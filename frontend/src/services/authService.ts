@@ -298,7 +298,13 @@ export const authStorage = {
   // User data
   getUser(): User | null {
     const userStr = localStorage.getItem("auth_user");
-    return userStr ? JSON.parse(userStr) : null;
+    if (!userStr) return null;
+    try {
+      return JSON.parse(userStr);
+    } catch {
+      localStorage.removeItem("auth_user");
+      return null;
+    }
   },
 
   setUser(user: User): void {
