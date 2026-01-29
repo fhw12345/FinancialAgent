@@ -41,6 +41,10 @@ spec:
           value: "postgresql://langfuse:$(POSTGRES_PASSWORD)@langfuse-postgres:5432/langfuse"
 
         # ClickHouse - Define password first, then use in MIGRATION_URL
+        # CRITICAL: The clickhouse-password secret value must NOT contain URL-special
+        # characters (+, @, /, =, %, #, ?) because it is embedded in the MIGRATION_URL.
+        # Go clickhouse driver URL parsing corrupts passwords with these chars.
+        # Use only alphanumeric characters. See: docs/recovery/ack-cluster-recovery-2026-01-29.md
         - name: CLICKHOUSE_PASSWORD
           valueFrom:
             secretKeyRef:

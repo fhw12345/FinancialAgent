@@ -16,6 +16,8 @@ spec:
         app: redis
         component: cache
     spec:
+      imagePullSecrets:
+      - name: acr-secret
       securityContext:
         runAsNonRoot: true
         runAsUser: 999  # redis user

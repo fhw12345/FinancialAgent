@@ -2,29 +2,51 @@
 
 Comprehensive guide to the Alibaba Cloud Container Service for Kubernetes (ACK) production environment architecture, authentication mechanisms, and operational procedures.
 
-## 🏗️ Architecture Overview
+## Cluster Details
+
+| Property | Value |
+|----------|-------|
+| **Cluster ID** | `c061af4c23eb34eb0a5d39335a2f9b10c` |
+| **API Server** | `47.102.113.54:6443` |
+| **Region** | Shanghai (cn-shanghai) |
+| **Node IPs** | `172.22.192.247`, `172.22.192.249`, `172.22.192.250`, `172.22.192.251` |
+| **Public EIP** | `106.14.61.31` (bound to node `172.22.192.247`) |
+| **Security Group** | `sg-uf678yj45sqqry5sfjim` |
+| **Pod CIDR** | `10.100.0.0/16` |
+| **Service CIDR** | `192.168.0.0/16` |
+| **Namespace** | `klinematrix-prod` |
+
+---
+
+## Architecture Overview
 
 ```
-Internet (HTTPS)
-     ↓
-Alibaba Cloud SLB (139.224.28.199)
-     ↓
-NGINX Ingress Controller (ingress-nginx namespace)
-     ↓
-├─→ klinecubic.cn/api → Backend Service (port 8000)
-└─→ klinecubic.cn/    → Frontend Service (port 80)
-     ↓
-Backend Pod ←→ MongoDB (StatefulSet)
-     ↓         Redis (Deployment)
-     ↓
-External APIs (DashScope, Alpaca, Alpha Vantage)
+Internet (HTTPS/HTTP)
+     |
+     v
+EIP 106.14.61.31 (bound to node 172.22.192.247)
+     |
+     v
+Node:80/443 (hostNetwork nginx-ingress pod, labeled ingress=true)
+     |
+     v
+ClusterIP Services (cluster-internal routing)
+     |
+     +--> klinecubic.cn/api/* --> backend-service:8000 --> Backend Pod
+     |
+     +--> klinecubic.cn/*     --> frontend-service:80  --> Frontend Pod
+                                                            |
+Backend Pod <--> MongoDB (StatefulSet)                      |
+     |          Redis (Deployment)                          |
+     v                                                      |
+External APIs (DashScope, Alpaca, Alpha Vantage)            |
 ```
 
 ### Key Components
 
 | Component | Purpose | Namespace | Access |
 |-----------|---------|-----------|--------|
-| **NGINX Ingress** | Load balancing, TLS termination | `ingress-nginx` | External SLB |
+| **NGINX Ingress** | TLS termination, routing | `ingress-nginx` | hostNetwork on EIP node |
 | **Cert-Manager** | SSL certificate management | `cert-manager` | Internal |
 | **Backend** | FastAPI application | `klinematrix-prod` | Via Ingress |
 | **Frontend** | React application | `klinematrix-prod` | Via Ingress |
@@ -33,37 +55,97 @@ External APIs (DashScope, Alpaca, Alpha Vantage)
 
 ---
 
-## 1️⃣ NGINX Ingress Controller
+## hostNetwork Architecture (No SLB)
+
+This cluster uses **hostNetwork mode** for the nginx-ingress controller instead of a traditional cloud load balancer (SLB). This is a deliberate cost-saving architecture choice.
+
+### How It Works
+
+1. **Node Labeling**: One node (`172.22.192.247`) is labeled `ingress=true`
+2. **EIP Binding**: A public Elastic IP (`106.14.61.31`) is bound directly to that node
+3. **hostNetwork Mode**: The nginx-ingress pod uses `hostNetwork: true`, binding directly to the node's network interface on ports 80 and 443
+4. **No SLB Required**: Traffic flows directly from the internet to the node's ports, eliminating the need for a cloud load balancer
+
+### Traffic Flow
+
+```
+Internet
+  |
+  v
+DNS: klinecubic.cn --> 106.14.61.31 (EIP)
+  |
+  v
+Node 172.22.192.247:80/443 (hostNetwork)
+  |
+  v
+nginx-ingress controller (running as host process)
+  |
+  v
+ClusterIP services (backend-service, frontend-service)
+  |
+  v
+Application pods
+```
+
+### Cost Savings
+
+| Architecture | Monthly Cost | Components |
+|-------------|-------------|------------|
+| **SLB-based** | ~$15-30/month | SLB instance + traffic fees |
+| **hostNetwork** | $0 additional | EIP already required for outbound |
+
+### Trade-offs
+
+- **No built-in HA for ingress**: If the ingress node goes down, traffic stops (acceptable for current scale)
+- **Port conflicts**: No other process can use ports 80/443 on the ingress node
+- **Node affinity required**: nginx-ingress must be scheduled on the labeled node
+
+### Security Group
+
+The security group `sg-uf678yj45sqqry5sfjim` must allow inbound traffic on:
+- Port **80** (HTTP, redirects to HTTPS)
+- Port **443** (HTTPS)
+- Port **6443** (Kubernetes API, restricted to admin IPs)
+
+---
+
+## 1. NGINX Ingress Controller
 
 ### Deployment
 
-Installed via Helm chart in the `ingress-nginx` namespace:
+Installed via Helm chart with hostNetwork values files:
 
 ```bash
 helm install nginx-ingress ingress-nginx/ingress-nginx \
   --namespace ingress-nginx --create-namespace \
-  --set controller.service.type=LoadBalancer \
-  --set controller.service.annotations."service\.beta\.kubernetes\.io/alibaba-cloud-loadbalancer-spec"="slb.s1.small"
+  -f .pipeline/helm/nginx-ingress/values.yaml \
+  -f .pipeline/helm/nginx-ingress/values-prod.yaml
 ```
+
+The values files configure:
+- `controller.hostNetwork: true` - Binds directly to node network
+- `controller.service.type: ClusterIP` - No LoadBalancer service needed
+- `controller.nodeSelector.ingress: "true"` - Schedules on the EIP-bound node
+- `controller.dnsPolicy: ClusterFirstWithHostNet` - Ensures DNS resolution works in hostNetwork mode
 
 ### How It Works
 
-1. **Service Load Balancer (SLB) Creation:**
-   - Alibaba Cloud Controller Manager detects `type: LoadBalancer`
-   - Automatically provisions SLB instance (`slb.s1.small` spec)
-   - Assigns external IP: `139.224.28.199`
+1. **hostNetwork Binding:**
+   - nginx-ingress pod runs with `hostNetwork: true`
+   - Binds directly to ports 80 and 443 on the node's network interface
+   - No NodePort or LoadBalancer service required
 
 2. **Traffic Routing:**
    ```
-   Internet → SLB:443 (HTTPS)
-            → NodePort:30548/32608 (TCP)
-            → NGINX Ingress Pod
-            → Backend/Frontend Services (HTTP internal)
+   Internet --> EIP:443 (HTTPS)
+             --> Node:443 (hostNetwork)
+             --> NGINX Ingress Pod (same network namespace as node)
+             --> Backend/Frontend ClusterIP Services (HTTP internal)
    ```
 
 3. **Routing Rules:**
-   - `/api/*` → backend-service:8000
-   - `/*` → frontend-service:80
+   - `/api/*` --> backend-service:8000
+   - `/*` --> frontend-service:80
 
 ### Ingress Configuration
 
@@ -100,7 +182,7 @@ spec:
 
 ---
 
-## 2️⃣ Cert-Manager (SSL Certificate Management)
+## 2. Cert-Manager (SSL Certificate Management)
 
 ### Deployment
 
@@ -111,7 +193,22 @@ helm repo add jetstack https://charts.jetstack.io
 helm install cert-manager jetstack/cert-manager \
   --namespace cert-manager --create-namespace \
   --set installCRDs=true
+
+# CRITICAL: Apply leader election RBAC
+kubectl apply -f .pipeline/k8s/base/cert-manager/rbac.yaml
 ```
+
+### Leader Election RBAC Patch
+
+Cert-manager requires RBAC permissions for leader election using `leases` in the `coordination.k8s.io` API group. Without this patch, cert-manager pods may fail to start or experience intermittent leader election failures.
+
+The RBAC patch (`.pipeline/k8s/base/cert-manager/rbac.yaml`) grants:
+- `get`, `create`, `update`, `patch` on `leases` in `coordination.k8s.io`
+- Applied to the `cert-manager` service account in the `cert-manager` namespace
+
+**Symptoms of missing RBAC:**
+- cert-manager controller pods in CrashLoopBackOff
+- Logs showing `Failed to create lease` or `leases.coordination.k8s.io is forbidden`
 
 ### Automatic Certificate Workflow
 
@@ -121,9 +218,9 @@ helm install cert-manager jetstack/cert-manager \
 
 2. **ACME Challenge (HTTP-01):**
    ```
-   Let's Encrypt → HTTP request to klinecubic.cn/.well-known/acme-challenge/TOKEN
-                 → NGINX Ingress routes to cert-manager solver pod
-                 → Validation succeeds
+   Let's Encrypt --> HTTP request to klinecubic.cn/.well-known/acme-challenge/TOKEN
+                 --> NGINX Ingress routes to cert-manager solver pod
+                 --> Validation succeeds
    ```
 
 3. **Certificate Issuance:**
@@ -147,11 +244,31 @@ kubectl describe certificate klinecubic-tls -n klinematrix-prod
 
 # Verify cert-manager pods
 kubectl get pods -n cert-manager
+
+# Check leader election lease
+kubectl get leases -n cert-manager
 ```
 
 ---
 
-## 3️⃣ Azure Container Registry (ACR) Authentication
+## 3. CoreDNS Configuration
+
+### Hairpin NAT Workaround
+
+When pods inside the cluster attempt to reach `klinecubic.cn` (the public domain), traffic would normally route out to the EIP and back in. This hairpin NAT scenario can fail in hostNetwork setups.
+
+The workaround is to add a `hosts` plugin entry in CoreDNS so that in-cluster DNS resolves `klinecubic.cn` directly to the nginx-ingress ClusterIP or the node's internal IP, bypassing the public network path entirely.
+
+```bash
+# Edit CoreDNS configmap
+kubectl edit configmap coredns -n kube-system
+```
+
+Add the `hosts` block inside the Corefile to map `klinecubic.cn` to the internal service or node IP.
+
+---
+
+## 4. Azure Container Registry (ACR) Authentication
 
 ### Registry Details
 
@@ -183,7 +300,7 @@ spec:
   template:
     spec:
       imagePullSecrets:
-      - name: acr-secret  # ← References the secret
+      - name: acr-secret
       containers:
       - name: backend
         image: financialagent-gxftdbbre4gtegea.azurecr.io/klinecubic/backend:prod-v0.7.0
@@ -193,17 +310,17 @@ spec:
 
 ```
 Pod scheduled
-  ↓
+  |
 Kubelet checks imagePullSecrets
-  ↓
+  |
 Reads acr-secret credentials
-  ↓
+  |
 HTTPS + Basic Auth to ACR
-  ↓
+  |
 ACR validates credentials
-  ↓
+  |
 Returns image layers
-  ↓
+  |
 Container starts
 ```
 
@@ -225,7 +342,7 @@ kubectl describe pod <pod-name> -n klinematrix-prod
 
 ---
 
-## 4️⃣ Secrets Management
+## 5. Secrets Management
 
 ### Current Approach: Manual Kubernetes Secrets
 
@@ -266,7 +383,7 @@ containers:
 **Future integration** (not currently active):
 
 ```yaml
-# Planned: Azure Key Vault → External Secrets Operator → K8s Secrets
+# Planned: Azure Key Vault --> External Secrets Operator --> K8s Secrets
 apiVersion: external-secrets.io/v1beta1
 kind: SecretStore
 metadata:
@@ -280,12 +397,12 @@ spec:
 
 **Why not active yet:**
 - Requires External Secrets Operator installation
-- Cross-cloud (Azure ↔ Alibaba) integration complexity
+- Cross-cloud (Azure <-> Alibaba) integration complexity
 - Manual secrets management sufficient for current scale
 
 ---
 
-## 5️⃣ Kubernetes RBAC
+## 6. Kubernetes RBAC
 
 ### Service Account
 
@@ -320,13 +437,12 @@ rules:
 
 ---
 
-## 🔐 Authentication & Communication Summary
+## Authentication & Communication Summary
 
 | Component | Auth Method | Credentials Storage | Protocol |
 |-----------|-------------|---------------------|----------|
-| **External → SLB** | None (public) | N/A | HTTPS |
-| **SLB → NGINX** | None (trusted network) | N/A | TCP (NodePort) |
-| **NGINX → Services** | None (cluster internal) | N/A | HTTP |
+| **External --> Node (EIP)** | None (public) | N/A | HTTPS |
+| **NGINX (hostNetwork) --> Services** | None (cluster internal) | N/A | HTTP |
 | **TLS Certificates** | ACME (Let's Encrypt) | K8s Secret (`klinecubic-tls`) | HTTPS |
 | **ACR Image Pull** | Docker Registry Secret | K8s Secret (`acr-secret`) | HTTPS + Basic Auth |
 | **Backend Secrets** | K8s Secrets | K8s Secret (`backend-secrets`) | In-cluster (envFrom) |
@@ -335,7 +451,7 @@ rules:
 
 ---
 
-## 🚀 Deployment Strategy
+## Deployment Strategy
 
 ### Backend: Recreate Strategy
 
@@ -348,21 +464,22 @@ spec:
 ```
 
 **Cluster Resource Context:**
-- **3 nodes** with ~2.3GB memory each (78-86% utilized)
-- **1 node** with 16GB memory (for Langfuse/MongoDB)
+- **4 nodes** (`172.22.192.247`, `.249`, `.250`, `.251`)
 - Backend requests 512Mi memory
+- Node `.247` also hosts nginx-ingress (hostNetwork)
 
 **Why Recreate:**
+
 | Strategy | Behavior | Downtime | Resource Need |
 |----------|----------|----------|---------------|
-| RollingUpdate | New pod starts → Old pod stops | Zero | 2x pod memory |
-| Recreate | Old pod stops → New pod starts | ~10-30s | 1x pod memory |
+| RollingUpdate | New pod starts, then old pod stops | Zero | 2x pod memory |
+| Recreate | Old pod stops, then new pod starts | ~10-30s | 1x pod memory |
 
 RollingUpdate would fail with "Insufficient memory" when both pods need to run simultaneously.
 
 ---
 
-## 🚀 Deployment Workflow
+## Deployment Workflow
 
 ### 1. Build Images in ACR
 
@@ -384,7 +501,7 @@ Edit `.pipeline/k8s/overlays/prod/kustomization.yaml`:
 images:
 - name: klinematrix/backend
   newName: financialagent-gxftdbbre4gtegea.azurecr.io/klinecubic/backend
-  newTag: "prod-v0.7.0"  # ← Update version
+  newTag: "prod-v0.7.0"  # <-- Update version
 ```
 
 ### 3. Apply Configuration
@@ -396,7 +513,7 @@ kubectl apply -k .pipeline/k8s/overlays/prod/
 
 ### 4. Force Rollout Restart
 
-⚠️ **CRITICAL:** ACK requires explicit restart to pull new images even if tag changed:
+**CRITICAL:** ACK requires explicit restart to pull new images even if tag changed:
 
 ```bash
 kubectl rollout restart deployment/backend deployment/frontend -n klinematrix-prod
@@ -422,7 +539,7 @@ curl https://klinecubic.cn/api/health
 
 ---
 
-## 🔍 Operational Commands
+## Operational Commands
 
 ### Cluster Access
 
@@ -472,12 +589,15 @@ kubectl port-forward svc/backend-service 8000:8000 -n klinematrix-prod
 kubectl get ingress -n klinematrix-prod
 kubectl describe ingress klinematrix-ingress -n klinematrix-prod
 
-# Check NGINX Ingress controller
-kubectl get svc -n ingress-nginx
+# Check NGINX Ingress controller (hostNetwork pod)
+kubectl get pods -n ingress-nginx -o wide
 kubectl logs -f deployment/nginx-ingress-ingress-nginx-controller -n ingress-nginx
 
-# Verify SLB external IP
-kubectl get svc nginx-ingress-ingress-nginx-controller -n ingress-nginx
+# Verify nginx is listening on host ports
+kubectl exec -n ingress-nginx deployment/nginx-ingress-ingress-nginx-controller -- ss -tlnp | grep -E ':80|:443'
+
+# Verify node label
+kubectl get nodes --show-labels | grep ingress=true
 ```
 
 ### Certificates
@@ -487,6 +607,9 @@ kubectl get svc nginx-ingress-ingress-nginx-controller -n ingress-nginx
 kubectl get certificate -n klinematrix-prod
 kubectl describe certificate klinecubic-tls -n klinematrix-prod
 
+# Check cert-manager leader election
+kubectl get leases -n cert-manager
+
 # Force certificate renewal
 kubectl delete secret klinecubic-tls -n klinematrix-prod
 # Cert-manager will automatically recreate
@@ -494,7 +617,7 @@ kubectl delete secret klinecubic-tls -n klinematrix-prod
 
 ---
 
-## 📊 Architecture Comparison: ACK vs AKS
+## Architecture Comparison: ACK vs AKS
 
 | Aspect | ACK (Production - Active) | AKS (Test - Planned) |
 |--------|---------------------------|----------------------|
@@ -503,14 +626,14 @@ kubectl delete secret klinecubic-tls -n klinematrix-prod
 | **Domain** | klinecubic.cn | klinematrix.com (planned) |
 | **Namespace** | klinematrix-prod | klinematrix-test |
 | **Image Prefix** | klinecubic/* | klinematrix/* |
-| **Load Balancer** | Alibaba SLB | Azure Load Balancer |
+| **Ingress** | hostNetwork + EIP | Azure Load Balancer (planned) |
 | **Secrets Mgmt** | Manual K8s Secrets | External Secrets + AKV (planned) |
 | **Node Pools** | Standard nodes | Workload identity (planned) |
-| **Status** | ✅ Active | ⚠️ Not deployed |
+| **Status** | Active | Not deployed |
 
 ---
 
-## 🔗 Related Documentation
+## Related Documentation
 
 - [Deployment Workflow](workflow.md) - Step-by-step deployment procedures
 - [Infrastructure Setup](infrastructure.md) - Cloud resource provisioning
@@ -520,12 +643,12 @@ kubectl delete secret klinecubic-tls -n klinematrix-prod
 
 ---
 
-## 📝 Notes
+## Notes
 
 - **Hybrid Cloud Strategy**: Azure ACR for container registry + Alibaba ACK for compute
+- **hostNetwork Ingress**: No SLB cost; nginx-ingress binds directly to EIP-bound node
 - **Security**: TLS everywhere external, HTTP internal (trusted network)
-- **High Availability**: Single-node for cost optimization, multi-node planned for HA
+- **Cost Optimized**: hostNetwork mode eliminates SLB monthly fees
 - **Monitoring**: Integrated with Alibaba Cloud monitoring + Langfuse for LLM observability
 
-**Last Updated:** 2025-12-13
-**Production Version:** Backend v0.8.7, Frontend v0.11.4
+**Last Updated:** 2026-01-29

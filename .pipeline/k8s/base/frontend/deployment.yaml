@@ -16,6 +16,8 @@ spec:
         app: frontend
         component: ui
     spec:
+      imagePullSecrets:
+      - name: acr-secret
       securityContext:
         runAsNonRoot: true
         runAsUser: 101  # nginx user

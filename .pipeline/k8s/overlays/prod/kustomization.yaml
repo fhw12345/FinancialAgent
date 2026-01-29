@@ -43,6 +43,11 @@ resources:
 - ../../base/langfuse/server-service.yaml
 - ../../base/langfuse/worker-deployment.yaml
 - ../../base/langfuse/ingress.yaml
+# CoreDNS hairpin NAT reference (applied manually to kube-system, stored here for reference)
+- ../../base/coredns/hosts-patch-configmap.yaml
+# NOTE: cert-manager RBAC (.pipeline/k8s/base/cert-manager/rbac.yaml) is applied
+# separately by the recovery script because it must stay in the cert-manager namespace.
+# Kustomize would override its namespace to klinematrix-prod, which is incorrect.
 
 # Production environment overrides
 patches:

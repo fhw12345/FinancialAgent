@@ -14,11 +14,12 @@ This document explains how secrets are managed across our hybrid-cloud architect
 - **Status**: ✅ Fully automated secret synchronization
 
 ### Production Environment (Alibaba ACK)
-- **Cloud Provider**: Alibaba Cloud (cn-hangzhou)
-- **Cluster**: `klinematrix-production`
+- **Cloud Provider**: Alibaba Cloud (cn-shanghai)
+- **Cluster**: `klinecubic-financialagent` (ID: `c061af4c23eb34eb0a5d39335a2f9b10c`)
 - **Secrets Method**: Manual `kubectl` secret creation
 - **Authentication**: N/A (no External Secrets Operator)
 - **Status**: ⚠️ Manual secret management
+- **Last Updated**: 2026-01-29 (cluster recovery)
 
 ## How Test Environment Works
 
@@ -175,6 +176,15 @@ Secrets in `klinematrix-prod` namespace (Alibaba ACK):
 | `backend-secrets` | `jwt-secret`<br>`dashscope-api-key`<br>`mongodb-url`<br>`alpaca-api-key`<br>`alpaca-secret-key`<br>`alpha-vantage-api-key`<br>`oss-access-key`<br>`oss-secret-key`<br>`admin-secret`<br>`tencent-secret-id`<br>`tencent-secret-key`<br>`langfuse-public-key`<br>`langfuse-secret-key` | Manual kubectl |
 | `langfuse-secrets` | `postgres-password`<br>`clickhouse-password`<br>`nextauth-secret`<br>`salt`<br>`oss-access-key-id`<br>`oss-access-key-secret` | Manual kubectl |
 | `redis-auth` | `password` | Base kustomize |
+| `acr-secret` | Docker registry credentials for Azure ACR | Manual kubectl |
+
+> **⚠️ CRITICAL: ClickHouse Password Constraint**
+>
+> The `clickhouse-password` in `langfuse-secrets` must **NOT** contain URL-special characters (`+`, `@`, `/`, `=`, `%`, `#`, `?`). This password is embedded in a `clickhouse://` URL (`CLICKHOUSE_MIGRATION_URL`), and the Go clickhouse driver's URL parser corrupts these characters. Use only alphanumeric passwords.
+>
+> **Generate safe passwords**: `openssl rand -hex 16`
+>
+> See: [ACK Recovery 2026-01-29](../recovery/ack-cluster-recovery-2026-01-29.md)
 
 ### Langfuse API Keys (Backend Integration)
 

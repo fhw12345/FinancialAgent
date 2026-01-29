@@ -10,11 +10,11 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - klinematrix.com
-    - www.klinematrix.com
-    secretName: klinematrix-tls
+    - klinecubic.cn
+    - www.klinecubic.cn
+    secretName: klinecubic-tls
   rules:
-  - host: klinematrix.com
+  - host: klinecubic.cn
     http:
       paths:
       - path: /api
@@ -31,7 +31,7 @@ spec:
             name: frontend-service
             port:
               number: 80
-  - host: www.klinematrix.com
+  - host: www.klinecubic.cn
     http:
       paths:
       - path: /api

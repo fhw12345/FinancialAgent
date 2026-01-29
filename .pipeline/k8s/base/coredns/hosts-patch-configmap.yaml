@@ -1,0 +1,55 @@
+# CoreDNS Hosts Patch for Hairpin NAT Workaround
+#
+# Problem: Internal pods (especially cert-manager) resolve klinecubic.cn to the
+# public EIP (106.14.61.31). Traffic from inside the cluster to the public EIP
+# doesn't work (hairpin NAT not supported on Alibaba Cloud VPC).
+#
+# Solution: Override DNS for our domains to resolve to the internal node IP
+# where nginx-ingress runs in hostNetwork mode.
+#
+# IMPORTANT: If the ingress node changes (different node gets the EIP),
+# update the IP address below and apply:
+#   kubectl apply -f this-file.yaml
+#   kubectl rollout restart deployment/coredns -n kube-system
+#
+# Current ingress node: 172.22.192.247 (node with EIP 106.14.61.31)
+# Created: 2026-01-29 (ACK cluster recovery)
+#
+# NOTE: This is a REFERENCE file. CoreDNS ConfigMap is in kube-system namespace
+# and managed by ACK. Apply this manually after cluster creation:
+#
+#   kubectl edit configmap coredns -n kube-system
+#
+# Add the following block BEFORE the "kubernetes" plugin block in the Corefile:
+#
+#   hosts {
+#     172.22.192.247 klinecubic.cn
+#     172.22.192.247 www.klinecubic.cn
+#     172.22.192.247 monitor.klinecubic.cn
+#     fallthrough
+#   }
+#
+# After editing, restart CoreDNS:
+#   kubectl rollout restart deployment/coredns -n kube-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-hosts-reference
+  namespace: klinematrix-prod
+  labels:
+    app: coredns
+    purpose: hairpin-nat-workaround
+data:
+  # Reference Corefile snippet to add to kube-system/coredns ConfigMap
+  hosts-snippet: |
+    hosts {
+      172.22.192.247 klinecubic.cn
+      172.22.192.247 www.klinecubic.cn
+      172.22.192.247 monitor.klinecubic.cn
+      fallthrough
+    }
+  # Current ingress node internal IP
+  ingress-node-ip: "172.22.192.247"
+  # Current ingress node public EIP
+  ingress-node-eip: "106.14.61.31"

@@ -4,6 +4,13 @@
 
 ## 🎯 Recent Architecture Changes
 
+**ACK Cluster Recovery** (2026-01-29 - Active): New cluster after SLB deletion incident.
+- **Cluster ID**: `c061af4c23eb34eb0a5d39335a2f9b10c` (K8s 1.34.3)
+- **Architecture**: hostNetwork nginx-ingress (no SLB) on node with EIP `106.14.61.31`
+- **Key Lessons**: Security group needs Pod CIDR rules, ClickHouse password no URL-special chars, cert-manager needs RBAC patch
+- **Recovery Script**: `scripts/ack-recovery.sh` (v2, all lessons baked in)
+- **Details**: [docs/recovery/ack-cluster-recovery-2026-01-29.md](docs/recovery/ack-cluster-recovery-2026-01-29.md)
+
 **GitHub Actions CI/CD** (2025-12-15 - Active): Automated deployment pipeline.
 - **PR Workflow**: `users/{name}/{feature}` branch → PR → Unit Tests → Review → Merge
 - **Deploy Workflow**: Push to main → Build images → Deploy to ACK (automatic)
@@ -83,9 +90,12 @@
 - **Access**: https://klinecubic.cn
 - **Langfuse**: https://monitor.klinecubic.cn (LLM trace visualization)
 - **Namespace**: `klinematrix-prod`
-- **Cluster**: `klinecubic-financialagent` (Shanghai/华东2)
+- **Cluster**: `klinecubic-financialagent` (Shanghai/华东2, ID: `c061af4c23eb34eb0a5d39335a2f9b10c`)
+- **K8s Version**: 1.34.3, Flannel CNI, IPVS proxy
 - **Images**: `financialagent-gxftdbbre4gtegea.azurecr.io/klinecubic/*`
-- **Status**: ✅ Active - Production deployment
+- **Ingress**: hostNetwork nginx on node `172.22.192.247` (EIP: `106.14.61.31`, label: `ingress=true`)
+- **Security Group**: `sg-uf678yj45sqqry5sfjim` (must include Pod CIDR 10.100.0.0/16 TCP/UDP rules)
+- **Status**: ✅ Active - Production deployment (recovered 2026-01-29)
 
 ### Test Environment (AKS - Planned, Not Active)
 - **Platform**: Azure Kubernetes Service (AKS)

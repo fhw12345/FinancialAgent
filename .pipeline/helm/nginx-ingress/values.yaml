@@ -1,6 +1,11 @@
 # Base nginx-ingress configuration
 # Shared across all environments
 # Chart: ingress-nginx/ingress-nginx v4.14.0
+#
+# Architecture (2026-01-29):
+#   Production uses hostNetwork mode (no SLB/LoadBalancer) to save costs.
+#   nginx-ingress binds directly to ports 80/443 on the node with public EIP.
+#   See values-prod.yaml for production-specific hostNetwork settings.
 
 controller:
   # Use Alibaba Cloud registry for faster pulls in China
@@ -17,11 +22,9 @@ controller:
   admissionWebhooks:
     enabled: false
 
-  # LoadBalancer service configuration
+  # Default service configuration
+  # NOTE: In production (hostNetwork mode), the service is not used for external traffic.
+  # Traffic flows: Internet → Node EIP:80/443 → hostNetwork nginx pod → ClusterIP services
   service:
-    type: LoadBalancer
-    # IMPORTANT: No loadbalancer-spec annotation
-    # Reason: Annotation caused "付费模式与实际实例不一致" error in ACK console
-    # ACK Cloud Controller Manager will auto-detect existing CLB configuration
-    # External IP will be preserved (139.224.28.199)
+    type: ClusterIP
     annotations: {}
