@@ -30,7 +30,7 @@ spec:
         # IMPORTANT: This image must be amd64 architecture (ACK nodes are amd64).
         # If rebuilding/pushing from Mac (arm64), use: docker build --platform linux/amd64
         # The ACR-hosted image was built with: az acr import --platform linux/amd64
-        image: financialagent-gxftdbbre4gtegea.azurecr.io/mongo:7.0
+        image: financialagent-gxftdbbre4gtegea.azurecr.io/mongo:7.0-amd64
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 27017
