@@ -16,7 +16,11 @@ Production environment deployed on Alibaba Cloud Container Service for Kubernete
 - **Nodes**:
   - 1× ecs.r8a.large (2c16GB, 100GB SSD)
   - 3× ecs.u1-c1m2.large (2c4GB, 40GB SSD)
-- **LoadBalancer IP**: 139.224.28.199
+- **Ingress Mode**: hostNetwork nginx-ingress (no SLB)
+- **Ingress Node**: 172.22.192.247 (label: `ingress=true`)
+- **Public EIP**: 106.14.61.31
+
+> **History**: Previously used SLB LoadBalancer (IP 139.224.28.199). Migrated to hostNetwork on 2026-01-29 after SLB deletion incident.
 
 ## Pre-deployment Setup
 
@@ -29,37 +33,42 @@ export KUBECONFIG=~/.kube/config-ack-prod
 # Install cert-manager (v1.16.2)
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.2/cert-manager.yaml
 
-# Install nginx-ingress with Alibaba Cloud mirrors (China network optimization)
+# Install nginx-ingress in hostNetwork mode (no SLB)
+# Uses values files with hostNetwork config, nodeSelector, and Alibaba Cloud mirrors
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 helm repo update
 
+# Label the ingress node (node with EIP 106.14.61.31)
+kubectl label node 172.22.192.247 ingress=true --overwrite
+
 helm install nginx-ingress ingress-nginx/ingress-nginx \
   --namespace ingress-nginx --create-namespace \
-  --set controller.service.type=LoadBalancer \
-  --set controller.service.annotations."service\.beta\.kubernetes\.io/alibaba-cloud-loadbalancer-spec"="slb.s1.small" \
-  --set controller.image.registry=registry.cn-hangzhou.aliyuncs.com \
-  --set controller.image.image=google_containers/nginx-ingress-controller \
-  --set controller.image.tag=v1.9.4 \
-  --set controller.image.digest="" \
-  --set controller.admissionWebhooks.enabled=false
+  -f .pipeline/helm/nginx-ingress/values.yaml \
+  -f .pipeline/helm/nginx-ingress/values-prod.yaml
 
-# Get LoadBalancer IP
-kubectl get svc -n ingress-nginx nginx-ingress-ingress-nginx-controller
+# Verify nginx-ingress pod is running on the ingress node
+kubectl get pods -n ingress-nginx -o wide
 ```
 
 ### 2. Configure DNS
 
-Point your domain to the LoadBalancer IP:
+Point your domain to the node EIP (hostNetwork mode, no SLB):
 
 ```
 Type: A
 Name: klinecubic.cn
-Value: 139.224.28.199
+Value: 106.14.61.31
 
 Type: A
 Name: www.klinecubic.cn
-Value: 139.224.28.199
+Value: 106.14.61.31
+
+Type: A
+Name: monitor.klinecubic.cn
+Value: 106.14.61.31
 ```
+
+> **Note**: DNS points to the EIP bound to node 172.22.192.247 where nginx-ingress runs in hostNetwork mode. Previously pointed to SLB IP 139.224.28.199 (before 2026-01-29).
 
 ### 3. Fix cert-manager DNS Resolution (ACK-specific)
 
@@ -145,13 +154,17 @@ kubectl get ingress -n klinematrix-prod
 kubectl get pods -n klinematrix-prod
 # Expected: backend, frontend, mongodb, redis all Running
 
+# Ingress controller (hostNetwork mode)
+kubectl get pods -n ingress-nginx -o wide
+# Expected: Pod running on node 172.22.192.247 with hostNetwork
+
 # Certificate
 kubectl get certificate -n klinematrix-prod
 # Expected: klinecubic-tls READY=True
 
 # Ingress
 kubectl get ingress -n klinematrix-prod
-# Expected: ADDRESS=139.224.28.199, PORTS=80,443
+# Expected: PORTS=80,443 (ADDRESS may be empty in hostNetwork mode - this is normal)
 ```
 
 ### Test Endpoints
@@ -177,7 +190,7 @@ kubectl get secret klinecubic-tls -n klinematrix-prod -o jsonpath='{.data.tls\.c
 
 - Using existing node SSDs via emptyDir: **$0 additional cost**
 - Cross-cloud image pulls: Within ACR free tier (<100GB/month)
-- SLB spec: slb.s1.small (basic LoadBalancer)
+- No SLB cost: hostNetwork mode eliminates LoadBalancer fees (previously slb.s1.small)
 
 ## Troubleshooting
 

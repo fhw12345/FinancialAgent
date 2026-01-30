@@ -292,6 +292,12 @@ kubectl rollout restart deployment/backend -n klinematrix-prod
 - Direct service access works (port-forward)
 - NGINX Ingress controller pod running
 
+### Architecture
+
+> **Current (since 2026-01-29)**: hostNetwork nginx-ingress on node 172.22.192.247 with EIP 106.14.61.31. No SLB/LoadBalancer.
+>
+> **Previously**: SLB LoadBalancer with external IP 139.224.28.199 (retired after SLB deletion incident).
+
 ### Resolution Steps
 
 #### 1. Check Ingress Status
@@ -306,21 +312,41 @@ Verify:
 - Hosts match DNS records
 - Backend services exist
 
-#### 2. Check NGINX Controller Service
+#### 2. Check hostNetwork Pod on Ingress Node
 
 ```bash
-kubectl get svc -n ingress-nginx
+# Verify nginx-ingress pod is running on the correct node
+kubectl get pods -n ingress-nginx -o wide
+# Expected: Pod running on node 172.22.192.247 with STATUS=Running
 ```
 
-Should show `LoadBalancer` type with EXTERNAL-IP.
+If the pod is not on the correct node:
+```bash
+# Check the ingress node label exists
+kubectl get nodes -l ingress=true
+# Should return node 172.22.192.247
 
-#### 3. Verify SLB External IP
+# If label is missing, re-apply it
+kubectl label node 172.22.192.247 ingress=true --overwrite
+```
+
+If the pod is not running:
+```bash
+# Check pod events for scheduling or startup errors
+kubectl describe pods -n ingress-nginx -l app.kubernetes.io/component=controller
+```
+
+#### 3. Verify EIP and Port Binding
 
 ```bash
-kubectl get svc nginx-ingress-ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-```
+# Test that ports 80/443 are reachable on the EIP
+curl -I http://106.14.61.31
+curl -Ik https://106.14.61.31
 
-Should return: `139.224.28.199` (or current SLB IP)
+# If connection refused, check if the pod has hostNetwork enabled
+kubectl get pods -n ingress-nginx -o yaml | grep hostNetwork
+# Should return: hostNetwork: true
+```
 
 #### 4. Check DNS Records
 
@@ -329,17 +355,24 @@ nslookup klinecubic.cn
 dig klinecubic.cn
 ```
 
-Should point to SLB external IP.
+Should point to EIP `106.14.61.31`.
 
-#### 5. Test NGINX Controller Logs
+#### 5. Check Security Group Rules
+
+The Alibaba Cloud security group (`sg-uf678yj45sqqry5sfjim`) must allow:
+- Inbound TCP 80 (HTTP) from 0.0.0.0/0
+- Inbound TCP 443 (HTTPS) from 0.0.0.0/0
+- Pod CIDR rules: TCP/UDP from 10.100.0.0/16 (required for hostNetwork pod to reach cluster services)
+
+#### 6. Test NGINX Controller Logs
 
 ```bash
-kubectl logs -f deployment/nginx-ingress-ingress-nginx-controller -n ingress-nginx | grep klinecubic
+kubectl logs -f -n ingress-nginx -l app.kubernetes.io/component=controller | grep klinecubic
 ```
 
 Look for routing errors or 404s.
 
-#### 6. Verify Backend Service
+#### 7. Verify Backend Service
 
 ```bash
 # Port-forward to test backend directly
@@ -347,7 +380,7 @@ kubectl port-forward svc/backend-service 8000:8000 -n klinematrix-prod
 curl http://localhost:8000/api/health
 ```
 
-If this works but Ingress doesn't, issue is in NGINX routing.
+If this works but Ingress doesn't, issue is in NGINX routing or hostNetwork connectivity.
 
 ---
 
