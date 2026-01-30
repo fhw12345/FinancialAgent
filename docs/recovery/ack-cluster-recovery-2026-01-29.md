@@ -228,7 +228,7 @@ cn-shanghai.172.22.192.251
 | `106.14.61.31` | Bound to node .247 (web traffic ingress) | In use |
 | `139.196.155.13` | NAT Gateway (outbound SNAT) | In use |
 | `47.102.113.54` | API Server SLB | In use |
-| `47.100.76.54` | Unbound | **Release to save cost** |
+| `47.100.76.54` | Released | ✅ Released (2026-01-30) |
 
 ### Kubernetes Secrets
 
@@ -359,8 +359,8 @@ The script includes:
 - [x] API health check passing (`/api/health`)
 - [x] Langfuse accessible (https://monitor.klinecubic.cn)
 - [x] SSL certificates valid and auto-renewing
-- [ ] Update GitHub secret `ACK_KUBECONFIG` with new cluster kubeconfig
-- [ ] Release unbound EIP `47.100.76.54` to reduce costs
+- [x] Update GitHub secret `ACK_KUBECONFIG` with new cluster kubeconfig
+- [x] Release unbound EIP `47.100.76.54` to reduce costs (confirmed released 2026-01-30)
 
 ---
 
