@@ -166,9 +166,11 @@
     "label": "Mode",
     "agent": "Agent",
     "copilot": "Copilot",
+    "deep": "Deep",
     "locked": "Mode locked for this chat",
     "agentDescription": "Agent mode (auto tool calling)",
-    "copilotDescription": "Copilot mode (manual tools)"
+    "copilotDescription": "Copilot mode (manual tools)",
+    "deepDescription": "Deep analysis (multi-agent + debate verification)"
   },
   "mobile": {
     "hideSidebar": "← Hide",
@@ -209,6 +211,27 @@
     "estimated": "estimated",
     "noCharge": "No charge",
     "totalTransactions": "total transactions"
+  },
+  "deepAgent": {
+    "deepAnalysis": "Deep Analysis",
+    "toggleAnalysis": "Toggle analysis details",
+    "synthesizing": "Synthesizing findings...",
+    "debateVerification": "Debate Verification",
+    "debateRound": "Round {{current}}/{{max}}",
+    "roundLabel": "Round {{n}}",
+    "toolsUsed": "{{count}} tools used",
+    "concernsRaised": "Concerns Raised",
+    "defense": "Defense",
+    "riskLevel": "Risk: {{level}}",
+    "expandAgent": "Expand {{name}}",
+    "collapseAgent": "Collapse {{name}}",
+    "toolInputHint": "Symbol: {{symbol}}",
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "statusPending": "Pending",
+    "statusRunning": "Running",
+    "statusCompleted": "Completed",
+    "statusFailed": "Failed"
   },
   "welcome": {
     "title": "🎯 Welcome to Financial Agent!",

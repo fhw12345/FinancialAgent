@@ -52,9 +52,9 @@ class ChatRequest(BaseModel):
         description="Tool invocation metadata for collapsible UI wrapper (when source='tool')",
     )
     # Agent Configuration
-    agent_version: Literal["v2", "v3"] = Field(
+    agent_version: Literal["v2", "v3", "v4-deep"] = Field(
         "v3",
-        description="Agent version: 'v2' (simple ChatAgent), 'v3' (SDK ReAct Agent with tool chaining)",
+        description="Agent version: 'v2' (simple ChatAgent), 'v3' (SDK ReAct Agent), 'v4-deep' (Deep hierarchical agent with sub-agents + debate)",
     )
     # LLM Configuration
     model: str = Field(

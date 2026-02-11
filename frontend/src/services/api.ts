@@ -6,6 +6,7 @@ import type {
   UpdateUIStateRequest,
   Chat,
   StreamEvent,
+  DeepStreamEvent,
   MarketStatus,
 } from "../types/api";
 import type {
@@ -217,6 +218,7 @@ export const chatService = {
       run_id: string;
       status: "error";
     }) => void,
+    onDeepEvent?: (event: DeepStreamEvent) => void,
     options?: {
       title?: string;
       role?: string;
@@ -224,7 +226,7 @@ export const chatService = {
       metadata?: any; // Analysis metadata for overlays
       tool_call?: any; // Tool invocation metadata for collapsible UI wrapper
       // Agent Configuration
-      agent_version?: "v2" | "v3"; // v2: simple chat, v3: ReAct agent with tools (default: v3)
+      agent_version?: "v2" | "v3" | "v4-deep"; // v2: simple chat, v3: ReAct agent, v4-deep: deep analysis
       // LLM Configuration
       model?: string;
       thinking_enabled?: boolean;
@@ -347,6 +349,11 @@ export const chatService = {
                 run_id: data.run_id,
                 status: "error",
               });
+            } else if (
+              data.type?.startsWith("deep_") &&
+              onDeepEvent
+            ) {
+              onDeepEvent(data as DeepStreamEvent);
             }
           }
         }

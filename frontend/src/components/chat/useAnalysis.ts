@@ -31,6 +31,7 @@ import {
 } from "../../utils/analysisMetadataExtractor";
 import { createToolCall, TOOL_REGISTRY, type ToolName } from "../../constants/toolRegistry";
 import type { ModelSettings } from "../../types/models";
+import type { DeepStreamEvent } from "../../types/api";
 import i18n from "../../i18n";
 
 // Formatting functions moved to analysisFormatters.ts
@@ -45,7 +46,8 @@ export const useAnalysis = (
   chatId?: string | null,
   setChatId?: (id: string) => void,
   modelSettings?: ModelSettings,
-  agentMode?: "v2" | "v3",
+  agentMode?: "v2" | "v3" | "v4-deep",
+  onDeepEvent?: (event: DeepStreamEvent) => void,
 ) => {
   const queryClient = useQueryClient();
   const optimisticDeduction = useOptimisticCreditDeduction();
@@ -211,13 +213,15 @@ export const useAnalysis = (
               ),
             );
           },
+          // Deep agent event callback (v4-deep only)
+          onDeepEvent,
           // LLM Configuration options
           {
             model: modelSettings?.model ?? "qwen-plus",
             thinking_enabled: modelSettings?.thinking_enabled ?? false,
             max_tokens: modelSettings?.max_tokens ?? 3000,
             debug_enabled: modelSettings?.debug_enabled ?? false,
-            agent_version: agentMode, // Pass agent mode (v2/v3)
+            agent_version: agentMode, // Pass agent mode (v2/v3/v4-deep)
             // Language configuration - get from i18n
             language: (i18n.language === "zh-CN" || i18n.language === "en" ? i18n.language : "zh-CN") as "zh-CN" | "en",
             // Symbol context - takes priority over DB ui_state, eliminates race condition
@@ -482,6 +486,7 @@ export const useButtonAnalysis = (
                 undefined, // onToolStart
                 undefined, // onToolEnd
                 undefined, // onToolError
+                undefined, // onDeepEvent
                 {
                   title: chatTitle,
                   role: "assistant",
@@ -515,6 +520,7 @@ export const useButtonAnalysis = (
             undefined, // onToolStart
             undefined, // onToolEnd
             undefined, // onToolError
+            undefined, // onDeepEvent
             {
               title: chatTitle,
               role: "user",

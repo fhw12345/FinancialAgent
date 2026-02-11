@@ -166,9 +166,11 @@
     "label": "模式",
     "agent": "代理",
     "copilot": "助手",
+    "deep": "深度分析",
     "locked": "此对话模式已锁定",
     "agentDescription": "代理模式（自动调用工具）",
-    "copilotDescription": "助手模式（手动工具）"
+    "copilotDescription": "助手模式（手动工具）",
+    "deepDescription": "深度分析模式（多智能体+辩论验证）"
   },
   "mobile": {
     "hideSidebar": "← 隐藏",
@@ -209,6 +211,27 @@
     "estimated": "预估",
     "noCharge": "无费用",
     "totalTransactions": "条交易"
+  },
+  "deepAgent": {
+    "deepAnalysis": "深度分析",
+    "toggleAnalysis": "展开/收起分析详情",
+    "synthesizing": "正在综合分析结果...",
+    "debateVerification": "辩论验证",
+    "debateRound": "第 {{current}}/{{max}} 轮",
+    "roundLabel": "第 {{n}} 轮",
+    "toolsUsed": "已使用 {{count}} 个工具",
+    "concernsRaised": "提出的问题",
+    "defense": "反驳",
+    "riskLevel": "风险: {{level}}",
+    "expandAgent": "展开 {{name}}",
+    "collapseAgent": "收起 {{name}}",
+    "toolInputHint": "标的: {{symbol}}",
+    "showMore": "展开更多",
+    "showLess": "收起",
+    "statusPending": "等待中",
+    "statusRunning": "运行中",
+    "statusCompleted": "已完成",
+    "statusFailed": "失败"
   },
   "welcome": {
     "title": "🎯 欢迎使用金融智能助手！",

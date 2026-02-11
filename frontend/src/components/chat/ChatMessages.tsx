@@ -23,6 +23,7 @@ interface ChatMessagesProps {
   hasMore?: boolean;
   isLoadingMore?: boolean;
   sortOrder?: "newest" | "oldest"; // Optional: sort messages by timestamp
+  deepAccordion?: React.ReactNode; // Deep agent accordion tree (v4-deep mode)
 }
 
 const formatTimestamp = (timestamp: string) => {
@@ -235,22 +236,13 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   hasMore = false,
   isLoadingMore = false,
   sortOrder = "oldest", // Default to oldest first (chronological) for chat messages
+  deepAccordion,
 }) => {
   const { t } = useTranslation(['chat', 'common']);
   const lastUserMessageRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastScrolledUserMessageRef = useRef<string | null>(null);
   const firstMessageIdRef = useRef<string | null>(null);
-
-  // Memoize last user message index to avoid recalculation on every render
-  const lastUserIdx = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === "user") {
-        return i;
-      }
-    }
-    return -1;
-  }, [messages]);
 
   // Scroll to last user message (or top if no user message) when chat loads
   useEffect(() => {
@@ -337,6 +329,16 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     return filtered;
   }, [messages, sortOrder]);
 
+  // Compute last user message index against visibleMessages (used for accordion placement)
+  const lastUserIdx = useMemo(() => {
+    for (let i = visibleMessages.length - 1; i >= 0; i--) {
+      if (visibleMessages[i].role === "user") {
+        return i;
+      }
+    }
+    return -1;
+  }, [visibleMessages]);
+
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0">
       {/* Chat ID Display - Debug info */}
@@ -378,25 +380,30 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         const isToolMessage = msg.role === "assistant" && msg.tool_call;
 
         return (
-          <div
-            key={msg._id || msg.timestamp}
-            ref={isLastUserMessage ? lastUserMessageRef : null}
-          >
-            {isToolProgress && msg.tool_progress ? (
-              <ToolExecutionProgress {...msg.tool_progress} />
-            ) : isToolMessage && msg.tool_call ? (
-              <ToolMessageWrapper
-                toolCall={msg.tool_call}
-                content={<MessageBubble msg={msg} t={t} />}
-              />
-            ) : (
-              <MessageBubble msg={msg} t={t} />
-            )}
-          </div>
+          <React.Fragment key={msg._id || msg.timestamp}>
+            <div ref={isLastUserMessage ? lastUserMessageRef : null}>
+              {isToolProgress && msg.tool_progress ? (
+                <ToolExecutionProgress {...msg.tool_progress} />
+              ) : isToolMessage && msg.tool_call ? (
+                <ToolMessageWrapper
+                  toolCall={msg.tool_call}
+                  content={<MessageBubble msg={msg} t={t} />}
+                />
+              ) : (
+                <MessageBubble msg={msg} t={t} />
+              )}
+            </div>
+            {/* Deep accordion appears right after the last user message */}
+            {isLastUserMessage && deepAccordion}
+          </React.Fragment>
         );
       })}
 
-      {isAnalysisPending && (
+      {/* Fallback: show accordion even if no user messages exist */}
+      {lastUserIdx === -1 && deepAccordion}
+
+      {/* Loading indicator (hidden when deep accordion is visible) */}
+      {isAnalysisPending && !deepAccordion && (
         <div className="flex justify-start">
           <div className="w-full bg-white text-gray-900 px-4 py-3 rounded-lg border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">

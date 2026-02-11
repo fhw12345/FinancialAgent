@@ -243,4 +243,99 @@ export type StreamEvent =
       type: "tool_info";
       tool_executions: number;
       trace_id: string;
+    }
+  // ===== Deep Agent Events (v4-deep) =====
+  | DeepStreamEvent;
+
+// Deep agent structured lifecycle events for accordion tree UI
+export type DeepStreamEvent =
+  | {
+      type: "deep_start";
+      seq: number;
+      timestamp: string;
+      symbol: string;
+      subagent_names: string[];
+      enable_debate: boolean;
+    }
+  | {
+      type: "deep_subagent_start";
+      seq: number;
+      timestamp: string;
+      subagent_name: string;
+      display_name: string;
+      icon: string;
+      tool_names: string[];
+    }
+  | {
+      type: "deep_tool_start";
+      seq: number;
+      timestamp: string;
+      subagent_name: string;
+      tool_name: string;
+      display_name: string;
+      inputs: Record<string, unknown>;
+    }
+  | {
+      type: "deep_tool_end";
+      seq: number;
+      timestamp: string;
+      subagent_name: string;
+      tool_name: string;
+      status: "success" | "error";
+      duration_ms: number;
+      output_preview: string;
+    }
+  | {
+      type: "deep_subagent_result";
+      seq: number;
+      timestamp: string;
+      subagent_name: string;
+      status: "success" | "error";
+      duration_ms: number;
+      result_summary: string;
+      tool_count: number;
+    }
+  | {
+      type: "deep_debate_start";
+      seq: number;
+      timestamp: string;
+      round: number;
+      max_rounds: number;
+    }
+  | {
+      type: "deep_debate_round";
+      seq: number;
+      timestamp: string;
+      round: number;
+      has_concerns: boolean;
+      summary: string;
+    }
+  | {
+      type: "deep_rebuttal_start";
+      seq: number;
+      timestamp: string;
+      round: number;
+    }
+  | {
+      type: "deep_rebuttal_result";
+      seq: number;
+      timestamp: string;
+      round: number;
+      defense_summary: string;
+      tool_count: number;
+      duration_ms: number;
+    }
+  | {
+      type: "deep_synthesis_start";
+      seq: number;
+      timestamp: string;
+    }
+  | {
+      type: "deep_verdict";
+      seq: number;
+      timestamp: string;
+      verdict_text: string;
+      risk_level: string | null;
+      tool_count: number;
+      total_duration_ms: number;
     };

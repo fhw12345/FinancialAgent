@@ -13,6 +13,8 @@ import { useUIStateSync } from "../hooks/useUIStateSync";
 import type { FibonacciMetadata } from "../utils/analysisMetadataExtractor";
 import { getPeriodForInterval, calculateDateRange } from "../utils/dateRangeCalculator";
 import type { ModelSettings } from "../types/models";
+import type { DeepStreamEvent } from "../types/api";
+import { useDeepAccordionState, DeepAgentAccordion, mapDeepEventToAction } from "./chat/deep";
 
 export function EnhancedChatInterface() {
   const { t } = useTranslation(['chat', 'common']);
@@ -37,8 +39,29 @@ export function EnhancedChatInterface() {
     debug_enabled: false,
   });
 
-  // Agent mode: v3 = Agent (auto tools), v2 = Copilot (manual tools)
-  const [agentMode, setAgentMode] = useState<"v2" | "v3">("v3");
+  // Agent mode: v3 = Agent (auto tools), v2 = Copilot (manual tools), v4-deep = Deep analysis
+  const [agentMode, setAgentMode] = useState<"v2" | "v3" | "v4-deep">("v3");
+
+  // Deep agent accordion state (active when agentMode === "v4-deep")
+  const { state: deepState, dispatch: deepDispatch } = useDeepAccordionState();
+
+  const handleDeepEvent = useCallback(
+    (event: DeepStreamEvent) => {
+      const action = mapDeepEventToAction(event);
+      if (action) {
+        deepDispatch(action);
+      }
+    },
+    [deepDispatch],
+  );
+
+  const deepAccordionElement = useMemo(
+    () =>
+      agentMode === "v4-deep" && deepState.status !== "pending"
+        ? <DeepAgentAccordion state={deepState} dispatch={deepDispatch} />
+        : undefined,
+    [agentMode, deepState, deepDispatch],
+  );
 
   // Pagination state for loading older messages
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
@@ -117,7 +140,8 @@ export function EnhancedChatInterface() {
     chatId,
     setChatId,
     modelSettings,
-    agentMode, // Pass agent mode
+    agentMode, // Pass agent mode (v2/v3/v4-deep)
+    agentMode === "v4-deep" ? handleDeepEvent : undefined,
   );
 
   // Button analysis mutation for quick analysis buttons
@@ -259,7 +283,8 @@ export function EnhancedChatInterface() {
     setDateRangeStart("");
     setDateRangeEnd("");
     setHasMoreMessages(false); // Reset pagination
-  }, [setMessages, setChatId]);
+    deepDispatch({ type: 'RESET' }); // Reset deep accordion state
+  }, [setMessages, setChatId, deepDispatch]);
 
   const handleLoadMore = useCallback(async () => {
     if (!chatId || isLoadingMore) return;
@@ -388,6 +413,7 @@ export function EnhancedChatInterface() {
                   onLoadMore={handleLoadMore}
                   hasMore={hasMoreMessages}
                   isLoadingMore={isLoadingMore}
+                  deepAccordion={deepAccordionElement}
                 />
 
                 {/* Agent Mode Toggle - Only enabled when starting new chat */}
@@ -433,6 +459,26 @@ export function EnhancedChatInterface() {
                       }
                     >
                       👤 {t('chat:mode.copilot')}
+                    </button>
+                    <button
+                      onClick={() => setAgentMode("v4-deep")}
+                      disabled={!!chatId}
+                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                        agentMode === "v4-deep"
+                          ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md"
+                          : "bg-white text-gray-700 hover:bg-gray-100"
+                      } ${
+                        chatId
+                          ? "opacity-50 cursor-not-allowed"
+                          : "cursor-pointer"
+                      }`}
+                      title={
+                        chatId
+                          ? t('chat:mode.locked')
+                          : t('chat:mode.deepDescription')
+                      }
+                    >
+                      🔬 {t('chat:mode.deep')}
                     </button>
                     {chatId && (
                       <span className="ml-auto text-xs text-gray-500 italic">
