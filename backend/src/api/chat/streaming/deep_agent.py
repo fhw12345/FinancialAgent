@@ -20,7 +20,6 @@ from typing import Any
 import structlog
 from fastapi.responses import StreamingResponse
 
-from ....agent.deep_agent_adapter import DeepAgentAdapter
 from ....core.utils import extract_token_usage_from_agent_result
 from ....core.utils.date_utils import utcnow
 from ....core.utils.title_utils import extract_title_from_response
@@ -56,7 +55,7 @@ async def stream_with_deep_agent(
     request: ChatRequest,
     user_id: str,
     chat_service: ChatService,
-    agent: DeepAgentAdapter,
+    agent: Any,  # DeepAgentAdapter — lazy import to avoid startup crash if deepagents missing
     credit_service: CreditService,
     context_manager: ContextWindowManager,
     message_repo: MessageRepository,

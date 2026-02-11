@@ -6,12 +6,13 @@ requests to either the Simple Agent (v2) or ReAct Agent (v3) based on
 the requested agent version.
 """
 
+from typing import Any
+
 import structlog
 from fastapi import Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 
 from ....agent.chat_agent import ChatAgent
-from ....agent.deep_agent_adapter import DeepAgentAdapter
 from ....agent.langgraph_react_agent import FinancialAnalysisReActAgent
 from ....database.repositories.message_repository import MessageRepository
 from ....services.chat_service import ChatService
@@ -41,7 +42,7 @@ async def chat_stream_unified(
     chat_service: ChatService = Depends(get_chat_service),
     simple_agent: ChatAgent = Depends(get_chat_agent),
     react_agent: FinancialAnalysisReActAgent = Depends(get_react_agent),
-    deep_agent: DeepAgentAdapter = Depends(get_deep_agent),
+    deep_agent: Any = Depends(get_deep_agent),
     credit_service: CreditService = Depends(get_credit_service),
     context_manager: ContextWindowManager = Depends(get_context_manager),
     message_repo: MessageRepository = Depends(get_message_repository),

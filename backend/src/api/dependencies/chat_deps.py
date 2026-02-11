@@ -2,10 +2,11 @@
 Dependencies for chat API endpoints.
 """
 
+from typing import Any
+
 from fastapi import Depends
 
 from ...agent.chat_agent import ChatAgent
-from ...agent.deep_agent_adapter import DeepAgentAdapter
 from ...agent.langgraph_react_agent import FinancialAnalysisReActAgent
 from ...core.config import Settings, get_settings
 from ...core.data.ticker_data_service import TickerDataService
@@ -23,7 +24,7 @@ from .auth import get_current_user_id, get_mongodb  # Import shared auth
 # Cache it as module-level singleton to avoid re-compilation on every request
 
 _react_agent_singleton: FinancialAnalysisReActAgent | None = None
-_deep_agent_singleton: DeepAgentAdapter | None = None
+_deep_agent_singleton = None  # DeepAgentAdapter | None — lazy import
 
 # ===== MongoDB and Repository Dependencies =====
 
@@ -159,7 +160,7 @@ def get_react_agent(
 def get_deep_agent(
     settings: Settings = Depends(get_settings),
     react_agent: FinancialAnalysisReActAgent = Depends(get_react_agent),
-) -> DeepAgentAdapter:
+) -> Any:  # Returns DeepAgentAdapter — lazy import to avoid startup crash
     """
     Get Deep ReAct agent wrapped in the adapter for ainvoke() compatibility.
 
@@ -175,6 +176,7 @@ def get_deep_agent(
 
     import structlog
 
+    from ...agent.deep_agent_adapter import DeepAgentAdapter
     from ...agent.deep_react_agent import DeepReActAgent
 
     _logger = structlog.get_logger()
