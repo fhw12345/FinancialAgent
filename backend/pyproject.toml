@@ -46,6 +46,7 @@ dependencies = [
     "slowapi>=0.1.9",                   # Rate limiting for FastAPI
     "tiktoken>=0.7.0",                  # Token counting for context window management
     "deepagents>=0.3.12",                # Deep hierarchical agent framework
+    "pytz>=2024.1",                       # Timezone support (required by alpaca-py)
 ]
 
 [project.optional-dependencies]
