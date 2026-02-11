@@ -146,6 +146,124 @@ class FundamentalsFormatter:
         return "\n".join(output)
 
     @staticmethod
+    def format_earnings(
+        raw_data: dict[str, Any],
+        symbol: str,
+        invoked_at: str,
+        quarterly_count: int = 8,
+    ) -> str:
+        """
+        Format earnings data with beat/miss analysis.
+
+        Args:
+            raw_data: Raw Alpha Vantage EARNINGS response
+            symbol: Stock symbol
+            invoked_at: ISO timestamp
+            quarterly_count: Number of quarterly reports to show (default: 8)
+
+        Returns:
+            Rich markdown with earnings history and beat/miss analysis
+        """
+        header = generate_metadata_header(
+            tool_name="Earnings Analysis",
+            symbol=symbol,
+            invoked_at=invoked_at,
+            data_source="EARNINGS",
+        )
+
+        annual_earnings = raw_data.get("annualEarnings", [])
+        quarterly_earnings = raw_data.get("quarterlyEarnings", [])
+
+        output = [
+            header,
+            f"## Earnings - {symbol}",
+            "",
+        ]
+
+        # Quarterly earnings table (most useful for beat/miss)
+        quarters = quarterly_earnings[:quarterly_count]
+        if quarters:
+            output.extend([
+                f"### Quarterly EPS (Last {len(quarters)} Quarters)",
+                "",
+                "| Report Date | Reported EPS | Estimated EPS | Surprise | Surprise % |",
+                "|-------------|-------------|---------------|----------|------------|",
+            ])
+
+            beats = 0
+            misses = 0
+            surprise_pcts = []
+
+            for q in quarters:
+                reported = safe_float(q.get("reportedEPS"))
+                estimated = safe_float(q.get("estimatedEPS"))
+                surprise = safe_float(q.get("surprise"))
+                surprise_pct = safe_float(q.get("surprisePercentage"))
+                report_date = q.get("reportedDate", q.get("fiscalDateEnding", "N/A"))
+
+                if surprise > 0:
+                    beats += 1
+                    indicator = "Beat"
+                elif surprise < 0:
+                    misses += 1
+                    indicator = "Miss"
+                else:
+                    indicator = "In-line"
+
+                surprise_pcts.append(surprise_pct)
+
+                output.append(
+                    f"| {report_date} | ${reported:.2f} | "
+                    f"${estimated:.2f} | "
+                    f"${surprise:+.2f} ({indicator}) | "
+                    f"{surprise_pct:+.1f}% |"
+                )
+
+            # Beat/miss summary
+            total = beats + misses + (len(quarters) - beats - misses)
+            avg_surprise = (
+                sum(surprise_pcts) / len(surprise_pcts) if surprise_pcts else 0
+            )
+            output.extend([
+                "",
+                "### Beat/Miss Summary",
+                f"* **Beat Rate:** {beats}/{total} quarters ({beats/total*100:.0f}%)"
+                if total > 0
+                else "* **Beat Rate:** N/A",
+                f"* **Average Surprise:** {avg_surprise:+.1f}%",
+                f"* **Beats:** {beats} | **Misses:** {misses} | "
+                f"**In-line:** {total - beats - misses}",
+            ])
+
+        # Annual earnings (compact)
+        annual = annual_earnings[:5]
+        if annual:
+            output.extend([
+                "",
+                "### Annual EPS",
+                "",
+                "| Fiscal Year | Reported EPS |",
+                "|-------------|-------------|",
+            ])
+
+            for a in annual:
+                fiscal_date = a.get("fiscalDateEnding", "N/A")
+                reported = safe_float(a.get("reportedEPS"))
+                output.append(f"| {fiscal_date} | ${reported:.2f} |")
+
+            # YoY growth if at least 2 years
+            if len(annual) >= 2:
+                latest = safe_float(annual[0].get("reportedEPS"))
+                previous = safe_float(annual[1].get("reportedEPS"))
+                growth = calculate_qoq_growth(latest, previous)
+                output.extend([
+                    "",
+                    f"* **EPS YoY Growth:** {growth}",
+                ])
+
+        return "\n".join(output)
+
+    @staticmethod
     def format_cash_flow(
         raw_data: dict[str, Any],
         symbol: str,

@@ -224,6 +224,77 @@ class DashScopeClient:
         return self.last_token_usage
 
 
+class VisionClient:
+    """
+    Vision model client for chart/image analysis.
+
+    Uses Qwen-VL (qwen-vl-max) for multimodal image understanding.
+    Designed for analyzing charts, patterns, and visual artifacts.
+    """
+
+    def __init__(self, settings: Settings, model: str = "qwen-vl-max"):
+        """
+        Initialize vision model client.
+
+        Args:
+            settings: Application settings with API keys
+            model: Vision model ID (default: qwen-vl-max)
+        """
+        self.model = model
+        self.settings = settings
+
+        self.chat = ChatTongyi(  # type: ignore[call-arg]
+            model_name=model,
+            dashscope_api_key=settings.dashscope_api_key,
+            model_kwargs={"result_format": "message"},
+        )
+        logger.info("VisionClient initialized", model=model)
+
+    async def analyze_image(
+        self,
+        image_base64: str,
+        prompt: str,
+    ) -> str:
+        """
+        Analyze image with vision model.
+
+        Args:
+            image_base64: Base64-encoded image (without data:image/png;base64, prefix)
+            prompt: Analysis prompt describing what to look for
+
+        Returns:
+            Vision model analysis as string
+        """
+        # Build multimodal content blocks for Qwen-VL
+        content: list[dict[str, str | dict[str, str]]] = [
+            {"type": "text", "text": prompt},
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/png;base64,{image_base64}"},
+            },
+        ]
+
+        messages = [HumanMessage(content=content)]  # type: ignore[arg-type]
+
+        logger.info(
+            "Analyzing image with vision model",
+            model=self.model,
+            prompt_preview=prompt[:100],
+        )
+
+        try:
+            response = await self.chat.ainvoke(messages)
+            return str(response.content) if response.content else ""
+        except Exception as e:
+            logger.error(
+                "Vision analysis failed",
+                model=self.model,
+                error=str(e),
+                error_type=type(e).__name__,
+            )
+            raise
+
+
 # Default system prompt for financial analysis
 # Note: Use get_financial_agent_system_prompt() to get prompt with current date
 FINANCIAL_AGENT_SYSTEM_PROMPT_TEMPLATE = """You are a senior financial analyst with 15+ years of Wall Street experience, conversing naturally with retail investors who value clarity and actionable insights.
@@ -255,6 +326,36 @@ Step 4: Synthesize final answer
 User: "What's the market doing today?"
 Step 1: Call get_market_movers (1 tool) - sufficient for overview
 Step 2: Analyze and respond - no additional tools needed
+
+**DELEGATION TO SUBAGENTS** (Advanced Pattern):
+For complex analysis requiring deep research, use the task() tool to delegate:
+- task("general-purpose", "your detailed task description")
+
+The subagent has access to all your tools and returns ONLY a concise summary.
+
+**WHEN TO DELEGATE:**
+- Complex multi-step analysis (technical + fundamental combined)
+- Tasks requiring extensive data gathering across multiple tools
+- Getting balanced perspectives (analyst vs debater viewpoints)
+
+**DUAL-AGENT PATTERN for investment decisions:**
+1. task("general-purpose", "As a bullish analyst, make the data-driven case for [SYMBOL]. Include technical setup, fundamentals, and catalysts.")
+2. task("general-purpose", "As a critical analyst, challenge the bull case for [SYMBOL]. Find risks, counter-evidence, and what could go wrong.")
+3. Then synthesize both perspectives into a balanced recommendation.
+
+**KEY BENEFIT:** Subagent work stays in isolated context - doesn't pollute your main conversation.
+
+**VISUALIZATION SKILL:**
+Use `generate_ohlc_chart(symbol, days)` to visualize price action and get structured metadata:
+- Generates candlestick chart with SMA, Bollinger Bands, Fibonacci levels
+- Returns: image path + technical indicators (RSI, trend, support/resistance)
+- Use the METADATA for reasoning (free) - no need to "see" the chart
+
+**For Visual Pattern Recognition** (expensive - use sparingly):
+If you need to identify visual patterns (head & shoulders, triangles, flags):
+1. First call generate_ohlc_chart() to get the base64 image data
+2. Then: task("visual-analysis", "Identify chart patterns", image_base64=chart_data)
+This uses qwen-vl-max vision model - only use when visual patterns are specifically requested.
 
 Response Style - Adapt to Context:
 

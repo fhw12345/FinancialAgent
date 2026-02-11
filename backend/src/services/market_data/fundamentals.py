@@ -297,6 +297,54 @@ class FundamentalsMixin(AlphaVantageBase):
             logger.error("Market movers fetch failed", error=str(e))
             raise
 
+    async def get_earnings(self, symbol: str) -> dict[str, Any]:
+        """
+        Get company earnings data using EARNINGS endpoint.
+
+        Returns annual and quarterly earnings (EPS) history including:
+        - reportedEPS, estimatedEPS, surprise, surprisePercentage
+        - fiscalDateEnding, reportedDate
+
+        Args:
+            symbol: Stock symbol
+
+        Returns:
+            Dict with annualEarnings and quarterlyEarnings lists
+        """
+        try:
+            response = await self.client.get(
+                self.base_url,
+                params={
+                    "function": "EARNINGS",
+                    "symbol": symbol,
+                    "apikey": self.api_key,
+                },
+            )
+
+            if response.status_code != 200:
+                sanitized_text = self._sanitize_text(response.text)
+                raise ValueError(
+                    f"Alpha Vantage API error: {response.status_code} - {sanitized_text}"
+                )
+
+            data = response.json()
+
+            if "annualEarnings" not in data and "quarterlyEarnings" not in data:
+                raise ValueError(f"No earnings data for symbol: {symbol}")
+
+            logger.info(
+                "Earnings data fetched",
+                symbol=symbol,
+                annual_count=len(data.get("annualEarnings", [])),
+                quarterly_count=len(data.get("quarterlyEarnings", [])),
+            )
+
+            return data  # type: ignore[no-any-return]
+
+        except Exception as e:
+            logger.error("Earnings fetch failed", symbol=symbol, error=str(e))
+            raise
+
     async def get_insider_transactions(
         self, symbol: str, limit: int = 50
     ) -> dict[str, Any]:

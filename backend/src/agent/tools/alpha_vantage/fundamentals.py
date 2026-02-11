@@ -193,6 +193,41 @@ def create_fundamental_tools(
             return f"Insider activity error for {symbol}: {str(e)}"
 
     @tool
+    async def get_company_earnings(symbol: str) -> str:
+        """
+        Get quarterly and annual earnings (EPS) history with beat/miss analysis.
+
+        Returns historical earnings per share with estimated vs reported EPS,
+        surprise amounts, and beat/miss tracking. Useful for evaluating
+        earnings quality and management execution.
+
+        Args:
+            symbol: Stock ticker symbol (e.g., "AAPL", "MSFT", "GOOGL")
+
+        Returns:
+            Formatted earnings history with beat rate and YoY growth
+
+        Examples:
+            - symbol="AAPL" → Apple quarterly EPS with beat/miss analysis
+            - symbol="NVDA" → NVIDIA earnings trend and surprise history
+        """
+        try:
+            data = await service.get_earnings(symbol)
+
+            if not data:
+                return f"No earnings data available for {symbol}"
+
+            return formatter.format_earnings(
+                raw_data=data,
+                symbol=symbol,
+                invoked_at=datetime.now(UTC).isoformat(),
+            )
+
+        except Exception as e:
+            logger.error("Earnings tool failed", symbol=symbol, error=str(e))
+            return f"Earnings data error for {symbol}: {str(e)}"
+
+    @tool
     async def get_etf_holdings(symbol: str) -> str:
         """
         Get ETF profile with top holdings and sector allocation.
@@ -232,6 +267,7 @@ def create_fundamental_tools(
     return [
         get_company_overview,
         get_financial_statements,
+        get_company_earnings,
         get_insider_activity,
         get_etf_holdings,
     ]

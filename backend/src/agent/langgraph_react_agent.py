@@ -74,6 +74,7 @@ from .tools.pcr_tools import create_pcr_tools
 
 logger = structlog.get_logger()
 
+
 # Conditional import for Langfuse (skip in CI/tests)
 if TYPE_CHECKING:
     from langfuse.langchain import CallbackHandler
@@ -597,6 +598,75 @@ Summary: {result.analysis_summary}"""
             )
             return None
 
+    # ===== ZERO-TOOL GUARD CONFIGURATION =====
+    # Keywords indicating a query needs real-time financial data (tool calls required)
+    _FINANCIAL_KEYWORDS: list[str] = [
+        "stock",
+        "price",
+        "market",
+        "share",
+        "ticker",
+        "analyze",
+        "analysis",
+        "earnings",
+        "revenue",
+        "profit",
+        "how is",
+        "how's",
+        "what's happening",
+        "what about",
+        "today",
+        "performance",
+        "chart",
+        "trend",
+        "outlook",
+        "fibonacci",
+        "stochastic",
+        "technical",
+        "fundamental",
+        "buy",
+        "sell",
+        "invest",
+        "portfolio",
+        "sector",
+        "bull",
+        "bear",
+        "support",
+        "resistance",
+        "valuation",
+        "p/e",
+        "dividend",
+        "insider",
+        "movers",
+        "gainers",
+        "losers",
+        # Common tickers (top traded)
+        "tesla",
+        "tsla",
+        "aapl",
+        "apple",
+        "msft",
+        "microsoft",
+        "googl",
+        "google",
+        "amzn",
+        "amazon",
+        "nvda",
+        "nvidia",
+        "meta",
+        "nflx",
+        "netflix",
+    ]
+
+    def _query_likely_needs_tools(self, query: str) -> bool:
+        """Detect if a query likely needs tool calls (financial data queries).
+
+        Returns True for queries containing financial/market keywords,
+        indicating the agent should have used tools to fetch real-time data.
+        """
+        query_lower = query.lower()
+        return any(kw in query_lower for kw in self._FINANCIAL_KEYWORDS)
+
     async def ainvoke(
         self,
         user_message: str,
@@ -821,6 +891,57 @@ Summary: {result.analysis_summary}"""
                 for msg in result["messages"]
                 if msg.__class__.__name__ == "ToolMessage"
             ]
+
+            # ===== ZERO-TOOL GUARD: Retry with nudge if no tools called =====
+            # DashScope/Qwen can echo system prompt instructions instead of
+            # calling tools for short queries. Detect and retry once.
+            if len(tool_messages) == 0 and self._query_likely_needs_tools(user_message):
+                logger.warning(
+                    "Zero-tool response for tool-requiring query — retrying with nudge",
+                    trace_id=trace_id,
+                    user_message_preview=user_message[:100],
+                    original_answer_preview=final_answer[:200],
+                )
+                try:
+                    nudge = HumanMessage(
+                        content=(
+                            "You have not used any tools yet. This query requires "
+                            "real-time financial data. Please call the appropriate "
+                            "tools (e.g., search_ticker, get_company_overview, "
+                            "get_news_sentiment) to gather data before answering."
+                        )
+                    )
+                    retry_messages = list(result["messages"]) + [nudge]
+                    retry_result = await asyncio.wait_for(
+                        self.agent.ainvoke({"messages": retry_messages}, config=config),
+                        timeout=60.0,  # 1 minute cap for nudge retry
+                    )
+                    # Replace result with retry output
+                    result = retry_result
+                    final_message = result["messages"][-1]
+                    final_answer = (
+                        final_message.content
+                        if hasattr(final_message, "content")
+                        else ""
+                    )
+                    tool_messages = [
+                        msg
+                        for msg in result["messages"]
+                        if msg.__class__.__name__ == "ToolMessage"
+                    ]
+                    logger.info(
+                        "Zero-tool retry completed",
+                        trace_id=trace_id,
+                        retry_tool_executions=len(tool_messages),
+                        retry_answer_length=len(final_answer),
+                    )
+                except Exception as retry_err:
+                    logger.warning(
+                        "Zero-tool retry failed, using original response",
+                        trace_id=trace_id,
+                        error=str(retry_err),
+                    )
+                    # Keep original result (final_answer, tool_messages already set)
 
             # Extract token usage from all AI messages
             total_input_tokens, total_output_tokens, _ = (

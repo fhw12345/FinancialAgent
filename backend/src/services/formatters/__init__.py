@@ -39,6 +39,18 @@ class AlphaVantageResponseFormatter:
         """Format company overview with comprehensive metrics."""
         return self._fundamentals.format_company_overview(raw_data, symbol, invoked_at)
 
+    def format_earnings(
+        self,
+        raw_data: dict[str, Any],
+        symbol: str,
+        invoked_at: str,
+        quarterly_count: int = 8,
+    ) -> str:
+        """Format earnings data with beat/miss analysis."""
+        return self._fundamentals.format_earnings(
+            raw_data, symbol, invoked_at, quarterly_count
+        )
+
     def format_cash_flow(
         self,
         raw_data: dict[str, Any],
