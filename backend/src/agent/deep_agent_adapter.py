@@ -33,19 +33,85 @@ _TICKER_PATTERN = re.compile(r"\b([A-Z]{1,5})\b")
 # common English words (V, F, MA) or have dots (BRK.B) where regex alone
 # might miss. The LLM fallback handles everything else.
 _FAST_TICKERS: set[str] = {
-    "AAPL", "MSFT", "GOOGL", "GOOG", "AMZN", "NVDA", "META", "TSLA",
-    "NFLX", "AMD", "INTC", "COIN", "PLTR", "UBER", "SHOP", "SPOT",
-    "BABA", "PDD", "NIO", "XPEV", "RIVN", "LCID", "SMCI", "ARM",
-    "SOFI", "HOOD", "PYPL", "ABNB", "SNAP", "RBLX", "MSTR",
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "GOOG",
+    "AMZN",
+    "NVDA",
+    "META",
+    "TSLA",
+    "NFLX",
+    "AMD",
+    "INTC",
+    "COIN",
+    "PLTR",
+    "UBER",
+    "SHOP",
+    "SPOT",
+    "BABA",
+    "PDD",
+    "NIO",
+    "XPEV",
+    "RIVN",
+    "LCID",
+    "SMCI",
+    "ARM",
+    "SOFI",
+    "HOOD",
+    "PYPL",
+    "ABNB",
+    "SNAP",
+    "RBLX",
+    "MSTR",
 }
 
 # Words to NEVER treat as tickers (common English/Chinese false positives)
 _STOP_WORDS: set[str] = {
-    "FOR", "AND", "NOT", "THE", "BUT", "ALL", "ARE", "CAN", "HAS",
-    "HER", "HIS", "HOW", "ITS", "LET", "MAY", "NEW", "NOW", "OLD",
-    "OUR", "OUT", "OWN", "SAY", "SHE", "TOO", "USE", "WAY", "WHO",
-    "BOY", "DID", "GET", "HIM", "HIT", "LOW", "MAN", "RUN", "SET",
-    "TOP", "TWO", "WHY", "BIG", "TRY", "ASK", "BUY", "CEO",
+    "FOR",
+    "AND",
+    "NOT",
+    "THE",
+    "BUT",
+    "ALL",
+    "ARE",
+    "CAN",
+    "HAS",
+    "HER",
+    "HIS",
+    "HOW",
+    "ITS",
+    "LET",
+    "MAY",
+    "NEW",
+    "NOW",
+    "OLD",
+    "OUR",
+    "OUT",
+    "OWN",
+    "SAY",
+    "SHE",
+    "TOO",
+    "USE",
+    "WAY",
+    "WHO",
+    "BOY",
+    "DID",
+    "GET",
+    "HIM",
+    "HIT",
+    "LOW",
+    "MAN",
+    "RUN",
+    "SET",
+    "TOP",
+    "TWO",
+    "WHY",
+    "BIG",
+    "TRY",
+    "ASK",
+    "BUY",
+    "CEO",
 }
 
 _SYMBOL_EXTRACTION_PROMPT = """Extract the stock ticker symbol from this user message.
@@ -227,7 +293,9 @@ class DeepAgentAdapter:
                 [HumanMessage(content=prompt)],
             )
             content = response.content
-            raw = (content if isinstance(content, str) else str(content)).strip().upper()
+            raw = (
+                (content if isinstance(content, str) else str(content)).strip().upper()
+            )
             # Extract just the ticker — LLM may return extra text
             match = re.match(r"^([A-Z]{1,5})$", raw)
             if match and match.group(1) != "UNKNOWN":

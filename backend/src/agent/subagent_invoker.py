@@ -204,7 +204,9 @@ async def invoke_subagent(
     )
 
     # Inject real-time tool streaming callback into config
-    merged_config: RunnableConfig = RunnableConfig(**config) if config else RunnableConfig()
+    merged_config: RunnableConfig = (
+        RunnableConfig(**config) if config else RunnableConfig()
+    )
     if emitter and on_event:
         cb = DeepToolStreamingCallback(subagent_name, emitter, on_event)
         raw_callbacks = merged_config.get("callbacks") or []
@@ -278,9 +280,7 @@ async def invoke_subagent(
         if hasattr(final_message, "content")
         else str(final_message)
     )
-    tool_count = sum(
-        1 for m in all_messages if m.__class__.__name__ == "ToolMessage"
-    )
+    tool_count = sum(1 for m in all_messages if m.__class__.__name__ == "ToolMessage")
 
     logger.debug(
         "Subagent completed",

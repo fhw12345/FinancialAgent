@@ -5,13 +5,13 @@ and categories used throughout the insights service.
 """
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class MetricStatus(str, Enum):
+class MetricStatus(StrEnum):
     """Status levels for insight metrics."""
 
     LOW = "low"

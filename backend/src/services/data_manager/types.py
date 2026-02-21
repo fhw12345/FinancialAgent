@@ -7,11 +7,11 @@ ensuring consistent interfaces across all data consumers.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class MetricStatus(str, Enum):
+class MetricStatus(StrEnum):
     """Status levels for insight metrics."""
 
     LOW = "low"
@@ -20,7 +20,7 @@ class MetricStatus(str, Enum):
     HIGH = "high"
 
 
-class Granularity(str, Enum):
+class Granularity(StrEnum):
     """Time granularity for OHLCV data."""
 
     MIN_1 = "1min"

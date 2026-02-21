@@ -183,12 +183,14 @@ class FundamentalsFormatter:
         # Quarterly earnings table (most useful for beat/miss)
         quarters = quarterly_earnings[:quarterly_count]
         if quarters:
-            output.extend([
-                f"### Quarterly EPS (Last {len(quarters)} Quarters)",
-                "",
-                "| Report Date | Reported EPS | Estimated EPS | Surprise | Surprise % |",
-                "|-------------|-------------|---------------|----------|------------|",
-            ])
+            output.extend(
+                [
+                    f"### Quarterly EPS (Last {len(quarters)} Quarters)",
+                    "",
+                    "| Report Date | Reported EPS | Estimated EPS | Surprise | Surprise % |",
+                    "|-------------|-------------|---------------|----------|------------|",
+                ]
+            )
 
             beats = 0
             misses = 0
@@ -224,27 +226,33 @@ class FundamentalsFormatter:
             avg_surprise = (
                 sum(surprise_pcts) / len(surprise_pcts) if surprise_pcts else 0
             )
-            output.extend([
-                "",
-                "### Beat/Miss Summary",
-                f"* **Beat Rate:** {beats}/{total} quarters ({beats/total*100:.0f}%)"
-                if total > 0
-                else "* **Beat Rate:** N/A",
-                f"* **Average Surprise:** {avg_surprise:+.1f}%",
-                f"* **Beats:** {beats} | **Misses:** {misses} | "
-                f"**In-line:** {total - beats - misses}",
-            ])
+            output.extend(
+                [
+                    "",
+                    "### Beat/Miss Summary",
+                    (
+                        f"* **Beat Rate:** {beats}/{total} quarters ({beats/total*100:.0f}%)"
+                        if total > 0
+                        else "* **Beat Rate:** N/A"
+                    ),
+                    f"* **Average Surprise:** {avg_surprise:+.1f}%",
+                    f"* **Beats:** {beats} | **Misses:** {misses} | "
+                    f"**In-line:** {total - beats - misses}",
+                ]
+            )
 
         # Annual earnings (compact)
         annual = annual_earnings[:5]
         if annual:
-            output.extend([
-                "",
-                "### Annual EPS",
-                "",
-                "| Fiscal Year | Reported EPS |",
-                "|-------------|-------------|",
-            ])
+            output.extend(
+                [
+                    "",
+                    "### Annual EPS",
+                    "",
+                    "| Fiscal Year | Reported EPS |",
+                    "|-------------|-------------|",
+                ]
+            )
 
             for a in annual:
                 fiscal_date = a.get("fiscalDateEnding", "N/A")
@@ -256,10 +264,12 @@ class FundamentalsFormatter:
                 latest = safe_float(annual[0].get("reportedEPS"))
                 previous = safe_float(annual[1].get("reportedEPS"))
                 growth = calculate_qoq_growth(latest, previous)
-                output.extend([
-                    "",
-                    f"* **EPS YoY Growth:** {growth}",
-                ])
+                output.extend(
+                    [
+                        "",
+                        f"* **EPS YoY Growth:** {growth}",
+                    ]
+                )
 
         return "\n".join(output)
 

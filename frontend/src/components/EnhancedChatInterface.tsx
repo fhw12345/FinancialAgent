@@ -11,13 +11,21 @@ import { ChatSidebar } from "./chat/ChatSidebar";
 import { useChatRestoration } from "../hooks/useChatRestoration";
 import { useUIStateSync } from "../hooks/useUIStateSync";
 import type { FibonacciMetadata } from "../utils/analysisMetadataExtractor";
-import { getPeriodForInterval, calculateDateRange } from "../utils/dateRangeCalculator";
+import {
+  getPeriodForInterval,
+  calculateDateRange,
+} from "../utils/dateRangeCalculator";
 import type { ModelSettings } from "../types/models";
 import type { DeepStreamEvent } from "../types/api";
-import { useDeepAccordionState, DeepAgentAccordion, mapDeepEventToAction } from "./chat/deep";
+import {
+  useDeepAccordionState,
+  DeepAgentAccordion,
+  mapDeepEventToAction,
+} from "./chat/deep";
+import { parseBackendMessage, replayDeepEvents } from "../utils/messageParser";
 
 export function EnhancedChatInterface() {
-  const { t } = useTranslation(['chat', 'common']);
+  const { t } = useTranslation(["chat", "common"]);
   const [message, setMessage] = useState("");
   const [currentSymbol, setCurrentSymbol] = useState("");
   const [currentCompanyName, setCurrentCompanyName] = useState("");
@@ -57,9 +65,9 @@ export function EnhancedChatInterface() {
 
   const deepAccordionElement = useMemo(
     () =>
-      agentMode === "v4-deep" && deepState.status !== "pending"
-        ? <DeepAgentAccordion state={deepState} dispatch={deepDispatch} />
-        : undefined,
+      agentMode === "v4-deep" && deepState.status !== "pending" ? (
+        <DeepAgentAccordion state={deepState} dispatch={deepDispatch} />
+      ) : undefined,
     [agentMode, deepState, deepDispatch],
   );
 
@@ -180,27 +188,36 @@ export function EnhancedChatInterface() {
     retry: false,
   });
 
-  const handleSymbolSelect = useCallback(async (symbol: string, name: string) => {
-    setCurrentSymbol(symbol);
-    setCurrentCompanyName(name);
+  const handleSymbolSelect = useCallback(
+    async (symbol: string, name: string) => {
+      setCurrentSymbol(symbol);
+      setCurrentCompanyName(name);
 
-    // Calculate date range for current interval
-    const dateRange = calculateDateRange({ start: "", end: "" }, selectedInterval);
-    setDateRangeStart(dateRange.start);
-    setDateRangeEnd(dateRange.end);
+      // Calculate date range for current interval
+      const dateRange = calculateDateRange(
+        { start: "", end: "" },
+        selectedInterval,
+      );
+      setDateRangeStart(dateRange.start);
+      setDateRangeEnd(dateRange.end);
 
-    // Auto-create chat if this is a new chat (no chatId yet)
-    if (!chatId) {
-      try {
-        const { chatService } = await import("../services/api");
-        const result = await chatService.createChat();
-        setChatId(result.chat_id);
-        console.log("✅ Chat auto-created on symbol selection:", result.chat_id);
-      } catch (error) {
-        console.error("❌ Failed to auto-create chat:", error);
+      // Auto-create chat if this is a new chat (no chatId yet)
+      if (!chatId) {
+        try {
+          const { chatService } = await import("../services/api");
+          const result = await chatService.createChat();
+          setChatId(result.chat_id);
+          console.log(
+            "✅ Chat auto-created on symbol selection:",
+            result.chat_id,
+          );
+        } catch (error) {
+          console.error("❌ Failed to auto-create chat:", error);
+        }
       }
-    }
-  }, [selectedInterval, chatId, setChatId]);
+    },
+    [selectedInterval, chatId, setChatId],
+  );
 
   const handleIntervalChange = useCallback((interval: TimeInterval) => {
     setSelectedInterval(interval);
@@ -259,20 +276,31 @@ export function EnhancedChatInterface() {
     async (chatId: string) => {
       // Prevent concurrent restoration requests
       if (isRestoringRef.current) {
-        console.log("⏭️ Skipping chat select: restoration in progress");
+        console.log("Skipping chat select: restoration in progress");
         return;
       }
 
       isRestoringRef.current = true;
       try {
-        await restoreChat(chatId);
-        // After restoration, assume there might be more messages (will hide button if none)
+        deepDispatch({ type: "RESET" });
+
+        const restoredMessages = await restoreChat(chatId);
         setHasMoreMessages(true);
+
+        // Replay deep events from the most recent deep analysis message
+        if (restoredMessages) {
+          const hasDeep = replayDeepEvents(
+            restoredMessages,
+            mapDeepEventToAction,
+            deepDispatch,
+          );
+          if (hasDeep) setAgentMode("v4-deep");
+        }
       } finally {
         isRestoringRef.current = false;
       }
     },
-    [restoreChat],
+    [restoreChat, deepDispatch],
   );
 
   const handleNewChat = useCallback(() => {
@@ -283,57 +311,73 @@ export function EnhancedChatInterface() {
     setDateRangeStart("");
     setDateRangeEnd("");
     setHasMoreMessages(false); // Reset pagination
-    deepDispatch({ type: 'RESET' }); // Reset deep accordion state
+    deepDispatch({ type: "RESET" }); // Reset deep accordion state
+    setAgentMode("v3"); // Reset to default agent mode
   }, [setMessages, setChatId, deepDispatch]);
 
   const handleLoadMore = useCallback(async () => {
     if (!chatId || isLoadingMore) return;
 
     setIsLoadingMore(true);
+
+    // Capture scroll position BEFORE loading
+    const scrollContainer = document.querySelector("[data-chat-scroll]");
+    const prevScrollHeight = scrollContainer?.scrollHeight ?? 0;
+
     try {
-      // Import chatService dynamically
       const { chatService } = await import("../services/api");
-
-      // Calculate offset (current message count)
       const currentOffset = messages.length;
-
-      // Fetch next 50 messages
-      const chatDetail = await chatService.getChatDetail(chatId, 50, currentOffset);
+      const chatDetail = await chatService.getChatDetail(
+        chatId,
+        50,
+        currentOffset,
+      );
 
       if (chatDetail.messages.length === 0) {
-        // No more messages to load
         setHasMoreMessages(false);
         return;
       }
 
-      // Convert backend messages to frontend format
-      const olderMessages = chatDetail.messages.map((msg) => ({
-        role: msg.role as "user" | "assistant",
-        content: msg.content,
-        timestamp: msg.timestamp,
-        analysis_data: msg.metadata?.raw_data as Record<string, unknown> | undefined,
-        tool_call: msg.tool_call,
-      }));
+      const olderMessages = chatDetail.messages.map(parseBackendMessage);
 
-      // Prepend older messages to current messages
+      // Only replay deep events when the accordion is not already populated.
+      // Once a deep analysis accordion is loaded (status !== "pending"), we
+      // must NOT overwrite it with events from older paginated messages —
+      // that would replace the most-recent analysis with a stale one.
+      if (deepState.status === "pending") {
+        const hasDeep = replayDeepEvents(
+          olderMessages,
+          mapDeepEventToAction,
+          deepDispatch,
+        );
+        if (hasDeep) setAgentMode("v4-deep");
+      }
+
       setMessages((prev) => [...olderMessages, ...prev]);
-
-      // Check if there might be even more messages
       setHasMoreMessages(chatDetail.messages.length === 50);
+
+      // Restore scroll position AFTER React renders new messages (double rAF ensures DOM flush)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (scrollContainer) {
+            const newScrollHeight = scrollContainer.scrollHeight;
+            scrollContainer.scrollTop += newScrollHeight - prevScrollHeight;
+          }
+        });
+      });
     } catch (error) {
       console.error("❌ Failed to load more messages:", error);
-      setMessages((prev) => [
-        {
-          role: "assistant",
-          content: "⚠️ Failed to load older messages. Please try again.",
-          timestamp: new Date().toISOString(),
-        },
-        ...prev,
-      ]);
     } finally {
       setIsLoadingMore(false);
     }
-  }, [chatId, messages.length, isLoadingMore, setMessages]);
+  }, [
+    chatId,
+    messages.length,
+    isLoadingMore,
+    setMessages,
+    deepDispatch,
+    deepState.status,
+  ]);
 
   return (
     <div className="bg-white overflow-hidden max-h-screen">
@@ -344,7 +388,7 @@ export function EnhancedChatInterface() {
           <div
             className="flex flex-col lg:grid lg:gap-0 h-[calc(100vh-5rem)]"
             style={{
-              gridTemplateColumns: `${isSidebarCollapsed ? '48px' : '240px'} minmax(500px, 1fr) ${isChartCollapsed ? '48px' : 'minmax(500px, 800px)'}`,
+              gridTemplateColumns: `${isSidebarCollapsed ? "48px" : "240px"} minmax(500px, 1fr) ${isChartCollapsed ? "48px" : "minmax(500px, 800px)"}`,
             }}
           >
             {/* Chat History Sidebar - Mobile: overlay, Desktop: fixed 240px column */}
@@ -388,16 +432,20 @@ export function EnhancedChatInterface() {
               {!isMobileChartVisible && (
                 <div className="flex lg:hidden absolute top-2 left-2 right-2 z-10 gap-2">
                   <button
-                    onClick={() => setIsMobileSidebarVisible(!isMobileSidebarVisible)}
+                    onClick={() =>
+                      setIsMobileSidebarVisible(!isMobileSidebarVisible)
+                    }
                     className="px-3 py-1.5 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg shadow-sm text-xs font-medium text-gray-700 hover:bg-gray-50"
                   >
-                    {isMobileSidebarVisible ? t('chat:mobile.hideSidebar') : t('chat:mobile.showChats')}
+                    {isMobileSidebarVisible
+                      ? t("chat:mobile.hideSidebar")
+                      : t("chat:mobile.showChats")}
                   </button>
                   <button
                     onClick={() => setIsMobileChartVisible(true)}
                     className="ml-auto px-3 py-1.5 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg shadow-sm text-xs font-medium text-gray-700 hover:bg-gray-50"
                   >
-                    {t('chat:mobile.showChart')}
+                    {t("chat:mobile.showChart")}
                   </button>
                 </div>
               )}
@@ -419,7 +467,9 @@ export function EnhancedChatInterface() {
                 {/* Agent Mode Toggle - Only enabled when starting new chat */}
                 <div className="flex-shrink-0 px-4 py-2 border-t border-gray-100 bg-gray-50/50">
                   <div className="flex items-center gap-3 text-sm">
-                    <span className="text-gray-600 font-medium">{t('chat:mode.label')}:</span>
+                    <span className="text-gray-600 font-medium">
+                      {t("chat:mode.label")}:
+                    </span>
                     <button
                       onClick={() => setAgentMode("v3")}
                       disabled={!!chatId}
@@ -434,11 +484,11 @@ export function EnhancedChatInterface() {
                       }`}
                       title={
                         chatId
-                          ? t('chat:mode.locked')
-                          : t('chat:mode.agentDescription')
+                          ? t("chat:mode.locked")
+                          : t("chat:mode.agentDescription")
                       }
                     >
-                      🤖 {t('chat:mode.agent')}
+                      🤖 {t("chat:mode.agent")}
                     </button>
                     <button
                       onClick={() => setAgentMode("v2")}
@@ -454,11 +504,11 @@ export function EnhancedChatInterface() {
                       }`}
                       title={
                         chatId
-                          ? t('chat:mode.locked')
-                          : t('chat:mode.copilotDescription')
+                          ? t("chat:mode.locked")
+                          : t("chat:mode.copilotDescription")
                       }
                     >
-                      👤 {t('chat:mode.copilot')}
+                      👤 {t("chat:mode.copilot")}
                     </button>
                     <button
                       onClick={() => setAgentMode("v4-deep")}
@@ -474,15 +524,15 @@ export function EnhancedChatInterface() {
                       }`}
                       title={
                         chatId
-                          ? t('chat:mode.locked')
-                          : t('chat:mode.deepDescription')
+                          ? t("chat:mode.locked")
+                          : t("chat:mode.deepDescription")
                       }
                     >
-                      🔬 {t('chat:mode.deep')}
+                      🔬 {t("chat:mode.deep")}
                     </button>
                     {chatId && (
                       <span className="ml-auto text-xs text-gray-500 italic">
-                        {t('chat:mode.locked')}
+                        {t("chat:mode.locked")}
                       </span>
                     )}
                   </div>
@@ -516,7 +566,7 @@ export function EnhancedChatInterface() {
                     onClick={() => setIsMobileChartVisible(false)}
                     className="px-4 py-2 bg-white/95 backdrop-blur-sm border border-gray-300 rounded-lg shadow-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                   >
-                    {t('chat:mobile.backToChat')}
+                    {t("chat:mobile.backToChat")}
                   </button>
                   <button
                     onClick={() => setIsMobileChartVisible(false)}

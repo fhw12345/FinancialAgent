@@ -115,3 +115,5 @@ dump.rdb
 .bmad-core/
 # HarshJudge E2E test scenarios (local)
 .harshJudge/
+# Recovery docs may contain credentials
+docs/recovery/

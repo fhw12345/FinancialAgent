@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 from ..context import AgentContext
 from ..tools.categorization import get_tools_for_subagent
-from . import DeepSubAgent, SubAgentConfig, _SKILLS_ROOT, create_deep_subagent
+from . import _SKILLS_ROOT, DeepSubAgent, SubAgentConfig, create_deep_subagent
 
 if TYPE_CHECKING:
     from langchain_core.language_models import BaseChatModel
@@ -77,9 +77,9 @@ Only say this if you truly have no remaining concerns.
         metadata={"domain": "debater", "termination_signal": TERMINATION_SIGNAL},
     )
 
-    debater_tools = list(get_tools_for_subagent(
-        list(tools.values()), "debater"
-    ).values())
+    debater_tools = list(
+        get_tools_for_subagent(list(tools.values()), "debater").values()
+    )
 
     return create_deep_subagent(
         config=config,

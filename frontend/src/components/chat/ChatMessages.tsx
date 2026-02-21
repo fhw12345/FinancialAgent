@@ -239,6 +239,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   deepAccordion,
 }) => {
   const { t } = useTranslation(['chat', 'common']);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const lastUserMessageRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastScrolledUserMessageRef = useRef<string | null>(null);
@@ -308,6 +309,39 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     }
   }, [messages]);
 
+  // Infinite scroll: observe sentinel at top of message list
+  // Use refs to avoid stale closures in IntersectionObserver callback
+  const isLoadingMoreRef = useRef(isLoadingMore);
+  isLoadingMoreRef.current = isLoadingMore;
+  const onLoadMoreRef = useRef(onLoadMore);
+  onLoadMoreRef.current = onLoadMore;
+
+  useEffect(() => {
+    if (!chatId || !hasMore || !onLoadMore) return;
+
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    // Skip the initial intersection report that fires on observe()
+    let isFirstCallback = true;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isFirstCallback) {
+          isFirstCallback = false;
+          if (!entries[0].isIntersecting) return;
+        }
+        if (entries[0].isIntersecting && !isLoadingMoreRef.current) {
+          if (onLoadMoreRef.current) void onLoadMoreRef.current();
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [chatId, hasMore, onLoadMore]);
+
   // Memoize filtered and sorted messages to avoid re-computing on every render
   const visibleMessages = useMemo(() => {
     const filtered = messages.filter(msg =>
@@ -340,7 +374,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   }, [visibleMessages]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0">
+    <div data-chat-scroll className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0">
       {/* Chat ID Display - Debug info */}
       {chatId && (
         <div className="flex justify-center mb-2">
@@ -350,23 +384,12 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         </div>
       )}
 
-      {/* Load More Button - Shows at top when chat has older messages */}
+      {/* Infinite scroll sentinel — triggers load when visible */}
       {chatId && hasMore && onLoadMore && (
-        <div className="flex justify-center mb-4">
-          <button
-            onClick={() => void onLoadMore()}
-            disabled={isLoadingMore}
-            className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg border border-blue-200 transition-colors flex items-center gap-2"
-          >
-            {isLoadingMore ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {t('common:buttons.loading')}
-              </>
-            ) : (
-              t('chat:message.loadOlderMessages')
-            )}
-          </button>
+        <div ref={sentinelRef} className="flex justify-center py-2">
+          {isLoadingMore && (
+            <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+          )}
         </div>
       )}
 

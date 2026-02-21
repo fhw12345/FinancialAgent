@@ -59,6 +59,7 @@ export interface ChatMessage {
     error?: string;
     durationMs?: number;
   };
+  deep_events?: DeepStreamEvent[]; // Persisted accordion events for restore
 }
 
 export interface ChatRequest {

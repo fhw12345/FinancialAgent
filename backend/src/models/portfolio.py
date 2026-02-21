@@ -6,12 +6,12 @@ and provides audit trail linking orders to AI analysis.
 """
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class OrderType(str, Enum):
+class OrderType(StrEnum):
     """Order type enum for portfolio orders."""
 
     MARKET = "market"
@@ -21,7 +21,7 @@ class OrderType(str, Enum):
     TRAILING_STOP = "trailing_stop"
 
 
-class TimeInForce(str, Enum):
+class TimeInForce(StrEnum):
     """Time in force enum for order duration."""
 
     DAY = "day"  # Valid until end of trading day

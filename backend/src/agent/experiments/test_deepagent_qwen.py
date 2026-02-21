@@ -175,9 +175,7 @@ async def run_experiment() -> dict[str, bool | str]:
         results["financial_tools_used"] = str(financial_tools_used)
 
         # Check: did it use get_company_overview?
-        used_financial = any(
-            "get_company_overview" in str(t) for t in tool_calls_made
-        )
+        used_financial = any("get_company_overview" in str(t) for t in tool_calls_made)
         results["used_financial_tool"] = used_financial
         if used_financial:
             print("[PASS] Agent used get_company_overview (our financial tool)")
@@ -233,7 +231,7 @@ def main():
         print("  Proceed to Phase B (full migration)")
     else:
         failed = [k for k in critical_checks if results.get(k) is not True]
-        print(f"VERDICT: deepagents + Qwen INCOMPATIBLE")
+        print("VERDICT: deepagents + Qwen INCOMPATIBLE")
         print(f"  Failed checks: {failed}")
         print("  Fallback: Use SKILL.md format with custom loader")
 

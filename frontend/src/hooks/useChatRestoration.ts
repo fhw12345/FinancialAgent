@@ -6,6 +6,7 @@
 import { useCallback } from "react";
 import type { ChatMessage } from "../types/api";
 import type { TimeInterval } from "../services/market";
+import { parseBackendMessage } from "../utils/messageParser";
 
 interface ChatRestoreCallbacks {
   setMessages: (messages: ChatMessage[]) => void;
@@ -39,30 +40,8 @@ export function useChatRestoration(callbacks: ChatRestoreCallbacks) {
         const chatDetail = await chatService.getChatDetail(chatId, 50);
 
         // Convert backend Message[] to frontend ChatMessage[]
-        const restoredMessages: ChatMessage[] = chatDetail.messages.map(
-          (msg) => {
-            // Unwrap from raw_data field with validation
-            let analysis_data: Record<string, unknown> | undefined = undefined;
-            if (
-              msg.metadata?.raw_data &&
-              Object.keys(msg.metadata.raw_data).length > 0
-            ) {
-              analysis_data = msg.metadata.raw_data as Record<string, unknown>;
-            } else if (msg.metadata && Object.keys(msg.metadata).length > 0) {
-              analysis_data = msg.metadata as unknown as Record<
-                string,
-                unknown
-              >;
-            }
-
-            return {
-              role: msg.role as "user" | "assistant",
-              content: msg.content,
-              timestamp: msg.timestamp,
-              analysis_data,
-            };
-          },
-        );
+        const restoredMessages: ChatMessage[] =
+          chatDetail.messages.map(parseBackendMessage);
 
         // Restore messages
         setMessages(restoredMessages);
@@ -121,6 +100,8 @@ export function useChatRestoration(callbacks: ChatRestoreCallbacks) {
           symbol: uiState.current_symbol,
           interval: uiState.current_interval,
         });
+
+        return restoredMessages;
       } catch (error) {
         console.error("❌ Failed to restore chat:", error);
 
@@ -138,6 +119,8 @@ export function useChatRestoration(callbacks: ChatRestoreCallbacks) {
         setCurrentSymbol("");
         setCurrentCompanyName("");
         setSelectedDateRange({ start: "", end: "" });
+
+        return undefined;
       }
     },
     [

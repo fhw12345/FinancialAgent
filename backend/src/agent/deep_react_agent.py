@@ -404,7 +404,11 @@ Respond with a structured defense addressing each concern point-by-point."""
                 if name in ("Debater", "Defender") and hasattr(msg, "content"):
                     debate_exchanges.append(f"**{name}**:\n{msg.content}")
 
-            debate_text = "\n\n---\n\n".join(debate_exchanges) if debate_exchanges else "No debate occurred."
+            debate_text = (
+                "\n\n---\n\n".join(debate_exchanges)
+                if debate_exchanges
+                else "No debate occurred."
+            )
 
             logger.info(
                 "Starting verdict phase",
@@ -552,29 +556,37 @@ Be decisive. Use the evidence from both sides. Do not hedge excessively."""
         sa_start = time.perf_counter()
         try:
             result, tool_count = await self._invoke_subagent(
-                subagent, prompt, config=config, emitter=emitter, on_event=on_event,
+                subagent,
+                prompt,
+                config=config,
+                emitter=emitter,
+                on_event=on_event,
             )
             sa_duration = int((time.perf_counter() - sa_start) * 1000)
 
             if emitter and emit_fn:
-                emit_fn(emitter.subagent_result(
-                    subagent_name=subagent_name,
-                    status="success",
-                    duration_ms=sa_duration,
-                    result_summary=result,
-                    tool_count=tool_count,
-                ))
+                emit_fn(
+                    emitter.subagent_result(
+                        subagent_name=subagent_name,
+                        status="success",
+                        duration_ms=sa_duration,
+                        result_summary=result,
+                        tool_count=tool_count,
+                    )
+                )
             return result, tool_count
 
         except Exception as e:
             sa_duration = int((time.perf_counter() - sa_start) * 1000)
             if emitter and emit_fn:
-                emit_fn(emitter.subagent_result(
-                    subagent_name=subagent_name,
-                    status="error",
-                    duration_ms=sa_duration,
-                    result_summary=str(e),
-                ))
+                emit_fn(
+                    emitter.subagent_result(
+                        subagent_name=subagent_name,
+                        status="error",
+                        duration_ms=sa_duration,
+                        result_summary=str(e),
+                    )
+                )
             if raise_on_error:
                 raise
             return "", 0
@@ -641,7 +653,9 @@ Be decisive. Use the evidence from both sides. Do not hedge excessively."""
 
         if emitter and on_event:
             subagent_names = ["technical_analyst", "news_analyst", "financial_analyst"]
-            _safe_emit(emitter.deep_start(symbol, subagent_names, context.enable_debate))
+            _safe_emit(
+                emitter.deep_start(symbol, subagent_names, context.enable_debate)
+            )
 
         start_time = time.perf_counter()
         logger.info(

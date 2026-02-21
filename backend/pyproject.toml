@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "financial-agent-backend"
-version = "0.10.2"
+version = "0.10.3"
 description = "AI-Enhanced Financial Analysis Platform Backend"
 authors = [
     {name = "Financial Agent Team", email = "team@financialagent.com"},
@@ -105,6 +105,8 @@ ignore = [
 "__init__.py" = ["F401"]
 # E402: Imports after patch_tongyi_check_response() call - intentional (patch must run before ChatTongyi import)
 "src/agent/langgraph_react_agent.py" = ["E402"]
+# E402: Experiment scripts load .env before imports - intentional
+"src/agent/experiments/*.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.12"

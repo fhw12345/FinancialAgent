@@ -10,13 +10,13 @@ Architecture:
 - OrderExecutionPlan: Phase 2 aggregated output (after agent optimization)
 """
 
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
 
-class TradingAction(str, Enum):
+class TradingAction(StrEnum):
     """Trading action types."""
 
     BUY = "BUY"

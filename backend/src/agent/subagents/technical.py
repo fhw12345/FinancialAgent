@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from ..context import AgentContext
 from ..tools.categorization import get_tools_for_subagent
-from . import DeepSubAgent, SubAgentConfig, _SKILLS_ROOT, create_deep_subagent
+from . import _SKILLS_ROOT, DeepSubAgent, SubAgentConfig, create_deep_subagent
 
 if TYPE_CHECKING:
     from langchain_core.language_models import BaseChatModel
@@ -69,9 +69,9 @@ Use `read_file` to load a skill workflow when you need step-by-step guidance.
     )
 
     # Extract only technical tools from the full tools dict
-    technical_tools = list(get_tools_for_subagent(
-        list(tools.values()), "technical"
-    ).values())
+    technical_tools = list(
+        get_tools_for_subagent(list(tools.values()), "technical").values()
+    )
 
     return create_deep_subagent(
         config=config,
