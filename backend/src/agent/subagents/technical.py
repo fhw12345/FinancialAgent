@@ -7,6 +7,8 @@ Uses deepagents with SKILL.md files for progressive disclosure:
 - skills/technical/momentum-signals/SKILL.md
 """
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
@@ -17,11 +19,14 @@ from . import _SKILLS_ROOT, DeepSubAgent, SubAgentConfig, create_deep_subagent
 if TYPE_CHECKING:
     from langchain_core.language_models import BaseChatModel
 
+    from ..tools.analysis_cache import AnalysisToolCache
+
 
 def create_technical_subagent(
     tools: dict[str, Callable],
-    model: "BaseChatModel",
+    model: BaseChatModel,
     context: AgentContext | None = None,
+    cache: AnalysisToolCache | None = None,
 ) -> DeepSubAgent:
     """
     Create the Technical Analysis sub-agent.
@@ -30,6 +35,7 @@ def create_technical_subagent(
         tools: Dictionary of available tools by name (full tool dict)
         model: LLM model for the agent
         context: Optional AgentContext for session parameters
+        cache: Optional AnalysisToolCache for cross-agent tool result caching
 
     Returns:
         DeepSubAgent for technical analysis
@@ -72,6 +78,9 @@ Use `read_file` to load a skill workflow when you need step-by-step guidance.
     technical_tools = list(
         get_tools_for_subagent(list(tools.values()), "technical").values()
     )
+
+    if cache is not None:
+        technical_tools = cache.wrap_tools(technical_tools)
 
     return create_deep_subagent(
         config=config,

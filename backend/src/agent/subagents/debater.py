@@ -8,6 +8,8 @@ Uses deepagents with SKILL.md files for progressive disclosure:
 - skills/debater/assumption-testing/SKILL.md
 """
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
@@ -18,14 +20,17 @@ from . import _SKILLS_ROOT, DeepSubAgent, SubAgentConfig, create_deep_subagent
 if TYPE_CHECKING:
     from langchain_core.language_models import BaseChatModel
 
+    from ..tools.analysis_cache import AnalysisToolCache
+
 
 TERMINATION_SIGNAL = "NO FURTHER CONCERNS"
 
 
 def create_debater_subagent(
     tools: dict[str, Callable],
-    model: "BaseChatModel",
+    model: BaseChatModel,
     context: AgentContext | None = None,
+    cache: AnalysisToolCache | None = None,
 ) -> DeepSubAgent:
     """
     Create the Debater/Adversarial Analysis sub-agent.
@@ -34,6 +39,7 @@ def create_debater_subagent(
         tools: Dictionary of available tools by name (full tool dict)
         model: LLM model for the agent
         context: Optional AgentContext for session parameters
+        cache: Optional AnalysisToolCache for cross-agent tool result caching
 
     Returns:
         DeepSubAgent for adversarial analysis
@@ -80,6 +86,9 @@ Only say this if you truly have no remaining concerns.
     debater_tools = list(
         get_tools_for_subagent(list(tools.values()), "debater").values()
     )
+
+    if cache is not None:
+        debater_tools = cache.wrap_tools(debater_tools)
 
     return create_deep_subagent(
         config=config,

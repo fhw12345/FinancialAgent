@@ -7,6 +7,8 @@ Uses deepagents with SKILL.md files for progressive disclosure:
 - skills/news/market-mood/SKILL.md
 """
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
@@ -17,11 +19,14 @@ from . import _SKILLS_ROOT, DeepSubAgent, SubAgentConfig, create_deep_subagent
 if TYPE_CHECKING:
     from langchain_core.language_models import BaseChatModel
 
+    from ..tools.analysis_cache import AnalysisToolCache
+
 
 def create_news_subagent(
     tools: dict[str, Callable],
-    model: "BaseChatModel",
+    model: BaseChatModel,
     context: AgentContext | None = None,
+    cache: AnalysisToolCache | None = None,
 ) -> DeepSubAgent:
     """
     Create the News/Sentiment Analysis sub-agent.
@@ -30,6 +35,7 @@ def create_news_subagent(
         tools: Dictionary of available tools by name (full tool dict)
         model: LLM model for the agent
         context: Optional AgentContext for session parameters
+        cache: Optional AnalysisToolCache for cross-agent tool result caching
 
     Returns:
         DeepSubAgent for news/sentiment analysis
@@ -69,6 +75,9 @@ Use `read_file` to load a skill workflow when you need step-by-step guidance.
     )
 
     news_tools = list(get_tools_for_subagent(list(tools.values()), "news").values())
+
+    if cache is not None:
+        news_tools = cache.wrap_tools(news_tools)
 
     return create_deep_subagent(
         config=config,
