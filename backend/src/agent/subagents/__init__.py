@@ -110,4 +110,8 @@ def create_deep_subagent(
 
 
 # Re-export for convenience
-__all__ = ["DeepSubAgent", "SubAgentConfig", "create_deep_subagent"]
+__all__ = [
+    "DeepSubAgent",
+    "SubAgentConfig",
+    "create_deep_subagent",
+]

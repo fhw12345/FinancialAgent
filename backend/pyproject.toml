@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "financial-agent-backend"
-version = "0.10.3"
+version = "0.11.0"
 description = "AI-Enhanced Financial Analysis Platform Backend"
 authors = [
     {name = "Financial Agent Team", email = "team@financialagent.com"},
@@ -47,6 +47,8 @@ dependencies = [
     "tiktoken>=0.7.0",                  # Token counting for context window management
     "deepagents>=0.3.12",                # Deep hierarchical agent framework
     "pytz>=2024.1",                       # Timezone support (required by alpaca-py)
+    "exa-py>=1.0.0",                      # Exa web search for debater agent
+    "yfinance>=0.2.0",                    # Yahoo Finance for debater agent
 ]
 
 [project.optional-dependencies]
@@ -60,7 +62,6 @@ dev = [
     "mypy>=1.7.0",
     "pre-commit>=3.5.0",
     "httpx>=0.25.0",         # For testing async endpoints
-    "yfinance>=0.2.0",       # For yfinance integration tests (mocked)
 ]
 
 [tool.black]
@@ -139,6 +140,7 @@ module = [
     "langchain_core.*",
     "opentelemetry.*",
     "deepagents.*",
+    "exa_py.*",
 ]
 ignore_missing_imports = true
 

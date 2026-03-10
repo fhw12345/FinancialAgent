@@ -5,7 +5,7 @@ Orchestrates specialist sub-agents (Technical, News, Financial)
 with optional adversarial debate loop. Supports structured event
 emission via on_event callback for real-time SSE streaming.
 
-Flow: User → [Sub-Agents] → [Debate ↔ Rebuttal] → Verdict
+Flow: User → [Main Agent] → [Debate ↔ Rebuttal] → Verdict
 """
 
 import operator
@@ -25,6 +25,14 @@ from ..api.schemas.deep_agent_events import (
 )
 from ..core.utils.token_utils import extract_token_usage_from_messages
 from .context import AgentContext
+from .debate_types import (
+    Concern,
+    Rebuttal,
+    merge_facts,
+    parse_debater_output,
+    parse_rebuttal_output,
+    render_verified_facts_reminder,
+)
 from .subagent_invoker import invoke_subagent
 from .subagents.debater import TERMINATION_SIGNAL, create_debater_subagent
 from .subagents.financial import create_financial_subagent
@@ -56,6 +64,9 @@ class AnalysisState(TypedDict, total=False):
     research_report: str
     # Whether debate loop is active
     debate_active: bool
+    # Structured debate exchange (auto-accumulated via operator.add reducer)
+    all_concerns: Annotated[list, operator.add]  # Concern dicts from debater
+    all_rebuttals: Annotated[list, operator.add]  # Rebuttal dicts from defender
 
 
 class DeepReActAgent:
@@ -88,6 +99,9 @@ class DeepReActAgent:
 
         # Convert tools to dict for skill creation
         self.tools_dict = get_all_tools_dict(tools)
+
+        # Exa API key for debater's independent web search
+        self.exa_api_key: str = getattr(settings, "exa_api_key", "")
 
         # Initialize LLM
         self.llm = ChatTongyi(
@@ -122,7 +136,7 @@ class DeepReActAgent:
                 self.tools_dict, self.llm, context, cache=cache
             ),
             "debater": create_debater_subagent(
-                self.tools_dict, self.llm, context, cache=cache
+                model=self.llm, context=context, exa_api_key=self.exa_api_key
             ),
         }
 
@@ -133,7 +147,19 @@ class DeepReActAgent:
         emitter: DeepEventEmitter | None = None,
         on_event: Callable[[dict[str, Any]], None] | None = None,
     ) -> StateGraph:
-        """Build the LangGraph workflow.
+        """Build the LangGraph workflow with symmetric debate topology.
+
+        Graph topology (debate enabled):
+            START → main_agent → debate → should_continue
+                                   ↑            |
+                                   |    continue → main_agent (rebuttal)
+                                   |    end → verdict → END
+
+        Round semantics:
+        - round_count starts at 0
+        - main_agent_node does NOT increment (research or rebuttal)
+        - debate_node increments after challenging
+        - should_continue checks after debater
 
         Args:
             context: Agent context with session parameters
@@ -151,57 +177,62 @@ class DeepReActAgent:
                 except Exception:
                     logger.warning("Failed to emit event", event_type=event.get("type"))
 
-        # Node functions - receive config via LangGraph's automatic config passing
-        async def research_node(state: dict, config: RunnableConfig) -> dict:
-            """Run parallel research with specialist sub-agents."""
+        # ── main_agent_node ──────────────────────────────────────────────
+        async def main_agent_node(state: dict, config: RunnableConfig) -> dict:
+            """Run research (round 0) or rebuttal (round > 0).
+
+            First invocation: Sequential research across tech, news, financial.
+            Subsequent invocations: Targeted rebuttal addressing debater concerns.
+            """
             symbol = state.get("symbol", context.symbol)
+            round_count = state.get("round_count", 0)
             configurable = config.get("configurable", {})
 
-            logger.info(
-                "Starting research phase",
-                symbol=symbol,
-                session_id=configurable.get("session_id"),
-                current_date=configurable.get("current_date"),
-            )
-
-            # Sub-agent invocation sequence with event emission
-            research_tasks = [
-                (
-                    "technical",
-                    f"Analyze the technical setup for {symbol}. "
-                    f"Focus on trend, Fibonacci levels, and momentum.",
-                ),
-                (
-                    "news",
-                    f"Analyze recent news and sentiment for {symbol}. "
-                    f"Include catalyst assessment and market mood.",
-                ),
-                (
-                    "financial",
-                    f"Analyze the fundamentals of {symbol}. "
-                    f"Focus on valuation, cash flow health, and earnings quality.",
-                ),
-            ]
-
-            reports: dict[str, str] = {}
-            for subagent_key, prompt in research_tasks:
-                report, _ = await self._invoke_with_events(
-                    subagents[subagent_key],
-                    prompt,
-                    config=config,
-                    emitter=emitter,
-                    on_event=on_event,
-                    emit_fn=_emit,
+            if round_count == 0:
+                # ── RESEARCH PHASE ──
+                logger.info(
+                    "Starting research phase",
+                    symbol=symbol,
+                    session_id=configurable.get("session_id"),
+                    current_date=configurable.get("current_date"),
                 )
-                reports[subagent_key] = report
 
-            # Emit synthesis start (signals sub-agents done, moving to debate)
-            if emitter:
-                _emit(emitter.synthesis_start())
+                research_tasks = [
+                    (
+                        "technical",
+                        f"Analyze the technical setup for {symbol}. "
+                        f"Focus on trend, Fibonacci levels, and momentum.",
+                    ),
+                    (
+                        "news",
+                        f"Analyze recent news and sentiment for {symbol}. "
+                        f"Include catalyst assessment and market mood.",
+                    ),
+                    (
+                        "financial",
+                        f"Analyze the fundamentals of {symbol}. "
+                        f"Focus on valuation, cash flow health, and earnings quality.",
+                    ),
+                ]
 
-            # Pass sub-agent reports through directly — the verdict node
-            # handles final synthesis + judgment as the orchestrator's concluding step.
-            report = f"""## Technical Analysis
+                reports: dict[str, str] = {}
+                for subagent_key, prompt in research_tasks:
+                    report, _ = await self._invoke_with_events(
+                        subagents[subagent_key],
+                        prompt,
+                        config=config,
+                        emitter=emitter,
+                        on_event=on_event,
+                        emit_fn=_emit,
+                    )
+                    reports[subagent_key] = report
+
+                # Only emit synthesis_start when debate is disabled (straight to END).
+                # When debate IS enabled, verdict_node emits synthesis_start instead.
+                if emitter and not self.enable_debate:
+                    _emit(emitter.synthesis_start())
+
+                combined_report = f"""## Technical Analysis
 {reports.get("technical", "N/A")}
 
 ## News & Sentiment Analysis
@@ -210,37 +241,169 @@ class DeepReActAgent:
 ## Fundamental Analysis
 {reports.get("financial", "N/A")}"""
 
+                logger.info(
+                    "Research phase complete",
+                    symbol=symbol,
+                    report_length=len(combined_report),
+                )
+
+                return {
+                    "messages": [AIMessage(content=combined_report, name="Researcher")],
+                    "research_report": combined_report,
+                    "round_count": round_count,
+                    # Empty lists — operator.add reducer accumulates automatically
+                    "all_concerns": [],
+                    "all_rebuttals": [],
+                }
+
+            # ── REBUTTAL PHASE ──
+            # Read accumulated concerns from state (populated by operator.add reducer)
+            all_concerns = state.get("all_concerns", [])
+
             logger.info(
-                "Research phase complete",
-                symbol=symbol,
-                report_length=len(report),
+                "Starting rebuttal phase",
+                round=round_count,
+                concern_count=len(all_concerns),
+            )
+
+            if emitter:
+                _emit(emitter.rebuttal_start(round_count))
+
+            rebuttal_start_time = time.perf_counter()
+
+            # Build targeted rebuttal from structured concerns
+            concern_lines = "\n".join(
+                f"- [{c.get('severity', 'MAJOR')}] {c.get('id', '?')}: "
+                f"{c.get('claim', '')} — {c.get('challenge', '')}"
+                for c in all_concerns
+            )
+
+            rebuttal_prompt = f"""The debater raised concerns about {symbol}:
+
+{concern_lines}
+
+Your job is to DEFEND the thesis by addressing each concern with evidence:
+1. For each concern, use tools to gather SPECIFIC data that confirms or refutes it
+2. If the concern is valid, acknowledge it and explain why the thesis still holds
+3. If the concern is wrong, provide evidence that disproves it
+
+RESPONSE FORMAT: Include a JSON block in your response:
+```json
+{{
+  "rebuttals": [
+    {{
+      "concern_id": "C1",
+      "status": "REFUTED|PARTIALLY_VALID|CONCEDED",
+      "defense": "Your defense with specific data",
+      "evidence": "Source of your evidence"
+    }}
+  ]
+}}
+```
+
+Be concise — focus on DATA, not rhetoric."""
+
+            defense_parts: list[str] = []
+            total_tool_count = 0
+
+            for subagent_key in ("financial",):
+                defense, actual_tool_count = await self._invoke_with_events(
+                    subagents[subagent_key],
+                    rebuttal_prompt,
+                    config=config,
+                    emitter=emitter,
+                    on_event=on_event,
+                    emit_fn=_emit,
+                    raise_on_error=False,
+                )
+                if defense:
+                    defense_parts.append(defense)
+                    total_tool_count += actual_tool_count
+                else:
+                    logger.warning(
+                        "Rebuttal sub-agent failed",
+                        subagent=subagent_key,
+                    )
+
+            combined_defense = "\n\n".join(defense_parts)
+            rebuttal_duration = int((time.perf_counter() - rebuttal_start_time) * 1000)
+
+            # Parse structured rebuttal output
+            rebuttal_output = parse_rebuttal_output(combined_defense)
+            new_rebuttals = [
+                {
+                    "concern_id": r.concern_id,
+                    "status": r.status,
+                    "defense": r.defense,
+                    "evidence": r.evidence,
+                }
+                for r in rebuttal_output.rebuttals
+            ]
+
+            if emitter:
+                _emit(
+                    emitter.rebuttal_result(
+                        current_round=round_count,
+                        defense_summary=combined_defense,
+                        tool_count=total_tool_count,
+                        duration_ms=rebuttal_duration,
+                        rebuttals=new_rebuttals,
+                    )
+                )
+
+            updated_report = (
+                f"{state.get('research_report', '')}"
+                f"\n\n## Defense (Round {round_count})\n{combined_defense}"
+            )
+
+            logger.info(
+                "Rebuttal phase complete",
+                round=round_count,
+                tool_count=total_tool_count,
+                parsed_rebuttals=len(new_rebuttals),
+                duration_ms=rebuttal_duration,
             )
 
             return {
-                "messages": [AIMessage(content=report, name="Researcher")],
-                "research_report": report,
-                "round_count": state.get("round_count", 0) + 1,
+                "messages": [AIMessage(content=combined_defense, name="Defender")],
+                "research_report": updated_report,
+                "round_count": round_count,
+                # Only return NEW items — operator.add reducer handles accumulation
+                "all_concerns": [],
+                "all_rebuttals": new_rebuttals,
             }
 
+        # ── debate_node ──────────────────────────────────────────────────
         async def debate_node(state: dict, config: RunnableConfig) -> dict:
-            """Run adversarial analysis with debater sub-agent."""
+            """Run adversarial analysis with structured concern parsing.
+
+            Invokes the debater sub-agent (with independent yfinance + Exa tools)
+            and parses its structured JSON output into programmatic concerns.
+            """
             report = state.get("research_report", "")
-            round_count = state.get("round_count", 1)
+            round_count = state.get("round_count", 0)
             configurable = config.get("configurable", {})
 
             logger.info(
                 "Starting debate phase",
-                round=round_count,
+                round=round_count + 1,
                 session_id=configurable.get("session_id"),
             )
 
-            # Emit debate start event
             if emitter:
-                _emit(emitter.debate_start(round_count, self.max_debate_rounds))
+                _emit(emitter.debate_start(round_count + 1, self.max_debate_rounds))
+
+            # Truncate at sentence boundary to avoid cutting mid-word/mid-JSON
+            max_len = 3000
+            truncated_report = report[:max_len]
+            if len(report) > max_len:
+                last_period = truncated_report.rfind(".")
+                if last_period > max_len // 2:
+                    truncated_report = truncated_report[: last_period + 1]
 
             critique_prompt = f"""Review the following investment thesis and challenge it:
 
-{report[:3000]}
+{truncated_report}
 
 Your job is to:
 1. Use your fact-checking skills to verify key claims
@@ -262,190 +425,128 @@ If after thorough review you genuinely have no concerns, respond with:
                 emit_fn=_emit,
             )
 
-            has_concerns = TERMINATION_SIGNAL not in critique
+            # Parse structured debater output
+            debater_output = parse_debater_output(critique)
+            new_concerns = [
+                {
+                    "id": c.id,
+                    "claim": c.claim,
+                    "category": c.category,
+                    "challenge": c.challenge,
+                    "severity": c.severity,
+                    "evidence": c.evidence,
+                }
+                for c in debater_output.concerns
+            ]
+
+            has_concerns = not debater_output.terminated and len(new_concerns) > 0
+            new_round = round_count + 1
+
             logger.info(
                 "Debate round complete",
-                round=round_count,
+                round=new_round,
                 has_concerns=has_concerns,
+                parsed_concerns=len(new_concerns),
+                terminated=debater_output.terminated,
             )
-
-            # Emit debate round result
-            if emitter:
-                _emit(emitter.debate_round(round_count, has_concerns, critique))
-
-            return {
-                "messages": [AIMessage(content=critique, name="Debater")],
-                "round_count": round_count,  # Explicitly preserve to prevent state loss
-                "research_report": report,  # Prevent LangGraph state loss
-            }
-
-        async def rebuttal_node(state: dict, config: RunnableConfig) -> dict:
-            """Defend the thesis against debater concerns with evidence.
-
-            Uses a subset of sub-agents (technical + financial) to gather
-            targeted evidence addressing each specific concern raised.
-            """
-            messages = state.get("messages", [])
-            report = state.get("research_report", "")
-            round_count = state.get("round_count", 1)
-
-            # Extract debater's critique from last message
-            critique = ""
-            if messages:
-                last_msg = messages[-1]
-                if hasattr(last_msg, "content"):
-                    critique = last_msg.content
-
-            logger.info(
-                "Starting rebuttal phase",
-                round=round_count,
-                critique_length=len(critique),
-            )
-
-            if emitter:
-                _emit(emitter.rebuttal_start(round_count))
-
-            rebuttal_start = time.perf_counter()
-
-            # Build focused rebuttal prompt targeting each concern
-            rebuttal_prompt = f"""The debater raised the following concerns about the investment thesis for {state.get("symbol", "")}:
-
---- DEBATER CRITIQUE ---
-{critique[:2000]}
---- END CRITIQUE ---
-
-Your job is to DEFEND the thesis by addressing each concern with evidence:
-1. For each concern, use tools to gather SPECIFIC data that confirms or refutes it
-2. If the concern is valid, acknowledge it and explain why the thesis still holds
-3. If the concern is wrong, provide evidence that disproves it
-4. Be concise — focus on DATA, not rhetoric
-
-Respond with a structured defense addressing each concern point-by-point."""
-
-            # Use financial sub-agent for evidence gathering (most fact-checking tools)
-            defense_parts: list[str] = []
-            total_tool_count = 0
-
-            for subagent_key in ("financial",):
-                defense, actual_tool_count = await self._invoke_with_events(
-                    subagents[subagent_key],
-                    rebuttal_prompt,
-                    config=config,
-                    emitter=emitter,
-                    on_event=on_event,
-                    emit_fn=_emit,
-                    raise_on_error=False,
-                )
-                if defense:
-                    defense_parts.append(defense)
-                    total_tool_count += actual_tool_count
-                else:
-                    logger.warning(
-                        "Rebuttal sub-agent failed, continuing with partial defense",
-                        subagent=subagent_key,
-                    )
-
-            combined_defense = "\n\n".join(defense_parts)
-            rebuttal_duration = int((time.perf_counter() - rebuttal_start) * 1000)
 
             if emitter:
                 _emit(
-                    emitter.rebuttal_result(
-                        current_round=round_count,
-                        defense_summary=combined_defense,
-                        tool_count=total_tool_count,
-                        duration_ms=rebuttal_duration,
+                    emitter.debate_round(
+                        new_round, has_concerns, critique, concerns=new_concerns
                     )
                 )
 
-            # Update research report with defense incorporated
-            updated_report = f"""{report}
-
-## Defense (Round {round_count})
-{combined_defense}"""
-
-            logger.info(
-                "Rebuttal phase complete",
-                round=round_count,
-                tool_count=total_tool_count,
-                duration_ms=rebuttal_duration,
-            )
-
             return {
-                "messages": [AIMessage(content=combined_defense, name="Defender")],
-                "research_report": updated_report,
-                "round_count": round_count + 1,
+                "messages": [AIMessage(content=critique, name="Debater")],
+                "round_count": new_round,
+                "research_report": report,
+                # Only return NEW concerns — operator.add reducer handles accumulation
+                "all_concerns": new_concerns,
+                "all_rebuttals": [],
+                "debate_active": not debater_output.terminated,
             }
 
+        # ── should_continue ──────────────────────────────────────────────
         def should_continue(state: dict) -> str:
-            """Determine if debate should continue."""
-            messages = state.get("messages", [])
-            round_count = state.get("round_count", 1)
+            """Determine if debate should continue based on debater output.
 
-            # Check max rounds
-            if round_count >= self.max_debate_rounds:
-                logger.info("Max debate rounds reached", rounds=round_count)
+            Returns "continue" for normal rounds, "final_rebuttal" when max
+            rounds reached but debater still has concerns (ensures symmetric
+            defense-before-verdict), or "end" when debater is satisfied.
+            """
+            round_count = state.get("round_count", 1)
+            debate_active = state.get("debate_active", True)
+
+            if not debate_active:
+                logger.info("Debater satisfied, ending debate")
                 return "end"
 
-            # Check for termination signal in last debater message
-            if messages:
-                last_message = messages[-1]
-                if hasattr(last_message, "content"):
-                    if TERMINATION_SIGNAL in last_message.content:
-                        logger.info("Debater satisfied, ending debate")
-                        return "end"
+            if round_count >= self.max_debate_rounds:
+                logger.info(
+                    "Max debate rounds reached, routing to final rebuttal",
+                    rounds=round_count,
+                )
+                return "final_rebuttal"
 
             logger.info("Continuing debate", round=round_count + 1)
             return "continue"
 
-        async def verdict_node(state: dict, config: RunnableConfig) -> dict:
-            """Synthesize debate into a final actionable verdict.
+        def after_main_agent(state: dict) -> str:
+            """Route main_agent output to debate or verdict.
 
-            Single LLM call (no tools) that categorizes each debater concern
-            and produces a Buy/Hold/Sell recommendation with conviction level.
+            After the initial research (round_count=1), always go to debate.
+            After a final rebuttal (round_count >= max), go directly to verdict
+            to preserve symmetry: defense always responds before verdict.
+            """
+            round_count = state.get("round_count", 0)
+            if round_count >= self.max_debate_rounds:
+                logger.info("Final rebuttal complete, proceeding to verdict")
+                return "verdict"
+            return "debate"
+
+        # ── verdict_node ─────────────────────────────────────────────────
+        async def verdict_node(state: dict, config: RunnableConfig) -> dict:
+            """Synthesize debate into final verdict with verified facts.
+
+            Merges all structured concerns and rebuttals into verified facts,
+            injects them as a <system-reminder> JSON block, and generates
+            a final Buy/Hold/Sell recommendation with conviction level.
             """
             report = state.get("research_report", "")
-            messages = state.get("messages", [])
             round_count = state.get("round_count", 1)
+            all_concerns = state.get("all_concerns", [])
+            all_rebuttals = state.get("all_rebuttals", [])
 
-            # Collect debate exchanges (Debater + Defender messages)
-            debate_exchanges: list[str] = []
-            for msg in messages:
-                name = getattr(msg, "name", "")
-                if name in ("Debater", "Defender") and hasattr(msg, "content"):
-                    debate_exchanges.append(f"**{name}**:\n{msg.content}")
-
-            debate_text = (
-                "\n\n---\n\n".join(debate_exchanges)
-                if debate_exchanges
-                else "No debate occurred."
+            # Merge structured facts for evidence-based verdict
+            concerns = [Concern(**c) for c in all_concerns] if all_concerns else []
+            rebuttals = [Rebuttal(**r) for r in all_rebuttals] if all_rebuttals else []
+            merged = merge_facts(concerns, rebuttals)
+            verified_facts_block = (
+                render_verified_facts_reminder(merged) if merged else ""
             )
 
             logger.info(
                 "Starting verdict phase",
                 round_count=round_count,
-                debate_exchange_count=len(debate_exchanges),
+                concern_count=len(all_concerns),
+                rebuttal_count=len(all_rebuttals),
+                merged_fact_count=len(merged),
             )
 
             if emitter:
                 _emit(emitter.synthesis_start())
 
-            # Extract original research (before defense appendages) to avoid
-            # double-vision where defense content appears in both report and debate_text
+            # Extract original research (before defense appendages)
             parts = report.split("\n\n## Defense (Round")
             original_research = parts[0].strip()
 
             verdict_prompt = f"""You are a Senior Investment Committee Judge delivering a final verdict.
 
-You have reviewed:
-1. A comprehensive research report
-2. {len(debate_exchanges)} debate exchanges between a Debater and Defender
+{verified_facts_block}
 
 ## Research Report
 {original_research[:6000]}
-
-## Debate Exchanges
-{debate_text[:4000]}
 
 ## Your Task
 
@@ -479,31 +580,42 @@ Be decisive. Use the evidence from both sides. Do not hedge excessively."""
                 "messages": [AIMessage(content=verdict_text, name="Judge")],
                 "research_report": verdict_text,  # Becomes final_answer via adapter
                 "round_count": round_count,
+                # Empty — no new items; operator.add preserves accumulated state
+                "all_concerns": [],
+                "all_rebuttals": [],
             }
 
-        # Build graph
-        builder = StateGraph(dict)
-
-        builder.add_node("research", research_node)
-        builder.add_edge(START, "research")
+        # ── Graph Assembly ───────────────────────────────────────────────
+        # Must use AnalysisState (not dict) so Annotated reducers are active.
+        # operator.add on messages/all_concerns/all_rebuttals requires this.
+        builder = StateGraph(AnalysisState)
+        builder.add_node("main_agent", main_agent_node)
 
         if self.enable_debate:
             builder.add_node("debate", debate_node)
-            builder.add_node("rebuttal", rebuttal_node)
             builder.add_node("verdict", verdict_node)
-            builder.add_edge("research", "debate")
-            builder.add_edge("rebuttal", "debate")
+            builder.add_edge(START, "main_agent")
+            builder.add_conditional_edges(
+                "main_agent",
+                after_main_agent,
+                {
+                    "debate": "debate",  # Normal flow: research/rebuttal → debate
+                    "verdict": "verdict",  # Final rebuttal complete → verdict
+                },
+            )
             builder.add_conditional_edges(
                 "debate",
                 should_continue,
                 {
-                    "continue": "rebuttal",  # Defense with evidence
-                    "end": "verdict",  # Final synthesis with concern categorization
+                    "continue": "main_agent",  # Rebuttal with evidence
+                    "final_rebuttal": "main_agent",  # Last rebuttal before verdict
+                    "end": "verdict",  # Debater satisfied, no concerns
                 },
             )
             builder.add_edge("verdict", END)
         else:
-            builder.add_edge("research", END)
+            builder.add_edge(START, "main_agent")
+            builder.add_edge("main_agent", END)
 
         return builder.compile()
 
@@ -651,6 +763,8 @@ Be decisive. Use the evidence from both sides. Do not hedge excessively."""
             "round_count": 0,
             "research_report": "",
             "debate_active": context.enable_debate,
+            "all_concerns": [],
+            "all_rebuttals": [],
         }
 
         def _safe_emit(event: dict[str, Any]) -> None:

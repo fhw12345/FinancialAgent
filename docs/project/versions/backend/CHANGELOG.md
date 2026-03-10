@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-02-23
+
+### Added
+- feat(deep-agent): Debate quality improvement with independent verification
+  - New yfinance news tool (`fetch_yfinance_news`) for independent market data
+  - New Exa web search tool (`search_web_exa`) for independent news verification
+  - Debater sub-agent rewritten with independent tools (yfinance + Exa, NOT Alpha Vantage)
+  - Structured JSON concern/rebuttal parsing (`debate_types.py`)
+  - Programmatic fact merging with `<system-reminder>` injection into verdict prompt
+  - Symmetric debate topology: defense always responds before verdict
+  - New graph: main_agent → debate → should_continue → verdict
+  - Extended SSE event schemas (`deep_rebuttal_start`, `deep_rebuttal_result`)
+  - 15 integration tests for full debate flow verification
+  - `exa_api_key` config setting for debater independent verification
+
+### Changed
+- Refactored `deep_react_agent.py` orchestrator for symmetric debate protocol
+  - Merged `research_node` + `rebuttal_node` into unified `main_agent_node`
+  - `debate_node` now parses structured JSON via `parse_debater_output()`
+  - `verdict_node` merges all concerns + rebuttals into verified facts reminder
+- Updated debater SKILL.md files for independent tool usage
+
 ## [0.10.1] - 2026-01-11
 
 ### Added

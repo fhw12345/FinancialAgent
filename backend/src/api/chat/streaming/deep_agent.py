@@ -191,7 +191,7 @@ async def stream_with_deep_agent(
                                 on_event=on_event,
                                 current_symbol=request.current_symbol,
                             ),
-                            timeout=480.0,
+                            timeout=600.0,
                         )
                         result_holder.update(r)
                     finally:
@@ -222,11 +222,11 @@ async def stream_with_deep_agent(
                         user_id=user_id,
                         current_symbol=request.current_symbol,
                     ),
-                    timeout=480.0,
+                    timeout=600.0,
                 )
 
         except TimeoutError:
-            logger.error("Deep agent timeout", chat_id=chat_id, timeout_seconds=480)
+            logger.error("Deep agent timeout", chat_id=chat_id, timeout_seconds=600)
             # NOTE: We intentionally persist partial events BEFORE failing the
             # transaction. The message record is independent of billing — it
             # lets users see what the agent found before the timeout, and
@@ -250,7 +250,7 @@ async def stream_with_deep_agent(
             if transaction:
                 await credit_service.fail_transaction(transaction.transaction_id)
             yield create_error_event(
-                "Deep analysis timed out (8 min limit). Try a simpler query.",
+                "Deep analysis timed out (10 min limit). Try a simpler query.",
                 "AGENT_TIMEOUT",
             )
             return

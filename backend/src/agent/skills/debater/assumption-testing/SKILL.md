@@ -1,7 +1,7 @@
 ---
 name: assumption-testing
 description: Challenge the underlying assumptions in the investment thesis
-allowed-tools: get_company_overview get_company_earnings get_news_sentiment get_market_movers
+allowed-tools: fetch_yfinance_news search_web_exa
 metadata:
   domain: debater
   complexity: advanced
@@ -9,7 +9,7 @@ metadata:
 
 ## Assumption Testing Workflow
 
-OBJECTIVE: Validate or invalidate key assumptions underlying the thesis.
+OBJECTIVE: Validate or invalidate key assumptions using INDEPENDENT data sources.
 
 ### Step 1: Extract Assumptions
 Identify both explicit and implicit assumptions:
@@ -25,11 +25,11 @@ For each assumption:
 - What evidence contradicts it?
 - What would invalidate it?
 
-Use tools:
-- `get_company_overview` for current state vs assumed
-- `get_company_earnings` for actual vs projected growth
-- `get_news_sentiment` for competitive dynamics
-- `get_market_movers` for sector trends
+Use your independent tools:
+- `fetch_yfinance_news` for current stats vs assumed (actual PE, EPS, growth rates)
+- `search_web_exa` for competitive dynamics, industry trends, analyst consensus
+
+CRITICAL: Compare what the thesis ASSUMES against what your INDEPENDENT sources show. The research used Alpha Vantage data — you are cross-checking with different sources.
 
 ### Step 3: Sensitivity Analysis
 If assumption is wrong, what happens to thesis?
@@ -42,8 +42,8 @@ ASSUMPTION TEST: [SYMBOL]
 
 CRITICAL ASSUMPTIONS (thesis depends on these):
 1. Assumption: [Statement]
-   Supporting Evidence: [Data]
-   Contradicting Evidence: [Data]
+   Supporting Evidence: [Independent data]
+   Contradicting Evidence: [Independent data]
    If Wrong: [Impact on thesis]
    Verdict: [SOLID/QUESTIONABLE/WEAK]
 

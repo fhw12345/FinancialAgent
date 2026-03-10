@@ -1,7 +1,7 @@
 ---
 name: counter-evidence
-description: Search for evidence that contradicts the investment thesis
-allowed-tools: get_news_sentiment get_insider_activity get_put_call_ratio get_market_movers
+description: Search for evidence that contradicts the investment thesis using independent sources
+allowed-tools: fetch_yfinance_news search_web_exa
 metadata:
   domain: debater
   complexity: advanced
@@ -9,7 +9,7 @@ metadata:
 
 ## Counter Evidence Workflow
 
-OBJECTIVE: Find legitimate reasons why the thesis might be wrong.
+OBJECTIVE: Find legitimate reasons why the thesis might be wrong, using INDEPENDENT data sources.
 
 ### Step 1: Identify Thesis Pillars
 What are the key bullish arguments?
@@ -21,11 +21,14 @@ What are the key bullish arguments?
 
 ### Step 2: Targeted Counter-Search
 For each pillar, actively look for contradictions:
-- Use `get_news_sentiment` with bearish keywords:
-  - "[company] risks", "[company] challenges", "[company] problems"
-  - "[company] competition", "[company] losing", "[company] decline"
-- Use `get_insider_activity` for insider selling
-- Use `get_put_call_ratio` for options market sentiment (high PCR = bearish bets)
+- Use `search_web_exa` with bearish keywords:
+  - "[company] risks", "[company] challenges", "[company] lawsuit"
+  - "[company] competition losing", "[company] regulatory action"
+  - "[company] analyst downgrade", "[company] SEC investigation"
+- Use `fetch_yfinance_news` to check:
+  - Whether financial stats match the thesis claims
+  - Recent news headlines that contradict the bullish narrative
+  - Key stats (PE ratio, growth rates) vs thesis assumptions
 
 ### Step 3: Assess Severity
 Rate each counter-evidence found:
@@ -38,7 +41,7 @@ Rate each counter-evidence found:
 COUNTER EVIDENCE REPORT: [SYMBOL]
 
 THESIS PILLAR: [Growth assumption]
-Counter-Evidence: [What was found]
+Counter-Evidence: [What was found from independent sources]
 Severity: [MINOR/MODERATE/MAJOR/CRITICAL]
 Implication: [What this means for the thesis]
 

@@ -99,6 +99,7 @@ class DeepDebateRoundEvent(TypedDict):
     round: int
     has_concerns: bool
     summary: str  # Full text (frontend handles truncation/expand)
+    concerns: list[dict]  # Structured concerns from debater
 
 
 class DeepRebuttalStartEvent(TypedDict):
@@ -120,6 +121,7 @@ class DeepRebuttalResultEvent(TypedDict):
     defense_summary: str
     tool_count: int
     duration_ms: int
+    rebuttals: list[dict]  # Structured rebuttals from defender
 
 
 class DeepSynthesisStartEvent(TypedDict):
@@ -205,6 +207,8 @@ TOOL_DISPLAY_NAMES: dict[str, str] = {
     "get_put_call_ratio": "Put/Call Ratio",
     "get_copper_commodity": "Commodity Prices",
     "read_file": "Read Skill File",
+    "fetch_yfinance_news": "Yahoo Finance News",
+    "search_web_exa": "Web Search (Exa)",
 }
 
 
@@ -338,6 +342,7 @@ class DeepEventEmitter:
         current_round: int,
         has_concerns: bool,
         summary: str = "",
+        concerns: list[dict] | None = None,
     ) -> dict[str, Any]:
         """Create a deep_debate_round event."""
         return {
@@ -345,6 +350,7 @@ class DeepEventEmitter:
             "round": current_round,
             "has_concerns": has_concerns,
             "summary": summary,
+            "concerns": concerns or [],
         }
 
     def rebuttal_start(self, current_round: int) -> dict[str, Any]:
@@ -360,6 +366,7 @@ class DeepEventEmitter:
         defense_summary: str,
         tool_count: int,
         duration_ms: int,
+        rebuttals: list[dict] | None = None,
     ) -> dict[str, Any]:
         """Create a deep_rebuttal_result event."""
         return {
@@ -368,6 +375,7 @@ class DeepEventEmitter:
             "defense_summary": defense_summary,
             "tool_count": tool_count,
             "duration_ms": duration_ms,
+            "rebuttals": rebuttals or [],
         }
 
     def synthesis_start(self) -> dict[str, Any]:

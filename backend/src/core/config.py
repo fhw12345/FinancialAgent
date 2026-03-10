@@ -84,6 +84,7 @@ class Settings(BaseSettings):
     alpaca_secret_key: str = ""  # Alpaca Paper Trading secret key
     alpaca_base_url: str = "https://paper-api.alpaca.markets"  # Paper trading endpoint
     polygon_api_key: str = ""  # Polygon.io API key for extended hours data
+    exa_api_key: str = ""  # Exa web search API key (debater independent verification)
 
     # Email configuration (Tencent Cloud SES)
     tencent_secret_id: str = ""  # Tencent Cloud API SecretID

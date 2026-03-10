@@ -10,6 +10,7 @@ Categories:
 - news: News search, Market movers, Sentiment
 - financial: Company overview, Financials, Earnings, Insider activity
 - insights: Market insights categories and metrics
+- independent: Yahoo Finance, Exa web search (debater-only verification)
 """
 
 from collections.abc import Callable
@@ -39,6 +40,9 @@ TOOL_CATEGORIES: dict[str, str] = {
     "get_put_call_ratio": "options",
     # Commodities Tools
     "get_copper_commodity": "commodities",
+    # Independent Verification Tools (debater only)
+    "fetch_yfinance_news": "independent",
+    "search_web_exa": "independent",
 }
 
 
@@ -59,6 +63,7 @@ def categorize_tools(tools: list[Callable]) -> dict[str, list[Callable]]:
         "insights": [],
         "options": [],
         "commodities": [],
+        "independent": [],
         "other": [],
     }
 
@@ -104,7 +109,7 @@ def get_tools_for_subagent(
         "technical": ["technical"],
         "news": ["news"],
         "financial": ["financial", "insights"],
-        "debater": ["news", "financial", "options"],  # Debater can use multiple
+        "debater": ["independent"],  # Independent sources only — NOT Alpha Vantage
     }
 
     allowed_categories = subagent_categories.get(subagent_type, [])
