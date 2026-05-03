@@ -45,7 +45,6 @@ class PortfolioOrder(BaseModel):
 
     # Foreign keys
     chat_id: str = Field(..., description="Chat where analysis happened")
-    user_id: str = Field(..., description="Portfolio owner")
     message_id: str | None = Field(
         None, description="Message ID with analysis reasoning"
     )
@@ -106,7 +105,6 @@ class PortfolioOrder(BaseModel):
             "example": {
                 "order_id": "order_abc123",
                 "chat_id": "chat_xyz789",
-                "user_id": "user_123",
                 "message_id": "msg_456",
                 "alpaca_order_id": "f8e1b8c3-7d4a-4e2f-9b1c-5a6d7e8f9a0b",
                 "analysis_id": "analysis-20251101-AAPL-bullish-momentum",
@@ -137,7 +135,6 @@ class PortfolioPosition(BaseModel):
     Aggregates all orders for a symbol to show current holdings.
     """
 
-    user_id: str = Field(..., description="Portfolio owner")
     symbol: str = Field(..., description="Stock symbol")
 
     # Position details
@@ -160,7 +157,6 @@ class PortfolioPosition(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "user_id": "user_123",
                 "symbol": "AAPL",
                 "quantity": 25.0,
                 "avg_entry_price": 270.50,
@@ -176,8 +172,6 @@ class PortfolioPosition(BaseModel):
 
 class PortfolioSummary(BaseModel):
     """Portfolio summary with total equity and P&L."""
-
-    user_id: str = Field(..., description="Portfolio owner")
 
     # Account values
     equity: float = Field(..., description="Total portfolio value")
@@ -199,7 +193,6 @@ class PortfolioSummary(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "user_id": "user_123",
                 "equity": 106870.0,
                 "cash": 100000.0,
                 "buying_power": 200000.0,

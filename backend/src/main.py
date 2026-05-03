@@ -24,7 +24,6 @@ from .api.auth import router as auth_router
 from .api.chat import router as chat_router
 from .api.dependencies.rate_limit import limiter
 from .api.dependencies.timing_middleware import TimingMiddleware
-from .api.feedback import router as feedback_router
 from .api.health import router as health_router
 from .api.insights import router as insights_router
 from .api.llm_models import router as llm_models_router
@@ -63,18 +62,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         # Create database indexes for optimal query performance
         from .database.repositories.chat_repository import ChatRepository
-        from .database.repositories.comment_repository import CommentRepository
-        from .database.repositories.feedback_repository import FeedbackRepository
         from .database.repositories.message_repository import MessageRepository
         from .database.repositories.tool_execution_repository import (
             ToolExecutionRepository,
         )
-
-        feedback_repo = FeedbackRepository(mongodb.get_collection("feedback_items"))
-        await feedback_repo.ensure_indexes()
-
-        comment_repo = CommentRepository(mongodb.get_collection("comments"))
-        await comment_repo.ensure_indexes()
 
         message_repo = MessageRepository(mongodb.get_collection("messages"))
         await message_repo.ensure_indexes()
@@ -123,17 +114,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from .database.repositories.tool_execution_repository import (
             ToolExecutionRepository,
         )
-        from .services.alpaca_trading_service import AlpacaTradingService
         from .services.alphavantage_market_data import AlphaVantageMarketDataService
         from .services.data_manager import DataManager
         from .services.insights.snapshot_service import InsightsSnapshotService
         from .services.tool_cache_wrapper import ToolCacheWrapper
 
         react_agent = None
-        alpaca_trading_service = None
         try:
             # Create agent instance (will be cached as singleton in dependency injection)
-            alpaca_trading_service = AlpacaTradingService(settings=settings)
             market_service = AlphaVantageMarketDataService(settings=settings)
             ticker_service = TickerDataService(
                 redis_cache=redis_cache,
@@ -206,7 +194,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             market_service=market_service,  # Pass Alpha Vantage service for price data
             settings=settings,  # Pass application settings for context management
             agent=react_agent,  # Pass agent for LLM-based analysis
-            trading_service=alpaca_trading_service,  # Pass trading service for order placement
+            trading_service=None,  # Alpaca trading removed; orders are suggestions only
             order_repository=order_repo,  # Pass order repository for MongoDB persistence
             data_manager=data_manager,  # Singleton DataManager for cached OHLCV access
         )
@@ -222,7 +210,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app.state.mongodb = mongodb
         app.state.redis = redis_cache
         app.state.market_service = market_service
-        app.state.alpaca_trading_service = alpaca_trading_service
 
         # Initialize Market Insights registry (singleton for all requests)
         from .services.insights import InsightsCategoryRegistry
@@ -391,7 +378,6 @@ def create_app() -> FastAPI:
     app.include_router(portfolio_router)  # Portfolio holdings management
     app.include_router(watchlist_router)  # Watchlist symbol tracking
     app.include_router(llm_models_router)  # LLM model selection and pricing
-    app.include_router(feedback_router)  # Feedback & Community Roadmap platform
     app.include_router(insights_router)  # Market Insights Platform
 
     @app.get("/")

@@ -8,9 +8,7 @@ for portfolio tracking and analysis review.
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Request
-
-from ..dependencies.auth import get_current_user_id
+from fastapi import APIRouter, HTTPException, Request
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -22,7 +20,6 @@ async def get_analysis_history(
     symbol: str | None = None,
     analysis_id: str | None = None,
     limit: int = 100,
-    user_id: str = Depends(get_current_user_id),
 ) -> dict[str, Any]:
     """
     Get analysis history messages.

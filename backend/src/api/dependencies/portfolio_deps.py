@@ -9,7 +9,7 @@ from ...core.data.ticker_data_service import TickerDataService
 from ...database.mongodb import MongoDB
 from ...database.redis import RedisCache
 from ...database.repositories.holding_repository import HoldingRepository
-from ...services.alpaca_trading_service import AlpacaTradingService
+from ...database.repositories.portfolio_order_repository import PortfolioOrderRepository
 from ...services.alphavantage_market_data import AlphaVantageMarketDataService
 from ...services.portfolio_service import PortfolioService
 from .auth import get_mongodb  # Import shared auth
@@ -22,6 +22,13 @@ def get_holding_repository(
     """Get holding repository instance."""
     holdings_collection = mongodb.get_collection("holdings")
     return HoldingRepository(holdings_collection)
+
+
+def get_portfolio_order_repository(
+    mongodb: MongoDB = Depends(get_mongodb),
+) -> PortfolioOrderRepository:
+    """Get portfolio order repository instance (suggested orders source)."""
+    return PortfolioOrderRepository(mongodb.get_collection("portfolio_orders"))
 
 
 def get_market_service() -> AlphaVantageMarketDataService:
@@ -41,20 +48,6 @@ def get_ticker_data_service(
         redis_cache=redis_cache,
         alpha_vantage_service=market_service,
     )
-
-
-def get_alpaca_trading_service() -> AlpacaTradingService | None:
-    """Get Alpaca trading service singleton from app.state.
-
-    Returns the single AlpacaTradingService instance created at startup,
-    avoiding re-initialization on every request (which was causing 8+ inits
-    during portfolio analysis runs).
-    """
-    from ...main import app
-
-    if hasattr(app.state, "alpaca_trading_service"):
-        return app.state.alpaca_trading_service
-    return None
 
 
 def get_portfolio_service(

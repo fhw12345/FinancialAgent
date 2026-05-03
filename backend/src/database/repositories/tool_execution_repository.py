@@ -28,36 +28,19 @@ class ToolExecutionRepository:
         self.collection = collection
 
     async def ensure_indexes(self) -> None:
-        """
-        Create indexes for optimal query performance.
-        Called during application startup.
-
-        Indexes:
-        1. analysis_id + started_at: For audit trail (tool sequence per analysis)
-        2. chat_id + started_at: For chat history
-        3. user_id + started_at: For cost tracking queries
-        4. tool_source + is_paid_api: For cost aggregation by source
-        """
-        # Index for analysis audit trail (get tool sequence)
+        """Create indexes for optimal query performance."""
         await self.collection.create_index(
             [("analysis_id", 1), ("started_at", 1)], name="idx_analysis_tools"
         )
-
-        # Index for chat tool history
         await self.collection.create_index(
             [("chat_id", 1), ("started_at", -1)], name="idx_chat_tools"
         )
-
-        # Index for cost tracking by user
         await self.collection.create_index(
-            [("user_id", 1), ("started_at", -1)], name="idx_user_cost"
+            [("started_at", -1)], name="idx_started_at"
         )
-
-        # Index for cost aggregation by tool source
         await self.collection.create_index(
             [("tool_source", 1), ("is_paid_api", 1)], name="idx_tool_cost"
         )
-
         logger.info("Tool execution indexes ensured")
 
     async def create(self, execution: ToolExecution) -> ToolExecution:
@@ -161,32 +144,15 @@ class ToolExecutionRepository:
         return executions
 
     async def get_cost_summary(
-        self, user_id: str, start_date: datetime, end_date: datetime
+        self,
+        user_id: str | None = None,
+        start_date: datetime = None,
+        end_date: datetime = None,
     ) -> dict[str, Any]:
-        """
-        Get cost summary for user within date range.
-
-        Args:
-            user_id: User identifier
-            start_date: Start datetime
-            end_date: End datetime
-
-        Returns:
-            Cost summary dict:
-            {
-                "total_executions": 100,
-                "total_cost": 0.004,
-                "cache_hit_rate": 0.75,
-                "by_tool_source": {
-                    "mcp_alphavantage": {"calls": 80, "cost": 0.0032},
-                    "1st_party": {"calls": 20, "cost": 0.0}
-                }
-            }
-        """
+        """Get cost summary within date range. user_id ignored."""
         pipeline = [
             {
                 "$match": {
-                    "user_id": user_id,
                     "started_at": {"$gte": start_date, "$lte": end_date},
                 }
             },

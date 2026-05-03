@@ -19,9 +19,6 @@ class WatchlistItem(BaseModel):
     # Database ID
     watchlist_id: str = Field(..., description="UUID for watchlist item")
 
-    # Foreign keys
-    user_id: str = Field(..., description="User who owns this watchlist item")
-
     # Stock details
     symbol: str = Field(..., description="Stock symbol (e.g., AAPL)")
 
@@ -41,7 +38,6 @@ class WatchlistItem(BaseModel):
         json_schema_extra = {
             "example": {
                 "watchlist_id": "watch_abc123",
-                "user_id": "user_123",
                 "symbol": "AAPL",
                 "added_at": "2025-11-01T10:00:00Z",
                 "last_analyzed_at": "2025-11-01T14:30:00Z",

@@ -88,9 +88,11 @@ class Settings(BaseSettings):
     # External APIs - Market Data & Trading
     alpha_vantage_api_key: str = ""  # Alpha Vantage API key (premium: 75 calls/min)
     fred_api_key: str = ""  # FRED API key (free, for liquidity metrics)
-    alpaca_api_key: str = ""  # Alpaca Paper Trading API key
-    alpaca_secret_key: str = ""  # Alpaca Paper Trading secret key
-    alpaca_base_url: str = "https://paper-api.alpaca.markets"  # Paper trading endpoint
+    # W5a: Alpaca live trading removed. Settings kept as deprecated placeholders so
+    # legacy .env files do not error out; values are no longer read by the app.
+    alpaca_api_key: str = ""  # deprecated, no longer used
+    alpaca_secret_key: str = ""  # deprecated, no longer used
+    alpaca_base_url: str = ""  # deprecated, no longer used
     polygon_api_key: str = ""  # Polygon.io API key for extended hours data
     exa_api_key: str = ""  # Exa web search API key (debater independent verification)
 

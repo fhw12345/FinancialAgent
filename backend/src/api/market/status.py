@@ -8,11 +8,10 @@ from datetime import timedelta
 
 import pandas as pd
 import structlog
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from ...services.alphavantage_market_data import get_market_session
-from ..dependencies.auth import get_current_user_id
 
 router = APIRouter()
 logger = structlog.get_logger()
@@ -37,9 +36,7 @@ class MarketStatusResponse(BaseModel):
 
 
 @router.get("/status", response_model=MarketStatusResponse)
-async def get_market_status(
-    user_id: str = Depends(get_current_user_id),
-) -> MarketStatusResponse:
+async def get_market_status() -> MarketStatusResponse:
     """
     Get current market status (open/closed, current session).
 
@@ -101,7 +98,6 @@ async def get_market_status(
 
         logger.info(
             "Market status checked",
-            user_id=user_id,
             current_session=current_session,
             is_open=is_open,
         )

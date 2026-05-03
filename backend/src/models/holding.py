@@ -17,7 +17,6 @@ class Holding(BaseModel):
     """
 
     holding_id: str = Field(..., description="Unique holding identifier")
-    user_id: str = Field(..., description="Owner user ID")
     symbol: str = Field(..., description="Stock symbol (e.g., AAPL)")
     quantity: int = Field(..., description="Number of shares")
     avg_price: float = Field(..., description="Average purchase price per share")
@@ -46,7 +45,6 @@ class Holding(BaseModel):
         json_schema_extra = {
             "example": {
                 "holding_id": "holding_abc123",
-                "user_id": "user_123",
                 "symbol": "AAPL",
                 "quantity": 100,
                 "avg_price": 150.50,

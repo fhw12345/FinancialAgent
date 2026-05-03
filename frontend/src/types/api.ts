@@ -134,7 +134,6 @@ export interface UIState {
 
 export interface Chat {
   chat_id: string;
-  user_id: string;
   title: string;
   is_archived: boolean;
   ui_state?: UIState;

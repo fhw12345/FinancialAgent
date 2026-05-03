@@ -14,6 +14,7 @@ from fastapi.responses import StreamingResponse
 
 from ....agent.chat_agent import ChatAgent
 from ....agent.langgraph_react_agent import FinancialAnalysisReActAgent
+from ....core.local_user import LOCAL_USER_ID
 from ....database.repositories.message_repository import MessageRepository
 from ....services.chat_service import ChatService
 from ....services.context_window_manager import ContextWindowManager
@@ -21,7 +22,6 @@ from ...dependencies.chat_deps import (
     get_chat_agent,
     get_chat_service,
     get_context_manager,
-    get_current_user_id,
     get_deep_agent,
     get_message_repository,
     get_react_agent,
@@ -36,7 +36,6 @@ logger = structlog.get_logger()
 
 async def chat_stream_unified(
     request: ChatRequest,
-    user_id: str = Depends(get_current_user_id),
     chat_service: ChatService = Depends(get_chat_service),
     simple_agent: ChatAgent = Depends(get_chat_agent),
     react_agent: FinancialAnalysisReActAgent = Depends(get_react_agent),
@@ -46,10 +45,10 @@ async def chat_stream_unified(
     x_debug: str | None = Header(None, alias="X-Debug"),
 ) -> StreamingResponse:
     """Unified streaming endpoint with version selection (v2/v3/v4-deep)."""
+    user_id = LOCAL_USER_ID
     logger.info(
         "Unified stream request",
         agent_version=request.agent_version,
-        user_id=user_id,
         chat_id=request.chat_id,
     )
 

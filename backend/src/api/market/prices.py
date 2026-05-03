@@ -20,7 +20,6 @@ from ...services.alphavantage_market_data import (
     get_market_session,
     validate_date_range,
 )
-from ..dependencies.auth import get_current_user_id
 from ..dependencies.chat_deps import get_redis
 
 router = APIRouter()
@@ -91,7 +90,6 @@ class QuoteResponse(BaseModel):
 @router.get("/price/{symbol}", response_model=PriceDataResponse)
 async def get_price_data(
     symbol: str,
-    user_id: str = Depends(get_current_user_id),
     service: AlphaVantageMarketDataService = Depends(get_market_service),
     redis_cache: RedisCache = Depends(get_redis),
     interval: str = Query(
@@ -138,7 +136,6 @@ async def get_price_data(
             period=period,
             start_date=start_date,
             end_date=end_date,
-            user_id=user_id,
         )
 
         # Generate cache key
@@ -153,7 +150,6 @@ async def get_price_data(
                 "Price data cache hit",
                 symbol=symbol,
                 interval=interval,
-                user_id=user_id,
             )
             return PriceDataResponse(**cached_response)
 
@@ -265,7 +261,6 @@ async def get_price_data(
 @router.get("/quote/{symbol}")
 async def get_quote(
     symbol: str,
-    user_id: str = Depends(get_current_user_id),
     service: AlphaVantageMarketDataService = Depends(get_market_service),
     redis: RedisCache = Depends(get_redis),
 ) -> QuoteResponse:
@@ -280,7 +275,7 @@ async def get_quote(
         if not symbol:
             raise ValueError("Symbol is required")
 
-        logger.info("Quote request", symbol=symbol, user_id=user_id)
+        logger.info("Quote request", symbol=symbol)
 
         # Check cache first
         cache_key = f"quote:{symbol}"

@@ -28,56 +28,32 @@ class HoldingRepository:
         self.collection = collection
 
     async def ensure_indexes(self) -> None:
-        """
-        Create indexes for optimal query performance.
-
-        Indexes:
-        1. user_id + symbol: For finding holdings by user and symbol (unique)
-        2. user_id + updated_at: For listing user holdings sorted by update time
-        """
-        # Unique index for user_id + symbol (user can't have duplicate holdings)
+        """Create indexes for optimal query performance."""
+        # Unique index on symbol (no per-user partition)
         await self.collection.create_index(
-            [("user_id", 1), ("symbol", 1)],
-            name="idx_user_symbol",
-            unique=True,
+            "symbol", name="idx_symbol", unique=True
         )
-
-        # Index for listing user holdings
         await self.collection.create_index(
-            [("user_id", 1), ("updated_at", -1)],
-            name="idx_user_holdings",
+            [("updated_at", -1)],
+            name="idx_holdings_updated",
         )
-
         logger.info("Holding indexes ensured")
 
-    async def create(self, user_id: str, holding_create: HoldingCreate) -> Holding:
-        """
-        Create a new holding.
-
-        Args:
-            user_id: User identifier
-            holding_create: Holding creation data
-
-        Returns:
-            Created holding
-
-        Raises:
-            DuplicateKeyError: If holding already exists for user+symbol
-        """
+    async def create(
+        self, user_id: str | None = None, holding_create: HoldingCreate = None
+    ) -> Holding:
+        """Create a new holding. user_id ignored."""
         import uuid
 
         holding_id = f"holding_{uuid.uuid4().hex[:12]}"
-
-        # Calculate cost basis
         cost_basis = holding_create.quantity * holding_create.avg_price
 
         holding = Holding(
             holding_id=holding_id,
-            user_id=user_id,
             symbol=holding_create.symbol.upper(),
             quantity=holding_create.quantity,
             avg_price=holding_create.avg_price,
-            current_price=None,  # Will be updated by price service
+            current_price=None,
             cost_basis=cost_basis,
             market_value=None,
             unrealized_pl=None,
@@ -87,83 +63,39 @@ class HoldingRepository:
             last_price_update=None,
         )
 
-        # Convert to dict for MongoDB
-        holding_dict = holding.model_dump()
-
-        # Insert into database
-        await self.collection.insert_one(holding_dict)
-
+        await self.collection.insert_one(holding.model_dump())
         logger.info(
             "Holding created",
             holding_id=holding_id,
-            user_id=user_id,
             symbol=holding.symbol,
             quantity=holding.quantity,
         )
-
         return holding
 
     async def get(self, holding_id: str) -> Holding | None:
-        """
-        Get holding by ID.
-
-        Args:
-            holding_id: Holding identifier
-
-        Returns:
-            Holding if found, None otherwise
-        """
         holding_dict = await self.collection.find_one({"holding_id": holding_id})
-
         if not holding_dict:
             return None
-
-        # Remove MongoDB _id field
         holding_dict.pop("_id", None)
-
         return Holding(**holding_dict)
 
-    async def get_by_symbol(self, user_id: str, symbol: str) -> Holding | None:
-        """
-        Get holding by user and symbol.
-
-        Args:
-            user_id: User identifier
-            symbol: Stock symbol
-
-        Returns:
-            Holding if found, None otherwise
-        """
-        holding_dict = await self.collection.find_one(
-            {"user_id": user_id, "symbol": symbol.upper()}
-        )
-
+    async def get_by_symbol(
+        self, user_id: str | None = None, symbol: str = ""
+    ) -> Holding | None:
+        """Get holding by symbol. user_id ignored."""
+        holding_dict = await self.collection.find_one({"symbol": symbol.upper()})
         if not holding_dict:
             return None
-
-        # Remove MongoDB _id field
         holding_dict.pop("_id", None)
-
         return Holding(**holding_dict)
 
-    async def list_by_user(self, user_id: str) -> list[Holding]:
-        """
-        List all holdings for a user.
-
-        Args:
-            user_id: User identifier
-
-        Returns:
-            List of holdings sorted by updated_at descending
-        """
-        cursor = self.collection.find({"user_id": user_id}).sort("updated_at", -1)
-
+    async def list_by_user(self, user_id: str | None = None) -> list[Holding]:
+        """List all holdings. user_id ignored."""
+        cursor = self.collection.find({}).sort("updated_at", -1)
         holdings = []
         async for holding_dict in cursor:
-            # Remove MongoDB _id field
             holding_dict.pop("_id", None)
             holdings.append(Holding(**holding_dict))
-
         return holdings
 
     def _calculate_pl(

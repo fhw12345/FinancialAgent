@@ -22,7 +22,6 @@ interface Message {
 interface Chat {
   chat_id: string;
   title: string;
-  user_id: string;
   created_at: string;
   updated_at: string;
   is_archived: boolean;
@@ -71,7 +70,6 @@ async function fetchPortfolioChats(date?: string, analysisType?: string): Promis
   const chats: Chat[] = data.chats.map((symbolChat) => ({
     chat_id: symbolChat.chat_id,
     title: symbolChat.title,
-    user_id: "portfolio_agent",
     created_at: symbolChat.latest_timestamp,
     updated_at: symbolChat.latest_timestamp,
     is_archived: false,

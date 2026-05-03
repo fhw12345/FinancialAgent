@@ -25,7 +25,6 @@ i18n
       "chat",
       "portfolio",
       "market",
-      "feedback",
       "validation",
       "insights",
     ],

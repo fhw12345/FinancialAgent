@@ -12,7 +12,6 @@ from ...core.config import get_settings
 from ...database.redis import RedisCache
 from ...services.alphavantage_market_data import AlphaVantageMarketDataService
 from ...services.alphavantage_response_formatter import AlphaVantageResponseFormatter
-from ..dependencies.auth import get_current_user_id
 from ..health import get_redis
 from ..models import (
     MarketMover,
@@ -30,7 +29,6 @@ router = APIRouter()
 @router.post("/news-sentiment", response_model=NewsSentimentResponse)
 async def news_sentiment(
     request: StockFundamentalsRequest,
-    user_id: str = Depends(get_current_user_id),
     redis_cache: RedisCache = Depends(get_redis),
     market_service: AlphaVantageMarketDataService = Depends(get_market_service),
     formatter: AlphaVantageResponseFormatter = Depends(get_formatter),
@@ -115,7 +113,6 @@ async def news_sentiment(
 
 @router.get("/market-movers", response_model=MarketMoversResponse)
 async def market_movers(
-    user_id: str = Depends(get_current_user_id),
     redis_cache: RedisCache = Depends(get_redis),
     market_service: AlphaVantageMarketDataService = Depends(get_market_service),
     formatter: AlphaVantageResponseFormatter = Depends(get_formatter),

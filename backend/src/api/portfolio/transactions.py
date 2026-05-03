@@ -9,7 +9,7 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from ...database.mongodb import MongoDB
-from ..dependencies.auth import get_current_user_id, get_mongodb
+from ..dependencies.auth import get_mongodb
 from ..dependencies.rate_limit import limiter
 
 logger = structlog.get_logger()
@@ -24,13 +24,10 @@ async def get_portfolio_transactions(
     limit: int = 10,
     offset: int = 0,
     status: str | None = None,  # "success", "failed", or None for all
-    user_id: str = Depends(get_current_user_id),  # JWT authentication required
     mongodb: MongoDB = Depends(get_mongodb),
 ) -> dict:
     """
     Get portfolio transactions from MongoDB (includes failed orders).
-
-    **Authentication**: Requires Bearer token in Authorization header.
 
     Unlike /orders (Alpaca API), this endpoint returns transactions from our
     database which includes both successful and failed orders with error messages.
@@ -39,7 +36,6 @@ async def get_portfolio_transactions(
         limit: Maximum number of transactions to return (default: 10)
         offset: Number of transactions to skip for pagination (default: 0)
         status: Filter by status - "success" (filled/new), "failed", or None for all
-        user_id: Authenticated user ID (auto-injected via JWT)
 
     Returns:
         List of transactions with execution details and error messages for failures

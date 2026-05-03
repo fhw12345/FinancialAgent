@@ -9,11 +9,12 @@ MIGRATION: Replaced yfinance with Alpaca for FREE paper trading data.
 
 from __future__ import annotations
 
+from typing import Any
+
 import pandas as pd
 import structlog
 
 from ...database.redis import RedisCache
-from ...services.alpaca_data_service import AlpacaDataService
 from ...services.alphavantage_market_data import AlphaVantageMarketDataService
 from ..utils.date_utils import DateUtils
 
@@ -33,7 +34,7 @@ class TickerDataService:
     def __init__(
         self,
         redis_cache: RedisCache,
-        alpaca_data_service: AlpacaDataService | None = None,
+        alpaca_data_service: Any | None = None,
         alpha_vantage_service: AlphaVantageMarketDataService | None = None,
     ):
         """
