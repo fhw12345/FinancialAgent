@@ -62,7 +62,7 @@ async def get_system_health(
     """
     Get comprehensive system health metrics.
 
-    **Admin only**: Requires admin privileges (username: allenpan or is_admin=True).
+    **Admin only**: Requires admin privileges (is_admin=True).
 
     Returns:
         SystemMetrics with database statistics and Kubernetes metrics (if available)

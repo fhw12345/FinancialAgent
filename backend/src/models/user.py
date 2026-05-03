@@ -55,7 +55,7 @@ class User(BaseModel):
         MVP: Hardcoded username check OR database flag.
         Future: Migrate to database-driven role system.
         """
-        return self.username == "allenpan" or self.is_admin
+        return self.is_admin
 
     class Config:
         json_schema_extra = {

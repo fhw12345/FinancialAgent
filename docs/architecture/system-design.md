@@ -246,8 +246,8 @@ See [Agent 12-Factors](agent-12-factors.md) for the complete philosophy and [Age
 | Environment | Platform | URL | Status |
 |-------------|----------|-----|--------|
 | **Local Dev** | Docker Compose | http://localhost:3000 | Active |
-| **Test** | Azure AKS | https://klinematrix.com | Planned |
-| **Prod** | Alibaba ACK (Shanghai) | https://klinecubic.cn | Active |
+| **Test** | Azure AKS | http://localhost:3000 | Planned |
+| **Prod** | Alibaba ACK (Shanghai) | http://localhost:3000 | Active |
 
 > **Full environment configuration**: See [CLAUDE.md](../../CLAUDE.md#-environment-rules)
 
@@ -290,7 +290,7 @@ The platform uses **LangGraph's SDK ReAct Agent** for autonomous financial analy
 
 **See**: [Agent Architecture Details](agent-architecture.md) | [SDK ReAct Agent Feature Spec](../features/langgraph-sdk-react-agent.md)
 
-**Current Deployment**: Production at https://klinecubic.cn (ACK)
+**Current Deployment**: Production at http://localhost:3000 (ACK)
 
 ---
 

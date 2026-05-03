@@ -309,7 +309,7 @@ agent.ainvoke(..., config={"callbacks": [handler]})
 **Usage**:
 ```bash
 # Send X-Debug header to enable debug mode
-curl -X POST https://klinematrix.com/api/chat/stream \
+curl -X POST http://localhost:3000/api/chat/stream \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Debug: true" \
   -H "Content-Type: application/json" \
@@ -380,7 +380,7 @@ INFO | 🔍 DEBUG: Full LLM Prompt | message_count=3 | full_messages=[
 
 **Issue**: `httpx` SOCKS proxy error in local environment
 
-**Resolution**: Langfuse now deployed to production (https://monitor.klinecubic.cn) with direct connectivity. Local dev uses Docker network without proxy issues.
+**Resolution**: Langfuse now deployed to production (http://localhost:3001) with direct connectivity. Local dev uses Docker network without proxy issues.
 
 ### 4. Test Fixture Warnings - ⚠️ LOW PRIORITY
 

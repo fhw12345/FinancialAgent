@@ -6,9 +6,7 @@ build-backend = "hatchling.build"
 name = "financial-agent-backend"
 version = "0.11.0"
 description = "AI-Enhanced Financial Analysis Platform Backend"
-authors = [
-    {name = "Financial Agent Team", email = "team@financialagent.com"},
-]
+authors = []
 # readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -25,7 +23,6 @@ dependencies = [
     "langchain-mcp-adapters>=0.1.0",
     "langgraph>=0.2.0",
     "langsmith>=0.2.0",
-    "langfuse>=3.0.0,<4.0.0",  # LLM observability (v3.x with OTLP, requires ClickHouse + Redis server)
     "dashscope>=1.20.0",      # Alibaba Cloud Qwen API
     "alpaca-py>=0.30.0",  # Alpaca for market data (replaced yfinance)
     "pandas>=2.1.0",
@@ -52,6 +49,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+observability = [
+    "langfuse>=3.0.0,<4.0.0",  # Optional LLM observability (requires ClickHouse + Redis + MinIO)
+]
 dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",

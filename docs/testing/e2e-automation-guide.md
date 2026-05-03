@@ -62,8 +62,8 @@ page.goto('http://localhost:3000')
 page.wait_for_load_state('networkidle')
 
 # 2. Fill login form (use placeholder selectors, NOT name attributes)
-page.fill('input[placeholder="your_username"]', 'allenpan')
-page.fill('input[type="password"]', 'admin123')
+page.fill('input[placeholder="your_username"]', 'admin')
+page.fill('input[type="password"]', '<password>')
 
 # 3. Submit
 page.click('button[type="submit"]')
@@ -293,8 +293,8 @@ with sync_playwright() as p:
 
     # 2. Run Test 1: Login
     page.goto('http://localhost:3000')
-    page.fill('input[placeholder="your_username"]', 'allenpan')
-    page.fill('input[type="password"]', 'admin123')
+    page.fill('input[placeholder="your_username"]', 'admin')
+    page.fill('input[type="password"]', '<password>')
     page.click('button[type="submit"]')
     page.wait_for_load_state('networkidle')
     time.sleep(2)
@@ -416,4 +416,4 @@ cat /tmp/webtesting/financial-agent-full/console.log
 **Test Framework**: Playwright 1.55.0 + Python 3.13
 **Success Rate**: 4/4 (100%)
 **Average Run Time**: 45 seconds
-**Login Credentials**: allenpan / admin123
+**Login Credentials**: admin / <password>

@@ -42,9 +42,9 @@ export default function PortfolioDashboard() {
   const [messageSortOrder, setMessageSortOrder] = useState<"newest" | "oldest">("newest"); // Sort order for messages in modal
   const [analysisType, setAnalysisType] = useState<string>(""); // Analysis type filter ("individual" or "portfolio")
 
-  // Admin check - only admin (allenpan) can see cron controller
+  // Admin check - only admin users can see cron controller
   const currentUser = authStorage.getUser();
-  const isAdmin = currentUser?.is_admin || currentUser?.username === "allenpan";
+  const isAdmin = !!currentUser?.is_admin;
 
   const {
     data: summary,

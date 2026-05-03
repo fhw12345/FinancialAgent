@@ -1,1 +1,0 @@
-{"status":"ok","environment":"development","version":"0.1.0","dependencies":{"mongodb":{"connected":true,"version":"7.0.25"},"redis":{"connected":true,"version":"7.2.12","memory_usage":"2.83M"}}}

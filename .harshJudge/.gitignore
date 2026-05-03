@@ -1,6 +1,0 @@
-# HarshJudge
-# Ignore large evidence files in CI (per-step structure)
-scenarios/*/runs/*/step-*/evidence/*.png
-scenarios/*/runs/*/step-*/evidence/*.html
-# Dashboard state (local only)
-.dashboard-state.json

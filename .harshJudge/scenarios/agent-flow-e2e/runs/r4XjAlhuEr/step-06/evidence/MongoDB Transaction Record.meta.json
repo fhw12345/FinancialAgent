@@ -1,9 +1,0 @@
-{
-  "runId": "r4XjAlhuEr",
-  "stepId": "06",
-  "type": "db_snapshot",
-  "name": "MongoDB Transaction Record",
-  "capturedAt": "2025-12-26T07:51:36.238Z",
-  "fileSize": 908,
-  "metadata": {}
-}

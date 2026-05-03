@@ -105,22 +105,22 @@ Returns:
 
 ### Check Status
 ```bash
-KUBECONFIG=~/.kube/config-ack-prod kubectl get cronjob -n klinematrix-prod
+KUBECONFIG=~/.kube/config-ack-prod kubectl get cronjob -n financial-agent
 ```
 
 ### Suspend/Resume
 ```bash
 # Suspend
-kubectl patch cronjob insights-snapshot-trigger -n klinematrix-prod -p '{"spec":{"suspend":true}}'
+kubectl patch cronjob insights-snapshot-trigger -n financial-agent -p '{"spec":{"suspend":true}}'
 
 # Resume
-kubectl patch cronjob insights-snapshot-trigger -n klinematrix-prod -p '{"spec":{"suspend":false}}'
+kubectl patch cronjob insights-snapshot-trigger -n financial-agent -p '{"spec":{"suspend":false}}'
 ```
 
 ### Manual Trigger
 ```bash
 # Via admin API
-curl -X POST https://klinecubic.cn/api/admin/insights/trigger-snapshot \
+curl -X POST http://localhost:3000/api/admin/insights/trigger-snapshot \
   -H "Authorization: Bearer $TOKEN"
 ```
 

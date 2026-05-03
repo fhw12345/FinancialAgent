@@ -1,9 +1,0 @@
-{
-  "runId": "X3tHpteMxy",
-  "stepId": "04",
-  "type": "console_log",
-  "name": "fallback_mongodb_logs",
-  "capturedAt": "2025-12-28T09:24:01.873Z",
-  "fileSize": 355,
-  "metadata": {}
-}

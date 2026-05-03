@@ -2,7 +2,7 @@
 
 **Status**: ✅ **IMPLEMENTED** (Backend v0.5.2, Frontend v0.8.3) - Released 2025-10-12
 
-**Test Environment URL**: https://klinematrix.com/feedback (login required)
+**Test Environment URL**: http://localhost:3000/feedback (login required)
 
 **Feature Specification and Implementation Plan**
 

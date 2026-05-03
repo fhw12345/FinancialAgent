@@ -1,6 +1,0 @@
-Cache MISS and MongoDB Fallback Verification:
-- Cache MISS cache_key=insights:ai_sector_risk:latest
-- Snapshot from MongoDB category_id=ai_sector_risk
-- Insight category from cache category_id=ai_sector_risk elapsed_ms=3.1 source=mongodb
-- Tool execution completed duration_ms=6
-Result: PASS - Fallback to MongoDB works correctly when Redis cache is empty

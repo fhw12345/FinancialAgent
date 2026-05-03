@@ -51,7 +51,7 @@ Add image upload capability to the feedback submission form, with files stored i
 **Key Components**:
 1. **Frontend**: File input with drag-and-drop support
 2. **Backend**: File upload endpoint with validation
-3. **Storage**: Use Alibaba Cloud OSS bucket (`klinecubic-financialagent-oss`)
+3. **Storage**: Use Alibaba Cloud OSS bucket (`financial-agent-oss`)
 4. **Database**: Store OSS URLs in feedback items
 5. **Display**: Show thumbnails in feedback list/detail views
 
@@ -66,7 +66,7 @@ Backend API (/api/feedback.py)
     ↓ (Validate + Upload)
 OSS Service (/services/oss_service.py)
     ↓ (Store file)
-Alibaba Cloud OSS (klinecubic-financialagent-oss/financial-agent/feedbacks/)
+Alibaba Cloud OSS (financial-agent-oss/financial-agent/feedbacks/)
     ↓ (Return URL)
 MongoDB (feedback collection)
     ↓ (Store attachment URLs)
@@ -102,7 +102,7 @@ User/Admin
 
 **OSSService**: `upload_feedback_attachment(file, filename, content_type) -> url` using `oss2` library
 
-**Storage**: OSS bucket `klinecubic-financialagent-oss`, endpoint `https://oss-cn-shanghai.aliyuncs.com`, prefix `financial-agent/feedbacks/`
+**Storage**: OSS bucket `financial-agent-oss`, endpoint `https://oss-cn-shanghai.aliyuncs.com`, prefix `financial-agent/feedbacks/`
 
 ### Phase 2: Backend Model & API (Day 2-3)
 
@@ -134,7 +134,7 @@ User/Admin
 
 `POST /api/feedback/upload-attachment` (multipart/form-data)
 
-**Response**: `{ "upload_url": "https://klinecubic-financialagent-oss.oss-cn-shanghai.aliyuncs.com/financial-agent/feedbacks/...", "public_url": "...", "object_key": "...", "expires_in": 300 }`
+**Response**: `{ "upload_url": "https://financial-agent-oss.oss-cn-shanghai.aliyuncs.com/financial-agent/feedbacks/...", "public_url": "...", "object_key": "...", "expires_in": 300 }`
 
 **Status Codes**: 200 (Success), 400 (Invalid type/size), 413 (Too large), 500 (Upload failed)
 
@@ -232,7 +232,7 @@ User/Admin
 ### External Services
 
 - **Alibaba Cloud OSS**: Dedicated feedback storage bucket
-  - Bucket: `klinecubic-financialagent-oss`
+  - Bucket: `financial-agent-oss`
   - Region: `cn-shanghai`
   - Endpoint: `oss-cn-shanghai.aliyuncs.com`
   - Object prefix: `financial-agent/feedbacks/`

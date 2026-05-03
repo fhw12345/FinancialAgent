@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: klinematrix-test
-  labels:
-    app.kubernetes.io/name: klinematrix
-    app.kubernetes.io/environment: test

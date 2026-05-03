@@ -40,7 +40,7 @@ This directory contains comprehensive testing documentation for the Financial Ag
 - Writing new E2E tests
 
 **Contains**:
-- Login credentials (allenpan/admin123)
+- Login credentials (admin/<password>)
 - All 35+ backend API endpoints with descriptions
 - 6 detailed user workflows (Login, Chat, Portfolio, Feedback, Transactions, Health)
 - 60+ Playwright selectors organized by page

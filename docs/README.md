@@ -8,9 +8,9 @@ AI-Enhanced Financial Analysis Platform documentation hub.
 
 | Component | Version | Environment | URL |
 |-----------|---------|-------------|-----|
-| Backend | v0.8.8 | Prod (ACK) | https://klinecubic.cn |
-| Frontend | v0.11.4 | Prod (ACK) | https://klinecubic.cn |
-| Test | Planned | AKS | https://klinematrix.com |
+| Backend | v0.8.8 | Prod (ACK) | http://localhost:3000 |
+| Frontend | v0.11.4 | Prod (ACK) | http://localhost:3000 |
+| Test | Planned | AKS | http://localhost:3000 |
 | Local Dev | Docker | Compose | http://localhost:3000 |
 
 > **Environment details**: See [CLAUDE.md](../CLAUDE.md#-environment-rules) for complete environment configuration.

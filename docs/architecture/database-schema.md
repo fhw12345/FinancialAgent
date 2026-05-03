@@ -15,7 +15,7 @@ The Financial Agent platform uses **Azure Cosmos DB with MongoDB API** for persi
 | **Provider** | Azure Cosmos DB for MongoDB API | Managed MongoDB-compatible service |
 | **API Version** | 4.2 | |
 | **Throughput Mode** | Shared Database Throughput | 400 RU/s minimum |
-| **Database Name** | `klinematrix_test` (test), `klinematrix_prod` (prod) | |
+| **Database Name** | `_test` (test), `_prod` (prod) | |
 | **Connection** | External Secrets → Azure Key Vault | `mongodb-connection-string-test` |
 
 ## Collections
@@ -83,7 +83,7 @@ db.users.createIndex({ "username": 1 }, { unique: true, name: "idx_username" })
 - **Multi-auth support**: Users can sign up with ANY ONE of email/phone/WeChat
 - **Partial indexes**: Allow unlimited NULL values while enforcing uniqueness on actual values
 - **Credit system**: Integrated for token-based economy (Backend v0.5.3)
-- **Admin check**: Hardcoded "allenpan" OR `is_admin` flag
+- **Admin check**: Hardcoded "admin" OR `is_admin` flag
 
 ---
 
@@ -443,7 +443,7 @@ Migrations are manual (no automated migration system).
 ```bash
 az cosmosdb mongodb collection update \
   --account-name financialagent-mongodb \
-  --database-name klinematrix_test \
+  --database-name _test \
   --name chats \
   --resource-group FinancialAgent \
   --idx '[

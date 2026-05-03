@@ -1,9 +1,0 @@
-{
-  "cache_behavior": "HIT",
-  "first_call_duration_ms": 2528,
-  "second_call_duration_ms": 3,
-  "speedup_factor": "843x",
-  "data_consistent": true,
-  "pcr_value": 0.30,
-  "log_evidence": "Cache HIT cache_key=market:pcr:NVDA"
-}

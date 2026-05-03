@@ -282,7 +282,7 @@ def get_oss_service(
     access_key_id: str = "",
     access_key_secret: str = "",
     endpoint: str = "oss-cn-shanghai.aliyuncs.com",
-    bucket_name: str = "klinecubic-financialagent-oss",
+    bucket_name: str = "financial-agent-oss",
 ) -> OSSService:
     """
     Factory function to create OSS service instance.

@@ -31,7 +31,7 @@ function App() {
     if (token && user) {
       setIsAuthenticated(true);
       setUsername(user.username);
-      setIsAdmin(user.is_admin || user.username === "allenpan");
+      setIsAdmin(!!user.is_admin);
     }
   }, []);
 
@@ -39,7 +39,7 @@ function App() {
     const user = authStorage.getUser();
     if (user) {
       setUsername(user.username);
-      setIsAdmin(user.is_admin || user.username === "allenpan");
+      setIsAdmin(!!user.is_admin);
     }
     setIsAuthenticated(true);
   };

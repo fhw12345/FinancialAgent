@@ -14,7 +14,7 @@
 
 ## Business Context
 
-The Financial Agent is in production at https://klinecubic.cn. As the platform scales, performance optimization becomes critical for:
+The Financial Agent is in production at http://localhost:3000. As the platform scales, performance optimization becomes critical for:
 - User experience (response times)
 - Operational costs (efficient resource utilization)
 - Scalability (supporting concurrent users)
@@ -138,7 +138,7 @@ Optimize Kubernetes resource allocation and connections.
 - **Architecture**: [docs/architecture/system-design.md](../architecture/system-design.md)
 - **Coding Standards**: [docs/development/coding-standards.md](../development/coding-standards.md)
 - **Testing Strategy**: [docs/development/testing-strategy.md](../development/testing-strategy.md)
-- **Observability**: Langfuse at https://monitor.klinecubic.cn
+- **Observability**: Langfuse at http://localhost:3001
 
 ## Success Metrics
 

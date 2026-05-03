@@ -47,10 +47,13 @@ class Settings(BaseSettings):
     ]  # Allow all hosts (override via ALLOWED_HOSTS env var)
     cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
-    # Langfuse observability configuration (Factor 2: Own Your Prompts)
-    langfuse_public_key: str = ""
-    langfuse_secret_key: str = ""
-    langfuse_host: str = "http://langfuse-server:3000"
+    # Langfuse observability configuration (optional, off by default)
+    # When langfuse_enabled=False, the @observe decorator becomes a no-op
+    # and the langfuse Python package is not required.
+    langfuse_enabled: bool = False
+    langfuse_public_key: str | None = None
+    langfuse_secret_key: str | None = None
+    langfuse_host: str | None = None
 
     # External APIs - LLM
     openai_api_key: str = ""
@@ -90,10 +93,10 @@ class Settings(BaseSettings):
     tencent_secret_id: str = ""  # Tencent Cloud API SecretID
     tencent_secret_key: str = ""  # Tencent Cloud API SecretKey (from Azure Key Vault)
     tencent_ses_region: str = "ap-guangzhou"  # ap-guangzhou or ap-hongkong
-    tencent_ses_from_email: str = "noreply@klinematrix.com"
-    tencent_ses_from_name: str = "KlineMatrix"
+    tencent_ses_from_email: str = "noreply@example.com"
+    tencent_ses_from_name: str = "FinancialAgent"
     tencent_ses_template_id: int = 37066  # Template ID for verification emails
-    email_verification_subject: str = "Your KlineMatrix Verification Code"
+    email_verification_subject: str = "Your FinancialAgent Verification Code"
     email_code_ttl_seconds: int = 300  # 5 minutes
 
     # Development mode settings
@@ -106,7 +109,7 @@ class Settings(BaseSettings):
     # Cloud storage (Alibaba OSS)
     oss_access_key: str = ""
     oss_secret_key: str = ""
-    oss_bucket: str = "klinecubic-financialagent-oss"
+    oss_bucket: str = "financial-agent-oss"
     oss_endpoint: str = "oss-cn-shanghai.aliyuncs.com"
 
     # Cache settings - TTL values in seconds by data category

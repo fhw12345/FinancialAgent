@@ -3,7 +3,7 @@
 **Status:** ✅ Completed
 **Created:** 2025-10-14
 **Completed:** 2025-10-15
-**Author:** Claude + allenpan
+**Author:** Claude + admin
 
 ## Context
 
@@ -395,7 +395,7 @@ Keep **1 credit = 200 tokens** as the *reference* for qwen-plus, but calculate a
 - Memoization for expensive computations (ChatMessages parsing)
 - Comprehensive test coverage (187 backend + 11 frontend tests)
 
-**Test Environment Deployment:** Deployed to Test environment (https://klinematrix.com)
+**Test Environment Deployment:** Deployed to Test environment (http://localhost:3000)
 
 **Verification:**
 - ✅ All 4 models configured in model registry

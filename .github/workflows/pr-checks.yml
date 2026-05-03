@@ -10,41 +10,9 @@ permissions:
   pull-requests: write
 
 jobs:
-  # 1. Enforce branch naming policy
-  branch-policy:
-    name: Branch Policy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Validate Branch Name
-        run: |
-          BRANCH_NAME="${{ github.head_ref }}"
-          echo "🔍 Checking branch: $BRANCH_NAME"
-
-          if [[ ! "$BRANCH_NAME" =~ ^users/[^/]+/.+$ ]]; then
-            echo ""
-            echo "❌ Branch naming violation!"
-            echo ""
-            echo "Your branch: $BRANCH_NAME"
-            echo "Required format: users/{username}/{feature-name}"
-            echo ""
-            echo "Examples:"
-            echo "  ✓ users/danny/add-dark-mode"
-            echo "  ✓ users/allen/fix-login-bug"
-            echo "  ✓ users/john/feature/new-dashboard"
-            echo ""
-            echo "Please rename your branch:"
-            echo "  git branch -m $BRANCH_NAME users/YOUR_NAME/YOUR_FEATURE"
-            echo "  git push origin -u users/YOUR_NAME/YOUR_FEATURE"
-            echo "  git push origin --delete $BRANCH_NAME"
-            exit 1
-          fi
-
-          echo "✅ Branch name is valid: $BRANCH_NAME"
-
-  # 2. Run unit tests (required status check)
+  # 1. Run unit tests (required status check)
   unit-tests:
     name: Unit Tests
-    needs: branch-policy
     runs-on: ubuntu-latest
 
     services:
@@ -128,7 +96,6 @@ jobs:
   # Note: Using coderabbitai for AI review - install via GitHub marketplace
   ai-summary:
     name: AI Summary
-    needs: branch-policy
     runs-on: ubuntu-latest
     # Don't fail the PR if AI summary fails
     continue-on-error: true

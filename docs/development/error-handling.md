@@ -31,7 +31,7 @@ except InvalidNamespace as e:
 
 # Result: Fast debugging
 # - See "error_type": "database_error" in logs
-# - See "db_name": "klinematrix_test?ssl=true" in context
+# - See "db_name": "_test?ssl=true" in context
 # - Immediately know it's a config issue (query params in DB name)
 # Developer fixes in 2 minutes
 ```
@@ -172,8 +172,8 @@ except Exception as e:
   "error_type": "database_error",
   "message": "Database name contains query parameters",
   "status_code": 500,
-  "raw_db_name": "klinematrix_test?ssl=true&retryWrites=true",
-  "parsed_db_name": "klinematrix_test"
+  "raw_db_name": "_test?ssl=true&retryWrites=true",
+  "parsed_db_name": "_test"
 }
 ```
 
@@ -270,7 +270,7 @@ if response.status_code >= 500:
 
 ### 1. MongoDB Database Name Validation
 
-**Problem:** Database name contained query parameters (`klinematrix_test?ssl=true`), causing `InvalidNamespace` errors that were hard to diagnose.
+**Problem:** Database name contained query parameters (`_test?ssl=true`), causing `InvalidNamespace` errors that were hard to diagnose.
 
 **Solution:**
 ```python
@@ -336,8 +336,8 @@ console.info('[Config] Environment:', import.meta.env.MODE)
   "method": "POST",
   "error_type": "database_error",  // ← Easy to filter/alert on
   "status_code": 500,
-  "raw_db_name": "klinematrix_test?ssl=true",
-  "parsed_db_name": "klinematrix_test"
+  "raw_db_name": "_test?ssl=true",
+  "parsed_db_name": "_test"
 }
 ```
 

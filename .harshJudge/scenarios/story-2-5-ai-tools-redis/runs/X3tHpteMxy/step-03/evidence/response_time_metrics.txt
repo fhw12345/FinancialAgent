@@ -1,5 +1,0 @@
-Response Time Verification:
-- Cache fetch elapsed_ms: 1.2ms (from Redis)
-- Tool execution duration_ms: 3ms
-- Threshold: < 100ms
-- Result: PASS (3ms << 100ms)

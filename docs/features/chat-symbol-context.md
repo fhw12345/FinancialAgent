@@ -208,7 +208,7 @@ docker compose logs -f backend
 **Test Scenarios**:
 
 1. **Scenario A**:
-   - Login: http://localhost:3000 (allenpan/admin123)
+   - Login: http://localhost:3000 (admin/<password>)
    - Select symbol "GOOG"
    - Send: "What's the trend?"
    - Verify: Agent uses GOOG in response

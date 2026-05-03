@@ -492,7 +492,7 @@ Relates to #456
 - ✅ Version bumped
 
 **Branch Protection Rules** (enforced on `main`):
-- Direct push to `main` is **blocked** (except for admin `allenpan`)
+- Direct push to `main` is **blocked** (except for repo admins)
 - All changes must go through Pull Request
 - 1 approving review required before merge
 - "Unit Tests" status check must pass

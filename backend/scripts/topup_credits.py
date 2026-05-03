@@ -4,7 +4,6 @@ Admin script to top up user credits.
 
 Usage:
     python scripts/topup_credits.py <username> <amount>
-    python scripts/topup_credits.py allenpan 1000
 """
 
 import asyncio
@@ -72,7 +71,7 @@ async def main():
     """Main entry point."""
     if len(sys.argv) < 3:
         print("Usage: python scripts/topup_credits.py <username> <amount>")
-        print("Example: python scripts/topup_credits.py allenpan 1000")
+        print("Example: python scripts/topup_credits.py myuser 1000")
         sys.exit(1)
 
     username = sys.argv[1]
