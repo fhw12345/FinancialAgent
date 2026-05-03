@@ -117,3 +117,11 @@ dump.rdb
 .harshJudge/
 # Recovery docs may contain credentials
 docs/recovery/
+
+# W9 E2E port override (FundAgent occupies default ports)
+docker-compose.override.yml
+
+# E2E artifacts
+e2e_test.py
+e2e_report.json
+e2e_screens/
