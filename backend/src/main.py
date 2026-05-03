@@ -67,21 +67,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from .database.repositories.comment_repository import CommentRepository
         from .database.repositories.feedback_repository import FeedbackRepository
         from .database.repositories.message_repository import MessageRepository
-        from .database.repositories.refresh_token_repository import (
-            RefreshTokenRepository,
-        )
         from .database.repositories.tool_execution_repository import (
             ToolExecutionRepository,
         )
         from .database.repositories.transaction_repository import (
             TransactionRepository,
         )
-
-        refresh_token_repo = RefreshTokenRepository(
-            mongodb.get_collection("refresh_tokens")
-        )
-        await refresh_token_repo.ensure_indexes()
-        logger.info("Refresh token indexes created")
 
         feedback_repo = FeedbackRepository(mongodb.get_collection("feedback_items"))
         await feedback_repo.ensure_indexes()

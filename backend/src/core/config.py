@@ -45,7 +45,12 @@ class Settings(BaseSettings):
     allowed_hosts: list[str] = [
         "*"
     ]  # Allow all hosts (override via ALLOWED_HOSTS env var)
-    cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
 
     # Langfuse observability configuration (optional, off by default)
     # When langfuse_enabled=False, the @observe decorator becomes a no-op

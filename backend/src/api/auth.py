@@ -1,500 +1,162 @@
 """
-Authentication API endpoints supporting multiple auth methods.
-Provides email/phone verification and JWT token generation.
+Authentication API endpoints — STUB (W3a + W3c).
+
+Single-user fork: every endpoint succeeds and returns the fixed local user
+with placeholder "local" tokens. Schemas are inlined here because the original
+`schemas/auth_schemas.py`, refresh-token repository, token service, and auth
+service modules were removed in W3c.
 """
 
 import structlog
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Header, Request
+from pydantic import BaseModel
 
-from ..database.mongodb import MongoDB
-from ..database.redis import RedisCache
-from ..database.repositories.refresh_token_repository import RefreshTokenRepository
-from ..database.repositories.user_repository import UserRepository
-from ..models.refresh_token import TokenPair
+from ..core.local_user import build_local_user
 from ..models.user import User
-from ..services.auth_service import AuthService
-from ..services.token_service import TokenService
-from .dependencies.auth import get_mongodb, get_user_repository
-from .schemas.auth_schemas import (
-    LoginRequest,
-    LoginResponse,
-    LogoutRequest,
-    RefreshTokenRequest,
-    RegisterRequest,
-    ResetPasswordRequest,
-    SendCodeRequest,
-    SendCodeResponse,
-    VerifyCodeRequest,
-)
 
 logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
 
-# ===== Dependencies =====
+# ===== Inlined request/response schemas (lenient — accept any payload) =====
 
 
-def get_redis() -> RedisCache:
-    """Get Redis instance from app state."""
-    from ..main import app
+class SendCodeRequest(BaseModel):
+    auth_type: str | None = None
+    identifier: str = ""
 
-    redis: RedisCache = app.state.redis
-    return redis
-
-
-def get_refresh_token_repository(
-    mongodb: MongoDB = Depends(get_mongodb),
-) -> RefreshTokenRepository:
-    """Get refresh token repository instance."""
-    refresh_tokens_collection = mongodb.get_collection("refresh_tokens")
-    return RefreshTokenRepository(refresh_tokens_collection)
+    model_config = {"extra": "allow"}
 
 
-def get_token_service(
-    refresh_token_repo: RefreshTokenRepository = Depends(get_refresh_token_repository),
-) -> TokenService:
-    """Get token service instance."""
-    return TokenService(refresh_token_repo)
+class SendCodeResponse(BaseModel):
+    message: str
+    code: str | None = None
 
 
-def get_auth_service(
-    user_repo: UserRepository = Depends(get_user_repository),
-    redis_cache: RedisCache = Depends(get_redis),
-) -> AuthService:
-    """Get auth service with Redis cache for code verification."""
-    return AuthService(user_repo, redis_cache)
+class VerifyCodeRequest(BaseModel):
+    model_config = {"extra": "allow"}
 
 
-# ===== Endpoints =====
+class RegisterRequest(BaseModel):
+    model_config = {"extra": "allow"}
+
+
+class LoginRequest(BaseModel):
+    model_config = {"extra": "allow"}
+
+
+class ResetPasswordRequest(BaseModel):
+    model_config = {"extra": "allow"}
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str | None = None
+
+    model_config = {"extra": "allow"}
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: str | None = None
+
+    model_config = {"extra": "allow"}
+
+
+class TokenPair(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str
+    expires_in: int
+    refresh_expires_in: int
+
+
+class LoginResponse(TokenPair):
+    user: User
+
+
+# ===== Stub endpoints =====
+
+_FAKE_TOKEN = "local"  # noqa: S105 — intentional placeholder for stubbed auth
+_FAKE_EXPIRES_IN = 60 * 60 * 24 * 365  # 1 year
+_FAKE_REFRESH_EXPIRES_IN = 60 * 60 * 24 * 365  # 1 year
+
+
+def _login_response() -> LoginResponse:
+    return LoginResponse(
+        access_token=_FAKE_TOKEN,
+        refresh_token=_FAKE_TOKEN,
+        token_type="bearer",
+        expires_in=_FAKE_EXPIRES_IN,
+        refresh_expires_in=_FAKE_REFRESH_EXPIRES_IN,
+        user=build_local_user(),
+    )
 
 
 @router.post("/send-code", response_model=SendCodeResponse)
-async def send_verification_code(
-    request: SendCodeRequest,
-    auth_service: AuthService = Depends(get_auth_service),
-) -> SendCodeResponse:
-    """
-    Send verification code via email or SMS.
-
-    Returns code in response for dev mode.
-    In production, code is sent but not returned in response.
-    """
-    try:
-        if request.auth_type == "email":
-            await auth_service.send_code_email(request.identifier)
-        elif request.auth_type == "phone":
-            raise HTTPException(
-                status_code=status.HTTP_501_NOT_IMPLEMENTED,
-                detail="Phone authentication not yet implemented",
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid auth type: {request.auth_type}",
-            )
-
-        # In production, do NOT return the code (it should only be sent via email)
-        # Code is only visible in email inbox
-        return SendCodeResponse(
-            message=f"Verification code sent to {request.identifier}",
-            code=None,  # Never return code in response for security
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error("Failed to send verification code", error=str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to send verification code: {str(e)}",
-        ) from e
+async def send_verification_code(request: SendCodeRequest) -> SendCodeResponse:
+    return SendCodeResponse(
+        message=f"(stub) Verification code accepted for {request.identifier}",
+        code=None,
+    )
 
 
 @router.post("/verify-code", response_model=LoginResponse)
 async def verify_code_and_login(
     verify_request: VerifyCodeRequest,
     http_request: Request,
-    auth_service: AuthService = Depends(get_auth_service),
-    token_service: TokenService = Depends(get_token_service),
 ) -> LoginResponse:
-    """
-    Verify code and login user.
-
-    Creates new user if identifier not registered.
-    Returns JWT token pair for authenticated requests.
-    """
-    try:
-        user, _ = await auth_service.verify_and_login(
-            auth_type=verify_request.auth_type,
-            identifier=verify_request.identifier,
-            code=verify_request.code,
-        )
-
-        # Create token pair with device info
-        user_agent = http_request.headers.get("user-agent")
-        ip_address = http_request.client.host if http_request.client else None
-
-        token_pair = await token_service.create_token_pair(
-            user=user,
-            user_agent=user_agent,
-            ip_address=ip_address,
-        )
-
-        return LoginResponse(
-            access_token=token_pair.access_token,
-            refresh_token=token_pair.refresh_token,
-            token_type=token_pair.token_type,
-            expires_in=token_pair.expires_in,
-            refresh_expires_in=token_pair.refresh_expires_in,
-            user=user,
-        )
-
-    except NotImplementedError as e:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail=str(e),
-        ) from e
-    except ValueError as e:
-        logger.warning("Verification failed", identifier=verify_request.identifier)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
-        ) from e
-    except Exception as e:
-        logger.error("Login failed", error=str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Login failed",
-        ) from e
+    return _login_response()
 
 
 @router.post("/register", response_model=LoginResponse)
 async def register_user(
     register_request: RegisterRequest,
     http_request: Request,
-    auth_service: AuthService = Depends(get_auth_service),
-    token_service: TokenService = Depends(get_token_service),
 ) -> LoginResponse:
-    """
-    Register a new user with email verification.
-
-    Flow:
-    1. User sends email → receives code
-    2. User submits this endpoint with: email, code, username, password
-    3. System verifies code, creates user, returns JWT token pair
-    """
-    try:
-        user, _ = await auth_service.register_user(
-            email=register_request.email,
-            code=register_request.code,
-            username=register_request.username,
-            password=register_request.password,
-        )
-
-        # Create token pair with device info
-        user_agent = http_request.headers.get("user-agent")
-        ip_address = http_request.client.host if http_request.client else None
-
-        token_pair = await token_service.create_token_pair(
-            user=user,
-            user_agent=user_agent,
-            ip_address=ip_address,
-        )
-
-        return LoginResponse(
-            access_token=token_pair.access_token,
-            refresh_token=token_pair.refresh_token,
-            token_type=token_pair.token_type,
-            expires_in=token_pair.expires_in,
-            refresh_expires_in=token_pair.refresh_expires_in,
-            user=user,
-        )
-
-    except ValueError as e:
-        logger.warning(
-            "Registration failed", email=register_request.email, error=str(e)
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        ) from e
-    except Exception as e:
-        logger.error("Registration failed", error=str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Registration failed",
-        ) from e
+    return _login_response()
 
 
 @router.post("/login", response_model=LoginResponse)
 async def login_with_password(
     login_request: LoginRequest,
     http_request: Request,
-    auth_service: AuthService = Depends(get_auth_service),
-    token_service: TokenService = Depends(get_token_service),
 ) -> LoginResponse:
-    """
-    Login with username and password.
-
-    For users who have already registered.
-    Returns JWT token pair (access + refresh) for authenticated requests.
-    """
-    try:
-        # Authenticate user
-        user, _ = await auth_service.login_with_password(
-            username=login_request.username,
-            password=login_request.password,
-        )
-
-        # Create token pair with device info
-        user_agent = http_request.headers.get("user-agent")
-        ip_address = http_request.client.host if http_request.client else None
-
-        token_pair = await token_service.create_token_pair(
-            user=user,
-            user_agent=user_agent,
-            ip_address=ip_address,
-        )
-
-        return LoginResponse(
-            access_token=token_pair.access_token,
-            refresh_token=token_pair.refresh_token,
-            token_type=token_pair.token_type,
-            expires_in=token_pair.expires_in,
-            refresh_expires_in=token_pair.refresh_expires_in,
-            user=user,
-        )
-
-    except ValueError as e:
-        logger.warning("Login failed", username=login_request.username)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
-        ) from e
-    except Exception as e:
-        logger.error("Login failed", error=str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Login failed",
-        ) from e
+    return _login_response()
 
 
 @router.post("/reset-password", response_model=LoginResponse)
 async def reset_password(
     reset_request: ResetPasswordRequest,
     http_request: Request,
-    auth_service: AuthService = Depends(get_auth_service),
-    token_service: TokenService = Depends(get_token_service),
 ) -> LoginResponse:
-    """
-    Reset password using email verification.
-
-    Flow:
-    1. User requests password reset (sends email → receives code)
-    2. User submits this endpoint with: email, code, new_password
-    3. System verifies code, updates password, returns JWT token pair (auto-login)
-    """
-    try:
-        user, _ = await auth_service.reset_password(
-            email=reset_request.email,
-            code=reset_request.code,
-            new_password=reset_request.new_password,
-        )
-
-        # Create token pair with device info
-        user_agent = http_request.headers.get("user-agent")
-        ip_address = http_request.client.host if http_request.client else None
-
-        token_pair = await token_service.create_token_pair(
-            user=user,
-            user_agent=user_agent,
-            ip_address=ip_address,
-        )
-
-        return LoginResponse(
-            access_token=token_pair.access_token,
-            refresh_token=token_pair.refresh_token,
-            token_type=token_pair.token_type,
-            expires_in=token_pair.expires_in,
-            refresh_expires_in=token_pair.refresh_expires_in,
-            user=user,
-        )
-
-    except ValueError as e:
-        logger.warning("Password reset failed", email=reset_request.email, error=str(e))
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        ) from e
-    except Exception as e:
-        logger.error("Password reset failed", error=str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Password reset failed",
-        ) from e
+    return _login_response()
 
 
 @router.get("/me", response_model=User)
 async def get_current_user_endpoint(
     authorization: str | None = Header(None),
-    auth_service: AuthService = Depends(get_auth_service),
 ) -> User:
-    """
-    Get current authenticated user.
-
-    Requires Bearer token in Authorization header.
-    """
-    if not authorization:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization header required",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Extract token from "Bearer <token>"
-    parts = authorization.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authorization header format. Expected: Bearer <token>",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    token = parts[1]
-    user = await auth_service.get_current_user(token)
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    return user
+    return build_local_user()
 
 
 @router.post("/refresh", response_model=TokenPair)
-async def refresh_access_token(
-    request: RefreshTokenRequest,
-    token_service: TokenService = Depends(get_token_service),
-) -> TokenPair:
-    """
-    Refresh access token using refresh token.
-
-    Automatically rotates refresh token for security.
-    Returns new token pair.
-    """
-    try:
-        token_pair = await token_service.refresh_access_token(
-            refresh_token=request.refresh_token,
-            rotate=True,
-        )
-
-        if isinstance(token_pair, str):
-            # Should not happen with rotate=True, but handle gracefully
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Token rotation failed",
-            )
-
-        return token_pair
-
-    except ValueError as e:
-        logger.warning("Token refresh failed", error=str(e))
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
-        ) from e
-    except Exception as e:
-        logger.error("Token refresh failed", error=str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Token refresh failed",
-        ) from e
+async def refresh_access_token(request: RefreshTokenRequest) -> TokenPair:
+    return TokenPair(
+        access_token=_FAKE_TOKEN,
+        refresh_token=_FAKE_TOKEN,
+        token_type="bearer",
+        expires_in=_FAKE_EXPIRES_IN,
+        refresh_expires_in=_FAKE_REFRESH_EXPIRES_IN,
+    )
 
 
 @router.post("/logout")
-async def logout(
-    request: LogoutRequest,
-    token_service: TokenService = Depends(get_token_service),
-) -> dict[str, str]:
-    """
-    Logout by revoking refresh token.
-
-    Access token will remain valid until expiry (30 min).
-    Client should delete both tokens from storage.
-    """
-    try:
-        revoked = await token_service.revoke_token(request.refresh_token)
-
-        if not revoked:
-            # Token not found or already revoked - treat as success
-            logger.info("Logout attempted with invalid token")
-
-        return {"message": "Logged out successfully"}
-
-    except Exception as e:
-        logger.error("Logout failed", error=str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Logout failed",
-        ) from e
+async def logout(request: LogoutRequest) -> dict[str, str]:
+    return {"message": "Logged out successfully"}
 
 
 @router.post("/logout-all")
 async def logout_all_devices(
     authorization: str | None = Header(None),
-    auth_service: AuthService = Depends(get_auth_service),
-    token_service: TokenService = Depends(get_token_service),
 ) -> dict[str, str]:
-    """
-    Logout from all devices by revoking all refresh tokens.
-
-    Requires Bearer token in Authorization header.
-    All active refresh tokens will be revoked.
-    """
-    try:
-        if not authorization:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authorization header required",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-        # Extract token from "Bearer <token>"
-        parts = authorization.split()
-        if len(parts) != 2 or parts[0].lower() != "bearer":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authorization header format. Expected: Bearer <token>",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-        token = parts[1]
-
-        # Get current user from access token
-        user = await auth_service.get_current_user(token)
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired token",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-        # Revoke all refresh tokens for this user
-        count = await token_service.revoke_all_user_tokens(user.user_id)
-
-        logger.info("Logout all completed", user_id=user.user_id, tokens_revoked=count)
-
-        return {"message": f"Logged out from all devices ({count} tokens revoked)"}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error("Logout all failed", error=str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Logout all failed",
-        ) from e
+    return {"message": "Logged out from all devices (0 tokens revoked)"}
