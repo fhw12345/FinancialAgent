@@ -112,8 +112,8 @@ respond with exactly: "{TERMINATION_SIGNAL}"
 
     # Independent tools only — NOT Alpha Vantage
     debater_tools = create_yfinance_tools()
-    if exa_api_key:
-        debater_tools.extend(create_exa_tools(api_key=exa_api_key))
+    # W7: web search is now free (yfinance.news + Google News RSS), always wired
+    debater_tools.extend(create_exa_tools(api_key=exa_api_key))
 
     return create_deep_subagent(
         config=config,

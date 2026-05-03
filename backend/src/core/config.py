@@ -61,8 +61,8 @@ class Settings(BaseSettings):
     langfuse_host: str | None = None
 
     # External APIs - LLM
-    openai_api_key: str = ""
-    qwen_api_key: str = ""  # Legacy - use dashscope_api_key instead
+    # NOTE: openai/legacy qwen keys removed in W7. DashScope is the sole LLM provider
+    # for now; broader multi-model routing handled in W8.
     dashscope_api_key: str = ""  # Alibaba Cloud DashScope API key
 
     # LLM Configuration
@@ -85,26 +85,12 @@ class Settings(BaseSettings):
     tail_messages_keep: int = 3  # Keep last 3 exchanges in tail
     summarization_model: str = "qwen-flash"  # Fast, cheap model for summarization
 
-    # External APIs - Market Data & Trading
-    alpha_vantage_api_key: str = ""  # Alpha Vantage API key (premium: 75 calls/min)
-    fred_api_key: str = ""  # FRED API key (free, for liquidity metrics)
-    # W5a: Alpaca live trading removed. Settings kept as deprecated placeholders so
-    # legacy .env files do not error out; values are no longer read by the app.
-    alpaca_api_key: str = ""  # deprecated, no longer used
-    alpaca_secret_key: str = ""  # deprecated, no longer used
-    alpaca_base_url: str = ""  # deprecated, no longer used
-    polygon_api_key: str = ""  # Polygon.io API key for extended hours data
-    exa_api_key: str = ""  # Exa web search API key (debater independent verification)
-
-    # Email configuration (Tencent Cloud SES)
-    tencent_secret_id: str = ""  # Tencent Cloud API SecretID
-    tencent_secret_key: str = ""  # Tencent Cloud API SecretKey (from Azure Key Vault)
-    tencent_ses_region: str = "ap-guangzhou"  # ap-guangzhou or ap-hongkong
-    tencent_ses_from_email: str = "noreply@example.com"
-    tencent_ses_from_name: str = "FinancialAgent"
-    tencent_ses_template_id: int = 37066  # Template ID for verification emails
-    email_verification_subject: str = "Your FinancialAgent Verification Code"
-    email_code_ttl_seconds: int = 300  # 5 minutes
+    # External APIs - Market Data
+    # W7: All paid market-data keys removed. yfinance (free, no key) is the
+    # default data source. Alpha Vantage key kept as optional for users who
+    # already have one — when empty the service falls back to yfinance.
+    alpha_vantage_api_key: str = ""  # optional, falls back to yfinance when empty
+    fred_api_key: str = ""  # FRED API key (free, register at fred.stlouisfed.org)
 
     # Development mode settings
     dev_bypass_email_verification: bool = False  # Skip actual email sending in dev mode
@@ -112,12 +98,6 @@ class Settings(BaseSettings):
     dev_analysis_symbols: str = (
         ""  # Comma-separated symbols to analyze in dev mode (empty = all)
     )
-
-    # Cloud storage (Alibaba OSS)
-    oss_access_key: str = ""
-    oss_secret_key: str = ""
-    oss_bucket: str = "financial-agent-oss"
-    oss_endpoint: str = "oss-cn-shanghai.aliyuncs.com"
 
     # Cache settings - TTL values in seconds by data category
     # These values are optimized based on data freshness requirements

@@ -1,15 +1,85 @@
 """
 Stock quotes and symbol search methods for Alpha Vantage service.
+
+W7: When no Alpha Vantage API key is configured, falls back to yfinance
+(free, unlimited) so the app works out-of-the-box without paid keys.
 """
 
+import asyncio
 from typing import Any
 
 import pandas as pd
 import structlog
+import yfinance as yf
 
 from .base import AlphaVantageBase
 
 logger = structlog.get_logger()
+
+
+def _yf_quote_sync(symbol: str) -> dict[str, Any]:
+    """Synchronous yfinance quote fetch — runs in thread pool."""
+    ticker = yf.Ticker(symbol)
+    info = ticker.info or {}
+    # Fall back to recent history if .info is sparse
+    hist = ticker.history(period="2d")
+    last_close = float(hist["Close"].iloc[-1]) if len(hist) else 0.0
+    prev_close = (
+        float(hist["Close"].iloc[-2])
+        if len(hist) >= 2
+        else float(info.get("previousClose", last_close) or last_close)
+    )
+    open_p = float(hist["Open"].iloc[-1]) if len(hist) else 0.0
+    high_p = float(hist["High"].iloc[-1]) if len(hist) else 0.0
+    low_p = float(hist["Low"].iloc[-1]) if len(hist) else 0.0
+    vol = int(hist["Volume"].iloc[-1]) if len(hist) else int(info.get("volume", 0) or 0)
+    price = float(info.get("currentPrice") or info.get("regularMarketPrice") or last_close)
+    change = price - prev_close
+    change_pct = (change / prev_close * 100.0) if prev_close else 0.0
+    last_day = (
+        hist.index[-1].strftime("%Y-%m-%d") if len(hist) else ""
+    )
+    return {
+        "symbol": symbol,
+        "price": price,
+        "volume": vol,
+        "latest_trading_day": last_day,
+        "previous_close": prev_close,
+        "change": change,
+        "change_percent": f"{change_pct:.4f}",
+        "open": open_p,
+        "high": high_p,
+        "low": low_p,
+    }
+
+
+def _yf_search_sync(query: str, limit: int) -> list[dict[str, Any]]:
+    """Synchronous yfinance ticker search via Yahoo's search endpoint."""
+    try:
+        # yfinance doesn't expose search directly; use the lookup endpoint
+        from yfinance import Search
+
+        results = Search(query, max_results=limit).quotes or []
+    except Exception:
+        results = []
+    out: list[dict[str, Any]] = []
+    for r in results[:limit]:
+        sym = r.get("symbol") or ""
+        out.append(
+            {
+                "symbol": sym,
+                "name": r.get("shortname") or r.get("longname") or "",
+                "type": r.get("quoteType", ""),
+                "exchange": r.get("exchange", ""),
+                "match_type": (
+                    "exact_symbol"
+                    if sym.upper() == query.upper()
+                    else "fuzzy"
+                ),
+                "confidence": 1.0 if sym.upper() == query.upper() else 0.5,
+            }
+        )
+    return out
 
 
 class QuotesMixin(AlphaVantageBase):
@@ -26,6 +96,15 @@ class QuotesMixin(AlphaVantageBase):
         Returns:
             List of search results with symbol, name, type, region, currency
         """
+        # W7: yfinance fallback when no AV key configured
+        if not self.api_key:
+            results = await asyncio.to_thread(_yf_search_sync, query, limit)
+            logger.info(
+                "Symbol search via yfinance",
+                query=query,
+                results_count=len(results),
+            )
+            return results
         try:
             response = await self.client.get(
                 self.base_url,
@@ -91,6 +170,19 @@ class QuotesMixin(AlphaVantageBase):
         Returns:
             Dict with price, volume, change, etc.
         """
+        # W7: yfinance fallback when no AV key configured
+        if not self.api_key:
+            try:
+                result = await asyncio.to_thread(_yf_quote_sync, symbol)
+                logger.info(
+                    "Quote via yfinance",
+                    symbol=symbol,
+                    price=result["price"],
+                )
+                return result
+            except Exception as e:
+                logger.error("yfinance quote failed", symbol=symbol, error=str(e))
+                raise
         try:
             # GLOBAL_QUOTE with entitlement=delayed returns previous day's close during market hours
             # It will show today's close only after market closes
@@ -203,6 +295,27 @@ class QuotesMixin(AlphaVantageBase):
         }
 
         try:
+            # W7: yfinance fallback — compute status from local time vs market hours
+            if not self.api_key:
+                tz = region_timezones.get(region, "UTC")
+                utc_now = pd.Timestamp.now(tz="UTC")
+                local_now = utc_now.tz_convert(tz)
+                # Simple heuristic: equity markets open 09:30-16:00 local, Mon-Fri
+                is_weekday = local_now.weekday() < 5
+                in_hours = (local_now.hour, local_now.minute) >= (9, 30) and (
+                    local_now.hour < 16
+                )
+                status = "open" if (is_weekday and in_hours) else "closed"
+                return {
+                    "region": region,
+                    "current_status": status,
+                    "local_open": "09:30",
+                    "local_close": "16:00",
+                    "primary_exchanges": "NYSE, NASDAQ" if region == "United States" else "",
+                    "notes": "yfinance fallback — heuristic schedule",
+                    "local_time": local_now.strftime("%Y-%m-%d %H:%M %Z"),
+                    "utc_time": utc_now.strftime("%Y-%m-%d %H:%M UTC"),
+                }
             response = await self.client.get(
                 self.base_url,
                 params={
