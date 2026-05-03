@@ -40,12 +40,6 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 
-# Patch DashScope error handling BEFORE importing ChatTongyi
-from ..core.utils.dashscope_fix import patch_tongyi_check_response
-
-patch_tongyi_check_response()
-
-from langchain_community.chat_models import ChatTongyi
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
@@ -68,6 +62,7 @@ from ..services.insights.snapshot_service import InsightsSnapshotService
 from ..services.market_data import FREDService
 from ..services.tool_cache_wrapper import ToolCacheWrapper
 from .llm_client import FINANCIAL_AGENT_SYSTEM_PROMPT_TEMPLATE
+from .llm_factory import get_llm
 from .tools.alpha_vantage_tools import create_alpha_vantage_tools
 from .tools.insights_tools import create_insights_tools
 from .tools.pcr_tools import create_pcr_tools
@@ -190,13 +185,11 @@ class FinancialAnalysisReActAgent:
             self.fibonacci_analyzer = None
             self.stochastic_analyzer = None
 
-        # Initialize LLM with centralized configuration
-        self.llm = ChatTongyi(
-            model_name=settings.default_llm_model,
-            dashscope_api_key=settings.dashscope_api_key,
+        # Initialize LLM via Agent Maestro (W8)
+        self.llm = get_llm(
+            "react_agent",
             temperature=settings.default_llm_temperature,
-            model_kwargs={"result_format": "message"},
-            request_timeout=30,
+            timeout=30,
         )
 
         # Create compressed local tools (Fibonacci + Stochastic + Historical Prices)

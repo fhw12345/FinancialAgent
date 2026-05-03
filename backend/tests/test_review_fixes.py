@@ -47,7 +47,7 @@ class TestSynthesisStartGuard:
         settings.default_llm_temperature = 0.7
         settings.exa_api_key = ""
 
-        with patch("src.agent.deep_react_agent.ChatTongyi"):
+        with patch("src.agent.deep_react_agent.get_llm"):
             agent = DeepReActAgent(
                 settings=settings,
                 tools=[],
@@ -77,7 +77,7 @@ class TestSynthesisStartGuard:
         settings.default_llm_temperature = 0.7
         settings.exa_api_key = ""
 
-        with patch("src.agent.deep_react_agent.ChatTongyi"):
+        with patch("src.agent.deep_react_agent.get_llm"):
             agent = DeepReActAgent(
                 settings=settings,
                 tools=[],

@@ -14,7 +14,6 @@ from collections.abc import Callable
 from typing import Annotated, Any, TypedDict
 
 import structlog
-from langchain_community.chat_models import ChatTongyi
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
@@ -33,6 +32,7 @@ from .debate_types import (
     parse_rebuttal_output,
     render_verified_facts_reminder,
 )
+from .llm_factory import get_llm
 from .subagent_invoker import invoke_subagent
 from .subagents.debater import TERMINATION_SIGNAL, create_debater_subagent
 from .subagents.financial import create_financial_subagent
@@ -103,14 +103,16 @@ class DeepReActAgent:
         # Exa API key for debater's independent web search
         self.exa_api_key: str = getattr(settings, "exa_api_key", "")
 
-        # Initialize LLM
-        self.llm = ChatTongyi(
-            model_name=settings.default_llm_model,
-            dashscope_api_key=settings.dashscope_api_key,
-            temperature=settings.default_llm_temperature,
-            model_kwargs={"result_format": "message"},
-            request_timeout=30,
-        )
+        # Initialize LLMs (W8: routed via Agent Maestro, per-role models)
+        # Main planner uses the strongest model; verdict synthesis uses sonnet.
+        temperature = float(getattr(settings, "default_llm_temperature", 0.7))
+        self.llm = get_llm("deep_planner", temperature=temperature, timeout=30)
+        self.verdict_llm = get_llm("verdict", temperature=temperature, timeout=30)
+        # Per-subagent LLMs
+        self._llm_technical = get_llm("sub_technical", temperature=temperature, timeout=30)
+        self._llm_news = get_llm("sub_news", temperature=temperature, timeout=30)
+        self._llm_financial = get_llm("sub_financial", temperature=temperature, timeout=30)
+        self._llm_debater = get_llm("sub_debater", temperature=temperature, timeout=30)
 
         logger.info(
             "DeepReActAgent initialized",
@@ -127,16 +129,16 @@ class DeepReActAgent:
         """Create all sub-agents with context and optional tool cache."""
         return {
             "technical": create_technical_subagent(
-                self.tools_dict, self.llm, context, cache=cache
+                self.tools_dict, self._llm_technical, context, cache=cache
             ),
             "news": create_news_subagent(
-                self.tools_dict, self.llm, context, cache=cache
+                self.tools_dict, self._llm_news, context, cache=cache
             ),
             "financial": create_financial_subagent(
-                self.tools_dict, self.llm, context, cache=cache
+                self.tools_dict, self._llm_financial, context, cache=cache
             ),
             "debater": create_debater_subagent(
-                model=self.llm, context=context, exa_api_key=self.exa_api_key
+                model=self._llm_debater, context=context, exa_api_key=self.exa_api_key
             ),
         }
 
@@ -565,7 +567,7 @@ Then provide your final verdict:
 
 Be decisive. Use the evidence from both sides. Do not hedge excessively."""
 
-            verdict_response = await self.llm.ainvoke(
+            verdict_response = await self.verdict_llm.ainvoke(
                 [HumanMessage(content=verdict_prompt)],
                 config=config,
             )
