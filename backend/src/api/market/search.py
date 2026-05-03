@@ -15,7 +15,6 @@ from ...core.config import Settings
 from ...core.utils.cache_utils import get_tool_ttl
 from ...database.redis import RedisCache
 from ...services.alphavantage_market_data import AlphaVantageMarketDataService
-from ..dependencies.auth import get_current_user_id
 from ..dependencies.chat_deps import get_redis
 
 router = APIRouter()
@@ -64,7 +63,6 @@ async def search_symbols(
         max_length=50,
         description="Search query (company name or partial symbol)",
     ),
-    user_id: str = Depends(get_current_user_id),
     service: AlphaVantageMarketDataService = Depends(get_market_service),
 ) -> SymbolSearchResponse:
     """
@@ -79,7 +77,7 @@ async def search_symbols(
         if len(query) < 1:
             raise ValueError("Search query must be at least 1 character")
 
-        logger.info("Symbol search started", query=query, user_id=user_id)
+        logger.info("Symbol search started", query=query)
 
         # Use hybrid service
         raw_results = await service.search_symbols(query, limit=10)
@@ -119,7 +117,6 @@ async def search_symbols(
 @router.get("/info/{symbol}")
 async def get_symbol_info(
     symbol: str,
-    user_id: str = Depends(get_current_user_id),
     service: AlphaVantageMarketDataService = Depends(get_market_service),
 ) -> dict[str, str]:
     """
@@ -164,7 +161,6 @@ async def get_symbol_info(
 
 @router.get("/market-movers")
 async def get_market_movers(
-    user_id: str = Depends(get_current_user_id),
     service: AlphaVantageMarketDataService = Depends(get_market_service),
     redis_cache: RedisCache = Depends(get_redis),
 ) -> dict[str, Any]:
@@ -184,7 +180,7 @@ async def get_market_movers(
     - Reduces Alpha Vantage API calls by 12x per 6-hour period
     """
     try:
-        logger.info("Market movers request", user_id=user_id)
+        logger.info("Market movers request")
 
         # Generate cache key
         cache_key = "market_movers:top_gainers_losers"
@@ -192,10 +188,10 @@ async def get_market_movers(
         # Check cache first
         cached_data = await redis_cache.get(cache_key)
         if cached_data is not None:
-            logger.info("Market movers cache hit", user_id=user_id)
+            logger.info("Market movers cache hit")
             return cached_data  # type: ignore[no-any-return]
 
-        logger.info("Market movers cache miss, fetching from API", user_id=user_id)
+        logger.info("Market movers cache miss, fetching from API")
 
         # Fetch from Alpha Vantage API
         data = await service.get_top_gainers_losers()

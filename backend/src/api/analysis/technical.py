@@ -16,7 +16,6 @@ from ...core.config import get_settings
 from ...core.financial_analysis import StochasticAnalyzer
 from ...database.redis import RedisCache
 from ...services.data_manager import DataManager
-from ..dependencies.auth import get_current_user_id
 from ..health import get_redis
 from ..models import (
     ChartGenerationResponse,
@@ -33,7 +32,6 @@ router = APIRouter()
 @router.post("/stochastic", response_model=StochasticAnalysisResponse)
 async def stochastic_analysis(
     request: StochasticAnalysisRequest,
-    user_id: str = Depends(get_current_user_id),
     redis_cache: RedisCache = Depends(get_redis),
     data_manager: DataManager = Depends(get_data_manager),
 ) -> StochasticAnalysisResponse:
@@ -184,7 +182,6 @@ async def stochastic_analysis(
 @router.post("/chart", response_model=ChartGenerationResponse)
 async def generate_chart(
     request: ChartRequest,
-    user_id: str = Depends(get_current_user_id),
     redis_cache: RedisCache = Depends(get_redis),
 ) -> ChartGenerationResponse:
     """

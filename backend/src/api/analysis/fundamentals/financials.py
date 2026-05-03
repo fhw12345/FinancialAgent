@@ -15,7 +15,6 @@ from ....services.alphavantage_response_formatter import (
     AlphaVantageResponseFormatter,
 )
 from ....shared.formatters import safe_float
-from ...dependencies.auth import get_current_user_id
 from ...health import get_redis
 from ...models import (
     BalanceSheetResponse,
@@ -31,7 +30,6 @@ router = APIRouter()
 @router.post("/cash-flow", response_model=CashFlowResponse)
 async def cash_flow(
     request: StockFundamentalsRequest,
-    user_id: str = Depends(get_current_user_id),
     redis_cache: RedisCache = Depends(get_redis),
     market_service: AlphaVantageMarketDataService = Depends(get_market_service),
     formatter: AlphaVantageResponseFormatter = Depends(get_formatter),
@@ -106,7 +104,6 @@ async def cash_flow(
 @router.post("/balance-sheet", response_model=BalanceSheetResponse)
 async def balance_sheet(
     request: StockFundamentalsRequest,
-    user_id: str = Depends(get_current_user_id),
     redis_cache: RedisCache = Depends(get_redis),
     market_service: AlphaVantageMarketDataService = Depends(get_market_service),
     formatter: AlphaVantageResponseFormatter = Depends(get_formatter),

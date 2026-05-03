@@ -24,7 +24,6 @@ dependencies = [
     "langgraph>=0.2.0",
     "langsmith>=0.2.0",
     "dashscope>=1.20.0",      # Alibaba Cloud Qwen API
-    "alpaca-py>=0.30.0",  # Alpaca for market data (replaced yfinance)
     "pandas>=2.1.0",
     "matplotlib>=3.8.0",
     "numpy>=1.26.0",
@@ -43,7 +42,6 @@ dependencies = [
     "slowapi>=0.1.9",                   # Rate limiting for FastAPI
     "tiktoken>=0.7.0",                  # Token counting for context window management
     "deepagents>=0.3.12",                # Deep hierarchical agent framework
-    "pytz>=2024.1",                       # Timezone support (required by alpaca-py)
     "exa-py>=1.0.0",                      # Exa web search for debater agent
     "yfinance>=0.2.0",                    # Yahoo Finance for debater agent
 ]

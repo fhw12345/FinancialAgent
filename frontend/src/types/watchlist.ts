@@ -4,7 +4,6 @@
 
 export interface WatchlistItem {
   watchlist_id: string;
-  user_id: string;
   symbol: string;
   added_at: string;
   last_analyzed_at: string | null;

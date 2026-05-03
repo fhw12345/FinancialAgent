@@ -28,7 +28,6 @@ class ToolExecution(BaseModel):
 
     # Foreign keys (linking to analysis workflow)
     chat_id: str = Field(..., description="Chat where tool was executed")
-    user_id: str = Field(..., description="User who triggered execution")
     analysis_id: str = Field(
         ..., description="Analysis workflow this execution belongs to"
     )
@@ -71,7 +70,6 @@ class ToolExecution(BaseModel):
             "example": {
                 "execution_id": "exec_abc123",
                 "chat_id": "chat_xyz789",
-                "user_id": "user_123",
                 "analysis_id": "analysis-20251101-AAPL-bullish",
                 "message_id": "msg_456",
                 "tool_name": "GLOBAL_QUOTE",

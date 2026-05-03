@@ -50,7 +50,6 @@ class ChatCreate(BaseModel):
     """Request model for creating a new chat."""
 
     title: str = Field("New Chat", description="Chat title")
-    user_id: str = Field(..., description="User who owns this chat")
 
 
 class ChatUpdate(BaseModel):
@@ -69,7 +68,6 @@ class Chat(BaseModel):
     """
 
     chat_id: str = Field(..., description="Unique chat identifier")
-    user_id: str = Field(..., description="User who owns this chat")
     title: str = Field("New Chat", description="Chat title")
     is_archived: bool = Field(False, description="Archive status")
 
@@ -90,7 +88,6 @@ class Chat(BaseModel):
         json_schema_extra = {
             "example": {
                 "chat_id": "chat_abc123",
-                "user_id": "user_xyz789",
                 "title": "AAPL Analysis",
                 "is_archived": False,
                 "ui_state": {

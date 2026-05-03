@@ -12,7 +12,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ...core.config import Settings
 from ...services.alphavantage_market_data import AlphaVantageMarketDataService
-from ..dependencies.auth import get_current_user_id
 
 router = APIRouter()
 logger = structlog.get_logger()
@@ -32,7 +31,6 @@ def get_market_service() -> AlphaVantageMarketDataService:
 @router.get("/overview/{symbol}")
 async def get_company_overview(
     symbol: str,
-    user_id: str = Depends(get_current_user_id),
     service: AlphaVantageMarketDataService = Depends(get_market_service),
 ) -> dict[str, Any]:
     """
@@ -49,7 +47,7 @@ async def get_company_overview(
         if not symbol:
             raise ValueError("Symbol is required")
 
-        logger.info("Company overview request", symbol=symbol, user_id=user_id)
+        logger.info("Company overview request", symbol=symbol)
 
         data = await service.get_company_overview(symbol)
 
@@ -71,7 +69,6 @@ async def get_company_overview(
 @router.get("/news-sentiment/{symbol}")
 async def get_news_sentiment(
     symbol: str,
-    user_id: str = Depends(get_current_user_id),
     service: AlphaVantageMarketDataService = Depends(get_market_service),
     limit: int = Query(50, ge=1, le=1000, description="Max news items (1-1000)"),
     sort: str = Query(
@@ -92,9 +89,7 @@ async def get_news_sentiment(
         if not symbol:
             raise ValueError("Symbol is required")
 
-        logger.info(
-            "News sentiment request", symbol=symbol, user_id=user_id, limit=limit
-        )
+        logger.info("News sentiment request", symbol=symbol, limit=limit)
 
         data = await service.get_news_sentiment(tickers=symbol, limit=limit, sort=sort)
 
@@ -118,7 +113,6 @@ async def get_news_sentiment(
 @router.get("/cash-flow/{symbol}")
 async def get_cash_flow(
     symbol: str,
-    user_id: str = Depends(get_current_user_id),
     service: AlphaVantageMarketDataService = Depends(get_market_service),
 ) -> dict[str, Any]:
     """
@@ -138,7 +132,7 @@ async def get_cash_flow(
         if not symbol:
             raise ValueError("Symbol is required")
 
-        logger.info("Cash flow request", symbol=symbol, user_id=user_id)
+        logger.info("Cash flow request", symbol=symbol)
 
         data = await service.get_cash_flow(symbol)
 
@@ -163,7 +157,6 @@ async def get_cash_flow(
 @router.get("/balance-sheet/{symbol}")
 async def get_balance_sheet(
     symbol: str,
-    user_id: str = Depends(get_current_user_id),
     service: AlphaVantageMarketDataService = Depends(get_market_service),
 ) -> dict[str, Any]:
     """
@@ -183,7 +176,7 @@ async def get_balance_sheet(
         if not symbol:
             raise ValueError("Symbol is required")
 
-        logger.info("Balance sheet request", symbol=symbol, user_id=user_id)
+        logger.info("Balance sheet request", symbol=symbol)
 
         data = await service.get_balance_sheet(symbol)
 

@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from ...database.mongodb import MongoDB
 from ...services.chat_service import ChatService
-from ..dependencies.auth import get_current_user_id, get_mongodb, require_admin
+from ..dependencies.auth import get_mongodb, require_admin
 from ..dependencies.chat_deps import get_chat_service
 from ..dependencies.rate_limit import limiter
 
@@ -34,39 +34,15 @@ async def get_portfolio_chat_history(
     analysis_type: (
         str | None
     ) = None,  # Optional: "individual" (symbol research), "portfolio" (decisions), or None for all
-    user_id: str = Depends(get_current_user_id),  # JWT authentication required
     mongodb: MongoDB = Depends(get_mongodb),
 ) -> dict:
     """
     Get portfolio agent's chat history grouped by symbol.
 
-    **Authentication**: Requires Bearer token in Authorization header.
-
     Each symbol has its own chat (e.g., "XIACY Analysis") where all
     analyses for that symbol are stored as messages.
-
-    **Enhanced Filtering**:
-    - Filter by specific symbol: `?symbol=AAPL`
-    - Filter by date range: `?start_date=2025-01-01&end_date=2025-03-15`
-    - Filter by symbol AND date: `?symbol=AAPL&start_date=2025-01-01`
-    - Filter by analysis type: `?analysis_type=individual` or `?analysis_type=portfolio`
-
-    Args:
-        symbol: Optional symbol filter (returns only chats for this symbol)
-        start_date: Optional start date (YYYY-MM-DD). Filters messages >= this date
-        end_date: Optional end date (YYYY-MM-DD). Filters messages <= this date
-        date: Legacy single date filter (YYYY-MM-DD) - use start_date/end_date instead
-        analysis_type: Optional type filter - "individual" (Phase 1 symbol research) or "portfolio" (Phase 2 decisions)
-        user_id: Authenticated user ID (auto-injected via JWT)
-
-    Returns:
-        Dictionary with symbol as keys, chat info with messages as values.
-        Messages within each chat are sorted chronologically (oldest first).
-        Chats are sorted by most recent message timestamp (newest first).
     """
-    # Auth verification happens automatically via get_current_user_id
-    # Portfolio data is shared (all authenticated users see same analysis)
-    # But only authenticated users can access it
+    # W5b: Portfolio chats identified by title pattern (no user_id field).
     try:
         chats_collection = mongodb.get_collection("chats")
         messages_collection = mongodb.get_collection("messages")
@@ -112,18 +88,25 @@ async def get_portfolio_chat_history(
                     status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD."
                 ) from e
 
-        # Get all chats for portfolio_agent user
-        chat_query = {"user_id": "portfolio_agent"}
+        # Get all portfolio-agent style chats (identified by title pattern)
+        chat_query: dict = {
+            "$or": [
+                {"title": {"$regex": r"\sAnalysis$", "$options": "i"}},
+                {"title": "Portfolio Decisions"},
+            ]
+        }
 
         # Apply symbol filter if provided (filter by title pattern)
         # Note: We always include "Portfolio Decisions" chat and filter by message metadata
         if symbol:
             # Match chats where title starts with symbol (e.g., "AAPL Analysis")
             # OR the "Portfolio Decisions" chat (filtered at message level)
-            chat_query["$or"] = [
-                {"title": {"$regex": f"^{symbol}\\s", "$options": "i"}},
-                {"title": "Portfolio Decisions"},
-            ]
+            chat_query = {
+                "$or": [
+                    {"title": {"$regex": f"^{symbol}\\s", "$options": "i"}},
+                    {"title": "Portfolio Decisions"},
+                ]
+            }
 
         portfolio_chats = await chats_collection.find(chat_query).to_list(length=None)
 
@@ -258,36 +241,22 @@ async def get_portfolio_chat_detail(
     request: Request,
     chat_id: str,
     limit: int | None = None,
-    user_id: str = Depends(get_current_user_id),  # JWT authentication required
     chat_service: ChatService = Depends(get_chat_service),
 ) -> dict:
     """
     Get portfolio agent chat detail with messages.
 
-    **Authentication**: Requires Bearer token in Authorization header.
-
-    Fetches portfolio_agent chats (owned by system user "portfolio_agent").
-    Portfolio data is shared across all authenticated users.
-
     Args:
         chat_id: Chat identifier
         limit: Optional message limit (default: 100)
-        user_id: Authenticated user ID (auto-injected via JWT)
 
     Returns:
         Chat detail with messages
     """
-    # Auth verification happens automatically via get_current_user_id
-    # Portfolio chats are owned by "portfolio_agent" (system user)
-    # All authenticated users can view them (shared data)
     try:
-        # Get chat without ownership verification (portfolio_agent chats)
-        chat = await chat_service.get_chat(chat_id, user_id="portfolio_agent")
+        chat = await chat_service.get_chat(chat_id)
 
-        # Get messages
-        messages = await chat_service.get_chat_messages(
-            chat_id, user_id="portfolio_agent", limit=limit
-        )
+        messages = await chat_service.get_chat_messages(chat_id, limit=limit)
 
         logger.info(
             "Portfolio chat detail retrieved",
@@ -336,7 +305,7 @@ async def delete_portfolio_chat(
     """
     try:
         # Delete chat with portfolio_agent as owner
-        deleted = await chat_service.delete_chat(chat_id, user_id="portfolio_agent")
+        deleted = await chat_service.delete_chat(chat_id)
 
         if not deleted:
             logger.warning(

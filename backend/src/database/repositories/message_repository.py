@@ -246,23 +246,7 @@ class MessageRepository:
         analysis_id: str | None = None,
         limit: int = 100,
     ) -> list[Message]:
-        """
-        Get analysis messages with optional filters.
-
-        Useful for:
-        - Getting all analyses for a symbol (for portfolio chart markers)
-        - Getting specific analysis session (by analysis_id)
-        - Getting user's analysis history
-
-        Args:
-            user_id: Optional user filter (requires chat lookup)
-            symbol: Optional symbol to filter by
-            analysis_id: Optional specific analysis workflow ID
-            limit: Maximum number of messages to return
-
-        Returns:
-            List of analysis messages sorted by timestamp descending
-        """
+        """Get analysis messages with optional filters. user_id ignored."""
         # Build query
         query: dict = {
             "source": {

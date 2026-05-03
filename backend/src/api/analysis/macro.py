@@ -12,7 +12,6 @@ from ...core.config import get_settings
 from ...core.financial_analysis import MacroAnalyzer
 from ...database.redis import RedisCache
 from ...services.alphavantage_market_data import AlphaVantageMarketDataService
-from ..dependencies.auth import get_current_user_id
 from ..health import get_redis
 from ..models import MacroAnalysisRequest, MacroSentimentResponse
 from .shared import get_market_service
@@ -24,7 +23,6 @@ router = APIRouter()
 @router.post("/macro", response_model=MacroSentimentResponse)
 async def macro_sentiment_analysis(
     request: MacroAnalysisRequest,
-    user_id: str = Depends(get_current_user_id),
     redis_cache: RedisCache = Depends(get_redis),
     market_service: AlphaVantageMarketDataService = Depends(get_market_service),
 ) -> MacroSentimentResponse:

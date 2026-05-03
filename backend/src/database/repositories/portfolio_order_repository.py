@@ -3,9 +3,13 @@ Portfolio order repository for order audit trail.
 
 Stores all orders placed through Alpaca with complete audit trail
 linking orders to analysis decisions and chat contexts.
+
+W5b: user_id removed from schema. user_id parameter kept on read methods
+for caller compatibility but ignored.
 """
 
 from datetime import datetime
+from typing import Any
 
 import structlog
 from motor.motor_asyncio import AsyncIOMotorCollection
@@ -30,49 +34,34 @@ class PortfolioOrderRepository:
         self.collection = collection
 
     async def ensure_indexes(self) -> None:
-        """
-        Create indexes for optimal query performance.
-
-        Indexes:
-        1. user_id + created_at: For listing user orders by time
-        2. analysis_id: For linking orders to analyses (audit trail)
-        3. alpaca_order_id: For looking up orders by Alpaca ID (unique)
-        4. user_id + status: For filtering orders by status
-        5. user_id + symbol: For symbol-specific order history
-        """
-        # Index for listing user orders sorted by time
+        """Create indexes for optimal query performance."""
+        # Index for listing orders sorted by time
         await self.collection.create_index(
-            [("user_id", 1), ("created_at", -1)],
-            name="idx_user_orders",
+            [("created_at", -1)],
+            name="idx_orders_created",
         )
-
-        # Index for audit trail (analysis → order linkage)
+        # Audit trail
         await self.collection.create_index(
             [("analysis_id", 1)],
             name="idx_analysis_orders",
         )
-
-        # Unique index on Alpaca order ID (prevent duplicates)
-        # sparse=True allows multiple documents with null alpaca_order_id (failed orders)
+        # Unique on Alpaca id (sparse - allows nulls)
         await self.collection.create_index(
             [("alpaca_order_id", 1)],
             name="idx_alpaca_order",
             unique=True,
             sparse=True,
         )
-
-        # Index for filtering by status
+        # Status filter
         await self.collection.create_index(
-            [("user_id", 1), ("status", 1), ("created_at", -1)],
-            name="idx_user_status_orders",
+            [("status", 1), ("created_at", -1)],
+            name="idx_status_orders",
         )
-
-        # Index for symbol-specific queries
+        # Symbol-specific
         await self.collection.create_index(
-            [("user_id", 1), ("symbol", 1), ("created_at", -1)],
-            name="idx_user_symbol_orders",
+            [("symbol", 1), ("created_at", -1)],
+            name="idx_symbol_orders",
         )
-
         logger.info("Portfolio order indexes ensured")
 
     async def create(self, order: PortfolioOrder) -> PortfolioOrder:
@@ -98,7 +87,6 @@ class PortfolioOrderRepository:
             "Portfolio order created",
             order_id=order.order_id,
             alpaca_order_id=order.alpaca_order_id,
-            user_id=order.user_id,
             symbol=order.symbol,
             side=order.side,
             quantity=order.quantity,
@@ -202,25 +190,13 @@ class PortfolioOrderRepository:
 
     async def list_by_user(
         self,
-        user_id: str,
+        user_id: str | None = None,
         status: str | None = None,
         symbol: str | None = None,
         limit: int = 100,
     ) -> list[PortfolioOrder]:
-        """
-        List orders for a user with optional filtering.
-
-        Args:
-            user_id: User identifier
-            status: Optional status filter ("filled", "canceled", etc.)
-            symbol: Optional symbol filter
-            limit: Maximum number of orders to return
-
-        Returns:
-            List of orders sorted by created_at descending
-        """
-        # Build query
-        query = {"user_id": user_id}
+        """List orders. user_id ignored."""
+        query: dict[str, Any] = {}
 
         if status:
             query["status"] = status
@@ -228,12 +204,10 @@ class PortfolioOrderRepository:
         if symbol:
             query["symbol"] = symbol.upper()
 
-        # Execute query
         cursor = self.collection.find(query).sort("created_at", -1).limit(limit)
 
         orders = []
         async for order_dict in cursor:
-            # Remove MongoDB _id field
             order_dict.pop("_id", None)
             orders.append(PortfolioOrder(**order_dict))
 
@@ -327,20 +301,11 @@ class PortfolioOrderRepository:
 
         return PortfolioOrder(**result)
 
-    async def count_by_user(self, user_id: str, status: str | None = None) -> int:
-        """
-        Count orders for a user.
-
-        Args:
-            user_id: User identifier
-            status: Optional status filter
-
-        Returns:
-            Order count
-        """
-        query = {"user_id": user_id}
-
+    async def count_by_user(
+        self, user_id: str | None = None, status: str | None = None
+    ) -> int:
+        """Count orders. user_id ignored."""
+        query: dict[str, Any] = {}
         if status:
             query["status"] = status
-
         return await self.collection.count_documents(query)

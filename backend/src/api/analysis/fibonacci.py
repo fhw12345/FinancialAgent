@@ -15,7 +15,6 @@ from ...core.config import get_settings
 from ...core.financial_analysis import FibonacciAnalyzer
 from ...database.redis import RedisCache
 from ...services.data_manager import DataManager
-from ..dependencies.auth import get_current_user_id
 from ..health import get_redis
 from ..models import FibonacciAnalysisRequest, FibonacciAnalysisResponse
 from .shared import get_data_manager, validate_date_range
@@ -27,7 +26,6 @@ router = APIRouter()
 @router.post("/fibonacci", response_model=FibonacciAnalysisResponse)
 async def fibonacci_analysis(
     request: FibonacciAnalysisRequest,
-    user_id: str = Depends(get_current_user_id),
     redis_cache: RedisCache = Depends(get_redis),
     data_manager: DataManager = Depends(get_data_manager),
 ) -> FibonacciAnalysisResponse:
