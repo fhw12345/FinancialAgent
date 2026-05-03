@@ -231,15 +231,13 @@ Format: Clear, structured summary with key points."""
         # Use LLM to generate summary
         if llm_service:
             try:
-                from ..agent.llm_client import DashScopeClient
+                from ..agent.llm_factory import get_llm
 
-                # Use fast, cheap model for summarization (qwen-flash)
-                llm = DashScopeClient(
-                    settings=self.settings, model=self.settings.summarization_model
-                )
+                # Use fast/cheap model for summarization (W8: routed via Maestro)
+                llm = get_llm("summary", temperature=0.3, max_tokens=2048)
 
                 # Invoke with simple prompt
-                summary = await llm.chat.ainvoke(
+                summary = await llm.ainvoke(
                     [{"role": "user", "content": summarization_prompt}]
                 )
 

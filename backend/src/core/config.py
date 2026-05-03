@@ -60,16 +60,19 @@ class Settings(BaseSettings):
     langfuse_secret_key: str | None = None
     langfuse_host: str | None = None
 
-    # External APIs - LLM
-    # NOTE: openai/legacy qwen keys removed in W7. DashScope is the sole LLM provider
-    # for now; broader multi-model routing handled in W8.
-    dashscope_api_key: str = ""  # Alibaba Cloud DashScope API key
+    # External APIs - LLM (W8: all LLM traffic routed via Agent Maestro)
+    maestro_base_url: str = "http://localhost:23333/api/anthropic"
+    maestro_auth_token: str = "Powered by Agent Maestro"
 
-    # LLM Configuration
-    default_llm_model: str = "qwen-plus-latest"  # Default model for agents
-    default_llm_temperature: float = 0.7  # Default temperature for LLM calls
+    # LLM Configuration (legacy fields kept for backward compat with callers
+    # that still read default_llm_model / default_llm_temperature; the actual
+    # model selection now lives in src.agent.llm_factory.MODELS).
+    default_llm_model: str = "claude-sonnet-4-6"  # informational only
+    default_llm_temperature: float = 0.7
 
     # Context Window Management (Portfolio Agent History)
+    # Limits per model name. Includes legacy qwen entries (still referenced by
+    # historical message metadata) and Claude models served via Maestro.
     llm_context_limits: dict[str, int] = {
         "qwen-plus": 100_000,
         "qwen-plus-latest": 100_000,
@@ -79,11 +82,14 @@ class Settings(BaseSettings):
         "qwen-turbo-latest": 8_000,
         "qwen-flash": 8_000,
         "deepseek-chat": 64_000,
+        "claude-opus-4-7": 200_000,
+        "claude-sonnet-4-6": 200_000,
+        "claude-haiku-4-5": 200_000,
     }
-    compact_threshold_ratio: float = 0.75  # Trigger compaction at 75% of context limit
-    compact_target_ratio: float = 0.25  # Compress history to 25% of context limit
-    tail_messages_keep: int = 3  # Keep last 3 exchanges in tail
-    summarization_model: str = "qwen-flash"  # Fast, cheap model for summarization
+    compact_threshold_ratio: float = 0.75
+    compact_target_ratio: float = 0.25
+    tail_messages_keep: int = 3
+    summarization_model: str = "claude-haiku-4-5"  # informational; routing via llm_factory
 
     # External APIs - Market Data
     # W7: All paid market-data keys removed. yfinance (free, no key) is the

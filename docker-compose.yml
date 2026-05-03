@@ -9,6 +9,9 @@ services:
       - ./backend/.env.development  # Load all config from gitignored file
     environment:
       - ENVIRONMENT=development
+      - MAESTRO_BASE_URL=http://host.docker.internal:23333/api/anthropic
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - mongodb
       - redis
@@ -42,6 +45,9 @@ services:
       - ./backend/.env.development
     environment:
       - ENVIRONMENT=development
+      - MAESTRO_BASE_URL=http://host.docker.internal:23333/api/anthropic
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - mongodb
       - redis
@@ -84,6 +90,9 @@ services:
       - ./backend/.env.development
     environment:
       - ENVIRONMENT=development
+      - MAESTRO_BASE_URL=http://host.docker.internal:23333/api/anthropic
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - mongodb
       - redis
