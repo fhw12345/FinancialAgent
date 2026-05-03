@@ -22,7 +22,6 @@ from .api.admin import router as admin_router
 from .api.analysis import router as analysis_router
 from .api.auth import router as auth_router
 from .api.chat import router as chat_router
-from .api.credits import router as credits_router
 from .api.dependencies.rate_limit import limiter
 from .api.dependencies.timing_middleware import TimingMiddleware
 from .api.feedback import router as feedback_router
@@ -70,18 +69,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from .database.repositories.tool_execution_repository import (
             ToolExecutionRepository,
         )
-        from .database.repositories.transaction_repository import (
-            TransactionRepository,
-        )
 
         feedback_repo = FeedbackRepository(mongodb.get_collection("feedback_items"))
         await feedback_repo.ensure_indexes()
 
         comment_repo = CommentRepository(mongodb.get_collection("comments"))
         await comment_repo.ensure_indexes()
-
-        transaction_repo = TransactionRepository(mongodb.get_collection("transactions"))
-        await transaction_repo.ensure_indexes()
 
         message_repo = MessageRepository(mongodb.get_collection("messages"))
         await message_repo.ensure_indexes()
@@ -397,7 +390,6 @@ def create_app() -> FastAPI:
     app.include_router(chat_router)  # Persistent MongoDB-based chat
     app.include_router(portfolio_router)  # Portfolio holdings management
     app.include_router(watchlist_router)  # Watchlist symbol tracking
-    app.include_router(credits_router)  # Token-based credit economy
     app.include_router(llm_models_router)  # LLM model selection and pricing
     app.include_router(feedback_router)  # Feedback & Community Roadmap platform
     app.include_router(insights_router)  # Market Insights Platform

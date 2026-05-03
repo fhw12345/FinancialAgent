@@ -29,8 +29,4 @@ def build_local_user() -> User:
         is_admin=True,
         created_at=datetime(2026, 1, 1),
         last_login=datetime(2026, 1, 1),
-        feedbackVotes=[],
-        credits=1_000_000.0,
-        total_tokens_used=0,
-        total_credits_spent=0.0,
     )

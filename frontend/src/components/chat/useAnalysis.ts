@@ -12,7 +12,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { analysisService } from "../../services/analysis";
 import { chatService } from "../../services/api";
 import { chatKeys } from "../../hooks/useChats";
-import { useOptimisticCreditDeduction, creditKeys } from "../../hooks/useCredits";
 import {
   formatBalanceSheetResponse,
   formatCashFlowResponse,
@@ -50,7 +49,6 @@ export const useAnalysis = (
   onDeepEvent?: (event: DeepStreamEvent) => void,
 ) => {
   const queryClient = useQueryClient();
-  const optimisticDeduction = useOptimisticCreditDeduction();
 
   const mutation = useMutation({
     mutationKey: ["chat", chatId],
@@ -88,9 +86,6 @@ export const useAnalysis = (
       };
 
       setMessages((prev) => [...prev, userMessageObj, assistantMessageObj]);
-
-      // Optimistically deduct credits (10 credits estimated cost)
-      const { rollback } = optimisticDeduction.deduct(10.0);
 
       // Local accumulator to avoid race conditions
       let accumulatedContent = "";
@@ -131,13 +126,10 @@ export const useAnalysis = (
             resolve({ type: "chat", content: accumulatedContent });
             // Invalidate chat list ONCE after stream completes
             void queryClient.invalidateQueries({ queryKey: chatKeys.lists() });
-            // Refresh credits to show actual cost deducted by backend
-            void queryClient.invalidateQueries({ queryKey: creditKeys.profile() });
           },
           (error: string) => {
-            // Error callback - rollback optimistic deduction
+            // Error callback
             console.error("❌ Streaming error:", error);
-            rollback();
             setMessages((prev) =>
               prev.map((msg: any) =>
                 msg._id === assistantMessageId
@@ -461,9 +453,6 @@ export const useButtonAnalysis = (
                   resolve(response);
                   void queryClient.invalidateQueries({
                     queryKey: chatKeys.lists(),
-                  });
-                  void queryClient.invalidateQueries({
-                    queryKey: creditKeys.profile(),
                   });
                 },
                 (error: string) => {

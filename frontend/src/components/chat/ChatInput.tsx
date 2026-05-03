@@ -7,8 +7,7 @@
 
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Send, AlertCircle, Coins, Settings } from "lucide-react";
-import { useCurrentBalance } from "../../hooks/useCredits";
+import { Send, Coins, Settings } from "lucide-react";
 import { estimateChatCost } from "../../utils/tokenEstimator";
 import { ModelSettings as IModelSettings } from "../../types/models";
 import { ModelSettings } from "./ModelSettings";
@@ -35,10 +34,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onModelSettingsChange,
 }) => {
   const { t } = useTranslation(['chat', 'common']);
-  const currentBalance = useCurrentBalance();
   const [showSettings, setShowSettings] = useState(false);
 
-  // Calculate estimated cost based on context + input
+  // Calculate estimated cost based on context + input (display only — no billing).
   const costEstimate = useMemo(() => {
     if (!message.trim()) return { estimatedCredits: 0, contextTokens: 0, inputTokens: 0, totalTokens: 0 };
     return estimateChatCost(messages, message);
@@ -46,52 +44,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const estimatedCost = costEstimate.estimatedCredits;
 
-  const hasInsufficientCredits =
-    currentBalance !== null && currentBalance < estimatedCost;
-  const isLowBalance =
-    currentBalance !== null &&
-    currentBalance < 50 &&
-    currentBalance >= estimatedCost;
-
   return (
     <div className="flex-shrink-0 border-t border-gray-200 px-4 py-3 bg-white">
-      {/* Warning Banner */}
-      {hasInsufficientCredits && (
-        <div className="mb-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-          <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-red-800">
-              {t('chat:input.insufficientCreditsTitle')}
-            </p>
-            <p className="text-xs text-red-600 mt-0.5">
-              {t('chat:input.insufficientCreditsMessage', {
-                required: estimatedCost,
-                balance: currentBalance?.toFixed(1) ?? t('common:buttons.loading')
-              })}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {isLowBalance && (
-        <div className="mb-3 px-4 py-3 bg-orange-50 border border-orange-200 rounded-xl flex items-start gap-3">
-          <AlertCircle
-            size={20}
-            className="text-orange-600 flex-shrink-0 mt-0.5"
-          />
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-orange-800">
-              {t('chat:input.lowBalance')}
-            </p>
-            <p className="text-xs text-orange-600 mt-0.5">
-              {t('chat:input.lowBalanceMessage', {
-                balance: currentBalance?.toFixed(1)
-              })}
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Model Settings Panel */}
       {showSettings && (
         <div className="mb-4">
@@ -109,7 +63,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !hasInsufficientCredits) {
+              if (e.key === "Enter") {
                 onSendMessage();
               }
             }}
@@ -119,10 +73,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 : t('chat:input.placeholderWithoutSymbol')
             }
             className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
-            disabled={isPending || hasInsufficientCredits}
+            disabled={isPending}
           />
-          {/* Cost Estimation */}
-          {message.trim() && !hasInsufficientCredits && (
+          {/* Cost Estimation (display only — billing removed) */}
+          {message.trim() && (
             <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
               <Coins size={12} />
               <span>
@@ -145,13 +99,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </button>
         <button
           onClick={onSendMessage}
-          disabled={!message.trim() || isPending || hasInsufficientCredits}
+          disabled={!message.trim() || isPending}
           className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-5 py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md"
-          title={
-            hasInsufficientCredits
-              ? t('chat:input.insufficientCredits')
-              : t('chat:input.sendTooltip')
-          }
+          title={t('chat:input.sendTooltip')}
         >
           <Send className="h-5 w-5" />
         </button>
