@@ -33,17 +33,15 @@ dependencies = [
     "python-multipart>=0.0.6",         # File uploads
     "httpx>=0.25.0",                    # Async HTTP client
     "tenacity>=8.2.0",                  # Retry logic
-    "tencentcloud-sdk-python-ses>=3.0.0",  # Tencent Cloud SES for email
     "bcrypt>=4.0.0",                    # Password hashing
     "kubernetes>=30.0.0",               # Kubernetes client for metrics
     "opentelemetry-api>=1.20.0",        # OpenTelemetry API
     "opentelemetry-sdk>=1.20.0",        # OpenTelemetry SDK
-    "oss2>=2.18.0",                     # Alibaba Cloud OSS SDK
     "slowapi>=0.1.9",                   # Rate limiting for FastAPI
     "tiktoken>=0.7.0",                  # Token counting for context window management
     "deepagents>=0.3.12",                # Deep hierarchical agent framework
-    "exa-py>=1.0.0",                      # Exa web search for debater agent
-    "yfinance>=0.2.0",                    # Yahoo Finance for debater agent
+    "yfinance>=0.2.0",                    # Yahoo Finance — primary free market data source
+    "feedparser>=6.0.0",                  # RSS parsing for free web search fallback
 ]
 
 [project.optional-dependencies]
@@ -128,7 +126,6 @@ module = [
     "motor.*",
     "fastapi.*",
     "pydantic_settings.*",
-    "tencentcloud.*",
     "pandas.*",
     "jose.*",
     "dashscope.*",
@@ -138,7 +135,6 @@ module = [
     "langchain_core.*",
     "opentelemetry.*",
     "deepagents.*",
-    "exa_py.*",
 ]
 ignore_missing_imports = true
 
