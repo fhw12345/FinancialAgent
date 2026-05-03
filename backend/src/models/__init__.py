@@ -5,7 +5,6 @@ Provides type safety and validation for database operations.
 
 from .chat import Chat, ChatCreate, ChatUpdate, UIState
 from .message import Message, MessageCreate, MessageMetadata
-from .refresh_token import RefreshToken, RefreshTokenInDB, TokenPair
 from .user import User, UserCreate, UserInDB
 
 __all__ = [
@@ -19,7 +18,4 @@ __all__ = [
     "Message",
     "MessageCreate",
     "MessageMetadata",
-    "RefreshToken",
-    "RefreshTokenInDB",
-    "TokenPair",
 ]

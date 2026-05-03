@@ -377,14 +377,9 @@ export const chatService = {
           if (newToken) {
             // Retry with new token
             response = await makeStreamRequest(newToken);
-          } else {
-            // Refresh failed - redirect to login
-            console.log(
-              "[Streaming] Token refresh failed, redirecting to login",
-            );
-            window.location.href = "/login";
-            return;
           }
+          // W3b: auth removed — no redirect on 401; fall through and let the
+          // request error normally if the backend still rejects it.
         }
 
         if (!response.ok) {

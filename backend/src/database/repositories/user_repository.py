@@ -11,7 +11,11 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 from src.core.utils.date_utils import utcnow
 
 from ...models.user import User, UserCreate
-from ...services.password import hash_password
+
+
+def hash_password(password: str) -> str:
+    """STUB (W3c): password hashing removed. Stores a placeholder marker."""
+    return f"stub:{len(password)}"
 
 logger = structlog.get_logger()
 

@@ -1,73 +1,28 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { HelpCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { EnhancedChatInterface } from "./components/EnhancedChatInterface";
-import { LoginPage } from "./components/LoginPage";
 import HealthPage from "./pages/HealthPage";
 import FeedbackPage from "./pages/FeedbackPage";
 import InsightsPage from "./pages/InsightsPage";
 import { TransactionHistory } from "./pages/TransactionHistory";
 import PortfolioDashboard from "./pages/PortfolioDashboard";
 import { CreditBalance } from "./components/credits/CreditBalance";
-import { authStorage, logout } from "./services/authService";
 import HelpModal from "./components/HelpModal";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
+
+// W3b: Auth removed. App always renders as a local single-user shell.
+// Default landing tab is Market Insights per the de-auth PRD.
+const LOCAL_IS_ADMIN = true;
 
 function App() {
   const { t } = useTranslation(["common", "auth"]);
   const [activeTab, setActiveTab] = useState<
     "health" | "chat" | "portfolio" | "insights" | "feedback" | "transactions"
-  >("chat");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
+  >("insights");
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
-  // Check if user is already logged in
-  useEffect(() => {
-    const token = authStorage.getToken();
-    const user = authStorage.getUser();
-
-    if (token && user) {
-      setIsAuthenticated(true);
-      setUsername(user.username);
-      setIsAdmin(!!user.is_admin);
-    }
-  }, []);
-
-  const handleLoginSuccess = () => {
-    const user = authStorage.getUser();
-    if (user) {
-      setUsername(user.username);
-      setIsAdmin(!!user.is_admin);
-    }
-    setIsAuthenticated(true);
-  };
-
-  const handleLogout = async () => {
-    const refreshToken = authStorage.getRefreshToken();
-
-    // Call backend logout to revoke refresh token
-    if (refreshToken) {
-      try {
-        await logout(refreshToken);
-      } catch (error) {
-        console.error("Logout error:", error);
-        // Continue with local logout even if API call fails
-      }
-    }
-
-    // Clear local storage
-    authStorage.clear();
-    setIsAuthenticated(false);
-    setUsername("");
-    setIsAdmin(false);
-  };
-
-  // Show login page if not authenticated
-  if (!isAuthenticated) {
-    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
-  }
+  const isAdmin = LOCAL_IS_ADMIN;
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -94,14 +49,6 @@ function App() {
               {/* Mobile user info */}
               <div className="flex items-center gap-2 sm:hidden">
                 <CreditBalance className="w-32" />
-                <button
-                  onClick={() => {
-                    void handleLogout();
-                  }}
-                  className="px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100/80 rounded-lg transition-all"
-                >
-                  {t("common:navigation.logout")}
-                </button>
               </div>
             </div>
 
@@ -173,15 +120,7 @@ function App() {
               <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-gray-200">
                 <CreditBalance className="w-56" />
                 <LanguageSwitcher variant="minimal" />
-                <span className="text-sm text-gray-700">👤 {username}</span>
-                <button
-                  onClick={() => {
-                    void handleLogout();
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100/80 rounded-lg transition-all"
-                >
-                  {t("common:navigation.logout")}
-                </button>
+                <span className="text-sm text-gray-700">👤 Local</span>
               </div>
             </nav>
           </div>
