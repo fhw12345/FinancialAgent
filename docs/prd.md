@@ -3,7 +3,7 @@
 > **Document Type**: Brownfield PRD (Living Document)
 > **Last Updated**: 2025-12-20
 > **Backend Version**: v0.8.8 | **Frontend Version**: v0.11.4
-> **Status**: Production (https://klinecubic.cn)
+> **Status**: Production (http://localhost:3000)
 
 ---
 
@@ -76,8 +76,8 @@ Transform sophisticated CLI financial analysis tools into a modern, conversation
 | Environment | Platform | URL | Status |
 |-------------|----------|-----|--------|
 | **Local Dev** | Docker Compose | http://localhost:3000 | Active |
-| **Production** | Alibaba ACK (Shanghai) | https://klinecubic.cn | Active |
-| **Test** | Azure AKS | https://klinematrix.com | Planned |
+| **Production** | Alibaba ACK (Shanghai) | http://localhost:3000 | Active |
+| **Test** | Azure AKS | http://localhost:3000 | Planned |
 
 ### Key Architectural Decisions
 

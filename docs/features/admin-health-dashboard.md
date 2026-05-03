@@ -51,7 +51,7 @@ As a system administrator, I want a comprehensive health dashboard to monitor re
 
 ### Architecture Changes
 
-**Admin Middleware**: `require_admin(username)` checks if username == "allenpan" (MVP). `@admin_required` decorator returns 403 for non-admins.
+**Admin Middleware**: `require_admin(username)` checks if username == "admin" (MVP). `@admin_required` decorator returns 403 for non-admins.
 
 **Data Models** (`admin_models.py`):
 - `PodMetrics`: name, cpu_usage, memory_usage, cpu_percentage, memory_percentage
@@ -69,9 +69,9 @@ As a system administrator, I want a comprehensive health dashboard to monitor re
 
 #### 1. Admin Access Control
 
-**User Model**: Add `is_admin: bool = False` field. Property `admin` returns `username == "allenpan" or is_admin`.
+**User Model**: Add `is_admin: bool = False` field. Property `admin` returns `username == "admin" or is_admin`.
 
-**Frontend**: Conditionally render Health nav item based on `user?.username === 'allenpan'`
+**Frontend**: Conditionally render Health nav item based on `user?.username === 'admin'`
 
 #### 2. Kubernetes Metrics Integration
 
@@ -147,7 +147,7 @@ As a system administrator, I want a comprehensive health dashboard to monitor re
   - [ ] Apple touch icon works on iOS
 
 - [ ] **Access Control**:
-  - [ ] Health page only accessible to admin (username: allenpan)
+  - [ ] Health page only accessible to admin (username: admin)
   - [ ] Non-admin receives 403 Forbidden on health endpoints
   - [ ] Health nav item hidden for non-admin users
   - [ ] Logged-out users cannot access health page

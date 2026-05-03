@@ -654,10 +654,10 @@ curl -X POST /api/chat -d '{"message": "How has AI sector risk changed this mont
 **Verification**:
 ```bash
 # Check metric in API response
-curl -s https://klinecubic.cn/api/insights/ai_sector_risk | jq '.metrics[] | select(.id == "options_put_call_ratio")'
+curl -s http://localhost:3000/api/insights/ai_sector_risk | jq '.metrics[] | select(.id == "options_put_call_ratio")'
 
 # Verify 7 metrics returned
-curl -s https://klinecubic.cn/api/insights/ai_sector_risk | jq '.metrics | length'
+curl -s http://localhost:3000/api/insights/ai_sector_risk | jq '.metrics | length'
 # Expected: 7
 ```
 
@@ -705,10 +705,10 @@ market_liquidity = (
 **Verification**:
 ```bash
 # Check new metric
-curl -s https://klinecubic.cn/api/insights/ai_sector_risk | jq '.metrics[] | select(.id == "market_liquidity")'
+curl -s http://localhost:3000/api/insights/ai_sector_risk | jq '.metrics[] | select(.id == "market_liquidity")'
 
 # Verify yield_curve removed
-curl -s https://klinecubic.cn/api/insights/ai_sector_risk | jq '.metrics[] | select(.id == "yield_curve")'
+curl -s http://localhost:3000/api/insights/ai_sector_risk | jq '.metrics[] | select(.id == "yield_curve")'
 # Expected: null/empty
 ```
 
@@ -910,4 +910,4 @@ The epic delivered a **Market Insights Platform** with:
 - Market Liquidity metric via FRED API (Story 2.7)
 
 **Stories Completed**: 2.1 → 2.8 (all 8 stories)
-**Production URL**: https://klinecubic.cn/insights
+**Production URL**: http://localhost:3000/insights

@@ -74,12 +74,12 @@ async def chat_stream_unified(
     **Example:**
     ```bash
     # Use v3 (SDK ReAct Agent with tools)
-    curl -X POST https://klinematrix.com/api/chat/stream \\
+    curl -X POST http://localhost:8000/api/chat/stream \\
       -H "Authorization: Bearer $TOKEN" \\
       -d '{"message": "Analyze AAPL", "agent_version": "v3"}'
 
     # Use v2 (simple chat)
-    curl -X POST https://klinematrix.com/api/chat/stream \\
+    curl -X POST http://localhost:8000/api/chat/stream \\
       -H "Authorization: Bearer $TOKEN" \\
       -d '{"message": "Hello", "agent_version": "v2"}'
     ```

@@ -1,1 +1,0 @@
-Redis cache keys found:\n- price:AAPL:1d:1mo (market data cache)\n- LIMITS:LIMITER/* (rate limiter keys)\n\nBackend logs confirm:\n- 'Price data cache miss, fetching from API'\n- 'Price data cached' with ttl_seconds=3600\n\nKey pattern: {domain}:{symbol}:{interval}:{period}

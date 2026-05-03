@@ -1,5 +1,0 @@
-Tool execution started inputs={'category_id': 'ai_sector_risk'}
-Cache HIT cache_key=insights:ai_sector_risk:latest
-Snapshot cache HIT category_id=ai_sector_risk
-Insight category from cache category_id=ai_sector_risk elapsed_ms=1.2 source=redis
-Tool execution completed duration_ms=3

@@ -61,9 +61,6 @@ env_paths = [
     Path(__file__).parents[4]
     / "backend"
     / ".env.development",  # From backend/src/agent/experiments/
-    Path(
-        "/Users/allenpan/Desktop/repos/projects/financial_agent/backend/.env.development"
-    ),  # Absolute fallback
 ]
 for env_path in env_paths:
     if env_path.exists():

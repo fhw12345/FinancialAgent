@@ -11,7 +11,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '';
  * Architecture:
  * - ONE Kubernetes CronJob runs daily at 9:30 AM ET (2:30 PM UTC) for ALL users
  * - This is a system-wide scheduled job, NOT per-user
- * - Only admin (allenpan) can see this component and manually trigger analysis
+ * - Only admin users can see this component and manually trigger analysis
  * - The cronjob schedule is defined in K8s YAML (30 14 * * *)
  *
  * Features:

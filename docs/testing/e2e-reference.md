@@ -3,13 +3,13 @@
 ## 1. LOGIN CREDENTIALS
 
 **Default Test User**:
-- **Username**: `allenpan`
-- **Password**: `admin123`
+- **Username**: `admin`
+- **Password**: `<password>`
 - **Role**: Admin (has access to Health dashboard)
 
 Location found: `/CLAUDE.md` line 78
 ```
-Login with credentials (allenpan/admin123)
+Login with credentials (admin/<password>)
 ```
 
 **Authentication Flow**:
@@ -239,7 +239,7 @@ Login with credentials (allenpan/admin123)
 ### Workflow 6: Admin Health Dashboard
 **URL**: `http://localhost:3000` (Health tab - Admin only)
 
-1. **Access** (requires `allenpan` user or admin):
+1. **Access** (requires `admin` user or admin):
    - Only visible in navigation if user is admin
    - Tab only shows when `isAdmin === true`
 2. **View System Health**:
@@ -385,7 +385,7 @@ refresh-metrics       button (refresh icon)        Refresh metrics button
 
 ### Environment Access
 - **Dev/Local**: `http://localhost:3000` (frontend), `http://localhost:8000` (API)
-- **Test (K8s)**: `https://klinematrix.com`
+- **Test (K8s)**: `http://localhost:3000`
 - **Start locally**: `make dev`
 
 ### Database
@@ -397,7 +397,7 @@ refresh-metrics       button (refresh icon)        Refresh metrics button
 - JWT tokens (Bearer in Authorization header)
 - Access token + refresh token pair
 - Tokens stored in localStorage (authService)
-- Admin check: `user.is_admin || user.username === "allenpan"`
+- Admin check: `user.is_admin || user.username === "admin"`
 
 ### Key Hooks (React)
 - `useQuery` - Fetch data (React Query)
@@ -417,8 +417,8 @@ refresh-metrics       button (refresh icon)        Refresh metrics button
 
 ## 6. IMPORTANT TESTING NOTES
 
-1. **Login credential**: Always use `allenpan` / `admin123` for testing
-2. **Admin access**: Only `allenpan` user sees Health tab
+1. **Login credential**: Always use `admin` / `<password>` for testing
+2. **Admin access**: Only `admin` user sees Health tab
 3. **Portfolio data**: Comes from Alpaca paper trading (real API)
 4. **Watchlist**: 5-minute analysis cycles (auto-trigger)
 5. **Credits**: Deducted per LLM API call (transaction history tracks it)

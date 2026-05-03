@@ -37,14 +37,14 @@ Access points:
 ### 3. Access Production (Read-Only)
 
 **Production URLs** (ACK - Alibaba Cloud):
-- **Frontend**: https://klinecubic.cn
-- **Backend API**: https://klinecubic.cn/api/health
-- **Langfuse**: https://monitor.klinecubic.cn
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:3000/api/health
+- **Langfuse**: http://localhost:3001
 
 **Verify production:**
 ```bash
 # Health check (may need proxy bypass in China)
-HTTP_PROXY="" HTTPS_PROXY="" curl -s https://klinecubic.cn/api/health
+HTTP_PROXY="" HTTPS_PROXY="" curl -s http://localhost:3000/api/health
 ```
 
 **Production K8s access:**
@@ -53,10 +53,10 @@ HTTP_PROXY="" HTTPS_PROXY="" curl -s https://klinecubic.cn/api/health
 export KUBECONFIG=~/.kube/config-ack-prod
 
 # Check pod status
-kubectl get pods -n klinematrix-prod
+kubectl get pods -n financial-agent
 
 # View backend logs
-kubectl logs -f deployment/backend -n klinematrix-prod
+kubectl logs -f deployment/backend -n financial-agent
 ```
 
 ### 4. Manual Local Development (Without Docker)
@@ -94,7 +94,7 @@ curl http://localhost:8000/api/health | python3 -m json.tool
 
 **Via production:**
 ```bash
-HTTP_PROXY="" HTTPS_PROXY="" curl https://klinecubic.cn/api/health | python3 -m json.tool
+HTTP_PROXY="" HTTPS_PROXY="" curl http://localhost:3000/api/health | python3 -m json.tool
 ```
 
 Expected response:
@@ -231,16 +231,16 @@ Visit http://localhost:5173 in your browser.
 **MongoDB:**
 ```bash
 # Via port-forward to Kubernetes
-kubectl port-forward -n klinematrix-test svc/mongodb-service 27017:27017
+kubectl port-forward -n financial-agent svc/mongodb-service 27017:27017
 
 # Then connect locally
-mongosh mongodb://localhost:27017/klinematrix_test
+mongosh mongodb://localhost:27017/_test
 ```
 
 **Redis:**
 ```bash
 # Via port-forward to Kubernetes
-kubectl port-forward -n klinematrix-test svc/redis-service 6379:6379
+kubectl port-forward -n financial-agent svc/redis-service 6379:6379
 
 # Then connect locally
 redis-cli -h localhost -p 6379
@@ -249,10 +249,10 @@ redis-cli -h localhost -p 6379
 **Or access directly in pods:**
 ```bash
 # MongoDB shell in pod
-kubectl exec -it deployment/mongodb -n klinematrix-test -- mongosh
+kubectl exec -it deployment/mongodb -n financial-agent -- mongosh
 
 # Redis CLI in pod
-kubectl exec -it deployment/redis -n klinematrix-test -- redis-cli
+kubectl exec -it deployment/redis -n financial-agent -- redis-cli
 ```
 
 ## Code Standards
@@ -322,9 +322,9 @@ Environment variables are configured in Kubernetes deployments and ConfigMaps:
 **Key Variables:**
 ```yaml
 ENVIRONMENT: test
-MONGODB_URL: mongodb://mongodb-service:27017/klinematrix_test
+MONGODB_URL: mongodb://mongodb-service:27017/_test
 REDIS_URL: redis://redis-service:6379
-CORS_ORIGINS: '["https://klinematrix.com"]'
+CORS_ORIGINS: '["http://localhost:3000"]'
 EMAIL_BYPASS_MODE: true  # Test environment only
 ```
 
@@ -344,48 +344,48 @@ For production builds, API URL is auto-detected from window.location.
 
 ```bash
 # Check pod status
-kubectl get pods -n klinematrix-test -l app=backend
+kubectl get pods -n financial-agent -l app=backend
 
 # Check pod logs
-kubectl logs -f deployment/backend -n klinematrix-test
+kubectl logs -f deployment/backend -n financial-agent
 
 # Restart backend pods
-kubectl rollout restart deployment/backend -n klinematrix-test
+kubectl rollout restart deployment/backend -n financial-agent
 
 # Check service endpoints
-kubectl get endpoints backend-service -n klinematrix-test
+kubectl get endpoints backend-service -n financial-agent
 ```
 
 ### Frontend Shows 503 Error
 
 ```bash
 # Check frontend pod status
-kubectl get pods -n klinematrix-test -l app=frontend
+kubectl get pods -n financial-agent -l app=frontend
 
 # Check frontend logs
-kubectl logs -f deployment/frontend -n klinematrix-test
+kubectl logs -f deployment/frontend -n financial-agent
 
 # Restart frontend pods
-kubectl rollout restart deployment/frontend -n klinematrix-test
+kubectl rollout restart deployment/frontend -n financial-agent
 ```
 
 ### Database Connection Errors
 
 ```bash
 # Check database pod status
-kubectl get pods -n klinematrix-test -l app=mongodb
-kubectl get pods -n klinematrix-test -l app=redis
+kubectl get pods -n financial-agent -l app=mongodb
+kubectl get pods -n financial-agent -l app=redis
 
 # Check database logs
-kubectl logs deployment/mongodb -n klinematrix-test
-kubectl logs deployment/redis -n klinematrix-test
+kubectl logs deployment/mongodb -n financial-agent
+kubectl logs deployment/redis -n financial-agent
 
 # Verify service endpoints
-kubectl get endpoints mongodb-service -n klinematrix-test
-kubectl get endpoints redis-service -n klinematrix-test
+kubectl get endpoints mongodb-service -n financial-agent
+kubectl get endpoints redis-service -n financial-agent
 
 # Restart backend after database restart
-kubectl rollout restart deployment/backend -n klinematrix-test
+kubectl rollout restart deployment/backend -n financial-agent
 ```
 
 ### Local Development Issues
@@ -405,8 +405,8 @@ lsof -i :6379  # Redis port-forward
 pkill -f "port-forward"
 
 # Restart port-forwards
-kubectl port-forward -n klinematrix-test svc/mongodb-service 27017:27017 &
-kubectl port-forward -n klinematrix-test svc/redis-service 6379:6379 &
+kubectl port-forward -n financial-agent svc/mongodb-service 27017:27017 &
+kubectl port-forward -n financial-agent svc/redis-service 6379:6379 &
 ```
 
 ### Hot Reload Not Working
@@ -426,20 +426,20 @@ kubectl port-forward -n klinematrix-test svc/redis-service 6379:6379 &
 # Rebuild image with new version
 ./scripts/bump-version.sh backend patch
 BACKEND_VERSION=$(grep '^version = ' backend/pyproject.toml | sed 's/version = "\(.*\)"/\1/')
-az acr build --registry financialagent --image klinematrix/backend:test-v${BACKEND_VERSION} --file backend/Dockerfile backend/
+az acr build --registry financialagent --image backend:test-v${BACKEND_VERSION} --file backend/Dockerfile backend/
 
 # Update deployment
-kubectl set image deployment/backend backend=financialagent-gxftdbbre4gtegea.azurecr.io/klinematrix/backend:test-v${BACKEND_VERSION} -n klinematrix-test
+kubectl set image deployment/backend backend=backend:test-v${BACKEND_VERSION} -n financial-agent
 
 # Or force pod restart
-kubectl rollout restart deployment/backend -n klinematrix-test
+kubectl rollout restart deployment/backend -n financial-agent
 ```
 
 ## Next Steps
 
 Once your development environment is running:
 
-1. **Explore the Interface** - Visit https://klinematrix.com
+1. **Explore the Interface** - Visit http://localhost:3000
 2. **Review the Code** - Check out backend and frontend source code
 3. **Read the Architecture** - See [System Design](../architecture/system-design.md)
 4. **Review Coding Standards** - See [Coding Standards](coding-standards.md)
@@ -448,9 +448,9 @@ Once your development environment is running:
 
 ## Resources
 
-- **API Documentation**: https://klinematrix.com/api/docs
+- **API Documentation**: http://localhost:3000/api/docs
 - **Complete Documentation**: [docs/README.md](../README.md)
 - **Project Specifications**: [docs/project/specifications.md](../project/specifications.md)
 - **12-Factor Agent Guide**: [docs/architecture/agent-12-factors.md](../architecture/agent-12-factors.md)
 - **Troubleshooting**: [docs/troubleshooting/README.md](../troubleshooting/README.md)
-- **Deployment Guide**: [docs/deployment/workflow.md](/Users/allenpan/Desktop/repos/projects/financial_agent/docs/deployment/workflow.md)
+- **Deployment Guide**: [docs/deployment/workflow.md](/Users/admin/Desktop/repos/projects/financial_agent/docs/deployment/workflow.md)

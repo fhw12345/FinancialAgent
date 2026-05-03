@@ -75,20 +75,33 @@ from .tools.pcr_tools import create_pcr_tools
 logger = structlog.get_logger()
 
 
-# Conditional import for Langfuse (skip in CI/tests)
+# Conditional import for Langfuse (optional dependency, off by default)
+# Only attempt import when LANGFUSE_ENABLED=true to avoid pulling in the package
+# during normal startup.
 if TYPE_CHECKING:
     from langfuse.langchain import CallbackHandler
 
-try:
-    from langfuse import Langfuse
-    from langfuse.langchain import CallbackHandler as LangfuseCallbackHandler
+import os as _os
 
-    LANGFUSE_AVAILABLE = True
-except ImportError:
-    LANGFUSE_AVAILABLE = False
-    LangfuseCallbackHandler = None
-    Langfuse = None
-    logger.warning("Langfuse not available - observability disabled")
+LANGFUSE_AVAILABLE = False
+Langfuse = None
+LangfuseCallbackHandler = None
+
+if _os.getenv("LANGFUSE_ENABLED", "false").lower() == "true":
+    try:
+        from langfuse import Langfuse  # type: ignore[no-redef]
+        from langfuse.langchain import (  # type: ignore[no-redef]
+            CallbackHandler as LangfuseCallbackHandler,
+        )
+
+        LANGFUSE_AVAILABLE = True
+    except ImportError:
+        logger.info(
+            "Langfuse enabled via env but package not installed; "
+            "install with `pip install '.[observability]'`. Skipping observability."
+        )
+else:
+    logger.debug("Langfuse disabled (LANGFUSE_ENABLED!=true); observability skipped")
 
 
 # ================================
@@ -140,6 +153,7 @@ class FinancialAnalysisReActAgent:
         self.langfuse_client = None  # Store client for custom span creation (Story 1.4)
         if (
             LANGFUSE_AVAILABLE
+            and getattr(settings, "langfuse_enabled", False)
             and settings.langfuse_public_key
             and settings.langfuse_secret_key
         ):

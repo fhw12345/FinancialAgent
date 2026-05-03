@@ -371,7 +371,7 @@ class TestGetOssService:
                     service = get_oss_service()
 
                     assert service.endpoint == "oss-cn-shanghai.aliyuncs.com"
-                    assert service.bucket_name == "klinecubic-financialagent-oss"
+                    assert service.bucket_name == "financial-agent-oss"
 
     def test_creates_service_with_custom_values(self):
         """Test factory creates service with custom values."""

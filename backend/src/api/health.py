@@ -69,7 +69,9 @@ async def health_check(
         },
         "configuration": {
             "langfuse_enabled": bool(
-                settings.langfuse_public_key and settings.langfuse_secret_key
+                getattr(settings, "langfuse_enabled", False)
+                and settings.langfuse_public_key
+                and settings.langfuse_secret_key
             ),
             "database_name": settings.database_name,
         },

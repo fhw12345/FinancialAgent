@@ -118,12 +118,12 @@ This document tracks compatibility between Financial Agent components across dif
 
 **Backend**:
 1. No schema changes required
-2. Update image to `klinematrix/backend:test-v0.4.1`
+2. Update image to `backend:test-v0.4.1`
 3. Restart pods to apply MongoDB URL parsing fix
 
 **Frontend**:
 1. No API contract changes
-2. Update image to `klinematrix/frontend:test-v0.4.1`
+2. Update image to `frontend:test-v0.4.1`
 3. Restart pods to apply API URL fix
 
 **Critical Fixes**:

@@ -359,7 +359,7 @@ Each analysis automatically includes AI-generated summary:
 
 ### Development Environment
 - **Local**: Docker Compose for infrastructure (MongoDB, Redis), native Python/Node.js for code
-- **Cloud (Test)**: AKS test namespace (`klinematrix-test`)
+- **Cloud (Test)**: AKS test namespace (`financial-agent`)
 - **Database**: Local MongoDB (dev) or Azure Cosmos DB (test)
 - **Cache**: Local Redis (dev) or in-cluster Redis (test, non-persistent)
 - **Authentication**: Bypass mode (local) or JWT with email verification (test)

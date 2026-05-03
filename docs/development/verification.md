@@ -9,7 +9,7 @@ This guide helps you verify the Financial Agent platform is working correctly in
 
 - ✅ kubectl configured for AKS cluster
 - ✅ Azure CLI authenticated (`az login`)
-- ✅ Access to `klinematrix-test` namespace
+- ✅ Access to `financial-agent` namespace
 - ✅ Web browser for testing endpoints
 
 ## Step 1: Verify Kubernetes Deployment
@@ -17,7 +17,7 @@ This guide helps you verify the Financial Agent platform is working correctly in
 ### 1.1 Check All Pods Running
 
 ```bash
-kubectl get pods -n klinematrix-test
+kubectl get pods -n financial-agent
 ```
 
 **Expected Output**:
@@ -36,7 +36,7 @@ redis-xxxxxxxxx-xxxxx       1/1     Running   0          5m
 ### 1.2 Check Services
 
 ```bash
-kubectl get svc -n klinematrix-test
+kubectl get svc -n financial-agent
 ```
 
 **Expected Output**:
@@ -50,13 +50,13 @@ redis-service      ClusterIP   10.0.xxx.xxx    <none>        6379/TCP   10m
 ### 1.3 Verify Ingress
 
 ```bash
-kubectl get ingress -n klinematrix-test
+kubectl get ingress -n financial-agent
 ```
 
 **Expected Output**:
 ```
 NAME              CLASS   HOSTS                ADDRESS        PORTS     AGE
-klinematrix       nginx   klinematrix.com      20.xx.xx.xx    80, 443   30m
+       nginx   localhost      20.xx.xx.xx    80, 443   30m
 ```
 
 **Check**:
@@ -70,12 +70,12 @@ klinematrix       nginx   klinematrix.com      20.xx.xx.xx    80, 443   30m
 
 **From Internet**:
 ```bash
-curl https://klinematrix.com/api/health
+curl http://localhost:3000/api/health
 ```
 
 **From within cluster**:
 ```bash
-kubectl exec -n klinematrix-test deployment/backend -- curl -s http://localhost:8000/api/health
+kubectl exec -n financial-agent deployment/backend -- curl -s http://localhost:8000/api/health
 ```
 
 **Expected Response**:
@@ -100,7 +100,7 @@ kubectl exec -n klinematrix-test deployment/backend -- curl -s http://localhost:
 ### 2.2 Frontend Health Check
 
 ```bash
-curl https://klinematrix.com/health
+curl http://localhost:3000/health
 ```
 
 **Expected Response**:
@@ -120,7 +120,7 @@ print("=" * 50)
 
 # Backend health
 try:
-    response = requests.get("https://klinematrix.com/api/health", timeout=10)
+    response = requests.get("http://localhost:3000/api/health", timeout=10)
     if response.status_code == 200:
         health = response.json()
         print("✅ Backend: OK")
@@ -134,7 +134,7 @@ except Exception as e:
 
 # Frontend health
 try:
-    response = requests.get("https://klinematrix.com/health", timeout=10)
+    response = requests.get("http://localhost:3000/health", timeout=10)
     if response.status_code == 200:
         print("✅ Frontend: OK")
     else:
@@ -152,13 +152,13 @@ EOF
 
 ```bash
 # Check External Secret sync
-kubectl get externalsecret mongodb-secret -n klinematrix-test
+kubectl get externalsecret mongodb-secret -n financial-agent
 
 # Verify secret exists
-kubectl get secret mongodb-secret -n klinematrix-test
+kubectl get secret mongodb-secret -n financial-agent
 
 # Test connection from pod
-kubectl exec -n klinematrix-test deployment/backend -- python3 -c "
+kubectl exec -n financial-agent deployment/backend -- python3 -c "
 from motor.motor_asyncio import AsyncIOMotorClient
 import asyncio
 import os
@@ -176,12 +176,12 @@ asyncio.run(test())
 
 ```bash
 # Test from backend pod
-kubectl exec -n klinematrix-test deployment/backend -- redis-cli -h redis-service -p 6379 ping
+kubectl exec -n financial-agent deployment/backend -- redis-cli -h redis-service -p 6379 ping
 # Expected: PONG
 
 # Set/get test
-kubectl exec -n klinematrix-test deployment/backend -- redis-cli -h redis-service -p 6379 set test_key "hello"
-kubectl exec -n klinematrix-test deployment/backend -- redis-cli -h redis-service -p 6379 get test_key
+kubectl exec -n financial-agent deployment/backend -- redis-cli -h redis-service -p 6379 set test_key "hello"
+kubectl exec -n financial-agent deployment/backend -- redis-cli -h redis-service -p 6379 get test_key
 # Expected: "hello"
 ```
 
@@ -189,13 +189,13 @@ kubectl exec -n klinematrix-test deployment/backend -- redis-cli -h redis-servic
 
 ```bash
 # Check External Secret sync
-kubectl get externalsecret alibaba-secret -n klinematrix-test
+kubectl get externalsecret alibaba-secret -n financial-agent
 
 # Verify secret exists
-kubectl get secret alibaba-secret -n klinematrix-test
+kubectl get secret alibaba-secret -n financial-agent
 
 # Test API key (from backend pod)
-kubectl exec -n klinematrix-test deployment/backend -- python3 -c "
+kubectl exec -n financial-agent deployment/backend -- python3 -c "
 import os
 import requests
 
@@ -211,7 +211,7 @@ else:
 
 ### 4.1 Access Frontend
 
-Open browser: **https://klinematrix.com**
+Open browser: **http://localhost:3000**
 
 **Expected**:
 - ✅ Page loads over HTTPS (valid certificate)
@@ -244,12 +244,12 @@ Open browser: **https://klinematrix.com**
 
 ```bash
 # Search for symbol
-curl -s "https://klinematrix.com/api/market/search?q=apple" | jq '.'
+curl -s "http://localhost:3000/api/market/search?q=apple" | jq '.'
 
 # Expected: Array of matching symbols including AAPL
 
 # Get price data
-curl -s "https://klinematrix.com/api/market/price/AAPL?interval=1d&period=1mo" | jq '.data[0]'
+curl -s "http://localhost:3000/api/market/price/AAPL?interval=1d&period=1mo" | jq '.data[0]'
 
 # Expected: OHLCV data for AAPL
 ```
@@ -260,17 +260,17 @@ curl -s "https://klinematrix.com/api/market/price/AAPL?interval=1d&period=1mo" |
 
 ```bash
 # Verify non-root execution
-kubectl get pods -n klinematrix-test -o json | \
+kubectl get pods -n financial-agent -o json | \
   jq '.items[].spec.containers[].securityContext.runAsUser'
 # Expected: 1000 (backend), 101 (frontend), 999 (redis)
 
 # Verify read-only filesystem
-kubectl get pods -n klinematrix-test -o json | \
+kubectl get pods -n financial-agent -o json | \
   jq '.items[].spec.containers[].securityContext.readOnlyRootFilesystem'
 # Expected: true
 
 # Verify dropped capabilities
-kubectl get pods -n klinematrix-test -o json | \
+kubectl get pods -n financial-agent -o json | \
   jq '.items[].spec.containers[].securityContext.capabilities.drop'
 # Expected: ["ALL"]
 ```
@@ -279,19 +279,19 @@ kubectl get pods -n klinematrix-test -o json | \
 
 ```bash
 # Check certificate validity
-curl -vI https://klinematrix.com 2>&1 | grep "SSL certificate verify"
+curl -vI http://localhost:3000 2>&1 | grep "SSL certificate verify"
 # Expected: "SSL certificate verify ok"
 
 # Check TLS version
-nslookup klinematrix.com
-openssl s_client -connect klinematrix.com:443 -tls1_2 < /dev/null | grep "Protocol"
+nslookup localhost
+openssl s_client -connect localhost:443 -tls1_2 < /dev/null | grep "Protocol"
 # Expected: TLSv1.2 or higher
 ```
 
 ### 5.3 Network Policies (if configured)
 
 ```bash
-kubectl get networkpolicies -n klinematrix-test
+kubectl get networkpolicies -n financial-agent
 ```
 
 ## Step 6: Performance and Monitoring
@@ -300,7 +300,7 @@ kubectl get networkpolicies -n klinematrix-test
 
 ```bash
 # Pod resource usage
-kubectl top pods -n klinematrix-test
+kubectl top pods -n financial-agent
 
 # Node resource usage
 kubectl top nodes
@@ -315,19 +315,19 @@ kubectl top nodes
 
 ```bash
 # Backend logs (last 50 lines)
-kubectl logs -n klinematrix-test deployment/backend --tail=50
+kubectl logs -n financial-agent deployment/backend --tail=50
 
 # Frontend logs
-kubectl logs -n klinematrix-test deployment/frontend --tail=50
+kubectl logs -n financial-agent deployment/frontend --tail=50
 
 # Follow logs in real-time
-kubectl logs -n klinematrix-test deployment/backend -f
+kubectl logs -n financial-agent deployment/backend -f
 ```
 
 ### 6.3 Check Pod Events
 
 ```bash
-kubectl get events -n klinematrix-test --sort-by='.lastTimestamp' | tail -20
+kubectl get events -n financial-agent --sort-by='.lastTimestamp' | tail -20
 ```
 
 **Watch for**:
@@ -341,7 +341,7 @@ kubectl get events -n klinematrix-test --sort-by='.lastTimestamp' | tail -20
 
 ```bash
 # Get shell in backend pod
-kubectl exec -it -n klinematrix-test deployment/backend -- python3
+kubectl exec -it -n financial-agent deployment/backend -- python3
 
 # Then in Python shell:
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -375,11 +375,11 @@ exit()
 ### 7.2 Redis Cache Check
 
 ```bash
-kubectl exec -n klinematrix-test deployment/backend -- redis-cli -h redis-service -p 6379 INFO stats
+kubectl exec -n financial-agent deployment/backend -- redis-cli -h redis-service -p 6379 INFO stats
 # Check: keyspace_hits, keyspace_misses, connected_clients
 
 # List keys (careful in production - use SCAN instead)
-kubectl exec -n klinematrix-test deployment/backend -- redis-cli -h redis-service -p 6379 --scan --pattern "market:*" | head -10
+kubectl exec -n financial-agent deployment/backend -- redis-cli -h redis-service -p 6379 --scan --pattern "market:*" | head -10
 ```
 
 ## Step 8: Image Version Verification
@@ -387,21 +387,21 @@ kubectl exec -n klinematrix-test deployment/backend -- redis-cli -h redis-servic
 ### 8.1 Check Deployed Images
 
 ```bash
-kubectl get pods -n klinematrix-test -o json | \
+kubectl get pods -n financial-agent -o json | \
   jq -r '.items[] | "\(.metadata.name): \(.spec.containers[0].image)"'
 ```
 
 **Expected** (current versions as of 2025-10-15):
 ```
-backend-xxx: financialagent-gxftdbbre4gtegea.azurecr.io/klinematrix/backend:test-v0.5.4
-frontend-xxx: financialagent-gxftdbbre4gtegea.azurecr.io/klinematrix/frontend:test-v0.8.4
+backend-xxx: backend:test-v0.5.4
+frontend-xxx: frontend:test-v0.8.4
 redis-xxx: redis:7.2-alpine
 ```
 
 ### 8.2 Verify Image Pull Policy
 
 ```bash
-kubectl get pods -n klinematrix-test -o json | \
+kubectl get pods -n financial-agent -o json | \
   jq '.items[].spec.containers[] | {name: .name, imagePullPolicy: .imagePullPolicy}'
 ```
 
@@ -439,22 +439,22 @@ echo "🧪 KUBERNETES HEALTH CHECK"
 echo "=" * 50
 
 # Check pods
-if kubectl get pods -n klinematrix-test | grep -q "0/1"; then
+if kubectl get pods -n financial-agent | grep -q "0/1"; then
   echo "❌ Some pods not ready"
-  kubectl get pods -n klinematrix-test
+  kubectl get pods -n financial-agent
 else
   echo "✅ All pods ready"
 fi
 
 # Check backend health
-if curl -sf https://klinematrix.com/api/health > /dev/null; then
+if curl -sf http://localhost:3000/api/health > /dev/null; then
   echo "✅ Backend health OK"
 else
   echo "❌ Backend health failed"
 fi
 
 # Check frontend
-if curl -sf https://klinematrix.com/health > /dev/null; then
+if curl -sf http://localhost:3000/health > /dev/null; then
   echo "✅ Frontend health OK"
 else
   echo "❌ Frontend health failed"

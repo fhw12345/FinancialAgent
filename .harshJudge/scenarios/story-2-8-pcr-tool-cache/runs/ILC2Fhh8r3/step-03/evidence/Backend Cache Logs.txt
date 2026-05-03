@@ -1,7 +1,0 @@
-backend-1  | 2025-12-31 02:23:56 [debug    ] Lock acquired                  lock_key=lock:market:pcr:NVDA ttl=30
-backend-1  | 2025-12-31 02:23:56 [debug    ] Cache MISS                     cache_key=market:pcr:NVDA
-backend-1  | 2025-12-31 02:23:56 [info     ] Cache miss with lock - fetching data cache_key=market:pcr:NVDA
-backend-1  | 2025-12-31 02:23:58 [info     ] pcr_calculated                 contracts=516 pcr=0.3 price=187.54 symbol=NVDA
-backend-1  | 2025-12-31 02:23:58 [info     ] Cache populated after fetch    cache_key=market:pcr:NVDA ttl=3600
-backend-1  | 2025-12-31 02:23:58 [debug    ] Lock released                  lock_key=lock:market:pcr:NVDA
-backend-1  | 2025-12-31 02:23:58 [info     ] Tool execution completed       duration_ms=2528 output_length=608 run_id=019b7238-1431-7c81-b0ca-6df988e44378 tool_name=get_put_call_ratio

@@ -125,7 +125,7 @@ def reconcile_stuck_transactions():
 
 **Deployment**:
 - Local Dev: Python scheduler runs every 5 minutes (for testing)
-- Test/Prod: Kubernetes CronJob with image: `klinematrix/backend:test-v0.6.0`
+- Test/Prod: Kubernetes CronJob with image: `backend:test-v0.6.0`
 
 ---
 
