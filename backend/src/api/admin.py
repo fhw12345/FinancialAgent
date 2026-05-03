@@ -14,13 +14,10 @@ from ..core.data.ticker_data_service import TickerDataService
 from ..database.mongodb import MongoDB
 from ..database.redis import RedisCache
 from ..database.repositories.tool_execution_repository import ToolExecutionRepository
-from ..database.repositories.transaction_repository import TransactionRepository
-from ..database.repositories.user_repository import UserRepository
 from ..models.user import User
 from ..services.alpaca_data_service import AlpacaDataService
 from ..services.alpaca_trading_service import AlpacaTradingService
 from ..services.alphavantage_market_data import AlphaVantageMarketDataService
-from ..services.credit_service import CreditService
 from ..services.data_manager import DataManager
 from ..services.database_stats_service import DatabaseStatsService
 from ..services.insights import InsightsSnapshotService
@@ -308,18 +305,6 @@ async def run_portfolio_analysis_background(
             total_tools=len(react_agent.tools),
         )
 
-        # Initialize credit service for usage tracking
-        logger.info("Initializing credit service")
-        user_repo = UserRepository(mongodb.get_collection("users"))
-        transaction_repo = TransactionRepository(mongodb.get_collection("transactions"))
-        credit_service = CreditService(
-            user_repo=user_repo,
-            transaction_repo=transaction_repo,
-            mongodb=mongodb,
-            settings=settings,
-        )
-        logger.info("Credit service initialized")
-
         # Initialize portfolio analysis agent
         portfolio_agent = PortfolioAnalysisAgent(
             mongodb=mongodb,
@@ -328,7 +313,6 @@ async def run_portfolio_analysis_background(
             settings=settings,
             market_service=market_service,
             trading_service=trading_service,
-            credit_service=credit_service,
         )
 
         # Run analysis for all users

@@ -301,85 +301,14 @@ class UserRepository:
         tokens: int,
         session: Any = None,
     ) -> User | None:
-        """
-        Deduct credits from user balance and update lifetime stats.
-        Uses atomic operations to prevent race conditions.
-
-        Args:
-            user_id: User identifier
-            cost: Credits to deduct
-            tokens: Tokens consumed (for lifetime tracking)
-            session: Optional MongoDB session for transactions
-
-        Returns:
-            Updated user if successful, None if user not found
-        """
-        result = await self.collection.find_one_and_update(
-            {"user_id": user_id},
-            {
-                "$inc": {
-                    "credits": -cost,  # Subtract from balance
-                    "total_credits_spent": cost,  # Add to lifetime total
-                    "total_tokens_used": tokens,  # Add to lifetime tokens
-                }
-            },
-            return_document=True,
-            session=session,
-        )
-
-        if not result:
-            logger.warning("Failed to deduct credits - user not found", user_id=user_id)
-            return None
-
-        # Remove MongoDB _id field
-        result.pop("_id", None)
-
-        logger.info(
-            "Credits deducted",
-            user_id=user_id,
-            cost=cost,
-            tokens=tokens,
-            new_balance=result.get("credits"),
-        )
-
-        return User(**result)
+        """Deprecated stub: credits removed (W4). Returns None."""
+        return None
 
     async def adjust_credits(
         self, user_id: str, amount: float, reason: str
     ) -> User | None:
-        """
-        Manually adjust user credits (admin operation for refunds/corrections).
-
-        Args:
-            user_id: User identifier
-            amount: Credits to add (positive) or deduct (negative)
-            reason: Reason for adjustment (for audit trail)
-
-        Returns:
-            Updated user if successful, None if user not found
-        """
-        result = await self.collection.find_one_and_update(
-            {"user_id": user_id},
-            {"$inc": {"credits": amount}},
-            return_document=True,
-        )
-
-        if not result:
-            logger.warning("Failed to adjust credits - user not found", user_id=user_id)
-            return None
-
-        # Remove MongoDB _id field
-        result.pop("_id", None)
-
-        logger.info(
-            "Credits adjusted",
-            user_id=user_id,
-            amount=amount,
-            reason=reason,
-            new_balance=result.get("credits"),
-        )
-
-        return User(**result)
+        """Deprecated stub: credits removed (W4). Returns None."""
+        return None
 
     async def get_active_users_with_portfolios(self) -> list[dict[str, Any]]:
         """

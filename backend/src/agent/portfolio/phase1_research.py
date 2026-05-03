@@ -146,28 +146,6 @@ Technical terms can include English in parentheses for clarity.
             # NOTE: Do NOT add prompt to conversation_history here!
             # ainvoke() will add it with language instruction - adding here causes duplicate
 
-            # Create pending transaction for credit tracking (if enabled)
-            transaction = None
-            if self.credit_service:
-                try:
-                    transaction = await self.credit_service.create_pending_transaction(
-                        user_id="portfolio_agent",
-                        chat_id=chat_id,
-                        estimated_cost=10.0,
-                        model=self.settings.dashscope_model,
-                    )
-                    logger.info(
-                        "Created pending transaction",
-                        transaction_id=transaction.transaction_id,
-                        symbol=symbol,
-                    )
-                except Exception as e:
-                    logger.warning(
-                        "Failed to create pending transaction",
-                        error=str(e),
-                        symbol=symbol,
-                    )
-
             # Invoke ReAct agent for research (tools enabled)
             logger.info(
                 "Invoking agent for symbol research",
@@ -220,24 +198,6 @@ Technical terms can include English in parentheses for clarity.
                 metadata=metadata,
             )
             message = await self.message_repo.create(message_create)
-
-            # Complete transaction with actual token usage
-            if self.credit_service and transaction:
-                try:
-                    await self.credit_service.complete_transaction_with_deduction(
-                        transaction_id=transaction.transaction_id,
-                        message_id=message.message_id,
-                        input_tokens=input_tokens,
-                        output_tokens=output_tokens,
-                        model=self.settings.dashscope_model,
-                        thinking_enabled=False,
-                    )
-                except Exception as e:
-                    logger.error(
-                        "Error completing transaction",
-                        error=str(e),
-                        transaction_id=transaction.transaction_id,
-                    )
 
             logger.info(
                 "Phase 1: Symbol research completed",

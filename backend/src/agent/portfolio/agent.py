@@ -21,7 +21,6 @@ from ...database.repositories.portfolio_order_repository import PortfolioOrderRe
 from ...database.repositories.user_repository import UserRepository
 from ...database.repositories.watchlist_repository import WatchlistRepository
 from ...services.context_window_manager import ContextWindowManager
-from ...services.credit_service import CreditService
 from ..langgraph_react_agent import FinancialAnalysisReActAgent
 from ..order_optimizer import OrderOptimizer
 from .phase1_research import Phase1ResearchMixin
@@ -53,7 +52,6 @@ class PortfolioAnalysisAgent(
         settings: Settings,
         market_service=None,  # AlphaVantageMarketDataService
         trading_service=None,  # AlpacaTradingService
-        credit_service: CreditService | None = None,  # For usage tracking
         redis_cache=None,  # DEPRECATED: Not used, kept for compatibility
     ):
         """
@@ -65,7 +63,6 @@ class PortfolioAnalysisAgent(
             settings: Application settings
             market_service: Alpha Vantage market data service
             trading_service: Alpaca trading service for order placement
-            credit_service: Credit service for usage tracking (optional)
             redis_cache: DEPRECATED - Not used, parameter kept for backward compatibility
         """
         self.mongodb = mongodb
@@ -73,7 +70,6 @@ class PortfolioAnalysisAgent(
         self.settings = settings
         self.market_service = market_service
         self.trading_service = trading_service
-        self.credit_service = credit_service
 
         # Repositories
         self.user_repo = UserRepository(mongodb.get_collection("users"))

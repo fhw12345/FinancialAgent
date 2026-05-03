@@ -5,9 +5,7 @@ import { EnhancedChatInterface } from "./components/EnhancedChatInterface";
 import HealthPage from "./pages/HealthPage";
 import FeedbackPage from "./pages/FeedbackPage";
 import InsightsPage from "./pages/InsightsPage";
-import { TransactionHistory } from "./pages/TransactionHistory";
 import PortfolioDashboard from "./pages/PortfolioDashboard";
-import { CreditBalance } from "./components/credits/CreditBalance";
 import HelpModal from "./components/HelpModal";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 
@@ -18,7 +16,7 @@ const LOCAL_IS_ADMIN = true;
 function App() {
   const { t } = useTranslation(["common", "auth"]);
   const [activeTab, setActiveTab] = useState<
-    "health" | "chat" | "portfolio" | "insights" | "feedback" | "transactions"
+    "health" | "chat" | "portfolio" | "insights" | "feedback"
   >("insights");
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
@@ -48,7 +46,6 @@ function App() {
               </div>
               {/* Mobile user info */}
               <div className="flex items-center gap-2 sm:hidden">
-                <CreditBalance className="w-32" />
               </div>
             </div>
 
@@ -106,19 +103,8 @@ function App() {
               >
                 {t("common:navigation.feedback")}
               </button>
-              <button
-                onClick={() => setActiveTab("transactions")}
-                className={`px-3 sm:px-5 py-1.5 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl transition-all duration-200 ${
-                  activeTab === "transactions"
-                    ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/30"
-                    : "text-gray-700 hover:bg-gray-100/80"
-                }`}
-              >
-                {t("common:navigation.transactions")}
-              </button>
               {/* Desktop user info */}
               <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-gray-200">
-                <CreditBalance className="w-56" />
                 <LanguageSwitcher variant="minimal" />
                 <span className="text-sm text-gray-700">👤 Local</span>
               </div>
@@ -137,8 +123,6 @@ function App() {
         {activeTab === "insights" && <InsightsPage />}
 
         {activeTab === "feedback" && <FeedbackPage />}
-
-        {activeTab === "transactions" && <TransactionHistory />}
       </main>
 
       <footer className="bg-white border-t">

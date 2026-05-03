@@ -9,12 +9,6 @@ import type {
   DeepStreamEvent,
   MarketStatus,
 } from "../types/api";
-import type {
-  UserProfile,
-  TransactionHistoryResponse,
-  CreditAdjustmentRequest,
-  CreditAdjustmentResponse,
-} from "../types/credits";
 import {
   refreshTokenIfNeeded,
   retryWithRefreshToken,
@@ -401,51 +395,6 @@ export const chatService = {
     return () => {
       controller.abort();
     };
-  },
-};
-
-// ===== Credit System API =====
-export const creditService = {
-  /**
-   * Get current user profile with credit balance
-   */
-  async getUserProfile(): Promise<UserProfile> {
-    const response = await api.get<UserProfile>("/api/users/me");
-    return response.data;
-  },
-
-  /**
-   * Get paginated transaction history for current user
-   */
-  async getTransactionHistory(
-    page: number = 1,
-    pageSize: number = 20,
-    status?: string,
-  ): Promise<TransactionHistoryResponse> {
-    const response = await api.get<TransactionHistoryResponse>(
-      "/api/credits/transactions",
-      {
-        params: {
-          page,
-          page_size: pageSize,
-          ...(status ? { status } : {}),
-        },
-      },
-    );
-    return response.data;
-  },
-
-  /**
-   * Admin: Manually adjust user credits
-   */
-  async adjustCredits(
-    request: CreditAdjustmentRequest,
-  ): Promise<CreditAdjustmentResponse> {
-    const response = await api.post<CreditAdjustmentResponse>(
-      "/api/admin/credits/adjust",
-      request,
-    );
-    return response.data;
   },
 };
 
