@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.5] - 2026-05-04
+
+### Fixed
+- fix(transactions): "Recent Transactions" panel was showing HOLD signals as SELL orders. RecentTransactions.tsx:182 hardcoded `isBuy = side === "buy"`, so the new `side="hold"` rows fell through to the SELL branch (red icon, "SELL" badge). Compounded by the fact that HOLD signals shouldn't appear in a *transactions* panel at all (they're recommendations, not trades). Fix: `GET /api/portfolio/transactions` now filters out `decision_type="signal"` rows server-side. Real BUY/SELL orders (decision_type="order" or legacy null) still appear normally.
+
 ## [0.15.4] - 2026-05-04
 
 ### Added

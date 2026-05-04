@@ -44,7 +44,10 @@ async def get_portfolio_transactions(
         orders_collection = mongodb.get_collection("portfolio_orders")
 
         # Build query based on status filter
-        query: dict = {}
+        # Exclude HOLD signals (decision_type="signal") — those are AI
+        # recommendations, not transactions. Real BUY/SELL orders have
+        # decision_type="order" or no decision_type field at all (legacy).
+        query: dict = {"decision_type": {"$ne": "signal"}}
 
         if status == "success":
             # Success = filled, new, partially_filled, accepted (anything that went to Alpaca)
