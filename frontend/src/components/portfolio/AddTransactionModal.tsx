@@ -7,7 +7,7 @@
  */
 
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { X } from "lucide-react";
@@ -61,7 +61,7 @@ export function AddTransactionModal({
     handleSubmit,
     reset,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<TransactionFormValues>({
     resolver: zodResolver(schema),
@@ -86,17 +86,19 @@ export function AddTransactionModal({
         },
   });
 
-  // Live-update total_amount = qty * price (unless user has touched it)
-  const qty = watch("quantity");
-  const price = watch("price");
-  const totalDirty = !!watch("total_amount") && false; // we don't track touched; always recompute
+  // Live-update total_amount = qty * price.
+  // useWatch (not watch) so only this effect re-subscribes — the parent modal
+  // does NOT re-render on every keystroke, which was killing native text
+  // selection (drag-to-highlight) inside Symbol/Quantity/Price inputs.
+  const qty = useWatch({ control, name: "quantity" });
+  const price = useWatch({ control, name: "price" });
+  const symbolValue = useWatch({ control, name: "symbol" });
 
   useEffect(() => {
     if (typeof qty === "number" && typeof price === "number" && qty > 0 && price > 0) {
       setValue("total_amount", Number((qty * price).toFixed(2)));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qty, price]);
+  }, [qty, price, setValue]);
 
   useEffect(() => {
     if (open) {
@@ -138,13 +140,19 @@ export function AddTransactionModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
+      onMouseDown={(e) => {
+        // Only close on a click that BOTH started and ended on the backdrop.
+        // Otherwise dragging text inside an input and releasing on the backdrop
+        // (common when select-all overshoots) would close the modal.
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
       role="dialog"
       aria-modal="true"
     >
       <div
         className="w-full max-w-lg rounded-lg bg-white shadow-xl"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
           <h3 className="text-base font-semibold text-gray-900">
@@ -182,7 +190,7 @@ export function AddTransactionModal({
                 <input type="hidden" {...register("symbol")} />
                 <SymbolSearch
                   autoFocus
-                  value={watch("symbol") || ""}
+                  value={symbolValue || ""}
                   placeholder="AAPL — Apple Inc."
                   onSymbolSelect={(sym) =>
                     setValue("symbol", sym, {

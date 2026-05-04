@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.7] - 2026-05-05
+
+### Fixed
+- **fix(AddTransactionModal): 鼠标拖选输入框内容时 modal 误关 + 高亮消失** — Symbol / Quantity / Price 三个框都中招。两个独立的根因叠在一起：
+  1. **真凶**：backdrop 用的是 `onClick={onClose}`，拖选时鼠标释放在 modal 外的暗色背景上 → 触发 click → 关掉整个 modal。`stopPropagation` 只挡了内部 click，挡不住"从内部开始、在外部松手"这种跨边界拖动。改成 `onMouseDown` 并要求 `e.target === e.currentTarget`，只有起点和终点都在 backdrop 才关闭。
+  2. **附带**：modal 顶层用 `watch("quantity")` / `watch("price")`，每次任意字段输入都触发整个 modal re-render。改用 `useWatch({ control })` 让订阅只影响 effect 内部消费者，父组件不再 re-render，输入手感更稳。同时移除写死为 `false` 的死代码 `totalDirty`。
+
 ## [0.11.5] - 2025-12-29
 
 ### Fixed
