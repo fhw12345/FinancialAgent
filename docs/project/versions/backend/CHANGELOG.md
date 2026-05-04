@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-05-04
+
+### Changed
+- refactor(llm): cross-vendor per-role model assignments via Agent Maestro
+  - Previously all roles routed to Claude (opus-4-7 / sonnet-4-6 / haiku-4-5)
+  - Now mixed across three vendors for diversity and task fit:
+    - **Claude** (opus-4.7): `deep_planner`, `portfolio_decisions`, `verdict`
+    - **Claude** (sonnet-4.6): `sub_technical`
+    - **Claude** (haiku-4.5): `simple_chat`
+    - **GPT** (gpt-5.5): `react_agent`, `sub_financial`, `portfolio_research`
+    - **Gemini** (3.1-pro-preview): `sub_debater` — cross-vendor debate so adversarial views aren't self-correlated
+    - **Gemini** (3-flash-preview): `sub_news`, `summary`
+  - Model IDs normalized to Maestro's native dotted format (e.g. `claude-opus-4.7`); short-hyphen aliases (`claude-opus-4-7`) still resolved by Maestro
+- All vendors reach FinancialAgent through Maestro's Anthropic-compatible endpoint (`/api/anthropic`); single `ChatAnthropic` wrapper continues to work because Maestro performs vendor protocol translation server-side
+
+### Added
+- `backend/tests/smoke_cross_vendor.py` — per-role chat + tool-calling smoke test
+- `backend/tests/e2e_deep_react.py` — full Deep ReAct flow driver (sub-agents → debate → verdict) for cross-vendor verification
+
 ## [0.11.0] - 2026-02-23
 
 ### Added
