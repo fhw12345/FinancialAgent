@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-05-04
+
+### Added — manual transactions ledger
+- New `user_transactions` collection — separate from `portfolio_orders` (which now strictly carries AI decision rows). The user-entered ledger of "I really bought/sold this" with auto-sync to holdings.
+- `POST/GET/PATCH/DELETE /api/portfolio/user-transactions` with reverse-and-forward holdings sync. Edit/delete reverse-applies the old version, then forward-applies the new one; oversell raises 400, holdings-state-changed mid-edit raises 409.
+- `+ Add Transaction` button on Portfolio Holdings card header (next to Refresh / Add Holding).
+- New `AddTransactionModal` (symbol + side + qty + price + total + executed_at + notes), uses shared `SymbolSearch` autocomplete.
+- `RecentTransactions` rewritten — now shows ONLY user-entered transactions (not AI decision rows). Inline edit + delete buttons per row. Holdings auto-sync via the backend on every mutation.
+
+### Fixed
+- fix(holding-modal): mouse-drag to select numeric value triggered `onWheel→blur()` and killed the selection. Switched to `onWheelCapture={e.preventDefault()}` which stops scroll-wheel value changes without disturbing focus/selection.
+
 ## [0.16.1] - 2026-05-04
 
 ### Fixed (the v0.16.0 known issue is now resolved)

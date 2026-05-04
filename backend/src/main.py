@@ -108,6 +108,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await order_repo.ensure_indexes()
         logger.info("Portfolio order indexes created (order audit trail)")
 
+        # User-entered transactions (manual buy/sell ledger)
+        from .database.repositories.user_transaction_repository import (
+            UserTransactionRepository,
+        )
+
+        user_tx_repo = UserTransactionRepository(
+            mongodb.get_collection("user_transactions")
+        )
+        await user_tx_repo.ensure_indexes()
+        logger.info("User transaction indexes created")
+
         # Initialize MCP tools for ReAct agent (if configured)
         # This loads 118 Alpha Vantage tools via MCP protocol
         from .agent.langgraph_react_agent import FinancialAnalysisReActAgent

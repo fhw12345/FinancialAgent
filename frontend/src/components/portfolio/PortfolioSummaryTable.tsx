@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowLeftRight, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import type { Holding, PortfolioSummary } from "../../types/portfolio";
 import {
   useAddHolding,
@@ -7,7 +7,12 @@ import {
   useUpdateHolding,
   useRefreshHoldingPrices,
 } from "../../hooks/usePortfolio";
+import { useAddUserTransaction } from "../../hooks/useUserTransactions";
 import { HoldingFormModal, type HoldingFormValues } from "./HoldingFormModal";
+import {
+  AddTransactionModal,
+  type TransactionFormValues,
+} from "./AddTransactionModal";
 
 interface PortfolioSummaryTableProps {
   holdings: Holding[];
@@ -24,11 +29,13 @@ export function PortfolioSummaryTable({
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Holding | null>(null);
+  const [txModalOpen, setTxModalOpen] = useState(false);
 
   const addMut = useAddHolding();
   const updateMut = useUpdateHolding();
   const deleteMut = useDeleteHolding();
   const refreshMut = useRefreshHoldingPrices();
+  const addTxMut = useAddUserTransaction();
 
   const formatCurrency = (value: number): string => `$${value.toFixed(2)}`;
   const formatPercentage = (value: number): string => `${value.toFixed(2)}%`;
@@ -70,6 +77,25 @@ export function PortfolioSummaryTable({
     await deleteMut.mutateAsync(h.holding_id);
   };
 
+  const handleAddTx = async (values: TransactionFormValues) => {
+    try {
+      await addTxMut.mutateAsync({
+        symbol: values.symbol,
+        side: values.side,
+        quantity: values.quantity,
+        price: values.price,
+        total_amount: values.total_amount,
+        executed_at: values.executed_at
+          ? new Date(values.executed_at).toISOString()
+          : undefined,
+        notes: values.notes,
+      });
+      setTxModalOpen(false);
+    } catch {
+      // mutation surfaces error; keep modal open
+    }
+  };
+
   const submitting = addMut.isPending || updateMut.isPending;
 
   // ----- Empty state still gets the Add button -----
@@ -79,13 +105,23 @@ export function PortfolioSummaryTable({
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Portfolio Holdings</h2>
-            <button
-              onClick={openAdd}
-              className="inline-flex items-center gap-1 rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              <Plus className="h-4 w-4" />
-              Add Holding
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setTxModalOpen(true)}
+                className="inline-flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                title="Record a manual buy/sell — auto-syncs holdings"
+              >
+                <ArrowLeftRight className="h-4 w-4" />
+                Add Transaction
+              </button>
+              <button
+                onClick={openAdd}
+                className="inline-flex items-center gap-1 rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                <Plus className="h-4 w-4" />
+                Add Holding
+              </button>
+            </div>
           </div>
           <div className="text-center text-gray-500 py-8">
             <p>No positions to display</p>
@@ -98,6 +134,12 @@ export function PortfolioSummaryTable({
           onClose={closeModal}
           onSubmit={handleSubmit}
           submitting={submitting}
+        />
+        <AddTransactionModal
+          open={txModalOpen}
+          onClose={() => setTxModalOpen(false)}
+          onSubmit={handleAddTx}
+          submitting={addTxMut.isPending}
         />
       </>
     );
@@ -119,6 +161,14 @@ export function PortfolioSummaryTable({
                 className={`h-4 w-4 ${refreshMut.isPending ? "animate-spin" : ""}`}
               />
               {refreshMut.isPending ? "Refreshing…" : "Refresh Prices"}
+            </button>
+            <button
+              onClick={() => setTxModalOpen(true)}
+              className="inline-flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              title="Record a manual buy/sell — auto-syncs holdings"
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              Add Transaction
             </button>
             <button
               onClick={openAdd}
@@ -248,6 +298,12 @@ export function PortfolioSummaryTable({
         onClose={closeModal}
         onSubmit={handleSubmit}
         submitting={submitting}
+      />
+      <AddTransactionModal
+        open={txModalOpen}
+        onClose={() => setTxModalOpen(false)}
+        onSubmit={handleAddTx}
+        submitting={addTxMut.isPending}
       />
     </>
   );

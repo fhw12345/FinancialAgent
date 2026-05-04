@@ -1,312 +1,203 @@
 /**
- * Recent Transactions Component.
+ * Recent Transactions Component (v0.16.x).
  *
- * Displays recent trading transactions (buy/sell orders) from MongoDB.
- * Includes both successful and failed orders with filtering support.
+ * Shows user-entered manual buy/sell transactions only — NOT AI decision rows
+ * (those live in DecisionTracker). Each row supports inline edit/delete.
+ * Holdings auto-syncs via the backend on every mutation.
  */
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
-import { apiClient } from "../../services/api";
+import { ArrowDownCircle, ArrowUpCircle, Pencil, Trash2 } from "lucide-react";
 import {
-  ArrowUpCircle,
-  ArrowDownCircle,
-  Clock,
-  DollarSign,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  ChevronDown,
-  Filter,
-} from "lucide-react";
+  useDeleteUserTransaction,
+  useUpdateUserTransaction,
+  useUserTransactions,
+  type UserTransaction,
+} from "../../hooks/useUserTransactions";
+import {
+  AddTransactionModal,
+  type TransactionFormValues,
+} from "./AddTransactionModal";
 
-interface Transaction {
-  order_id: string;
-  alpaca_order_id: string | null;
-  symbol: string;
-  side: "buy" | "sell";
-  quantity: number;
-  order_type: string;
-  status: string;
-  filled_qty: number;
-  filled_avg_price: number | null;
-  error_message: string | null; // For failed orders
-  analysis_id: string | null;
-  created_at: string | null;
-  filled_at: string | null;
-}
-
-interface TransactionsResponse {
-  transactions: Transaction[];
-  total: number;
-  limit: number;
-  offset: number;
-  has_more: boolean;
-}
-
-type StatusFilter = "all" | "success" | "failed";
-
-/**
- * Fetch transactions from MongoDB
- */
-async function fetchTransactions(
-  limit: number,
-  offset: number,
-  status?: string
-): Promise<TransactionsResponse> {
-  const params: Record<string, unknown> = { limit, offset };
-  if (status && status !== "all") {
-    params.status = status;
+function formatDate(s: string): string {
+  try {
+    return new Date(s).toLocaleString();
+  } catch {
+    return s;
   }
-  const response = await apiClient.get<TransactionsResponse>(
-    "/api/portfolio/transactions",
-    { params }
+}
+
+function SideBadge({ side }: { side: UserTransaction["side"] }) {
+  if (side === "buy") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded bg-green-100 text-green-800 px-2 py-0.5 text-xs font-medium">
+        <ArrowUpCircle className="h-3 w-3" />
+        BUY
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded bg-red-100 text-red-800 px-2 py-0.5 text-xs font-medium">
+      <ArrowDownCircle className="h-3 w-3" />
+      SELL
+    </span>
   );
-  return response.data;
 }
 
 export function RecentTransactions() {
-  const { t } = useTranslation(["portfolio", "common"]);
-  const [showAll, setShowAll] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const { data: txs = [], isLoading, error } = useUserTransactions();
+  const updateMut = useUpdateUserTransaction();
+  const deleteMut = useDeleteUserTransaction();
 
-  const limit = showAll ? 100 : 10;
+  const [editing, setEditing] = useState<UserTransaction | null>(null);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["recent-transactions", limit, statusFilter],
-    queryFn: () => fetchTransactions(limit, 0, statusFilter),
-    refetchInterval: 30000, // Refetch every 30 seconds
-  });
-
-  const getStatusIcon = (status: string) => {
-    if (status === "failed") {
-      return <XCircle size={14} className="text-red-500" />;
+  const handleSubmitEdit = async (values: TransactionFormValues) => {
+    if (!editing) return;
+    try {
+      await updateMut.mutateAsync({
+        transactionId: editing.transaction_id,
+        update: {
+          quantity: values.quantity,
+          price: values.price,
+          total_amount: values.total_amount,
+          executed_at: values.executed_at
+            ? new Date(values.executed_at).toISOString()
+            : undefined,
+          notes: values.notes,
+        },
+      });
+      setEditing(null);
+    } catch {
+      // Mutation surfaces error; keep modal open so user can fix
     }
-    if (status === "filled") {
-      return <CheckCircle size={14} className="text-green-500" />;
-    }
-    return <Clock size={14} className="text-yellow-500" />;
   };
 
-  const getStatusColor = (status: string) => {
-    if (status === "failed") {
-      return "bg-red-100 text-red-800";
+  const handleDelete = async (tx: UserTransaction) => {
+    if (
+      !window.confirm(
+        `Delete ${tx.side.toUpperCase()} ${tx.quantity} ${tx.symbol} @ $${tx.price}?`,
+      )
+    ) {
+      return;
     }
-    if (status === "filled") {
-      return "bg-green-100 text-green-800";
+    try {
+      await deleteMut.mutateAsync(tx.transaction_id);
+    } catch (e) {
+      alert(`Delete failed: ${(e as Error).message}`);
     }
-    return "bg-yellow-100 text-yellow-800";
   };
-
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <Clock size={16} />
-          {t("portfolio:transactions.title")}
-        </h3>
-        <div className="flex items-center justify-center py-8">
-          <div className="text-sm text-gray-500">{t("common:loading")}</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <Clock size={16} />
-          {t("portfolio:transactions.title")}
-        </h3>
-        <div className="text-sm text-red-500">
-          {t("portfolio:transactions.loadFailed")}
-        </div>
-      </div>
-    );
-  }
-
-  const transactions = data?.transactions || [];
-  const total = data?.total || 0;
-  const hasMore = data?.has_more || false;
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200">
-      {/* Header with Filter */}
-      <div className="px-4 py-3 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-            <Clock size={16} />
-            {t("portfolio:transactions.title")}
-          </h3>
-
-          {/* Status Filter Dropdown */}
-          <div className="relative">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              className="appearance-none pl-7 pr-6 py-1 text-xs border border-gray-200 rounded-md bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-            >
-              <option value="all">{t("portfolio:transactions.filterAll")}</option>
-              <option value="success">{t("portfolio:transactions.filterSuccess")}</option>
-              <option value="failed">{t("portfolio:transactions.filterFailed")}</option>
-            </select>
-            <Filter
-              size={12}
-              className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-            />
-            <ChevronDown
-              size={12}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-            />
-          </div>
-        </div>
-        <p className="text-xs text-gray-500 mt-1">
-          {t("portfolio:transactions.subtitle", { count: total })}
-        </p>
+    <div className="bg-white rounded-lg shadow p-6 mt-6">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold text-gray-900">
+          Recent Transactions
+          <span className="ml-2 text-xs font-normal text-gray-500">
+            (your manual buy/sell records)
+          </span>
+        </h2>
       </div>
 
-      {/* Transactions List - Scrollable */}
-      {transactions.length === 0 ? (
-        <div className="text-sm text-gray-500 text-center py-8">
-          {t("portfolio:transactions.noTransactions")}
-        </div>
-      ) : (
-        <div
-          className={`divide-y divide-gray-100 ${
-            showAll ? "max-h-96 overflow-y-auto" : ""
-          }`}
-        >
-          {transactions.map((transaction) => {
-            const isBuy = transaction.side === "buy";
-            const isFailed = transaction.status === "failed";
-            const timestamp = transaction.filled_at || transaction.created_at;
-            const displayTime = timestamp
-              ? new Date(timestamp).toLocaleString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                })
-              : "-";
-
-            const totalValue = transaction.filled_avg_price
-              ? transaction.filled_qty * transaction.filled_avg_price
-              : 0;
-
-            return (
-              <div
-                key={transaction.order_id}
-                className={`px-4 py-3 hover:bg-gray-50 transition-colors ${
-                  isFailed ? "bg-red-50/30" : ""
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  {/* Icon */}
-                  <div
-                    className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                      isFailed
-                        ? "bg-red-100"
-                        : isBuy
-                        ? "bg-green-100"
-                        : "bg-orange-100"
-                    }`}
-                  >
-                    {isFailed ? (
-                      <AlertCircle size={16} className="text-red-600" />
-                    ) : isBuy ? (
-                      <ArrowUpCircle size={16} className="text-green-600" />
-                    ) : (
-                      <ArrowDownCircle size={16} className="text-orange-600" />
-                    )}
-                  </div>
-
-                  {/* Transaction Info */}
-                  <div className="flex-1 min-w-0">
-                    {/* Symbol and Side */}
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm text-gray-900">
-                        {transaction.symbol}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 text-xs font-medium rounded ${
-                          isBuy
-                            ? "bg-green-100 text-green-800"
-                            : "bg-orange-100 text-orange-800"
-                        }`}
-                      >
-                        {isBuy
-                          ? t("portfolio:transactions.buy")
-                          : t("portfolio:transactions.sell")}
-                      </span>
-                    </div>
-
-                    {/* Quantity and Price */}
-                    <div className="mt-1 text-xs text-gray-600">
-                      <span>
-                        {transaction.quantity}{" "}
-                        {transaction.quantity === 1 ? "share" : "shares"}
-                      </span>
-                      {transaction.filled_avg_price && (
-                        <span className="ml-2">
-                          @ ${transaction.filled_avg_price.toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Total Value (for filled orders) */}
-                    {totalValue > 0 && (
-                      <div className="mt-1 flex items-center gap-1 text-xs font-medium text-gray-900">
-                        <DollarSign size={12} />
-                        {totalValue.toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </div>
-                    )}
-
-                    {/* Error Message (for failed orders) */}
-                    {isFailed && transaction.error_message && (
-                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-                        <span className="font-medium">Error: </span>
-                        {transaction.error_message}
-                      </div>
-                    )}
-
-                    {/* Timestamp */}
-                    <div className="mt-1 text-xs text-gray-500">{displayTime}</div>
-                  </div>
-
-                  {/* Status Badge */}
-                  <div className="flex-shrink-0">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded flex items-center gap-1 ${getStatusColor(
-                        transaction.status
-                      )}`}
-                    >
-                      {getStatusIcon(transaction.status)}
-                      {transaction.status}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+      {isLoading && (
+        <div className="text-sm text-gray-500">Loading…</div>
+      )}
+      {error && (
+        <div className="text-sm text-red-600">
+          Failed to load: {(error as Error).message}
         </div>
       )}
 
-      {/* Show All / Show Less Footer */}
-      {(hasMore || showAll) && (
-        <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
-          <button
-            onClick={() => setShowAll(!showAll)}
-            className="w-full text-center text-xs text-blue-600 hover:text-blue-800 font-medium"
-          >
-            {showAll
-              ? t("portfolio:transactions.showLess")
-              : t("portfolio:transactions.showAll", { total })}
-          </button>
+      {!isLoading && txs.length === 0 && (
+        <div className="text-center text-gray-500 py-6">
+          <p>No transactions yet.</p>
+          <p className="text-sm mt-1">
+            Click <span className="font-medium">Add Transaction</span> on the
+            Portfolio Holdings card to record a buy or sell.
+          </p>
+        </div>
+      )}
+
+      {txs.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase text-gray-500 border-b border-gray-200">
+                <th className="py-2 pr-3">Date</th>
+                <th className="py-2 pr-3">Symbol</th>
+                <th className="py-2 pr-3">Side</th>
+                <th className="py-2 pr-3 text-right">Qty</th>
+                <th className="py-2 pr-3 text-right">Price</th>
+                <th className="py-2 pr-3 text-right">Total</th>
+                <th className="py-2 pr-3">Notes</th>
+                <th className="py-2 pr-3 w-20"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {txs.map((tx) => (
+                <tr
+                  key={tx.transaction_id}
+                  className="border-b border-gray-100 hover:bg-gray-50"
+                >
+                  <td className="py-2 pr-3 text-xs text-gray-500">
+                    {formatDate(tx.executed_at)}
+                  </td>
+                  <td className="py-2 pr-3 font-mono font-medium text-gray-900">
+                    {tx.symbol}
+                  </td>
+                  <td className="py-2 pr-3">
+                    <SideBadge side={tx.side} />
+                  </td>
+                  <td className="py-2 pr-3 text-right text-gray-700">
+                    {tx.quantity}
+                  </td>
+                  <td className="py-2 pr-3 text-right text-gray-700">
+                    ${tx.price.toFixed(2)}
+                  </td>
+                  <td className="py-2 pr-3 text-right text-gray-700">
+                    ${tx.total_amount.toFixed(2)}
+                  </td>
+                  <td className="py-2 pr-3 text-xs text-gray-500 max-w-[12rem] truncate">
+                    {tx.notes ?? ""}
+                  </td>
+                  <td className="py-2 pr-3 text-right">
+                    <div className="inline-flex gap-1">
+                      <button
+                        onClick={() => setEditing(tx)}
+                        className="rounded p-1 text-gray-500 hover:bg-blue-50 hover:text-blue-700"
+                        aria-label="Edit"
+                        title="Edit"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(tx)}
+                        disabled={deleteMut.isPending}
+                        className="rounded p-1 text-gray-500 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                        aria-label="Delete"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <AddTransactionModal
+        open={!!editing}
+        initial={editing}
+        onClose={() => setEditing(null)}
+        onSubmit={handleSubmitEdit}
+        submitting={updateMut.isPending}
+      />
+
+      {(updateMut.error || deleteMut.error) && (
+        <div className="mt-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {(updateMut.error || deleteMut.error)?.message}
         </div>
       )}
     </div>
