@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-05-04
+
+### Changed
+- feat(ui): added autocomplete to all symbol inputs by reusing the existing `<SymbolSearch>` primitive (already production-grade in ChartPanel).
+  - **HoldingFormModal** (Add Holding modal): replaced plain `<input {...register("symbol")}>` with `<SymbolSearch>` wired through `setValue` + hidden register input. Edit mode keeps the locked plain input since symbol is the row identity.
+  - **WatchlistPanel** (Add to watchlist): replaced plain symbol input with `<SymbolSearch>`; selection sets `newSymbol` state, form submit stays the same.
+  - DecisionTracker symbol filter intentionally unchanged — it's a client-side filter over already-loaded rows, not a new symbol submission.
+  - Backend already had `GET /api/market/search?q=` (Alpaca asset list, sub-100ms fuzzy match); zero backend changes needed.
+
 ## [0.15.1] - 2026-05-04
 
 ### Fixed

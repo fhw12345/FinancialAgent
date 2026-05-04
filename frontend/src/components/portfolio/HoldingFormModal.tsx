@@ -15,6 +15,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { X } from "lucide-react";
 import type { Holding } from "../../types/portfolio";
+import { SymbolSearch } from "../SymbolSearch";
 
 const schema = z.object({
   symbol: z
@@ -48,6 +49,8 @@ export function HoldingFormModal({
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<HoldingFormValues>({
     resolver: zodResolver(schema),
@@ -121,14 +124,32 @@ export function HoldingFormModal({
             <label className="block text-xs font-medium text-gray-700 mb-1">
               Symbol
             </label>
-            <input
-              {...register("symbol")}
-              type="text"
-              placeholder="AAPL"
-              autoFocus
-              disabled={isEdit}
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm uppercase focus:border-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-500"
-            />
+            {isEdit ? (
+              // Edit mode: locked plain input (symbol is the row identity)
+              <input
+                {...register("symbol")}
+                type="text"
+                disabled
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm uppercase bg-gray-100 text-gray-500"
+              />
+            ) : (
+              // Add mode: autocomplete via shared SymbolSearch
+              <>
+                {/* Hidden input keeps react-hook-form aware of the symbol value */}
+                <input type="hidden" {...register("symbol")} />
+                <SymbolSearch
+                  autoFocus
+                  value={watch("symbol") || ""}
+                  placeholder="AAPL — Apple Inc."
+                  onSymbolSelect={(sym) => {
+                    setValue("symbol", sym, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    });
+                  }}
+                />
+              </>
+            )}
             {errors.symbol && (
               <p className="mt-1 text-xs text-red-600">{errors.symbol.message}</p>
             )}

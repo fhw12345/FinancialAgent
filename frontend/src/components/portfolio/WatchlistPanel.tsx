@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { SymbolSearch } from "../SymbolSearch";
 import {
   useWatchlist,
   useAddToWatchlist,
@@ -105,14 +106,13 @@ export function WatchlistPanel() {
       {/* Add Symbol Form */}
       <form onSubmit={handleAdd} className="mb-4">
         <div className="flex gap-2">
-          <input
-            type="text"
-            value={newSymbol}
-            onChange={(e) => setNewSymbol(e.target.value)}
-            placeholder={t('portfolio:watchlistPanel.placeholder')}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={addMutation.isPending}
-          />
+          <div className="flex-1">
+            <SymbolSearch
+              value={newSymbol}
+              placeholder={t("portfolio:watchlistPanel.placeholder")}
+              onSymbolSelect={(sym) => setNewSymbol(sym)}
+            />
+          </div>
           <button
             type="submit"
             disabled={addMutation.isPending}
