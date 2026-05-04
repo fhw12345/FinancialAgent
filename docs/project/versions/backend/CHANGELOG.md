@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-05-04
+
+### Added — Holdings CRUD
+- feat(holdings): POST/PATCH/DELETE endpoints for direct holdings management
+  - `POST /api/portfolio/holdings` — create new row, OR merge into existing same-symbol row using weighted-average cost: `new_avg = (q1*p1 + q2*p2) / (q1+q2)`. Returns enriched response with live `current_price` / `market_value` / `unrealized_pl` from `DataManager.get_quote` (3s timeout, gracefully nulls on failure)
+  - `PATCH /api/portfolio/holdings/{id}` — partial update on quantity / avg_price; `cost_basis` recalculated in repo. Returns 404 if id unknown, 422 if both fields omitted
+  - `DELETE /api/portfolio/holdings/{id}` — hard delete; returns 204 / 404
+- Frontend: `HoldingFormModal` (react-hook-form + zod first usage in repo) wired into `PortfolioSummaryTable` — Add Holding button in header, Edit/Delete icons per row, inline `window.confirm` for delete
+- 13 new backend tests covering POST happy/merge/422/uppercase, PATCH happy/404/empty, DELETE happy/404, quote enrichment success + failure paths
+
+### Fixed
+- fix(holdings): pre-existing repo crash on `HoldingCreate.avg_price=None` is now defended at the API layer with explicit 422
+- The frontend already shipped `useAddHolding` / `useUpdateHolding` / `useDeleteHolding` mutation hooks calling these paths; the backend was the missing piece
+
 ## [0.13.1] - 2026-05-04
 
 ### Fixed (decision tracking E2E surfaced 4 bugs)
