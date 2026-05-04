@@ -74,11 +74,21 @@ async def get_portfolio_summary(
 # ---------------------------------------------------------------------------
 
 
-async def _enrich_with_quote(request: Request, holding: Holding) -> Holding:
+async def _enrich_with_quote(
+    request: Request,
+    holding: Holding,
+    *,
+    persist: bool = False,
+    holding_repo: HoldingRepository | None = None,
+) -> Holding:
     """Best-effort: fetch live quote via DataManager, populate live fields.
 
     Failures are swallowed — caller still gets the inserted holding back.
     Bounded by QUOTE_TIMEOUT_SECONDS so a slow vendor cannot block POST.
+
+    When `persist=True` and a `holding_repo` is provided, also writes the
+    fetched price back to mongo via `repo.update_price` so subsequent GETs
+    show the same number (otherwise the in-memory enrichment is response-only).
     """
     dm = getattr(request.app.state, "data_manager", None)
     if dm is None:
@@ -98,6 +108,15 @@ async def _enrich_with_quote(request: Request, holding: Holding) -> Holding:
             if holding.cost_basis > 0
             else 0.0
         )
+        if persist and holding_repo is not None:
+            try:
+                await holding_repo.update_price(holding.holding_id, price)
+            except Exception as e:
+                logger.warning(
+                    "holding_price_persist_failed",
+                    symbol=holding.symbol,
+                    error=str(e),
+                )
     except (TimeoutError, Exception) as e:
         logger.warning(
             "holding_quote_enrichment_failed",
@@ -152,7 +171,9 @@ async def create_or_merge_holding(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Merge update returned no row",
             )
-        merged = await _enrich_with_quote(request, merged)
+        merged = await _enrich_with_quote(
+            request, merged, persist=True, holding_repo=holding_repo
+        )
         logger.info(
             "Holding merged",
             symbol=symbol,
@@ -166,7 +187,9 @@ async def create_or_merge_holding(
         symbol=symbol, quantity=payload.quantity, avg_price=payload.avg_price
     )
     created = await holding_repo.create(holding_create=payload_with_upper)
-    created = await _enrich_with_quote(request, created)
+    created = await _enrich_with_quote(
+        request, created, persist=True, holding_repo=holding_repo
+    )
     return HoldingResponse.from_holding(created)
 
 
@@ -207,3 +230,57 @@ async def delete_holding(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Holding {holding_id} not found",
         )
+
+
+@router.post("/holdings/refresh-prices")
+@limiter.limit("10/minute")
+async def refresh_holding_prices(
+    request: Request,
+    holding_repo: HoldingRepository = Depends(get_holding_repository),
+) -> dict:
+    """Manually refresh current_price + market_value + P&L for every holding.
+
+    Same logic as the nightly cron (`scripts/refresh_holding_prices.py`),
+    but on-demand from the dashboard's [Refresh Prices] button. Each symbol
+    is fetched concurrently via DataManager (Finnhub → AV → yfinance).
+    """
+    dm = getattr(request.app.state, "data_manager", None)
+    if dm is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="DataManager unavailable",
+        )
+
+    holdings = await holding_repo.list_by_user()
+    if not holdings:
+        return {"refreshed": 0, "failed": 0, "total": 0}
+
+    sem = asyncio.Semaphore(8)
+
+    async def _refresh_one(h: Holding) -> bool:
+        async with sem:
+            try:
+                quote = await asyncio.wait_for(
+                    dm.get_quote(h.symbol), timeout=QUOTE_TIMEOUT_SECONDS
+                )
+                price = float(getattr(quote, "price", 0) or 0)
+                if price <= 0:
+                    return False
+                await holding_repo.update_price(h.holding_id, price)
+                return True
+            except Exception as e:
+                logger.warning(
+                    "holding_price_refresh_failed", symbol=h.symbol, error=str(e)
+                )
+                return False
+
+    results = await asyncio.gather(*(_refresh_one(h) for h in holdings))
+    refreshed = sum(1 for r in results if r)
+    failed = len(results) - refreshed
+    logger.info(
+        "holdings_manual_refresh_done",
+        refreshed=refreshed,
+        failed=failed,
+        total=len(holdings),
+    )
+    return {"refreshed": refreshed, "failed": failed, "total": len(holdings)}

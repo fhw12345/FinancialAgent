@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import type { Holding, PortfolioSummary } from "../../types/portfolio";
 import {
   useAddHolding,
   useDeleteHolding,
   useUpdateHolding,
+  useRefreshHoldingPrices,
 } from "../../hooks/usePortfolio";
 import { HoldingFormModal, type HoldingFormValues } from "./HoldingFormModal";
 
@@ -27,6 +28,7 @@ export function PortfolioSummaryTable({
   const addMut = useAddHolding();
   const updateMut = useUpdateHolding();
   const deleteMut = useDeleteHolding();
+  const refreshMut = useRefreshHoldingPrices();
 
   const formatCurrency = (value: number): string => `$${value.toFixed(2)}`;
   const formatPercentage = (value: number): string => `${value.toFixed(2)}%`;
@@ -106,13 +108,26 @@ export function PortfolioSummaryTable({
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold">Portfolio Holdings</h2>
-          <button
-            onClick={openAdd}
-            className="inline-flex items-center gap-1 rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4" />
-            Add Holding
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => refreshMut.mutate()}
+              disabled={refreshMut.isPending}
+              className="inline-flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              title="Fetch latest prices and recompute P/L for every holding"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${refreshMut.isPending ? "animate-spin" : ""}`}
+              />
+              {refreshMut.isPending ? "Refreshing…" : "Refresh Prices"}
+            </button>
+            <button
+              onClick={openAdd}
+              className="inline-flex items-center gap-1 rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4" />
+              Add Holding
+            </button>
+          </div>
         </div>
 
         <div className="overflow-x-auto">

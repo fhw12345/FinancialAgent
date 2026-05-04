@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.4] - 2026-05-04
+
+### Added
+- feat(holdings): on-demand price refresh — solves the "I just added AAPL but it shows $0" surprise.
+  - `POST /api/portfolio/holdings/refresh-prices` — concurrent (sem=8) DataManager.get_quote per holding, persists via `repo.update_price`. Same logic as the nightly cron.
+  - `[Refresh Prices]` button in the Portfolio Holdings card header (next to Add Holding). Uses `useRefreshHoldingPrices` mutation that invalidates holdings + summary queries.
+  - `_enrich_with_quote()` now optionally `persist=True` writes the fetched price back to mongo. Wired so `POST /holdings` (Add and merge) saves the live price immediately, not just in the response.
+
 ## [0.15.3] - 2026-05-04
 
 ### Fixed

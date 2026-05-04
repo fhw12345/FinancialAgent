@@ -110,3 +110,18 @@ export function useDeleteHolding() {
     },
   });
 }
+
+/**
+ * Manually refresh current_price + P&L for every holding via DataManager.
+ * Same logic as the nightly cron, on-demand from a dashboard button.
+ */
+export function useRefreshHoldingPrices() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => portfolioApi.refreshHoldingPrices(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: portfolioKeys.holdings() });
+      queryClient.invalidateQueries({ queryKey: portfolioKeys.summary() });
+    },
+  });
+}

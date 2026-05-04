@@ -131,3 +131,12 @@ export async function updateHolding(
 export async function deleteHolding(holdingId: string): Promise<void> {
   await apiClient.delete(`/api/portfolio/holdings/${holdingId}`);
 }
+
+export async function refreshHoldingPrices(): Promise<{
+  refreshed: number;
+  failed: number;
+  total: number;
+}> {
+  const { data } = await apiClient.post("/api/portfolio/holdings/refresh-prices");
+  return data;
+}

@@ -223,8 +223,9 @@ export default function PortfolioDashboard() {
           )}
         </div>
 
-            {/* Portfolio Holdings Table */}
-            {summary && holdings && holdings.length > 0 && (
+            {/* Portfolio Holdings Table — always render so the empty-state
+                Add Holding button is reachable when holdings.length === 0. */}
+            {summary && holdings && (
               <div className="mt-8">
                 <PortfolioSummaryTable holdings={holdings} summary={summary} />
               </div>

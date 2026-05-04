@@ -170,6 +170,9 @@ export function HoldingFormModal({
               step="1"
               min="1"
               placeholder="10"
+              // Prevent mouse-wheel from accidentally mutating the number
+              // when the input has focus (default browser behavior).
+              onWheel={(e) => (e.target as HTMLInputElement).blur()}
               className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             />
             {errors.quantity && (
@@ -189,6 +192,7 @@ export function HoldingFormModal({
               step="0.01"
               min="0.01"
               placeholder="150.00"
+              onWheel={(e) => (e.target as HTMLInputElement).blur()}
               className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             />
             {errors.avg_price && (
