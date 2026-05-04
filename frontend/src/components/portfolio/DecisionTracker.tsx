@@ -9,7 +9,7 @@
  * borders, gray-900 text on white) so it sits naturally on the dashboard.
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, Fragment } from "react";
 import {
   ArrowUpCircle,
   ArrowDownCircle,
@@ -123,6 +123,7 @@ type SourceTab = "all" | "holdings" | "picks";
 export function DecisionTracker() {
   const [symbolFilter, setSymbolFilter] = useState("");
   const [tab, setTab] = useState<SourceTab>("all");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const { data, isLoading, error } = useDecisions(
     symbolFilter || undefined,
     tab === "all" ? undefined : tab,
@@ -134,6 +135,15 @@ export function DecisionTracker() {
     () => buildSeries(decisions),
     [decisions],
   );
+
+  const toggleExpanded = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
   const showChart =
     chartSymbols.length > 0 &&
     chartData.some((p) => chartSymbols.some((s) => typeof p[s] === "number"));
@@ -204,9 +214,11 @@ export function DecisionTracker() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase text-gray-500 border-b border-gray-200">
+                    <th className="py-2 pr-3 w-6"></th>
                     <th className="py-2 pr-3">Symbol</th>
                     <th className="py-2 pr-3">Side</th>
                     <th className="py-2 pr-3">Decision $</th>
+                    <th className="py-2 pr-3">Conf</th>
                     <th className="py-2 pr-3">7d</th>
                     <th className="py-2 pr-3">30d</th>
                     <th className="py-2 pr-3">90d</th>
@@ -215,39 +227,71 @@ export function DecisionTracker() {
                   </tr>
                 </thead>
                 <tbody>
-                  {decisions.map((d) => (
-                    <tr
-                      key={d.order_id}
-                      className="border-b border-gray-100 hover:bg-gray-50"
-                    >
-                      <td className="py-2 pr-3 font-mono text-gray-900 font-medium">
-                        {d.symbol}
-                      </td>
-                      <td className="py-2 pr-3">
-                        <SideBadge side={d.side} />
-                      </td>
-                      <td className="py-2 pr-3 text-gray-700">
-                        {d.decision_price
-                          ? `$${d.decision_price.toFixed(2)}`
-                          : "—"}
-                      </td>
-                      <td className="py-2 pr-3">
-                        <PnlCell pct={d.pnl_snapshots?.["7d"]?.pnl_pct} />
-                      </td>
-                      <td className="py-2 pr-3">
-                        <PnlCell pct={d.pnl_snapshots?.["30d"]?.pnl_pct} />
-                      </td>
-                      <td className="py-2 pr-3">
-                        <PnlCell pct={d.pnl_snapshots?.["90d"]?.pnl_pct} />
-                      </td>
-                      <td className="py-2 pr-3 text-xs text-gray-500">
-                        {new Date(d.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="py-2 pr-3 text-xs text-gray-500">
-                        {d.decision_type}
-                      </td>
-                    </tr>
-                  ))}
+                  {decisions.map((d) => {
+                    const reasoning = d.metadata?.reasoning ?? "";
+                    const conf = d.metadata?.confidence;
+                    const isOpen = expanded.has(d.order_id);
+                    const hasDetail = !!reasoning;
+                    return (
+                      <Fragment key={d.order_id}>
+                        <tr
+                          className={`border-b border-gray-100 ${hasDetail ? "cursor-pointer hover:bg-blue-50" : "hover:bg-gray-50"}`}
+                          onClick={() => hasDetail && toggleExpanded(d.order_id)}
+                        >
+                          <td className="py-2 pr-3 text-gray-400">
+                            {hasDetail ? (isOpen ? "▼" : "▶") : ""}
+                          </td>
+                          <td className="py-2 pr-3 font-mono text-gray-900 font-medium">
+                            {d.symbol}
+                          </td>
+                          <td className="py-2 pr-3">
+                            <SideBadge side={d.side} />
+                          </td>
+                          <td className="py-2 pr-3 text-gray-700">
+                            {d.decision_price
+                              ? `$${d.decision_price.toFixed(2)}`
+                              : "—"}
+                          </td>
+                          <td className="py-2 pr-3 text-gray-700 text-xs">
+                            {conf != null ? `${conf}/10` : "—"}
+                          </td>
+                          <td className="py-2 pr-3">
+                            <PnlCell pct={d.pnl_snapshots?.["7d"]?.pnl_pct} />
+                          </td>
+                          <td className="py-2 pr-3">
+                            <PnlCell pct={d.pnl_snapshots?.["30d"]?.pnl_pct} />
+                          </td>
+                          <td className="py-2 pr-3">
+                            <PnlCell pct={d.pnl_snapshots?.["90d"]?.pnl_pct} />
+                          </td>
+                          <td className="py-2 pr-3 text-xs text-gray-500">
+                            {new Date(d.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="py-2 pr-3 text-xs text-gray-500">
+                            {d.decision_type}
+                          </td>
+                        </tr>
+                        {isOpen && hasDetail && (
+                          <tr className="bg-blue-50/40">
+                            <td></td>
+                            <td colSpan={9} className="py-3 pr-3 text-sm text-gray-700">
+                              <div className="whitespace-pre-wrap leading-relaxed">
+                                <span className="text-xs uppercase text-gray-500 font-semibold mr-2">
+                                  AI Reasoning:
+                                </span>
+                                {reasoning}
+                                {d.metadata?.position_size_percent != null && (
+                                  <span className="ml-3 text-xs text-gray-500">
+                                    · suggested size: {d.metadata.position_size_percent}%
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -11,6 +11,14 @@ export interface PnlSnapshot {
   computed_at: string;
 }
 
+export interface DecisionMetadata {
+  confidence?: number;
+  position_size_percent?: number | null;
+  reasoning?: string;
+  // any other fields the backend stuffs in here
+  [key: string]: unknown;
+}
+
 export interface DecisionRow {
   order_id: string;
   symbol: string;
@@ -22,7 +30,9 @@ export interface DecisionRow {
   created_at: string;
   analysis_id: string;
   chat_id: string;
+  recommendation_source: string | null;
   pnl_snapshots: Record<string, PnlSnapshot | undefined>;
+  metadata: DecisionMetadata;
 }
 
 interface DecisionsResponse {

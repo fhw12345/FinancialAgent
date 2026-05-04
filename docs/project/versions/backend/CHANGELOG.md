@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.6] - 2026-05-04
+
+### Added
+- feat(decisions): expandable reasoning row in DecisionTracker. AI's full reasoning text + suggested position size are now visible (was already in DB and API response, just never rendered). Added a confidence column (`Conf` 0-10). Click any row with reasoning to expand a blue-highlighted detail row underneath.
+
 ## [0.15.5] - 2026-05-04
 
 ### Fixed
