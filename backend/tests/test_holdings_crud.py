@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api.dependencies.portfolio_deps import get_holding_repository
+from src.api.portfolio.user_transactions import get_user_tx_repo
 from src.main import app
 from src.models.holding import Holding
 
@@ -39,6 +40,7 @@ def _holding(symbol: str = "AAPL", qty: int = 10, avg: float = 150.0) -> Holding
 @pytest.fixture
 def repo() -> MagicMock:
     r = MagicMock()
+    r.get = AsyncMock(return_value=None)
     r.get_by_symbol = AsyncMock(return_value=None)
     r.create = AsyncMock()
     r.update = AsyncMock()
@@ -47,10 +49,18 @@ def repo() -> MagicMock:
 
 
 @pytest.fixture
-def client(repo: MagicMock):
+def tx_repo() -> MagicMock:
+    r = MagicMock()
+    r.delete_by_symbol = AsyncMock(return_value=0)
+    return r
+
+
+@pytest.fixture
+def client(repo: MagicMock, tx_repo: MagicMock):
     # Stub out app.state.data_manager so quote enrichment is a no-op.
     app.state.data_manager = None
     app.dependency_overrides[get_holding_repository] = lambda: repo
+    app.dependency_overrides[get_user_tx_repo] = lambda: tx_repo
     yield TestClient(app)
     app.dependency_overrides.clear()
 
@@ -163,15 +173,27 @@ class TestPatchHolding:
 
 class TestDeleteHolding:
     def test_happy_path(self, client: TestClient, repo: MagicMock):
+        repo.get = AsyncMock(return_value=_holding("AAPL", 10, 150.0))
         repo.delete = AsyncMock(return_value=True)
         r = client.delete("/api/portfolio/holdings/holding_aapl")
         assert r.status_code == 204
         repo.delete.assert_awaited_once_with("holding_aapl")
 
     def test_not_found(self, client: TestClient, repo: MagicMock):
-        repo.delete = AsyncMock(return_value=False)
+        repo.get = AsyncMock(return_value=None)
         r = client.delete("/api/portfolio/holdings/missing")
         assert r.status_code == 404
+
+    def test_cascades_transactions_for_symbol(
+        self, client: TestClient, repo: MagicMock, tx_repo: MagicMock
+    ):
+        repo.get = AsyncMock(return_value=_holding("NVDA", 3, 500.0))
+        repo.delete = AsyncMock(return_value=True)
+        tx_repo.delete_by_symbol = AsyncMock(return_value=2)
+        r = client.delete("/api/portfolio/holdings/holding_nvda")
+        assert r.status_code == 204
+        tx_repo.delete_by_symbol.assert_awaited_once_with("NVDA")
+        repo.delete.assert_awaited_once_with("holding_nvda")
 
 
 # ---------- Quote enrichment ----------

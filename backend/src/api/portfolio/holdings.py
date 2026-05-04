@@ -14,8 +14,12 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from ...database.repositories.holding_repository import HoldingRepository
+from ...database.repositories.user_transaction_repository import (
+    UserTransactionRepository,
+)
 from ...models.holding import Holding, HoldingCreate, HoldingUpdate
 from ..dependencies.portfolio_deps import get_holding_repository
+from .user_transactions import get_user_tx_repo
 from ..dependencies.rate_limit import limiter
 from ..schemas.portfolio_models import (
     HoldingResponse,
@@ -222,14 +226,29 @@ async def delete_holding(
     request: Request,
     holding_id: str,
     holding_repo: HoldingRepository = Depends(get_holding_repository),
+    tx_repo: UserTransactionRepository = Depends(get_user_tx_repo),
 ) -> None:
-    """Hard delete — no soft-delete or undo."""
+    """Hard delete — cascades to user_transactions for the same symbol to keep
+    the ledger and holdings collection from drifting apart."""
+    holding = await holding_repo.get(holding_id)
+    if holding is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Holding {holding_id} not found",
+        )
+    removed_tx = await tx_repo.delete_by_symbol(holding.symbol)
     ok = await holding_repo.delete(holding_id)
     if not ok:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Holding {holding_id} not found",
         )
+    logger.info(
+        "holding_deleted_with_cascade",
+        holding_id=holding_id,
+        symbol=holding.symbol,
+        removed_transactions=removed_tx,
+    )
 
 
 @router.post("/holdings/refresh-prices")

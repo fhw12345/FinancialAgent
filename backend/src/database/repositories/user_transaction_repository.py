@@ -130,3 +130,7 @@ class UserTransactionRepository:
     async def delete(self, transaction_id: str) -> bool:
         r = await self.collection.delete_one({"transaction_id": transaction_id})
         return r.deleted_count > 0
+
+    async def delete_by_symbol(self, symbol: str) -> int:
+        r = await self.collection.delete_many({"symbol": symbol.upper()})
+        return r.deleted_count
