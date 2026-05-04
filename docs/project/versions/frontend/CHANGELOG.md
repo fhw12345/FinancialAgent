@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-05-05
+
+### Added — LLM 内容自动翻译
+- **`hooks/useTranslated.ts`** — 单段文本翻译 hook。i18n 当前语言以 `en` 开头时直接返回原文不打网络；`zh-CN` 时调 `/api/translate`，TanStack Query 缓存（`staleTime: Infinity`，因为同一段英文翻译永远不变），失败回落原文。返回 `{text, isLoading, isTranslated}`。
+- **`components/Translated.tsx`** — 轻包装：`<Translated text={...} as="div" />`。`isLoading` 时给原文加 `opacity: 0.7` 提示，不出 spinner，不撑列表布局。
+- **接入点**：
+  - `DecisionTracker` 的 AI Reasoning 行内文本 + Full Research modal 正文
+  - `ExpandableText`（被 SubAgentSection / DebateSection 复用）— 在组件内部直接调 `useTranslated`，所以 SubAgent resultSummary、Debate Concerns、Defense Summary 三处全部覆盖，零接入面变更
+- **测试 5 条**（`hooks/__tests__/useTranslated.test.ts`）：英文 locale 立返不打 API、null/undefined 返空、zh-CN 真调 API 显译文、API 错落回原文、不支持的 locale 不打 API。
+- 230/230 frontend 测试全过，无回归。
+
 ## [0.11.7] - 2026-05-05
 
 ### Fixed

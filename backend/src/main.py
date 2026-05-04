@@ -30,6 +30,7 @@ from .api.llm_models import router as llm_models_router
 from .api.market_data import router as market_data_router
 from .api.portfolio import router as portfolio_router
 from .api.portfolio_admin import router as portfolio_admin_router
+from .api.translate import router as translate_router
 from .api.watchlist import router as watchlist_router
 from .core.config import get_settings
 from .core.exceptions import AppError
@@ -428,6 +429,7 @@ def create_app() -> FastAPI:
     app.include_router(watchlist_router)  # Watchlist symbol tracking
     app.include_router(llm_models_router)  # LLM model selection and pricing
     app.include_router(insights_router)  # Market Insights Platform
+    app.include_router(translate_router)  # On-demand translation for LLM output
 
     @app.get("/")
     async def root() -> dict[str, str]:

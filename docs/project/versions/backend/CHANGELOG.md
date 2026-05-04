@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-05-05
+
+### Added — i18n 翻译层 (Prompt 全英 + 展示前翻译)
+- **新增 `POST /api/translate`** — body `{texts: string[], target_lang: "zh-CN"}` → `{translations: string[]}`. 同长度同顺序，永不 5xx（任何后端故障返回原英文）。
+- **`services/translation_service.py`** — 用现有 `llm_factory.get_llm("verdict")`（claude-opus-4.7-xhigh）走批量翻译，sha1(text) → Redis 缓存，TTL 1 天。一次请求里：先并发查 Redis 拿命中，再把 miss 全部塞一次 LLM 调用，最后写回 Redis。设计上 prompt 系统不变，模型输出在前端展示前才翻译。
+- **System prompt 规则**：保留 ticker / 数字 / 货币 / 百分比 / 日期原样，使用大陆财经术语，输出 JSON 数组。fence/extra prose 都能解析。
+- **测试 13 条**（`test_translation_service.py`）：全命中跳过 LLM、全 miss 调一次 LLM 并缓存、混合命中只 miss 走 LLM 且顺序保留、LLM 错误回落原文不污染缓存、长度不匹配回落、markdown fence JSON 容错、英文 locale 短路、batch 上限 422、空数组 200、不支持的 lang 422。
+- **实测**：第一次 NVDA + TSLA 翻译耗时 ~3s 真调 LLM；重复请求 87ms 命中缓存 0 LLM 调用。
+
 ## [0.17.3] - 2026-05-05
 
 ### Added

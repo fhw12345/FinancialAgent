@@ -10,6 +10,7 @@
  */
 
 import { useMemo, useState, Fragment } from "react";
+import { Translated } from "../Translated";
 import {
   ArrowUpCircle,
   ArrowDownCircle,
@@ -285,7 +286,7 @@ export function DecisionTracker() {
                                 <span className="text-xs uppercase text-gray-500 font-semibold mr-2">
                                   AI Reasoning:
                                 </span>
-                                {reasoning}
+                                <Translated text={reasoning} />
                                 {d.metadata?.position_size_percent != null && (
                                   <span className="ml-3 text-xs text-gray-500">
                                     · suggested size: {d.metadata.position_size_percent}%
@@ -382,7 +383,11 @@ export function DecisionTracker() {
               </button>
             </div>
             <div className="overflow-y-auto px-4 py-4 text-sm text-gray-800 whitespace-pre-wrap font-sans leading-relaxed">
-              {researchModal.text || "(no research text recorded for this decision)"}
+              {researchModal.text ? (
+                <Translated text={researchModal.text} as="div" />
+              ) : (
+                "(no research text recorded for this decision)"
+              )}
             </div>
             <div className="border-t border-gray-200 px-4 py-2 text-right">
               <button

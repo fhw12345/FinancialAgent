@@ -7,6 +7,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useTranslated } from '../../../hooks/useTranslated';
 
 interface ExpandableTextProps {
   text: string;
@@ -17,6 +18,7 @@ interface ExpandableTextProps {
 
 function ExpandableTextInner({ text, maxLines = 3, className = '' }: ExpandableTextProps) {
   const { t } = useTranslation(['chat']);
+  const { text: displayText, isLoading: translating } = useTranslated(text);
   const [expanded, setExpanded] = useState(false);
   const [needsTruncation, setNeedsTruncation] = useState(false);
   const textRef = useRef<HTMLParagraphElement>(null);
@@ -27,7 +29,7 @@ function ExpandableTextInner({ text, maxLines = 3, className = '' }: ExpandableT
       // Compare scroll height vs client height to detect overflow
       setNeedsTruncation(el.scrollHeight > el.clientHeight + 2);
     }
-  }, [text, maxLines]);
+  }, [displayText, maxLines]);
 
   // Tailwind line-clamp classes (1-6 supported)
   const clampClass = expanded ? '' : `line-clamp-${maxLines}`;
@@ -37,8 +39,9 @@ function ExpandableTextInner({ text, maxLines = 3, className = '' }: ExpandableT
       <p
         ref={textRef}
         className={`text-xs text-gray-600 dark:text-gray-400 whitespace-pre-line leading-relaxed ${clampClass} ${className}`}
+        style={translating ? { opacity: 0.7 } : undefined}
       >
-        {text}
+        {displayText}
       </p>
       {(needsTruncation || expanded) && (
         <button
