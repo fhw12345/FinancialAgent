@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-05-04
+
+### Added — Decision Tracking Dashboard
+- feat(decisions): persist every AI decision (BUY/SELL/HOLD/Deep ReAct verdict) with the price at decision time, then mark to market at 7d/30d/90d horizons via cron
+  - `PortfolioOrder` gains `decision_price`, `decision_type` ('order'|'signal'), `pnl_snapshots` dict (mongo migration-free; defaults handled at model level)
+  - `OrderExecutor` now writes `OptimizedOrder.estimated_price` into `decision_price` (was being dropped)
+  - `Phase3ExecutionMixin._persist_hold_signals` writes HOLD decisions as `decision_type="signal"` rows; uses `react_agent.data_manager.get_quote()` for the anchor price
+  - `DeepReActAgent` accepts `order_repo` + `data_manager`; `verdict_node` parses `**Action**: Buy/Hold/Sell` and persists as `decision_type="signal"`
+  - `DataManager.get_price_on_date(symbol, target_dt, max_forward_days=5)` — point-in-time close lookup with weekend/holiday forward-scan
+  - New `services/pnl_service.py` — pure compute_pnl_pct + run_pnl_snapshot_job; sign-aware (SELL flips), idempotent
+  - New `scripts/run_pnl_snapshots.py` — wired into the `portfolio-cron` daily loop
+  - New `GET /api/portfolio/decisions?symbol=&decision_type=&limit=` returning decisions enriched with snapshots
+  - Frontend: new `DecisionTracker` component (table + per-symbol Recharts line chart of P&L across horizons), mounted on `PortfolioDashboard`
+  - Recharts ^2.12.0 added to `frontend/package.json` for the chart
+  - 13 new pnl_service tests
+
+### Changed
+- `DataManager.__init__` is now `(redis_cache, alpha_vantage_service, finnhub_service=None)` — `finnhub_service` already defaulted to None in v0.12.0 so existing callers unaffected; documenting here for completeness
+
 ## [0.12.1] - 2026-05-04
 
 ### Fixed

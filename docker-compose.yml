@@ -82,7 +82,9 @@ services:
         while true; do
           echo \"[$(date)] Running portfolio analysis...\";
           python scripts/run_portfolio_analysis.py;
-          echo \"[$(date)] Analysis completed. Next run in $$INTERVAL minutes.\";
+          echo \"[$(date)] Computing decision P&L snapshots...\";
+          python scripts/run_pnl_snapshots.py;
+          echo \"[$(date)] Cycle complete. Next run in $$INTERVAL minutes.\";
           sleep $$((INTERVAL * 60));
         done
       "

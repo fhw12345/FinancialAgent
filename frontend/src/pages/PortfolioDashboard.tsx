@@ -14,6 +14,7 @@ import { PortfolioSummaryTable } from "../components/portfolio/PortfolioSummaryT
 import { WatchlistPanel } from "../components/portfolio/WatchlistPanel";
 import { CronController } from "../components/portfolio/CronController";
 import { RecentTransactions } from "../components/portfolio/RecentTransactions";
+import { DecisionTracker } from "../components/portfolio/DecisionTracker";
 import { MarketMovers } from "../components/MarketMovers";
 import { ChatSidebar } from "../components/chat/ChatSidebar";
 import { ChatMessages } from "../components/chat/ChatMessages";
@@ -120,6 +121,9 @@ export default function PortfolioDashboard() {
 
             {/* Recent Transactions */}
             <RecentTransactions />
+
+            {/* AI Decision Tracker — ex-post P&L per decision */}
+            <DecisionTracker />
           </div>
         </div>
 

@@ -12,3 +12,4 @@
 | 2026-05-04 | [Ghost Compose Project](2026-05-04-ghost-compose-project.md) | Docker | 同名 compose 项目互撞 + Windows bind mount 静默建空目录 |
 | 2026-05-04 | [Token 统计永远是 0](2026-05-04-token-extraction-getattr-on-dict.md) | LangChain / 测试 | `getattr` 用在 dict 上 + `Mock` 遮蔽真实数据形状 |
 | 2026-05-04 | [Finnhub fallback chain](2026-05-04-finnhub-fallback-chain.md) | 服务层架构 | 三层 fallback + "注释撒谎"模式 + Mock 兜底盲点 |
+| 2026-05-04 | [Decision tracking cross-layer](2026-05-04-decision-tracking-cross-layer.md) | 端到端 | 5 层 instrumentation + 端口陷阱（同一根因家族第二次）|

@@ -18,6 +18,7 @@ Backward compatibility is maintained - you can still import `router` directly:
 from fastapi import APIRouter
 
 from .chats import router as chats_router
+from .decisions import router as decisions_router
 from .history import router as history_router
 from .holdings import router as holdings_router
 from .orders import router as orders_router
@@ -32,6 +33,7 @@ router.include_router(transactions_router)
 router.include_router(orders_router)
 router.include_router(history_router)
 router.include_router(chats_router)
+router.include_router(decisions_router)
 
 # Export router for backward compatibility
 __all__ = ["router"]

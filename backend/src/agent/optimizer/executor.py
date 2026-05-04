@@ -80,7 +80,9 @@ class OrderExecutor:
                 continue
 
             analysis = analysis_by_symbol.get(order.symbol)
-            analysis_id = analysis.analysis_id if analysis else f"suggested_{order.symbol}"
+            analysis_id = (
+                analysis.analysis_id if analysis else f"suggested_{order.symbol}"
+            )
             chat_id = analysis.chat_id if analysis else "unknown"
             message_id = analysis.message_id if analysis else None
 
@@ -104,6 +106,9 @@ class OrderExecutor:
                 filled_at=None,
                 error_message=None,
                 created_at=utcnow(),
+                # Decision-tracking anchor: capture the price the AI saw.
+                decision_price=float(order.estimated_price),
+                decision_type="order",
             )
             suggested_orders.append(suggested)
 

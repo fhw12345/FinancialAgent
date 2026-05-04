@@ -746,6 +746,42 @@ class DataManager:
 
         return await asyncio.to_thread(_sync)
 
+    # =========================================================================
+    # Point-in-time price lookup (used by decision-tracking PnL service)
+    # =========================================================================
+
+    async def get_price_on_date(
+        self, symbol: str, target_date: datetime, max_forward_days: int = 5
+    ) -> float | None:
+        """
+        Return the closing price for `symbol` on `target_date`, or the next
+        trading day within `max_forward_days` if the target was a weekend/holiday.
+
+        Returns None if no bar can be located in the window — callers should
+        treat this as "not yet computable" and retry later, not as an error.
+        """
+
+        symbol = symbol.upper()
+        if target_date.tzinfo is None:
+            target_date = target_date.replace(tzinfo=UTC)
+        target_day = target_date.date()
+
+        try:
+            bars = await self.get_ohlcv(symbol, "daily", outputsize="full")
+        except DataFetchError as e:
+            logger.warning("price_on_date_fetch_failed", symbol=symbol, error=str(e))
+            return None
+
+        # Bars are newest-first; build a date->close map for window scan.
+        by_day = {b.date.date(): b.close for b in bars}
+        for offset in range(max_forward_days + 1):
+            from datetime import timedelta as _td
+
+            day = target_day + _td(days=offset)
+            if day in by_day:
+                return float(by_day[day])
+        return None
+
     async def get_options(self, symbol: str) -> list[OptionContract]:
         """
         Get options chain for a symbol.

@@ -94,6 +94,21 @@ class PortfolioOrder(BaseModel):
     filled_at: datetime | None = Field(None, description="Order fill time")
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
+    # Decision tracking (decision_price = price snapshot at AI decision moment;
+    # used as anchor for ex-post P&L vs marks at 7d/30d/90d horizons).
+    decision_price: float | None = Field(
+        None,
+        description="Quote price at the moment the AI made the decision (mark-to-market anchor)",
+    )
+    decision_type: str = Field(
+        "order",
+        description="'order' for executable BUY/SELL, 'signal' for HOLD recommendations or Deep ReAct verdicts",
+    )
+    pnl_snapshots: dict = Field(
+        default_factory=dict,
+        description="Ex-post P&L snapshots keyed by horizon (e.g. '7d', '30d', '90d') — see services/pnl_service",
+    )
+
     # Metadata
     metadata: dict = Field(
         default_factory=dict,

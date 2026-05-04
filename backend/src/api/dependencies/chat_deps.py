@@ -160,6 +160,7 @@ def get_react_agent(
 def get_deep_agent(
     settings: Settings = Depends(get_settings),
     react_agent: FinancialAnalysisReActAgent = Depends(get_react_agent),
+    mongodb: MongoDB = Depends(get_mongodb),
 ) -> Any:  # Returns DeepAgentAdapter — lazy import to avoid startup crash
     """
     Get Deep ReAct agent wrapped in the adapter for ainvoke() compatibility.
@@ -181,13 +182,29 @@ def get_deep_agent(
 
     _logger = structlog.get_logger()
 
-    # Reuse tools from the existing react agent
+    # Reuse tools + DataManager from the existing react agent. Inject
+    # order_repo/data_manager so verdicts get persisted as decision rows
+    # for the decision tracker.
     tools = react_agent.tools if hasattr(react_agent, "tools") else []
+    data_manager = getattr(react_agent, "data_manager", None)
+    order_repo = None
+    try:
+        from ...database.repositories.portfolio_order_repository import (
+            PortfolioOrderRepository,
+        )
+
+        order_repo = PortfolioOrderRepository(
+            mongodb.get_collection("portfolio_orders")
+        )
+    except Exception as _e:
+        _logger.warning("deep_react_order_repo_unavailable", error=str(_e))
 
     deep_agent = DeepReActAgent(
         settings=settings,
         tools=tools,
         enable_debate=True,
+        order_repo=order_repo,
+        data_manager=data_manager,
     )
 
     _deep_agent_singleton = DeepAgentAdapter(deep_agent)

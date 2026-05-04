@@ -309,3 +309,67 @@ class PortfolioOrderRepository:
         if status:
             query["status"] = status
         return await self.collection.count_documents(query)
+
+    # ---------------------------------------------------------------------
+    # Decision-tracking (P&L snapshot) queries
+    # ---------------------------------------------------------------------
+
+    async def list_pending_pnl_snapshots(
+        self,
+        horizon_days: int,
+        cutoff_dt: datetime,
+        limit: int = 200,
+    ) -> list[PortfolioOrder]:
+        """
+        Return decisions older than `horizon_days` (created_at <= cutoff_dt)
+        that have a decision_price but no snapshot yet for this horizon.
+        """
+        horizon_key = f"pnl_snapshots.{horizon_days}d"
+        query: dict[str, Any] = {
+            "decision_price": {"$ne": None, "$gt": 0},
+            "created_at": {"$lte": cutoff_dt},
+            horizon_key: {"$exists": False},
+        }
+        cursor = self.collection.find(query).sort("created_at", -1).limit(limit)
+        out: list[PortfolioOrder] = []
+        async for doc in cursor:
+            doc.pop("_id", None)
+            out.append(PortfolioOrder(**doc))
+        return out
+
+    async def update_pnl_snapshot(
+        self,
+        order_id: str,
+        horizon_days: int,
+        snapshot: dict[str, Any],
+    ) -> bool:
+        """Write one P&L snapshot under pnl_snapshots.{N}d. Returns True if matched."""
+        result = await self.collection.update_one(
+            {"order_id": order_id},
+            {
+                "$set": {
+                    f"pnl_snapshots.{horizon_days}d": snapshot,
+                    "updated_at": utcnow(),
+                }
+            },
+        )
+        return result.matched_count > 0
+
+    async def list_decisions(
+        self,
+        symbol: str | None = None,
+        decision_type: str | None = None,
+        limit: int = 100,
+    ) -> list[PortfolioOrder]:
+        """List decisions (orders + signals), newest first. Used by /api/decisions."""
+        query: dict[str, Any] = {}
+        if symbol:
+            query["symbol"] = symbol.upper()
+        if decision_type:
+            query["decision_type"] = decision_type
+        cursor = self.collection.find(query).sort("created_at", -1).limit(limit)
+        out: list[PortfolioOrder] = []
+        async for doc in cursor:
+            doc.pop("_id", None)
+            out.append(PortfolioOrder(**doc))
+        return out

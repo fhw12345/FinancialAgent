@@ -83,6 +83,8 @@ class DeepReActAgent:
         tools: list[Any],
         enable_debate: bool = True,
         max_debate_rounds: int = DEFAULT_MAX_DEBATE_ROUNDS,
+        order_repo: Any = None,
+        data_manager: Any = None,
     ):
         """
         Initialize the Deep ReAct Agent.
@@ -92,10 +94,18 @@ class DeepReActAgent:
             tools: List of all available tools
             enable_debate: Whether to enable the adversarial debate loop
             max_debate_rounds: Maximum number of debate iterations
+            order_repo: Optional PortfolioOrderRepository — when provided,
+                Buy/Hold/Sell verdicts are persisted as decision_type="signal"
+                rows so the decision tracker can mark them to market.
+            data_manager: Optional DataManager — used to capture decision_price
+                via get_quote at verdict time. Both must be set to enable
+                verdict persistence.
         """
         self.settings = settings
         self.enable_debate = enable_debate
         self.max_debate_rounds = max_debate_rounds
+        self._order_repo = order_repo
+        self._data_manager = data_manager
 
         # Convert tools to dict for skill creation
         self.tools_dict = get_all_tools_dict(tools)
@@ -109,9 +119,13 @@ class DeepReActAgent:
         self.llm = get_llm("deep_planner", temperature=temperature, timeout=30)
         self.verdict_llm = get_llm("verdict", temperature=temperature, timeout=30)
         # Per-subagent LLMs
-        self._llm_technical = get_llm("sub_technical", temperature=temperature, timeout=30)
+        self._llm_technical = get_llm(
+            "sub_technical", temperature=temperature, timeout=30
+        )
         self._llm_news = get_llm("sub_news", temperature=temperature, timeout=30)
-        self._llm_financial = get_llm("sub_financial", temperature=temperature, timeout=30)
+        self._llm_financial = get_llm(
+            "sub_financial", temperature=temperature, timeout=30
+        )
         self._llm_debater = get_llm("sub_debater", temperature=temperature, timeout=30)
 
         logger.info(
@@ -578,6 +592,13 @@ Be decisive. Use the evidence from both sides. Do not hedge excessively."""
                 verdict_length=len(verdict_text),
             )
 
+            # Persist verdict as a decision row (best-effort, non-blocking).
+            await self._persist_verdict_decision(
+                symbol=state.get("symbol", ""),
+                verdict_text=str(verdict_text),
+                config=config,
+            )
+
             return {
                 "messages": [AIMessage(content=verdict_text, name="Judge")],
                 "research_report": verdict_text,  # Becomes final_answer via adapter
@@ -620,6 +641,80 @@ Be decisive. Use the evidence from both sides. Do not hedge excessively."""
             builder.add_edge("main_agent", END)
 
         return builder.compile()
+
+    async def _persist_verdict_decision(
+        self,
+        symbol: str,
+        verdict_text: str,
+        config: Any,
+    ) -> None:
+        """
+        Best-effort: extract Buy/Hold/Sell from verdict text, capture current
+        quote as the decision_price anchor, persist as decision_type="signal".
+
+        Failures are swallowed (this is observability, not user-facing).
+        """
+        if not self._order_repo or not self._data_manager or not symbol:
+            return
+        try:
+            import re
+            import uuid as _uuid
+
+            from ..core.utils.date_utils import utcnow
+            from ..models.portfolio import PortfolioOrder
+
+            m = re.search(
+                r"\*\*Action\*\*\s*:\s*(buy|hold|sell)",
+                verdict_text,
+                re.IGNORECASE,
+            )
+            if not m:
+                logger.debug("verdict_persist_skipped_no_action", symbol=symbol)
+                return
+            side = m.group(1).lower()
+
+            quote = await self._data_manager.get_quote(symbol)
+            decision_price = float(getattr(quote, "price", 0.0) or 0.0)
+            if decision_price <= 0:
+                return
+
+            cfg = getattr(config, "configurable", {}) or {}
+            session_id = cfg.get("session_id") or _uuid.uuid4().hex[:12]
+            user_id = cfg.get("user_id") or "anonymous"
+
+            row = PortfolioOrder(
+                order_id=f"verdict_{_uuid.uuid4().hex[:12]}",
+                chat_id=cfg.get("chat_id", "deep_react"),
+                user_id=user_id,
+                message_id=cfg.get("message_id"),
+                alpaca_order_id=None,
+                analysis_id=f"deep_react_{symbol}_{session_id}",
+                symbol=symbol.upper(),
+                order_type="market",
+                side=side,
+                quantity=0.0,
+                limit_price=None,
+                stop_price=None,
+                time_in_force="day",
+                status="signal",
+                filled_qty=0.0,
+                filled_avg_price=None,
+                filled_at=None,
+                error_message=None,
+                created_at=utcnow(),
+                decision_price=decision_price,
+                decision_type="signal",
+                metadata={"source": "deep_react_verdict"},
+            )
+            await self._order_repo.create(row)
+            logger.info(
+                "verdict_decision_persisted",
+                symbol=symbol,
+                side=side,
+                decision_price=decision_price,
+            )
+        except Exception as e:
+            logger.warning("verdict_persist_failed", symbol=symbol, error=str(e))
 
     async def _invoke_subagent(
         self,
