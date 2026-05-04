@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-05-04
+
+### Fixed
+- fix(token-utils): `extract_token_usage_from_messages` always returned 0
+  - Root cause: code used `getattr(msg.usage_metadata, "input_tokens", 0)` but LangChain's `usage_metadata` is a `TypedDict`, not an object — `getattr` always hit the default
+  - Affected all vendors (Claude / GPT / Gemini), pre-existed before the cross-vendor refactor; surfaced while investigating `input_tokens=0 output_tokens=0` in Deep ReAct logs
+  - Tests passed because they used `Mock(input_tokens=...)` (object) instead of real dict — fixed 6 test fixtures to use real dicts
+  - Verified live: Claude/GPT/Gemini all now report non-zero token counts via `extract_token_usage_from_messages`
+
+### Added
+- `docs/interview/` — case-study notes for non-trivial bugs (context, reasoning, root cause, fix, takeaways) for interview prep. First two entries: ghost compose project + token getattr-on-dict bug.
+
 ## [0.11.1] - 2026-05-04
 
 ### Changed

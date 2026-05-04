@@ -21,11 +21,15 @@ class TestExtractTokenUsageFromMessages:
     """Test extracting token usage from LangChain messages"""
 
     def test_extract_from_usage_metadata_format(self):
-        """Test extraction from newer LangChain usage_metadata format"""
+        """usage_metadata is a dict (TypedDict) in real LangChain — not an object."""
         # Arrange
         mock_ai_message = Mock()
         mock_ai_message.__class__.__name__ = "AIMessage"
-        mock_ai_message.usage_metadata = Mock(input_tokens=100, output_tokens=50)
+        mock_ai_message.usage_metadata = {
+            "input_tokens": 100,
+            "output_tokens": 50,
+            "total_tokens": 150,
+        }
         mock_ai_message.response_metadata = None
 
         messages = [mock_ai_message]
@@ -89,12 +93,12 @@ class TestExtractTokenUsageFromMessages:
         # Arrange
         msg1 = Mock()
         msg1.__class__.__name__ = "AIMessage"
-        msg1.usage_metadata = Mock(input_tokens=100, output_tokens=50)
+        msg1.usage_metadata = {"input_tokens": 100, "output_tokens": 50}
         msg1.response_metadata = None
 
         msg2 = Mock()
         msg2.__class__.__name__ = "AIMessage"
-        msg2.usage_metadata = Mock(input_tokens=150, output_tokens=75)
+        msg2.usage_metadata = {"input_tokens": 150, "output_tokens": 75}
         msg2.response_metadata = None
 
         messages = [msg1, msg2]
@@ -114,11 +118,11 @@ class TestExtractTokenUsageFromMessages:
         # Arrange
         human_msg = Mock()
         human_msg.__class__.__name__ = "HumanMessage"
-        human_msg.usage_metadata = Mock(input_tokens=100, output_tokens=50)
+        human_msg.usage_metadata = {"input_tokens": 100, "output_tokens": 50}
 
         ai_msg = Mock()
         ai_msg.__class__.__name__ = "AIMessage"
-        ai_msg.usage_metadata = Mock(input_tokens=200, output_tokens=75)
+        ai_msg.usage_metadata = {"input_tokens": 200, "output_tokens": 75}
         ai_msg.response_metadata = None
 
         messages = [human_msg, ai_msg]
@@ -138,11 +142,11 @@ class TestExtractTokenUsageFromMessages:
         # Arrange
         system_msg = Mock()
         system_msg.__class__.__name__ = "SystemMessage"
-        system_msg.usage_metadata = Mock(input_tokens=50, output_tokens=25)
+        system_msg.usage_metadata = {"input_tokens": 50, "output_tokens": 25}
 
         ai_msg = Mock()
         ai_msg.__class__.__name__ = "AIMessage"
-        ai_msg.usage_metadata = Mock(input_tokens=100, output_tokens=50)
+        ai_msg.usage_metadata = {"input_tokens": 100, "output_tokens": 50}
         ai_msg.response_metadata = None
 
         messages = [system_msg, ai_msg]
@@ -218,10 +222,7 @@ class TestExtractTokenUsageFromMessages:
         # Arrange
         ai_msg = Mock()
         ai_msg.__class__.__name__ = "AIMessage"
-        # Mock usage_metadata without output_tokens attribute
-        mock_usage = Mock(spec=["input_tokens"])
-        mock_usage.input_tokens = 100
-        ai_msg.usage_metadata = mock_usage
+        ai_msg.usage_metadata = {"input_tokens": 100}  # output_tokens missing
         ai_msg.response_metadata = None
 
         messages = [ai_msg]
@@ -264,7 +265,7 @@ class TestExtractTokenUsageFromMessages:
         # Message 1: usage_metadata format
         msg1 = Mock()
         msg1.__class__.__name__ = "AIMessage"
-        msg1.usage_metadata = Mock(input_tokens=100, output_tokens=50)
+        msg1.usage_metadata = {"input_tokens": 100, "output_tokens": 50}
         msg1.response_metadata = None
 
         # Message 2: DashScope format
@@ -464,7 +465,7 @@ class TestTokenUtilsIntegration:
         # Arrange
         mock_ai_message = Mock()
         mock_ai_message.__class__.__name__ = "AIMessage"
-        mock_ai_message.usage_metadata = Mock(input_tokens=100, output_tokens=50)
+        mock_ai_message.usage_metadata = {"input_tokens": 100, "output_tokens": 50}
         mock_ai_message.response_metadata = None
 
         messages = [mock_ai_message]

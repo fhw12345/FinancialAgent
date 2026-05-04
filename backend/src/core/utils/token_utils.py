@@ -36,10 +36,11 @@ def extract_token_usage_from_messages(messages: list[Any]) -> tuple[int, int, in
         if msg.__class__.__name__ != "AIMessage":
             continue
 
-        # Try usage_metadata first (newer LangChain format)
+        # Try usage_metadata first (newer LangChain format — a dict, not an object)
         if hasattr(msg, "usage_metadata") and msg.usage_metadata:
-            total_input_tokens += getattr(msg.usage_metadata, "input_tokens", 0)
-            total_output_tokens += getattr(msg.usage_metadata, "output_tokens", 0)
+            um = msg.usage_metadata
+            total_input_tokens += um.get("input_tokens", 0)
+            total_output_tokens += um.get("output_tokens", 0)
 
         # Fallback to response_metadata (provider-specific formats)
         elif hasattr(msg, "response_metadata") and msg.response_metadata:
