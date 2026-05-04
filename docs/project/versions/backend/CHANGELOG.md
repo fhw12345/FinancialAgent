@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-05-04
+
+### Changed — full Phase 1+2 pipeline behind both dashboard buttons
+- **Analyze My Holdings** and **Today's Picks** no longer use the simplified single-LLM-call shortcut. Both now route through the existing `PortfolioAnalysisAgent`'s real Phase 1 (ReAct + 118 MCP tools per symbol) → Phase 2 (structured `PortfolioDecisionList`) pipeline, with Phase 3 deliberately skipped (no order optimization needed).
+- Picks: universe → risk-adaptive filter to 50 → **capped at 20** for Phase 1 (`PICKS_PHASE1_CAP`) to keep runtime ≈5-15min instead of 25-75min. Phase 2 still picks Top 5 BUYs from those 20.
+- Per-symbol research is **not** persisted as separate chats (no chat-list pollution). Instead the full Phase 1 markdown text rides on `portfolio_orders.metadata.full_research`. Deletion of the decision deletes the research with it.
+- One **aggregated summary chat** per run is written to `messages` with `chat_id="system-run-{flow}-{date}"`, listing each symbol with its action / confidence / short reasoning. Replaces N per-symbol chats from the cron path.
+
+### Added
+- `phase1_research.py:_run_phase1_research(...suppress_chat=True)` and `_analyze_symbol(...suppress_chat=True)` — gates the per-symbol chat write so the dashboard flow can suppress chat-list pollution. Backward-compatible (default False).
+- `flows.py` graceful fallback to the old simplified path when `app.state.portfolio_agent` is unavailable.
+- `app.state.portfolio_agent` singleton built at startup (single LangGraph instance, not re-created per click).
+- DecisionTracker frontend: per-row `[📄 View Full Research]` button in the expand pane → modal renders the full Phase 1 markdown text. Pure client-side state.
+
+### Known issue (tracked separately)
+- The ReAct agent currently returns generic "I'm ready to help" responses for some Phase 1 prompts, with `tool_executions=0` even after the built-in retry-with-nudge. Pipeline wiring is correct; the failure is inside `react_agent.ainvoke()` tool-binding under the cross-vendor llm_factory routing. Tracked as a follow-up.
+
 ## [0.15.6] - 2026-05-04
 
 ### Added

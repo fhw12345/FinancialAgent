@@ -26,6 +26,7 @@ class Phase1ResearchMixin:
         symbol: str,
         user_id: str,
         analysis_type: str,
+        suppress_chat: bool = False,
     ) -> SymbolAnalysisResult | None:
         """
         Phase 1: Independent symbol research using ReAct agent with tools.
@@ -37,6 +38,9 @@ class Phase1ResearchMixin:
             symbol: Stock symbol to analyze
             user_id: User ID (use "portfolio_agent" for system analysis)
             analysis_type: Type of analysis (holding, watchlist)
+            suppress_chat: If True, skip per-symbol chat/message creation —
+                used by the dashboard two-button flows that store research
+                inline on portfolio_orders.metadata.full_research instead.
 
         Returns:
             SymbolAnalysisResult with analysis text, or None if failed
@@ -55,10 +59,21 @@ class Phase1ResearchMixin:
             )
 
             # Get symbol-specific chat ID for context retrieval
-            chat_id = await self._get_symbol_chat_id(symbol, user_id)
+            # Symbol chat is only needed if we're going to write to it.
+            chat_id = (
+                f"ephemeral_{symbol}_{analysis_id}"
+                if suppress_chat
+                else await self._get_symbol_chat_id(symbol, user_id)
+            )
 
             # Fetch historical messages for context management (sliding window + summary)
-            historical_messages = await self.message_repo.get_by_chat(chat_id)
+            # When suppress_chat=True we skip both the historical-context
+            # lookup and the message persist (caller stores the research
+            # inline elsewhere). Build a synthetic empty history.
+            if suppress_chat:
+                historical_messages = []
+            else:
+                historical_messages = await self.message_repo.get_by_chat(chat_id)
 
             # Pure research prompt - NO portfolio context, NO trading decisions
             # Decisions will be made in Phase 2 with full portfolio visibility
@@ -197,7 +212,11 @@ Technical terms can include English in parentheses for clarity.
                 source="llm",
                 metadata=metadata,
             )
-            message = await self.message_repo.create(message_create)
+            message = (
+                None
+                if suppress_chat
+                else await self.message_repo.create(message_create)
+            )
 
             logger.info(
                 "Phase 1: Symbol research completed",
@@ -285,16 +304,20 @@ Technical terms can include English in parentheses for clarity.
         user_id: str,
         dry_run: bool,
         result_summary: dict[str, Any],
+        suppress_chat: bool = False,
     ) -> list[SymbolAnalysisResult]:
         """
         Run Phase 1: Independent symbol research (concurrent, pure analysis).
 
         Args:
-            positions: List of Alpaca positions
-            watchlist_items: List of watchlist items
+            positions: List of position-like objects (must have .symbol)
+            watchlist_items: List of watchlist-like objects (must have .symbol)
             user_id: User ID for tracking
             dry_run: If True, skip actual analysis
             result_summary: Result summary dict to update
+            suppress_chat: When True, per-symbol chat/message rows are NOT
+                written; SymbolAnalysisResult.analysis_text still carries
+                the full research. Used by dashboard two-button flows.
 
         Returns:
             List of SymbolAnalysisResult from all analyses
@@ -318,6 +341,7 @@ Technical terms can include English in parentheses for clarity.
                         symbol=position.symbol,
                         user_id=user_id,
                         analysis_type="holding",
+                        suppress_chat=suppress_chat,
                     )
                     for position in positions
                 ]
@@ -374,6 +398,7 @@ Technical terms can include English in parentheses for clarity.
                         symbol=watchlist_item.symbol,
                         user_id=user_id,
                         analysis_type="watchlist",
+                        suppress_chat=suppress_chat,
                     )
                     for watchlist_item in unique_watchlist_items
                 ]

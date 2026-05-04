@@ -188,7 +188,30 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
             # Store in app state for use in dependencies
             app.state.react_agent = react_agent
+            app.state.market_service = market_service
+            app.state.settings = settings
             logger.info("ReAct agent initialized")
+
+            # Build PortfolioAnalysisAgent singleton — used by the dashboard
+            # two-button flows (Analyze My Holdings + Today's Picks) so we
+            # don't re-initialize the LangGraph graph on every click.
+            try:
+                from .agent.portfolio.agent import PortfolioAnalysisAgent
+
+                app.state.portfolio_agent = PortfolioAnalysisAgent(
+                    settings=settings,
+                    mongodb=mongodb,
+                    react_agent=react_agent,
+                    market_service=market_service,
+                    trading_service=None,  # Alpaca removed in W5a
+                )
+                logger.info("PortfolioAnalysisAgent initialized for dashboard flows")
+            except Exception as _pa_e:
+                logger.warning(
+                    "PortfolioAnalysisAgent init failed — two-button flows will fall back to simplified path",
+                    error=str(_pa_e),
+                )
+                app.state.portfolio_agent = None
 
         except Exception as e:
             logger.warning(

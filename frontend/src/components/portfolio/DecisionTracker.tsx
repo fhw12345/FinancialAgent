@@ -120,10 +120,16 @@ const PALETTE = [
 
 type SourceTab = "all" | "holdings" | "picks";
 
+interface ResearchModalState {
+  symbol: string;
+  text: string;
+}
+
 export function DecisionTracker() {
   const [symbolFilter, setSymbolFilter] = useState("");
   const [tab, setTab] = useState<SourceTab>("all");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [researchModal, setResearchModal] = useState<ResearchModalState | null>(null);
   const { data, isLoading, error } = useDecisions(
     symbolFilter || undefined,
     tab === "all" ? undefined : tab,
@@ -285,6 +291,22 @@ export function DecisionTracker() {
                                     · suggested size: {d.metadata.position_size_percent}%
                                   </span>
                                 )}
+                                {d.metadata?.full_research && (
+                                  <div className="mt-2">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setResearchModal({
+                                          symbol: d.symbol,
+                                          text: String(d.metadata?.full_research || ""),
+                                        });
+                                      }}
+                                      className="inline-flex items-center gap-1 rounded border border-blue-300 bg-white px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                                    >
+                                      📄 View Full Research
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -334,6 +356,45 @@ export function DecisionTracker() {
           </>
         )}
       </div>
+
+      {/* Full-research modal — opened from per-row [View Full Research] button */}
+      {researchModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setResearchModal(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="w-full max-w-3xl max-h-[80vh] flex flex-col rounded-lg bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+              <h3 className="text-base font-semibold text-gray-900">
+                Full Research — {researchModal.symbol}
+              </h3>
+              <button
+                onClick={() => setResearchModal(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="overflow-y-auto px-4 py-4 text-sm text-gray-800 whitespace-pre-wrap font-sans leading-relaxed">
+              {researchModal.text || "(no research text recorded for this decision)"}
+            </div>
+            <div className="border-t border-gray-200 px-4 py-2 text-right">
+              <button
+                onClick={() => setResearchModal(null)}
+                className="rounded border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

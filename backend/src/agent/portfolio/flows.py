@@ -1,34 +1,55 @@
 """
 Two new top-level analysis flows for the dashboard buttons:
 
-- run_analyze_holdings: LLM analyzes user's existing positions, writes
-  decisions to portfolio_orders with recommendation_source="holdings"
-- run_today_picks: LLM picks Top 5 BUYs from sector-filtered S&P/Nasdaq
-  universe (NOT from holdings), writes with recommendation_source="picks"
+- run_analyze_holdings: full Phase 1 (ReAct + 118 MCP tools per symbol) on
+  every holding, then Phase 2 holistic decisions. Persists decisions to
+  portfolio_orders with recommendation_source="holdings" + full per-symbol
+  research embedded in metadata.full_research.
+- run_today_picks: sector-filtered universe → top 20 finalists (cap for
+  runtime) → full Phase 1 per finalist → Phase 2 picks Top 5 BUYs. Same
+  recommendation_source="picks" tagging.
 
-Both share Phase 2 LLM logic but differ in the symbol universe and
-decision_type tagging. Both short-circuit cleanly when there's nothing
-to analyze (empty holdings / empty sector intersection).
+Both flows write a single aggregated summary chat message at the end so
+the user can see the run on their chat list, but skip the per-symbol chat
+churn that the cron-driven analyze_user_portfolio creates.
+
+If `app.state.portfolio_agent` is missing (init failed at startup), both
+flows fall back to the simplified single-LLM-call path via
+_phase2_for_symbols (preserves v0.15.0 behavior).
 """
 
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 from typing import Any
 
 import structlog
 
 from ...core.utils.date_utils import utcnow
 from ...database.repositories.holding_repository import HoldingRepository
+from ...database.repositories.message_repository import MessageRepository
 from ...database.repositories.portfolio_order_repository import (
     PortfolioOrderRepository,
 )
+from ...models.message import MessageCreate, MessageMetadata
 from ...models.portfolio import PortfolioOrder
 from ...models.portfolio_analysis import PortfolioSettings
 from .context_builder import build_context_from_mongo
 from .universe_filter import filter_by_risk
 
 logger = structlog.get_logger(__name__)
+
+# Picks Phase 1 cap — 20 symbols × ~30-90s/symbol = ~5-15min including
+# concurrency. Above this the user wait is unreasonable.
+PICKS_PHASE1_CAP = 20
+
+
+@dataclass
+class _SymbolStub:
+    """Duck-typed object satisfying Phase 1's `.symbol` access on positions/watchlist."""
+
+    symbol: str
 
 
 def _resolve_data_manager(app: Any) -> Any:
@@ -41,20 +62,29 @@ def _resolve_mongo(app: Any) -> Any:
     return getattr(state, "mongodb", None) if state else None
 
 
+def _resolve_portfolio_agent(app: Any) -> Any:
+    """Pull the PortfolioAnalysisAgent singleton off app.state if available."""
+    return getattr(getattr(app, "state", None), "portfolio_agent", None)
+
+
 # ---------------------------------------------------------------------------
 # Flow A: Analyze My Holdings
 # ---------------------------------------------------------------------------
 
 
 async def run_analyze_holdings(app: Any, settings: PortfolioSettings) -> dict[str, Any]:
-    """LLM-analyze existing positions; persist decisions tagged 'holdings'."""
+    """
+    Full Phase 1+2 pipeline on existing positions; persist decisions tagged 'holdings'.
+    """
     mongo = _resolve_mongo(app)
     dm = _resolve_data_manager(app)
+    pa = _resolve_portfolio_agent(app)
     if mongo is None or dm is None:
         raise RuntimeError("app.state.mongodb / data_manager missing")
 
     holding_repo = HoldingRepository(mongo.get_collection("holdings"))
     order_repo = PortfolioOrderRepository(mongo.get_collection("portfolio_orders"))
+    message_repo = MessageRepository(mongo.get_collection("messages"))
 
     holdings = await holding_repo.list_by_user()
     if not holdings:
@@ -63,22 +93,65 @@ async def run_analyze_holdings(app: Any, settings: PortfolioSettings) -> dict[st
     context = await build_context_from_mongo(settings, holding_repo, dm)
     symbols = [h.symbol for h in holdings]
 
-    # Lazy imports to avoid circular dependencies at module load
-    decisions = await _phase2_for_symbols(
-        symbols=symbols,
-        context=context,
-        settings=settings,
-        flow_label="holdings",
+    # If the full pipeline is unavailable, fall back to single-LLM shortcut.
+    if pa is None:
+        logger.warning("portfolio_agent_unavailable_using_simplified")
+        decisions = await _phase2_for_symbols(
+            symbols=symbols, context=context, settings=settings, flow_label="holdings"
+        )
+        written = await _persist_decisions(
+            decisions,
+            dm,
+            order_repo,
+            source="holdings",
+            run_id=f"holdings_{uuid.uuid4().hex[:8]}",
+        )
+        return {
+            "message": f"[fallback] Analyzed {len(symbols)} holding(s); persisted {written}.",
+            "result_count": written,
+        }
+
+    # ---- Full pipeline path ----
+    run_id = f"holdings_{uuid.uuid4().hex[:8]}"
+    positions = [_SymbolStub(symbol=s) for s in symbols]
+    summary: dict[str, Any] = {
+        "holdings_analyzed": 0,
+        "watchlist_analyzed": 0,
+        "errors": [],
+    }
+    logger.info("holdings_full_pipeline_start", run_id=run_id, count=len(positions))
+    phase1_results = await pa._run_phase1_research(
+        positions=positions,
+        watchlist_items=[],
+        user_id="local",
+        dry_run=False,
+        result_summary=summary,
+        suppress_chat=True,
     )
+    research_by_symbol = {r.symbol: r.analysis_text for r in phase1_results}
+    if not phase1_results:
+        return {
+            "message": "Phase 1 produced no research (all symbols failed).",
+            "result_count": 0,
+        }
+    _, trading_decisions = await pa._run_phase2_decisions(
+        all_analysis_results=phase1_results,
+        portfolio_context=context,
+        user_id="local",
+        dry_run=False,
+    )
+    decisions = _trading_decisions_to_dicts(trading_decisions)
     written = await _persist_decisions(
         decisions,
         dm,
         order_repo,
         source="holdings",
-        run_id=f"holdings_{uuid.uuid4().hex[:8]}",
+        run_id=run_id,
+        research_by_symbol=research_by_symbol,
     )
+    await _write_summary_chat(message_repo, "holdings", run_id, decisions)
     return {
-        "message": f"Analyzed {len(symbols)} holding(s); persisted {written} decision(s).",
+        "message": f"Researched {len(phase1_results)} holding(s); persisted {written} decision(s).",
         "result_count": written,
     }
 
@@ -91,9 +164,13 @@ async def run_analyze_holdings(app: Any, settings: PortfolioSettings) -> dict[st
 async def run_today_picks(
     app: Any, settings: PortfolioSettings, sectors: list[str]
 ) -> dict[str, Any]:
-    """Sector-filtered Top 5 BUY recommendations from S&P/Nasdaq universe."""
+    """
+    Full pipeline: sector filter → top 20 finalists (cap) → Phase 1 per
+    symbol → Phase 2 → Top 5 BUYs. Tagged recommendation_source='picks'.
+    """
     mongo = _resolve_mongo(app)
     dm = _resolve_data_manager(app)
+    pa = _resolve_portfolio_agent(app)
     if mongo is None or dm is None:
         raise RuntimeError("app.state.mongodb / data_manager missing")
 
@@ -107,19 +184,18 @@ async def run_today_picks(
 
     candidates = filter_universe(sectors)
     if not candidates:
-        return {
-            "message": "No symbols match selected sectors.",
-            "result_count": 0,
-        }
+        return {"message": "No symbols match selected sectors.", "result_count": 0}
 
     finalists = await filter_by_risk(candidates, settings.risk_tolerance, dm)
     if not finalists:
         return {"message": "Universe filter returned 0 finalists.", "result_count": 0}
 
-    holding_repo = HoldingRepository(mongo.get_collection("holdings"))
-    order_repo = PortfolioOrderRepository(mongo.get_collection("portfolio_orders"))
+    # Cap Phase 1 universe — 50 finalists × 30-90s would be 25-75 minutes.
+    finalists = finalists[:PICKS_PHASE1_CAP]
 
-    # Build a "context" that says no current positions — this is fresh-pick mode
+    order_repo = PortfolioOrderRepository(mongo.get_collection("portfolio_orders"))
+    message_repo = MessageRepository(mongo.get_collection("messages"))
+
     context = {
         "total_equity": settings.cash_balance,
         "buying_power": settings.cash_balance,
@@ -131,26 +207,150 @@ async def run_today_picks(
     }
 
     symbols = [r.symbol for r in finalists]
-    decisions = await _phase2_for_symbols(
-        symbols=symbols,
-        context=context,
-        settings=settings,
-        flow_label="picks",
-        top_n=5,
+    if pa is None:
+        logger.warning("portfolio_agent_unavailable_using_simplified")
+        decisions = await _phase2_for_symbols(
+            symbols=symbols,
+            context=context,
+            settings=settings,
+            flow_label="picks",
+            top_n=5,
+        )
+        written = await _persist_decisions(
+            decisions,
+            dm,
+            order_repo,
+            source="picks",
+            run_id=f"picks_{uuid.uuid4().hex[:8]}",
+        )
+        return {
+            "message": f"[fallback] Analyzed {len(symbols)} candidate(s); persisted {written}.",
+            "result_count": written,
+        }
+
+    # ---- Full pipeline path ----
+    run_id = f"picks_{uuid.uuid4().hex[:8]}"
+    watchlist_stubs = [_SymbolStub(symbol=s) for s in symbols]
+    summary: dict[str, Any] = {
+        "holdings_analyzed": 0,
+        "watchlist_analyzed": 0,
+        "errors": [],
+    }
+    logger.info("picks_full_pipeline_start", run_id=run_id, count=len(watchlist_stubs))
+    phase1_results = await pa._run_phase1_research(
+        positions=[],
+        watchlist_items=watchlist_stubs,
+        user_id="local",
+        dry_run=False,
+        result_summary=summary,
+        suppress_chat=True,
     )
+    research_by_symbol = {r.symbol: r.analysis_text for r in phase1_results}
+    if not phase1_results:
+        return {
+            "message": "Phase 1 produced no research (all candidates failed).",
+            "result_count": 0,
+        }
+    _, trading_decisions = await pa._run_phase2_decisions(
+        all_analysis_results=phase1_results,
+        portfolio_context=context,
+        user_id="local",
+        dry_run=False,
+    )
+    # Picks: only keep BUY recommendations, capped at Top 5 by confidence
+    buys = [
+        d
+        for d in _trading_decisions_to_dicts(trading_decisions)
+        if d["decision"].lower() == "buy"
+    ]
+    buys.sort(key=lambda d: d.get("confidence") or 0, reverse=True)
+    top5 = buys[:5]
     written = await _persist_decisions(
-        decisions,
+        top5,
         dm,
         order_repo,
         source="picks",
-        run_id=f"picks_{uuid.uuid4().hex[:8]}",
+        run_id=run_id,
+        research_by_symbol=research_by_symbol,
     )
+    await _write_summary_chat(message_repo, "picks", run_id, top5)
     msg = (
-        f"Analyzed {len(symbols)} candidate(s); persisted {written} pick(s)."
+        f"Researched {len(phase1_results)} candidate(s); persisted {written} pick(s)."
         if written
-        else "No candidates met BUY criteria today."
+        else f"Researched {len(phase1_results)} candidate(s); none met BUY criteria."
     )
     return {"message": msg, "result_count": written}
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _trading_decisions_to_dicts(trading_decisions: list[Any]) -> list[dict[str, Any]]:
+    """Normalize Phase 2 TradingDecision objects to the dict shape _persist_decisions wants."""
+    out = []
+    for d in trading_decisions or []:
+        out.append(
+            {
+                "symbol": d.symbol,
+                "decision": (
+                    d.decision.value
+                    if hasattr(d.decision, "value")
+                    else str(d.decision)
+                ),
+                "position_size_percent": d.position_size_percent,
+                "confidence": d.confidence,
+                "reasoning_summary": d.reasoning_summary,
+            }
+        )
+    return out
+
+
+async def _write_summary_chat(
+    message_repo: MessageRepository,
+    flow: str,
+    run_id: str,
+    decisions: list[dict[str, Any]],
+) -> None:
+    """One aggregated summary message per run — keeps the chat list clean."""
+    date_str = utcnow().strftime("%Y-%m-%d")
+    chat_id = f"system-run-{flow}-{date_str}"
+    title = "Holdings Analysis" if flow == "holdings" else "Today's Picks"
+    if decisions:
+        lines = [
+            f"- **{d['symbol']}** {d['decision'].upper()}"
+            f" (conf {d.get('confidence', '?')}/10)"
+            f" — {d.get('reasoning_summary', '')[:160]}"
+            for d in decisions
+        ]
+        body = "\n".join(lines)
+        content = (
+            f"### {title} — {date_str}\n"
+            f"_run id: `{run_id}`_\n\n"
+            f"{body}\n\n"
+            f"_Click any decision row in the dashboard to see the full per-symbol research._"
+        )
+    else:
+        content = (
+            f"### {title} — {date_str}\n"
+            f"_run id: `{run_id}`_\n\n"
+            f"No actionable decisions produced this run."
+        )
+    try:
+        await message_repo.create(
+            MessageCreate(
+                chat_id=chat_id,
+                role="assistant",
+                content=content,
+                source="llm",
+                metadata=MessageMetadata(
+                    analysis_id=run_id, analysis_type="portfolio_run_summary"
+                ),
+            )
+        )
+    except Exception as e:
+        logger.warning("summary_chat_write_failed", run_id=run_id, error=str(e))
 
 
 # ---------------------------------------------------------------------------
@@ -256,8 +456,14 @@ async def _persist_decisions(
     order_repo: PortfolioOrderRepository,
     source: str,
     run_id: str,
+    research_by_symbol: dict[str, str] | None = None,
 ) -> int:
-    """Write each decision as a PortfolioOrder row tagged with source + run_id."""
+    """Write each decision as a PortfolioOrder row tagged with source + run_id.
+
+    If `research_by_symbol` is provided, the per-symbol Phase 1 research text
+    is embedded into `metadata.full_research` so the dashboard can show it.
+    """
+    research_by_symbol = research_by_symbol or {}
     written = 0
     for d in decisions:
         sym = d["symbol"].upper()
@@ -303,6 +509,7 @@ async def _persist_decisions(
                 "confidence": d.get("confidence"),
                 "position_size_percent": d.get("position_size_percent"),
                 "reasoning": d.get("reasoning_summary", "")[:500],
+                "full_research": research_by_symbol.get(sym, ""),
             },
         )
         try:
