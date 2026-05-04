@@ -1,0 +1,516 @@
+symbol,name,sector,industry,market_cap_b
+NVDA,NVIDIA Corporation,Technology,Semiconductors,4852.37
+GOOGL,Alphabet Inc.,Communication Services,Internet Content & Information,4632.22
+GOOG,Alphabet Inc.,Communication Services,Internet Content & Information,4587.61
+AAPL,Apple Inc.,Technology,Consumer Electronics,4055.91
+MSFT,Microsoft Corporation,Technology,Software - Infrastructure,3115.89
+AMZN,"Amazon.com, Inc.",Consumer Cyclical,Internet Retail,2922.41
+AVGO,Broadcom Inc.,Technology,Semiconductors,2000.71
+META,"Meta Platforms, Inc.",Communication Services,Internet Content & Information,1539.55
+TSLA,"Tesla, Inc.",Consumer Cyclical,Auto Manufacturers,1469.06
+WMT,Walmart Inc.,Consumer Defensive,Discount Stores,1044.68
+BRK-B,Berkshire Hathaway Inc.,Financial Services,Insurance - Diversified,1016.08
+LLY,Eli Lilly and Company,Healthcare,Drug Manufacturers - General,859.84
+JPM,JPMorgan Chase & Co.,Financial Services,Banks - Diversified,826.98
+MU,"Micron Technology, Inc.",Technology,Semiconductors,658.15
+XOM,Exxon Mobil Corporation,Energy,Oil & Gas Integrated,629.8
+V,Visa Inc.,Financial Services,Credit Services,621.26
+AMD,"Advanced Micro Devices, Inc.",Technology,Semiconductors,573.5
+ASML,ASML Holding N.V.,Technology,Semiconductor Equipment & Materials,544.82
+JNJ,Johnson & Johnson,Healthcare,Drug Manufacturers - General,544.61
+ORCL,Oracle Corporation,Technology,Software - Infrastructure,518.65
+INTC,Intel Corporation,Technology,Semiconductors,492.75
+COST,Costco Wholesale Corporation,Consumer Defensive,Discount Stores,447.26
+MA,Mastercard Incorporated,Financial Services,Credit Services,443.76
+CAT,Caterpillar Inc.,Industrials,Farm & Heavy Construction Machinery,412.12
+NFLX,"Netflix, Inc.",Communication Services,Entertainment,386.07
+CVX,Chevron Corporation,Energy,Oil & Gas Integrated,376.57
+BAC,Bank of America Corporation,Financial Services,Banks - Diversified,375.67
+CSCO,"Cisco Systems, Inc.",Technology,Communication Equipment,364.2
+ABBV,AbbVie Inc.,Healthcare,Drug Manufacturers - General,363.98
+PLTR,Palantir Technologies Inc.,Technology,Software - Infrastructure,356.36
+PG,The Procter & Gamble Company,Consumer Defensive,Household & Personal Products,336.55
+KO,The Coca-Cola Company,Consumer Defensive,Beverages - Non-Alcoholic,335.89
+UNH,UnitedHealth Group Incorporated,Healthcare,Healthcare Plans,333.42
+LRCX,Lam Research Corporation,Technology,Semiconductor Equipment & Materials,323.21
+HD,"The Home Depot, Inc.",Consumer Cyclical,Home Improvement Retail,317.51
+AMAT,"Applied Materials, Inc.",Technology,Semiconductor Equipment & Materials,312.52
+GE,GE Aerospace,Industrials,Aerospace & Defense,301.74
+MS,Morgan Stanley,Financial Services,Capital Markets,300.96
+GEV,GE Vernova Inc.,Industrials,Specialty Industrial Machinery,291.57
+MRK,"Merck & Co., Inc.",Healthcare,Drug Manufacturers - General,280.73
+GS,"The Goldman Sachs Group, Inc.",Financial Services,Capital Markets,271.34
+PM,Philip Morris International Inc.,Consumer Defensive,Tobacco,263.71
+TXN,Texas Instruments Incorporated,Technology,Semiconductors,253.43
+WFC,Wells Fargo & Company,Financial Services,Banks - Diversified,245.12
+RTX,RTX Corporation,Industrials,Aerospace & Defense,235.86
+LIN,Linde plc,Basic Materials,Specialty Chemicals,232.16
+KLAC,KLA Corporation,Technology,Semiconductor Equipment & Materials,229.51
+ANET,"Arista Networks, Inc.",Technology,Computer Hardware,223.89
+C,Citigroup Inc.,Financial Services,Banks - Diversified,219.43
+ARM,Arm Holdings plc,Technology,Semiconductors,219.08
+AXP,American Express Company,Financial Services,Credit Services,217.82
+IBM,International Business Machines Corporation,Technology,Information Technology Services,217.13
+PEP,"PepsiCo, Inc.",Consumer Defensive,Beverages - Non-Alcoholic,213.28
+TMUS,"T-Mobile US, Inc.",Communication Services,Telecom Services,209.68
+MCD,McDonald's Corporation,Consumer Cyclical,Restaurants,205.19
+NEE,"NextEra Energy, Inc.",Utilities,Utilities - Regulated Electric,199.93
+VZ,Verizon Communications Inc.,Communication Services,Telecom Services,198.56
+ADI,"Analog Devices, Inc.",Technology,Semiconductors,193.46
+SNDK,Sandisk Corporation,Technology,Computer Hardware,184.1
+DIS,The Walt Disney Company,Communication Services,Entertainment,180.62
+T,AT&T Inc.,Communication Services,Telecom Services,179.96
+BA,The Boeing Company,Industrials,Aerospace & Defense,178.65
+APH,Amphenol Corporation,Technology,Electronic Components,176.71
+QCOM,QUALCOMM Incorporated,Technology,Semiconductors,176.69
+AMGN,Amgen Inc.,Healthcare,Drug Manufacturers - General,175.49
+TJX,"The TJX Companies, Inc.",Consumer Cyclical,Apparel Retail,173.42
+TMO,Thermo Fisher Scientific Inc.,Healthcare,Diagnostics & Research,173.39
+ETN,Eaton Corporation plc,Industrials,Specialty Industrial Machinery,166.93
+SHOP,Shopify Inc.,Technology,Software - Application,165.32
+STX,Seagate Technology Holdings plc,Technology,Computer Hardware,164.75
+BLK,"BlackRock, Inc.",Financial Services,Asset Management,163.9
+GILD,"Gilead Sciences, Inc.",Healthcare,Drug Manufacturers - General,163.19
+ISRG,"Intuitive Surgical, Inc.",Healthcare,Medical Instruments & Supplies,162.08
+SCHW,The Charles Schwab Corporation,Financial Services,Capital Markets,161.27
+APP,AppLovin Corporation,Communication Services,Advertising Agencies,159.16
+UNP,Union Pacific Corporation,Industrials,Railroads,157.67
+DE,Deere & Company,Industrials,Farm & Heavy Construction Machinery,155.53
+ABT,Abbott Laboratories,Healthcare,Medical Devices,154.73
+WDC,Western Digital Corporation,Technology,Computer Hardware,154.1
+WELL,Welltower Inc.,Real Estate,REIT - Healthcare Facilities,152.85
+UBER,"Uber Technologies, Inc.",Technology,Software - Application,152.22
+BX,Blackstone Inc.,Financial Services,Asset Management,151.93
+CRM,"Salesforce, Inc.",Technology,Software - Application,151.59
+PFE,Pfizer Inc.,Healthcare,Drug Manufacturers - General,149.75
+PANW,"Palo Alto Networks, Inc.",Technology,Software - Infrastructure,149.55
+COP,ConocoPhillips,Energy,Oil & Gas E&P,149.44
+MRVL,"Marvell Technology, Inc.",Technology,Semiconductors,143.68
+PDD,PDD Holdings Inc.,Consumer Cyclical,Internet Retail,139.28
+GLW,Corning Incorporated,Technology,Electronic Components,138.66
+IBKR,"Interactive Brokers Group, Inc.",Financial Services,Capital Markets,138.45
+DELL,Dell Technologies Inc.,Technology,Computer Hardware,134.51
+HON,Honeywell International Inc.,Industrials,Conglomerates,134.03
+PLD,"Prologis, Inc.",Real Estate,REIT - Industrial,130.48
+BKNG,Booking Holdings Inc.,Consumer Cyclical,Travel Services,129.95
+LOW,"Lowe's Companies, Inc.",Consumer Cyclical,Home Improvement Retail,128.71
+VRT,Vertiv Holdings Co,Industrials,Electrical Equipment & Parts,127.07
+SPGI,S&P Global Inc.,Financial Services,Financial Data & Stock Exchanges,126.52
+CB,Chubb Limited,Financial Services,Insurance - Property & Casualty,125.67
+MO,"Altria Group, Inc.",Consumer Defensive,Tobacco,123.22
+DHR,Danaher Corporation,Healthcare,Diagnostics & Research,123.19
+COF,Capital One Financial Corporation,Financial Services,Credit Services,121.02
+LMT,Lockheed Martin Corporation,Industrials,Aerospace & Defense,119.94
+SBUX,Starbucks Corporation,Consumer Cyclical,Restaurants,119.73
+NEM,Newmont Corporation,Basic Materials,Gold,117.6
+CRWD,"CrowdStrike Holdings, Inc.",Technology,Software - Infrastructure,117.49
+BMY,Bristol-Myers Squibb Company,Healthcare,Drug Manufacturers - General,117.15
+PGR,The Progressive Corporation,Financial Services,Insurance - Property & Casualty,116.13
+CEG,Constellation Energy Corporation,Utilities,Utilities - Independent Power Producers,114.12
+SYK,Stryker Corporation,Healthcare,Medical Devices,112.83
+INTU,Intuit Inc.,Technology,Software - Application,112.66
+PWR,"Quanta Services, Inc.",Industrials,Engineering & Construction,111.98
+PH,Parker-Hannifin Corporation,Industrials,Specialty Industrial Machinery,110.83
+ACN,Accenture plc,Technology,Information Technology Services,110.7
+SO,The Southern Company,Utilities,Utilities - Regulated Electric,108.75
+VRTX,Vertex Pharmaceuticals Incorporated,Healthcare,Biotechnology,108.69
+TT,Trane Technologies plc,Industrials,Building Products & Equipment,107.43
+EQIX,"Equinix, Inc.",Real Estate,REIT - Specialty,106.78
+CVS,CVS Health Corporation,Healthcare,Healthcare Plans,105.04
+CME,CME Group Inc.,Financial Services,Financial Data & Stock Exchanges,104.05
+MDT,Medtronic plc,Healthcare,Medical Devices,101.45
+ADBE,Adobe Inc.,Technology,Software - Application,100.1
+DUK,Duke Energy Corporation,Utilities,Utilities - Regulated Electric,99.53
+MCK,McKesson Corporation,Healthcare,Medical Distribution,99.34
+HWM,Howmet Aerospace Inc.,Industrials,Aerospace & Defense,96.98
+KKR,KKR & Co. Inc.,Financial Services,Asset Management,96.6
+CMCSA,Comcast Corporation,Communication Services,Telecom Services,96.08
+NOW,"ServiceNow, Inc.",Technology,Software - Application,95.91
+HCA,"HCA Healthcare, Inc.",Healthcare,Medical Care Facilities,95.05
+CDNS,"Cadence Design Systems, Inc.",Technology,Software - Application,94.88
+SNPS,"Synopsys, Inc.",Technology,Software - Infrastructure,94.73
+GD,General Dynamics Corporation,Industrials,Aerospace & Defense,93.55
+MELI,"MercadoLibre, Inc.",Consumer Cyclical,Internet Retail,93.43
+MAR,"Marriott International, Inc.",Consumer Cyclical,Lodging,93.02
+WMB,"The Williams Companies, Inc.",Energy,Oil & Gas Midstream,92.47
+WM,"Waste Management, Inc.",Industrials,Waste Management,91.3
+BK,The Bank of New York Mellon Corporation,Financial Services,Banks - Diversified,91.29
+CMI,Cummins Inc.,Industrials,Specialty Industrial Machinery,90.81
+JCI,Johnson Controls International plc,Industrials,Building Products & Equipment,88.81
+PNC,"The PNC Financial Services Group, Inc.",Financial Services,Banks - Regional,88.42
+ICE,"Intercontinental Exchange, Inc.",Financial Services,Financial Data & Stock Exchanges,88.14
+FDX,FedEx Corporation,Industrials,Integrated Freight & Logistics,87.28
+USB,U.S. Bancorp,Financial Services,Banks - Regional,86.71
+ADP,"Automatic Data Processing, Inc.",Technology,Software - Application,85.48
+UPS,"United Parcel Service, Inc.",Industrials,Integrated Freight & Logistics,84.48
+BSX,Boston Scientific Corporation,Healthcare,Medical Devices,84.31
+SLB,SLB N.V.,Energy,Oil & Gas Equipment & Services,84.22
+AMT,American Tower Corporation,Real Estate,REIT - Specialty,83.88
+CVNA,Carvana Co.,Consumer Cyclical,Auto & Truck Dealerships,83.65
+ABNB,"Airbnb, Inc.",Consumer Cyclical,Travel Services,83.64
+CSX,CSX Corporation,Industrials,Railroads,83.24
+NOC,Northrop Grumman Corporation,Industrials,Aerospace & Defense,81.38
+ORLY,"O'Reilly Automotive, Inc.",Consumer Cyclical,Auto Parts,81.17
+ELV,"Elevance Health, Inc.",Healthcare,Healthcare Plans,80.75
+FCX,Freeport-McMoRan Inc.,Basic Materials,Copper,80.7
+MRSH,"Marsh & McLennan Companies, Inc.",Financial Services,Insurance Brokers,80.52
+MCO,Moody's Corporation,Financial Services,Financial Data & Stock Exchanges,80.09
+MDLZ,"Mondelez International, Inc.",Consumer Defensive,Confectioners,78.57
+SHW,The Sherwin-Williams Company,Basic Materials,Specialty Chemicals,77.88
+EMR,Emerson Electric Co.,Industrials,Specialty Industrial Machinery,77.75
+MPWR,"Monolithic Power Systems, Inc.",Technology,Semiconductors,77.51
+SPG,"Simon Property Group, Inc.",Real Estate,REIT - Retail,76.7
+CIEN,Ciena Corporation,Technology,Communication Equipment,75.98
+CRH,CRH plc,Basic Materials,Building Materials,75.89
+DASH,"DoorDash, Inc.",Consumer Cyclical,Internet Retail,75.73
+APO,"Apollo Global Management, Inc.",Financial Services,Asset Management,75.52
+MMM,3M Company,Industrials,Conglomerates,74.97
+EOG,"EOG Resources, Inc.",Energy,Oil & Gas E&P,74.9
+CI,The Cigna Group,Healthcare,Healthcare Plans,74.49
+NXPI,NXP Semiconductors N.V.,Technology,Semiconductors,74.33
+REGN,"Regeneron Pharmaceuticals, Inc.",Healthcare,Biotechnology,74.1
+AEP,"American Electric Power Company, Inc.",Utilities,Utilities - Regulated Electric,73.63
+MNST,Monster Beverage Corporation,Consumer Defensive,Beverages - Non-Alcoholic,73.49
+VLO,Valero Energy Corporation,Energy,Oil & Gas Refining & Marketing,73.49
+ITW,Illinois Tool Works Inc.,Industrials,Specialty Industrial Machinery,73.33
+ECL,Ecolab Inc.,Basic Materials,Specialty Chemicals,73.12
+ROST,"Ross Stores, Inc.",Consumer Cyclical,Apparel Retail,72.82
+MPC,Marathon Petroleum Corporation,Energy,Oil & Gas Refining & Marketing,72.81
+MSI,"Motorola Solutions, Inc.",Technology,Communication Equipment,72.61
+KMI,"Kinder Morgan, Inc.",Energy,Oil & Gas Midstream,71.82
+HLT,Hilton Worldwide Holdings Inc.,Consumer Cyclical,Lodging,71.49
+DLR,"Digital Realty Trust, Inc.",Real Estate,REIT - Specialty,70.85
+RCL,Royal Caribbean Cruises Ltd.,Consumer Cyclical,Travel Services,70.58
+NSC,Norfolk Southern Corporation,Industrials,Railroads,70.46
+PSX,Phillips 66,Energy,Oil & Gas Refining & Marketing,70.33
+CL,Colgate-Palmolive Company,Consumer Defensive,Household & Personal Products,69.13
+HOOD,"Robinhood Markets, Inc.",Financial Services,Capital Markets,68.9
+GM,General Motors Company,Consumer Cyclical,Auto Manufacturers,68.82
+LITE,Lumentum Holdings Inc.,Technology,Communication Equipment,68.69
+BKR,Baker Hughes Company,Energy,Oil & Gas Equipment & Services,68.53
+WBD,"Warner Bros. Discovery, Inc.",Communication Services,Entertainment,67.49
+CTAS,Cintas Corporation,Industrials,Specialty Business Services,67.09
+AON,Aon plc,Financial Services,Insurance Brokers,66.26
+APD,"Air Products and Chemicals, Inc.",Basic Materials,Specialty Chemicals,66.23
+TDG,TransDigm Group Incorporated,Industrials,Aerospace & Defense,66.15
+FIX,"Comfort Systems USA, Inc.",Industrials,Engineering & Construction,65.67
+NKE,"NIKE, Inc.",Consumer Cyclical,Footwear & Accessories,65.37
+TRV,"The Travelers Companies, Inc.",Financial Services,Insurance - Property & Casualty,64.49
+FTNT,"Fortinet, Inc.",Technology,Software - Infrastructure,64.34
+RSG,"Republic Services, Inc.",Industrials,Waste Management,63.74
+MSTR,Strategy Inc,Technology,Software - Application,63.14
+COHR,Coherent Corp.,Technology,Scientific & Technical Instruments,62.97
+TFC,Truist Financial Corporation,Financial Services,Banks - Regional,62.34
+SRE,Sempra,Utilities,Utilities - Diversified,61.63
+PCAR,PACCAR Inc,Industrials,Farm & Heavy Construction Machinery,60.8
+KEYS,"Keysight Technologies, Inc.",Technology,Scientific & Technical Instruments,60.3
+TEL,TE Connectivity plc,Technology,Electronic Components,60.3
+AZO,"AutoZone, Inc.",Consumer Cyclical,Auto Parts,59.41
+O,Realty Income Corporation,Real Estate,REIT - Retail,59.16
+FANG,"Diamondback Energy, Inc.",Energy,Oil & Gas E&P,59.08
+COR,"Cencora, Inc.",Healthcare,Medical Distribution,59.07
+TGT,Target Corporation,Consumer Defensive,Discount Stores,58.81
+URI,"United Rentals, Inc.",Industrials,Rental & Leasing Services,58.78
+LHX,"L3Harris Technologies, Inc.",Industrials,Aerospace & Defense,58.34
+OXY,Occidental Petroleum Corporation,Energy,Oil & Gas E&P,58.33
+AFL,Aflac Incorporated,Financial Services,Insurance - Life,57.31
+OKE,"ONEOK, Inc.",Energy,Oil & Gas Midstream,56.12
+D,"Dominion Energy, Inc.",Utilities,Utilities - Regulated Electric,55.61
+ALL,The Allstate Corporation,Financial Services,Insurance - Property & Casualty,55.35
+CARR,Carrier Global Corporation,Industrials,Building Products & Equipment,55.16
+TRGP,Targa Resources Corp.,Energy,Oil & Gas Midstream,54.58
+GWW,"W.W. Grainger, Inc.",Industrials,Industrial Distribution,54.34
+CTVA,"Corteva, Inc.",Basic Materials,Agricultural Inputs,54.08
+VST,Vistra Corp.,Utilities,Utilities - Independent Power Producers,53.95
+AJG,Arthur J. Gallagher & Co.,Financial Services,Insurance Brokers,53.86
+TER,"Teradyne, Inc.",Technology,Semiconductor Equipment & Materials,53.77
+ETR,Entergy Corporation,Utilities,Utilities - Regulated Electric,53.05
+PSA,Public Storage,Real Estate,REIT - Industrial,52.71
+AME,"AMETEK, Inc.",Industrials,Specialty Industrial Machinery,52.68
+COIN,"Coinbase Global, Inc.",Financial Services,Financial Data & Stock Exchanges,52.5
+NDAQ,"Nasdaq, Inc.",Financial Services,Financial Data & Stock Exchanges,51.96
+FAST,Fastenal Company,Industrials,Industrial Distribution,51.44
+MET,"MetLife, Inc.",Financial Services,Insurance - Life,51.32
+ADSK,"Autodesk, Inc.",Technology,Software - Application,51.28
+XEL,Xcel Energy Inc.,Utilities,Utilities - Regulated Electric,51.13
+MCHP,Microchip Technology Incorporated,Technology,Semiconductors,50.9
+NUE,Nucor Corporation,Basic Materials,Steel,50.8
+EA,Electronic Arts Inc.,Communication Services,Electronic Gaming & Multimedia,50.58
+DDOG,"Datadog, Inc.",Technology,Software - Application,49.68
+FER,Ferrovial N.V.,Industrials,Engineering & Construction,49.22
+EBAY,eBay Inc.,Consumer Cyclical,Internet Retail,48.81
+EW,Edwards Lifesciences Corporation,Healthcare,Medical Devices,48.49
+ZTS,Zoetis Inc.,Healthcare,Drug Manufacturers - Specialty & Generic,48.09
+EXC,Exelon Corporation,Utilities,Utilities - Regulated Electric,47.22
+F,Ford Motor Company,Consumer Cyclical,Auto Manufacturers,47.01
+CAH,"Cardinal Health, Inc.",Healthcare,Medical Distribution,46.34
+GRMN,Garmin Ltd.,Technology,Scientific & Technical Instruments,46.25
+ROK,"Rockwell Automation, Inc.",Industrials,Specialty Industrial Machinery,45.94
+PYPL,"PayPal Holdings, Inc.",Financial Services,Credit Services,45.88
+DAL,"Delta Air Lines, Inc.",Industrials,Airlines,45.69
+IDXX,"IDEXX Laboratories, Inc.",Healthcare,Diagnostics & Research,45.03
+FITB,Fifth Third Bancorp,Financial Services,Banks - Regional,45.02
+WAB,Westinghouse Air Brake Technologies Corporation,Industrials,Railroads,44.97
+YUM,"Yum! Brands, Inc.",Consumer Cyclical,Restaurants,43.38
+XYZ,"Block, Inc.",Technology,Software - Infrastructure,43.32
+MSCI,MSCI Inc.,Financial Services,Financial Data & Stock Exchanges,43.06
+KR,The Kroger Co.,Consumer Defensive,Grocery Stores,42.88
+VTR,"Ventas, Inc.",Real Estate,REIT - Healthcare Facilities,42.86
+BDX,"Becton, Dickinson and Company",Healthcare,Medical Instruments & Supplies,42.47
+CMG,"Chipotle Mexican Grill, Inc.",Consumer Cyclical,Restaurants,42.37
+TRI,Thomson Reuters Corporation,Industrials,Specialty Business Services,42.29
+AMP,"Ameriprise Financial, Inc.",Financial Services,Asset Management,41.78
+DHI,"D.R. Horton, Inc.",Consumer Cyclical,Residential Construction,41.73
+CBRE,"CBRE Group, Inc.",Real Estate,Real Estate Services,41.71
+STT,State Street Corporation,Financial Services,Asset Management,41.65
+CCEP,Coca-Cola Europacific Partners PLC,Consumer Defensive,Beverages - Non-Alcoholic,41.4
+AIG,"American International Group, Inc.",Financial Services,Insurance - Diversified,41.36
+ODFL,"Old Dominion Freight Line, Inc.",Industrials,Trucking,41.29
+TTWO,"Take-Two Interactive Software, Inc.",Communication Services,Electronic Gaming & Multimedia,40.98
+ON,ON Semiconductor Corporation,Technology,Semiconductors,40.85
+EME,"EMCOR Group, Inc.",Industrials,Engineering & Construction,40.64
+ED,"Consolidated Edison, Inc.",Utilities,Utilities - Regulated Electric,40.63
+PEG,Public Service Enterprise Group Incorporated,Utilities,Utilities - Regulated Electric,39.92
+ARES,Ares Management Corporation,Financial Services,Asset Management,39.82
+KDP,Keurig Dr Pepper Inc.,Consumer Defensive,Beverages - Non-Alcoholic,39.61
+ALNY,"Alnylam Pharmaceuticals, Inc.",Healthcare,Biotechnology,39.17
+CCI,Crown Castle Inc.,Real Estate,REIT - Specialty,38.95
+WEC,"WEC Energy Group, Inc.",Utilities,Utilities - Regulated Electric,38.15
+VMC,Vulcan Materials Company,Basic Materials,Building Materials,37.95
+IRM,Iron Mountain Incorporated,Real Estate,REIT - Specialty,37.84
+HPE,Hewlett Packard Enterprise Company,Technology,Communication Equipment,37.79
+EQT,EQT Corporation,Energy,Oil & Gas E&P,37.13
+LYV,"Live Nation Entertainment, Inc.",Communication Services,Entertainment,36.96
+HSY,The Hershey Company,Consumer Defensive,Confectioners,36.94
+HIG,"The Hartford Insurance Group, Inc.",Financial Services,Insurance - Diversified,36.9
+ROP,"Roper Technologies, Inc.",Technology,Software - Application,36.84
+MLM,"Martin Marietta Materials, Inc.",Basic Materials,Building Materials,36.45
+JBL,Jabil Inc.,Technology,Electronic Components,36.09
+CCL,Carnival Corporation & plc,Consumer Cyclical,Travel Services,36.06
+PCG,PG&E Corporation,Utilities,Utilities - Regulated Electric,36.04
+ADM,Archer-Daniels-Midland Company,Consumer Defensive,Farm Products,36.01
+SYY,Sysco Corporation,Consumer Defensive,Food Distribution,35.38
+CBOE,"Cboe Global Markets, Inc.",Financial Services,Financial Data & Stock Exchanges,34.93
+LVS,Las Vegas Sands Corp.,Consumer Cyclical,Resorts & Casinos,34.83
+SATS,EchoStar Corporation,Communication Services,Telecom Services,34.75
+HAL,Halliburton Company,Energy,Oil & Gas Equipment & Services,34.66
+PRU,"Prudential Financial, Inc.",Financial Services,Insurance - Life,33.88
+PAYX,"Paychex, Inc.",Technology,Software - Application,33.54
+HBAN,Huntington Bancshares Incorporated,Financial Services,Banks - Regional,33.16
+ACGL,Arch Capital Group Ltd.,Financial Services,Insurance - Diversified,32.91
+KVUE,Kenvue Inc.,Consumer Defensive,Household & Personal Products,32.87
+NRG,"NRG Energy, Inc.",Utilities,Utilities - Independent Power Producers,32.78
+STLD,"Steel Dynamics, Inc.",Basic Materials,Steel,32.72
+AXON,"Axon Enterprise, Inc.",Industrials,Aerospace & Defense,32.57
+WDAY,"Workday, Inc.",Technology,Software - Application,32.57
+A,"Agilent Technologies, Inc.",Healthcare,Diagnostics & Research,31.99
+CPRT,"Copart, Inc.",Industrials,Specialty Business Services,31.95
+MTB,M&T Bank Corporation,Financial Services,Banks - Regional,31.93
+KMB,Kimberly-Clark Corporation,Consumer Defensive,Household & Personal Products,31.69
+DVN,Devon Energy Corporation,Energy,Oil & Gas E&P,31.57
+EXR,Extra Space Storage Inc.,Real Estate,REIT - Industrial,31.14
+AEE,Ameren Corporation,Utilities,Utilities - Regulated Electric,31.11
+CASY,"Casey's General Stores, Inc.",Consumer Cyclical,Specialty Retail,31.09
+ATO,Atmos Energy Corporation,Utilities,Utilities - Regulated Gas,31.0
+DTE,DTE Energy Company,Utilities,Utilities - Regulated Electric,30.58
+VICI,VICI Properties Inc.,Real Estate,REIT - Diversified,30.56
+RMD,ResMed Inc.,Healthcare,Medical Instruments & Supplies,30.43
+RJF,"Raymond James Financial, Inc.",Financial Services,Asset Management,30.39
+IR,Ingersoll Rand Inc.,Industrials,Specialty Industrial Machinery,30.34
+NTRS,Northern Trust Corporation,Financial Services,Asset Management,30.28
+EXPE,"Expedia Group, Inc.",Consumer Cyclical,Travel Services,30.17
+UAL,"United Airlines Holdings, Inc.",Industrials,Airlines,30.1
+INSM,Insmed Incorporated,Healthcare,Biotechnology,30.06
+TPL,Texas Pacific Land Corporation,Energy,Oil & Gas E&P,29.98
+DOV,Dover Corporation,Industrials,Specialty Industrial Machinery,29.97
+WAT,Waters Corporation,Healthcare,Diagnostics & Research,29.88
+Q,"Qnity Electronics, Inc.",Technology,Semiconductor Equipment & Materials,29.69
+TDY,Teledyne Technologies Incorporated,Technology,Scientific & Technical Instruments,29.5
+OTIS,Otis Worldwide Corporation,Industrials,Specialty Industrial Machinery,29.49
+EL,The Estée Lauder Companies Inc.,Consumer Defensive,Household & Personal Products,29.4
+TPR,"Tapestry, Inc.",Consumer Cyclical,Luxury Goods,28.98
+DOW,Dow Inc.,Basic Materials,Chemicals,28.76
+GEHC,GE HealthCare Technologies Inc.,Healthcare,Medical Devices,28.38
+PPL,PPL Corporation,Utilities,Utilities - Regulated Electric,28.26
+CNP,"CenterPoint Energy, Inc.",Utilities,Utilities - Regulated Electric,28.21
+HUM,Humana Inc.,Healthcare,Healthcare Plans,28.11
+BIIB,Biogen Inc.,Healthcare,Drug Manufacturers - General,27.6
+XYL,Xylem Inc.,Industrials,Specialty Industrial Machinery,27.45
+HUBB,Hubbell Incorporated,Industrials,Electrical Equipment & Parts,27.41
+CFG,"Citizens Financial Group, Inc.",Financial Services,Banks - Regional,27.22
+FE,FirstEnergy Corp.,Utilities,Utilities - Regulated Electric,27.07
+IQV,IQVIA Holdings Inc.,Healthcare,Diagnostics & Research,26.93
+CTRA,Coterra Energy Inc.,Energy,Oil & Gas E&P,26.89
+FOXA,Fox Corporation,Communication Services,Entertainment,26.83
+EIX,Edison International,Utilities,Utilities - Regulated Electric,26.73
+KHC,The Kraft Heinz Company,Consumer Defensive,Packaged Foods,26.5
+ES,Eversource Energy,Utilities,Utilities - Regulated Electric,26.26
+ROL,"Rollins, Inc.",Consumer Cyclical,Personal Services,26.22
+CNC,Centene Corporation,Healthcare,Healthcare Plans,26.16
+STZ,"Constellation Brands, Inc.",Consumer Defensive,Beverages - Brewers,26.14
+WRB,W. R. Berkley Corporation,Financial Services,Insurance - Property & Casualty,25.98
+MTD,Mettler-Toledo International Inc.,Healthcare,Diagnostics & Research,25.54
+AVB,"AvalonBay Communities, Inc.",Real Estate,REIT - Residential,25.49
+DG,Dollar General Corporation,Consumer Defensive,Discount Stores,25.41
+SYF,Synchrony Financial,Financial Services,Credit Services,25.33
+EQR,Equity Residential,Real Estate,REIT - Residential,25.19
+VRSN,"VeriSign, Inc.",Technology,Software - Infrastructure,24.96
+CINF,Cincinnati Financial Corporation,Financial Services,Insurance - Property & Casualty,24.84
+CTSH,Cognizant Technology Solutions Corporation,Technology,Information Technology Services,24.78
+AWK,"American Water Works Company, Inc.",Utilities,Utilities - Regulated Water,24.67
+FICO,Fair Isaac Corporation,Technology,Software - Application,24.46
+FIS,"Fidelity National Information Services, Inc.",Technology,Information Technology Services,24.35
+CHTR,"Charter Communications, Inc.",Communication Services,Telecom Services,24.25
+EXE,Expand Energy Corporation,Energy,Oil & Gas E&P,24.21
+WTW,Willis Towers Watson Public Limited Company,Financial Services,Insurance Brokers,24.19
+FOX,Fox Corporation,Communication Services,Entertainment,24.09
+BG,Bunge Global SA,Consumer Defensive,Farm Products,24.06
+LYB,LyondellBasell Industries N.V.,Basic Materials,Specialty Chemicals,23.94
+RF,Regions Financial Corporation,Financial Services,Banks - Regional,23.77
+VRSK,"Verisk Analytics, Inc.",Industrials,Consulting Services,23.65
+PPG,"PPG Industries, Inc.",Basic Materials,Specialty Chemicals,23.57
+KEY,KeyCorp,Financial Services,Banks - Regional,23.53
+CMS,CMS Energy Corporation,Utilities,Utilities - Regulated Electric,23.38
+SBAC,SBA Communications Corporation,Real Estate,REIT - Specialty,23.33
+ULTA,"Ulta Beauty, Inc.",Consumer Cyclical,Specialty Retail,23.04
+NI,NiSource Inc.,Utilities,Utilities - Regulated Gas,23.02
+DXCM,"DexCom, Inc.",Healthcare,Medical Devices,22.93
+ZS,"Zscaler, Inc.",Technology,Software - Infrastructure,22.79
+FSLR,"First Solar, Inc.",Technology,Solar,22.78
+JBHT,"J.B. Hunt Transport Services, Inc.",Industrials,Integrated Freight & Logistics,22.65
+ALB,Albemarle Corporation,Basic Materials,Specialty Chemicals,22.56
+PHM,"PulteGroup, Inc.",Consumer Cyclical,Residential Construction,22.46
+TSN,"Tyson Foods, Inc.",Consumer Defensive,Farm Products,22.23
+DRI,"Darden Restaurants, Inc.",Consumer Cyclical,Restaurants,22.14
+TROW,"T. Rowe Price Group, Inc.",Financial Services,Asset Management,22.11
+CHD,"Church & Dwight Co., Inc.",Consumer Defensive,Household & Personal Products,22.06
+L,Loews Corporation,Financial Services,Insurance - Property & Casualty,22.02
+NTAP,"NetApp, Inc.",Technology,Software - Infrastructure,21.99
+OMC,Omnicom Group Inc.,Communication Services,Advertising Agencies,21.96
+RL,Ralph Lauren Corporation,Consumer Cyclical,Apparel Manufacturing,21.88
+PFG,"Principal Financial Group, Inc.",Financial Services,Asset Management,21.7
+VLTO,Veralto Corporation,Industrials,Pollution & Treatment Controls,21.51
+LEN,Lennar Corporation,Consumer Cyclical,Residential Construction,21.43
+WST,"West Pharmaceutical Services, Inc.",Healthcare,Medical Instruments & Supplies,21.18
+DGX,Quest Diagnostics Incorporated,Healthcare,Diagnostics & Research,21.16
+STE,STERIS plc,Healthcare,Medical Devices,21.01
+WSM,"Williams-Sonoma, Inc.",Consumer Cyclical,Specialty Retail,21.01
+LH,Labcorp Holdings Inc.,Healthcare,Diagnostics & Research,20.97
+EFX,Equifax Inc.,Industrials,Consulting Services,20.94
+SW,Smurfit Westrock Plc,Consumer Cyclical,Packaging & Containers,20.67
+CPAY,"Corpay, Inc.",Technology,Software - Infrastructure,20.31
+GPN,Global Payments Inc.,Industrials,Specialty Business Services,19.98
+CHRW,"C.H. Robinson Worldwide, Inc.",Industrials,Integrated Freight & Logistics,19.66
+BRO,"Brown & Brown, Inc.",Financial Services,Insurance Brokers,19.59
+SNA,Snap-on Incorporated,Industrials,Tools & Accessories,19.59
+PKG,Packaging Corporation of America,Consumer Cyclical,Packaging & Containers,19.57
+INCY,Incyte Corporation,Healthcare,Biotechnology,19.41
+LDOS,"Leidos Holdings, Inc.",Technology,Information Technology Services,19.08
+LUV,Southwest Airlines Co.,Industrials,Airlines,19.0
+HPQ,HP Inc.,Technology,Computer Hardware,18.95
+EVRG,"Evergy, Inc.",Utilities,Utilities - Regulated Electric,18.86
+LNT,Alliant Energy Corporation,Utilities,Utilities - Regulated Electric,18.85
+DD,"DuPont de Nemours, Inc.",Basic Materials,Specialty Chemicals,18.77
+CF,"CF Industries Holdings, Inc.",Basic Materials,Agricultural Inputs,18.76
+DLTR,"Dollar Tree, Inc.",Consumer Defensive,Discount Stores,18.69
+FFIV,"F5, Inc.",Technology,Software - Infrastructure,18.56
+FTV,Fortive Corporation,Technology,Scientific & Technical Instruments,18.44
+EXPD,"Expeditors International of Washington, Inc.",Industrials,Integrated Freight & Logistics,18.43
+GIS,"General Mills, Inc.",Consumer Defensive,Packaged Foods,18.4
+MRNA,"Moderna, Inc.",Healthcare,Biotechnology,18.33
+LII,Lennox International Inc.,Industrials,Building Products & Equipment,18.31
+ESS,"Essex Property Trust, Inc.",Real Estate,REIT - Residential,18.28
+IFF,International Flavors & Fragrances Inc.,Basic Materials,Specialty Chemicals,17.89
+TSCO,Tractor Supply Company,Consumer Cyclical,Specialty Retail,17.82
+BR,"Broadridge Financial Solutions, Inc.",Technology,Information Technology Services,17.77
+VTRS,Viatris Inc.,Healthcare,Drug Manufacturers - Specialty & Generic,17.54
+CDW,CDW Corporation,Technology,Information Technology Services,17.52
+AMCR,Amcor plc,Consumer Cyclical,Packaging & Containers,17.29
+WY,Weyerhaeuser Company,Real Estate,REIT - Specialty,17.2
+IP,International Paper Company,Consumer Cyclical,Packaging & Containers,17.17
+INVH,Invitation Homes Inc.,Real Estate,REIT - Residential,16.95
+NVR,"NVR, Inc.",Consumer Cyclical,Residential Construction,16.81
+SMCI,"Super Micro Computer, Inc.",Technology,Computer Hardware,16.76
+NWS,News Corporation,Communication Services,Entertainment,16.62
+PTC,PTC Inc.,Technology,Software - Application,16.4
+TXT,Textron Inc.,Industrials,Aerospace & Defense,16.38
+BALL,Ball Corporation,Consumer Cyclical,Packaging & Containers,16.13
+ZBH,"Zimmer Biomet Holdings, Inc.",Healthcare,Medical Devices,16.04
+TRMB,Trimble Inc.,Technology,Scientific & Technical Instruments,15.9
+IEX,IDEX Corporation,Industrials,Specialty Industrial Machinery,15.88
+NDSN,Nordson Corporation,Industrials,Specialty Industrial Machinery,15.71
+KIM,Kimco Realty Corporation,Real Estate,REIT - Retail,15.69
+LULU,lululemon athletica inc.,Consumer Cyclical,Apparel Retail,15.58
+BEN,"Franklin Resources, Inc.",Financial Services,Asset Management,15.52
+MAA,"Mid-America Apartment Communities, Inc.",Real Estate,REIT - Residential,15.41
+AKAM,"Akamai Technologies, Inc.",Technology,Software - Infrastructure,15.38
+J,Jacobs Solutions Inc.,Industrials,Engineering & Construction,15.24
+GNRC,Generac Holdings Inc.,Industrials,Specialty Industrial Machinery,15.15
+APTV,Aptiv PLC,Consumer Cyclical,Auto Parts,15.03
+REG,Regency Centers Corporation,Real Estate,REIT - Retail,14.71
+HST,"Host Hotels & Resorts, Inc.",Real Estate,REIT - Hotel & Motel,14.56
+GPC,Genuine Parts Company,Consumer Cyclical,Auto Parts,14.53
+NWSA,News Corporation,Communication Services,Entertainment,14.38
+TYL,"Tyler Technologies, Inc.",Technology,Software - Application,14.26
+APA,APA Corporation,Energy,Oil & Gas E&P,14.22
+MAS,Masco Corporation,Industrials,Building Products & Equipment,14.2
+CSGP,"CoStar Group, Inc.",Real Estate,Real Estate Services,14.17
+HII,"Huntington Ingalls Industries, Inc.",Industrials,Aerospace & Defense,14.15
+DECK,Deckers Outdoor Corporation,Consumer Cyclical,Footwear & Accessories,14.14
+EG,"Everest Group, Ltd.",Financial Services,Insurance - Reinsurance,14.04
+TKO,"TKO Group Holdings, Inc.",Communication Services,Entertainment,13.95
+UDR,"UDR, Inc.",Real Estate,REIT - Residential,13.51
+HAS,"Hasbro, Inc.",Consumer Cyclical,Leisure,13.41
+MKC,"McCormick & Company, Incorporated",Consumer Defensive,Packaged Foods,13.34
+PNR,Pentair plc,Industrials,Specialty Industrial Machinery,12.73
+ALGN,"Align Technology, Inc.",Healthcare,Medical Instruments & Supplies,12.58
+PNW,Pinnacle West Capital Corporation,Utilities,Utilities - Regulated Electric,12.41
+AVY,Avery Dennison Corporation,Consumer Cyclical,Packaging & Containers,12.39
+PSKY,Paramount Skydance Corporation,Communication Services,Entertainment,12.36
+BBY,"Best Buy Co., Inc.",Consumer Cyclical,Specialty Retail,12.31
+SWK,"Stanley Black & Decker, Inc.",Industrials,Tools & Accessories,12.16
+COO,"The Cooper Companies, Inc.",Healthcare,Medical Instruments & Supplies,12.1
+PODD,Insulet Corporation,Healthcare,Medical Devices,11.99
+GL,Globe Life Inc.,Financial Services,Insurance - Life,11.9
+GEN,Gen Digital Inc.,Technology,Software - Infrastructure,11.86
+SOLV,Solventum Corporation,Healthcare,Medical Instruments & Supplies,11.67
+GDDY,GoDaddy Inc.,Technology,Software - Infrastructure,11.63
+HRL,Hormel Foods Corporation,Consumer Defensive,Packaged Foods,11.61
+BF-B,Brown-Forman Corporation,Consumer Defensive,Beverages - Wineries & Distilleries,11.58
+IVZ,Invesco Ltd.,Financial Services,Asset Management,11.52
+ALLE,Allegion plc,Industrials,Security & Protection Services,11.51
+TTD,"The Trade Desk, Inc.",Communication Services,Advertising Agencies,11.51
+AIZ,"Assurant, Inc.",Financial Services,Insurance - Property & Casualty,11.42
+DOC,"Healthpeak Properties, Inc.",Real Estate,REIT - Healthcare Facilities,11.35
+DPZ,"Domino's Pizza, Inc.",Consumer Cyclical,Restaurants,11.28
+JKHY,"Jack Henry & Associates, Inc.",Technology,Information Technology Services,11.13
+ERIE,Erie Indemnity Company,Financial Services,Insurance Brokers,11.12
+ZBRA,Zebra Technologies Corporation,Technology,Communication Equipment,11.03
+WYNN,"Wynn Resorts, Limited",Consumer Cyclical,Resorts & Casinos,10.92
+BXP,"BXP, Inc.",Real Estate,REIT - Office,10.46
+CLX,The Clorox Company,Consumer Defensive,Household & Personal Products,10.43
+SWKS,"Skyworks Solutions, Inc.",Technology,Semiconductors,10.37
+CPT,Camden Property Trust,Real Estate,REIT - Residential,10.36
+SJM,The J. M. Smucker Company,Consumer Defensive,Packaged Foods,10.28
+AES,The AES Corporation,Utilities,Utilities - Diversified,10.18
+DVA,DaVita Inc.,Healthcare,Medical Care Facilities,10.13
+UHS,"Universal Health Services, Inc.",Healthcare,Medical Care Facilities,10.0
+FRT,Federal Realty Investment Trust,Real Estate,REIT - Retail,9.98
+MGM,MGM Resorts International,Consumer Cyclical,Resorts & Casinos,9.92
+IT,"Gartner, Inc.",Technology,Information Technology Services,9.9
+RVTY,"Revvity, Inc.",Healthcare,Diagnostics & Research,9.71
+BAX,Baxter International Inc.,Healthcare,Medical Instruments & Supplies,8.78
+TECH,Bio-Techne Corporation,Healthcare,Biotechnology,8.55
+HSIC,"Henry Schein, Inc.",Healthcare,Medical Distribution,8.42
+FDS,FactSet Research Systems Inc.,Financial Services,Financial Data & Stock Exchanges,8.26
+CRL,"Charles River Laboratories International, Inc.",Healthcare,Diagnostics & Research,8.22
+AOS,A. O. Smith Corporation,Industrials,Specialty Industrial Machinery,8.18
+BLDR,"Builders FirstSource, Inc.",Industrials,Building Products & Equipment,8.15
+TAP,Molson Coors Beverage Company,Consumer Defensive,Beverages - Brewers,7.77
+NCLH,Norwegian Cruise Line Holdings Ltd.,Consumer Cyclical,Travel Services,7.75
+POOL,Pool Corporation,Industrials,Industrial Distribution,7.51
+MOS,The Mosaic Company,Basic Materials,Agricultural Inputs,7.3
+ARE,"Alexandria Real Estate Equities, Inc.",Real Estate,REIT - Office,7.07
+CAG,"Conagra Brands, Inc.",Consumer Defensive,Packaged Foods,6.68
+CPB,The Campbell's Company,Consumer Defensive,Packaged Foods,6.14
+EPAM,"EPAM Systems, Inc.",Technology,Information Technology Services,5.88

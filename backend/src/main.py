@@ -29,6 +29,7 @@ from .api.insights import router as insights_router
 from .api.llm_models import router as llm_models_router
 from .api.market_data import router as market_data_router
 from .api.portfolio import router as portfolio_router
+from .api.portfolio_admin import router as portfolio_admin_router
 from .api.watchlist import router as watchlist_router
 from .core.config import get_settings
 from .core.exceptions import AppError
@@ -170,6 +171,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             # Store DataManager and SnapshotService in app state for admin API access
             app.state.data_manager = data_manager
             app.state.snapshot_service = snapshot_service
+            # Make MongoDB reachable from background tasks too (used by
+            # portfolio_admin two-button flows).
+            app.state.mongodb = mongodb
 
             # Create agent with tool cache wrapper and Redis for insights caching
             react_agent = FinancialAnalysisReActAgent(
@@ -386,6 +390,7 @@ def create_app() -> FastAPI:
     app.include_router(market_data_router)
     app.include_router(chat_router)  # Persistent MongoDB-based chat
     app.include_router(portfolio_router)  # Portfolio holdings management
+    app.include_router(portfolio_admin_router)  # Two-button analysis + settings
     app.include_router(watchlist_router)  # Watchlist symbol tracking
     app.include_router(llm_models_router)  # LLM model selection and pricing
     app.include_router(insights_router)  # Market Insights Platform

@@ -366,6 +366,7 @@ class PortfolioOrderRepository:
         self,
         symbol: str | None = None,
         decision_type: str | None = None,
+        source: str | None = None,
         limit: int = 100,
     ) -> list[PortfolioOrder]:
         """List decisions (orders + signals), newest first. Used by /api/decisions."""
@@ -374,6 +375,8 @@ class PortfolioOrderRepository:
             query["symbol"] = symbol.upper()
         if decision_type:
             query["decision_type"] = decision_type
+        if source:
+            query["recommendation_source"] = source
         cursor = self.collection.find(query).sort("created_at", -1).limit(limit)
         out: list[PortfolioOrder] = []
         async for doc in cursor:

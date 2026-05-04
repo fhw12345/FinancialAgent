@@ -27,13 +27,20 @@ async def list_decisions(
     decision_type: str | None = Query(
         None, description="'order' (BUY/SELL), 'signal' (HOLD/verdict), or omit for all"
     ),
+    source: str | None = Query(
+        None,
+        description="'holdings' or 'picks' to filter by analysis flow source; omit for all",
+    ),
     limit: int = Query(100, ge=1, le=500),
     order_repo: PortfolioOrderRepository = Depends(get_portfolio_order_repository),
 ) -> dict:
     """List AI decisions newest-first with their P&L snapshots."""
     try:
         decisions = await order_repo.list_decisions(
-            symbol=symbol, decision_type=decision_type, limit=limit
+            symbol=symbol,
+            decision_type=decision_type,
+            source=source,
+            limit=limit,
         )
         return {
             "decisions": [
@@ -48,7 +55,9 @@ async def list_decisions(
                     "created_at": d.created_at.isoformat(),
                     "analysis_id": d.analysis_id,
                     "chat_id": d.chat_id,
+                    "recommendation_source": d.recommendation_source,
                     "pnl_snapshots": d.pnl_snapshots or {},
+                    "metadata": d.metadata or {},
                 }
                 for d in decisions
             ],

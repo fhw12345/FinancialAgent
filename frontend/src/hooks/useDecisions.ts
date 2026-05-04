@@ -30,19 +30,25 @@ interface DecisionsResponse {
   count: number;
 }
 
-async function fetchDecisions(symbol?: string, limit = 100): Promise<DecisionsResponse> {
+async function fetchDecisions(
+  symbol?: string,
+  source?: string,
+  limit = 100,
+): Promise<DecisionsResponse> {
   const params: Record<string, unknown> = { limit };
   if (symbol) params.symbol = symbol;
-  const { data } = await apiClient.get<DecisionsResponse>("/api/portfolio/decisions", {
-    params,
-  });
+  if (source) params.source = source;
+  const { data } = await apiClient.get<DecisionsResponse>(
+    "/api/portfolio/decisions",
+    { params },
+  );
   return data;
 }
 
-export function useDecisions(symbol?: string, limit = 100) {
+export function useDecisions(symbol?: string, source?: string, limit = 100) {
   return useQuery({
-    queryKey: ["decisions", symbol ?? "all", limit],
-    queryFn: () => fetchDecisions(symbol, limit),
+    queryKey: ["decisions", symbol ?? "all", source ?? "all", limit],
+    queryFn: () => fetchDecisions(symbol, source, limit),
     staleTime: 60_000, // 1 minute — snapshots only update hourly via cron
     refetchOnWindowFocus: false,
   });

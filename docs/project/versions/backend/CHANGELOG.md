@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-05-04
+
+### Added — Two-button portfolio analysis
+- feat(analysis): two new dashboard buttons that trigger LLM-driven portfolio analysis
+  - **Analyze My Holdings** — runs Phase 2 LLM on every existing position; returns BUY (add) / SELL (trim/exit) / HOLD per symbol
+  - **Today's Picks** — sector-filtered Top 5 BUY recommendations from S&P 500 + Nasdaq 100 universe (no holdings overlap by design)
+- New `user_settings` mongo collection: `cash_balance`, `risk_tolerance` (conservative/moderate/aggressive), `max_position_pct` (5-30). All three required (no defaults); buttons disabled until saved.
+- New endpoints under `/api/admin/portfolio/`:
+  - `GET/PUT settings` — round-trip with strict 422 on missing fields
+  - `POST trigger-analysis?flow=holdings|picks` — fires `BackgroundTasks`; per-button idempotent (re-click during running returns existing run)
+  - `GET status/{run_id}` — polled by frontend every 3s while pending/running
+  - `GET universe/sectors` — derived from CSV, 11 yfinance sectors
+- `recommendation_source` field added to `PortfolioOrder`; new `?source=holdings|picks` filter on `GET /api/portfolio/decisions`
+- Risk-adaptive coarse universe filter: conservative→top 50 by market cap, aggressive→top 50 by 30d momentum, moderate→union of top 25 each (`backend/src/agent/portfolio/universe_filter.py`)
+- `backend/data/sector_universe.csv` — 515 rows committed (S&P 500 + Nasdaq 100, sector + industry + market_cap_b)
+- `backend/scripts/build_sector_universe.py` — one-time scraper with rotating UA, retry+backoff, jitter; failure-tolerant (1/516 missing)
+- Frontend: `SettingsPanel`, `AnalysisButtons`, DecisionTracker source-tab toggle (All / Holdings / Today's Picks)
+
+### E2E verification (real LLM calls)
+- Holdings flow: 13s end-to-end on 3 holdings → AAPL=HOLD, NVDA=BUY, TSLA=SELL persisted
+- Picks flow: 30s on Technology sector (25 finalists) → Top 5 = NVDA/AVGO/MSFT/ANET/LRCX, all BUY conf 7-9, position_size_pct=15 (= max_position_pct)
+- Empty holdings short-circuit: status=done immediately, message "Add holdings first", zero LLM calls
+- Empty sectors short-circuit: same pattern, message "No sectors selected — pick at least one."
+
+### Notes
+- Cron container's `run_portfolio_analysis.py` reference is still dead (script not created); to be addressed in a follow-up. The new flows run via the trigger endpoint, not the cron loop.
+
 ## [0.14.1] - 2026-05-04
 
 ### Added

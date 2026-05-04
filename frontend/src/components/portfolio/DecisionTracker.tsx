@@ -118,10 +118,14 @@ const PALETTE = [
   "#ea580c", // orange-600
 ];
 
+type SourceTab = "all" | "holdings" | "picks";
+
 export function DecisionTracker() {
   const [symbolFilter, setSymbolFilter] = useState("");
+  const [tab, setTab] = useState<SourceTab>("all");
   const { data, isLoading, error } = useDecisions(
     symbolFilter || undefined,
+    tab === "all" ? undefined : tab,
     100,
   );
 
@@ -151,6 +155,29 @@ export function DecisionTracker() {
           onChange={(e) => setSymbolFilter(e.target.value.toUpperCase())}
           className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none"
         />
+      </div>
+
+      <div className="px-4 pt-3 border-b border-gray-200">
+        <div className="flex gap-1">
+          {(["all", "holdings", "picks"] as SourceTab[]).map((t) => {
+            const active = tab === t;
+            const label =
+              t === "all"
+                ? "All"
+                : t === "holdings"
+                  ? "Holdings Analysis"
+                  : "Today's Picks";
+            return (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-t border-b-2 ${active ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-800"}`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="p-4">

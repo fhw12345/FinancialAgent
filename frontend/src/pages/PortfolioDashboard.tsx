@@ -6,6 +6,7 @@
  */
 
 import { useState } from "react";
+import { useQueryClient as useReactQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { usePortfolioSummary, usePortfolioHistory, useHoldings } from "../hooks/usePortfolio";
 import { usePortfolioChatDetail } from "../hooks/usePortfolioChatDetail";
@@ -15,6 +16,8 @@ import { WatchlistPanel } from "../components/portfolio/WatchlistPanel";
 import { CronController } from "../components/portfolio/CronController";
 import { RecentTransactions } from "../components/portfolio/RecentTransactions";
 import { DecisionTracker } from "../components/portfolio/DecisionTracker";
+import { SettingsPanel, usePortfolioSettings } from "../components/portfolio/SettingsPanel";
+import { AnalysisButtons } from "../components/portfolio/AnalysisButtons";
 import { MarketMovers } from "../components/MarketMovers";
 import { ChatSidebar } from "../components/chat/ChatSidebar";
 import { ChatMessages } from "../components/chat/ChatMessages";
@@ -227,6 +230,11 @@ export default function PortfolioDashboard() {
               </div>
             )}
 
+            {/* Settings + AI Analysis triggers */}
+            <div className="mt-6">
+              <PortfolioSettingsAndAnalysis />
+            </div>
+
             {/* Watchlist Panel */}
             <div className="mt-8">
               <WatchlistPanel />
@@ -402,5 +410,26 @@ function ChatMessagesModal({ chatId, onClose, sortOrder }: { chatId: string; onC
         </div>
       </div>
     </div>
+  );
+}
+
+/** Inline composer: settings panel above, analysis triggers below.
+ *  When any analysis run completes, invalidates the decisions query so
+ *  the DecisionTracker below auto-refreshes.
+ */
+function PortfolioSettingsAndAnalysis() {
+  const settings = usePortfolioSettings();
+  const ready = !!settings.data;
+  const qc = useReactQueryClient();
+  return (
+    <>
+      <SettingsPanel />
+      <AnalysisButtons
+        settingsReady={ready}
+        onRunComplete={() => {
+          qc.invalidateQueries({ queryKey: ["decisions"] });
+        }}
+      />
+    </>
   );
 }

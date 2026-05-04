@@ -108,6 +108,10 @@ class PortfolioOrder(BaseModel):
         default_factory=dict,
         description="Ex-post P&L snapshots keyed by horizon (e.g. '7d', '30d', '90d') — see services/pnl_service",
     )
+    recommendation_source: str | None = Field(
+        None,
+        description="Origin of this decision: 'holdings' (analyze-holdings flow), 'picks' (today's picks flow), or None for legacy rows",
+    )
 
     # Metadata
     metadata: dict = Field(
