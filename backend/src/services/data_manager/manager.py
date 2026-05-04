@@ -757,30 +757,79 @@ class DataManager:
         Return the closing price for `symbol` on `target_date`, or the next
         trading day within `max_forward_days` if the target was a weekend/holiday.
 
-        Returns None if no bar can be located in the window — callers should
-        treat this as "not yet computable" and retry later, not as an error.
+        Tries Alpha Vantage daily bars first; falls back to yfinance if AV is
+        rate-limited or returns empty (Finnhub free tier doesn't include
+        historical daily bars). Returns None if no bar can be located.
         """
+        from datetime import timedelta as _td
 
         symbol = symbol.upper()
         if target_date.tzinfo is None:
             target_date = target_date.replace(tzinfo=UTC)
         target_day = target_date.date()
 
+        # Provider 1: Alpha Vantage via the OHLCV pipeline (cached)
+        bars: list = []
         try:
             bars = await self.get_ohlcv(symbol, "daily", outputsize="full")
         except DataFetchError as e:
-            logger.warning("price_on_date_fetch_failed", symbol=symbol, error=str(e))
-            return None
+            logger.warning("price_on_date_av_failed", symbol=symbol, error=str(e))
 
-        # Bars are newest-first; build a date->close map for window scan.
         by_day = {b.date.date(): b.close for b in bars}
         for offset in range(max_forward_days + 1):
-            from datetime import timedelta as _td
-
             day = target_day + _td(days=offset)
             if day in by_day:
                 return float(by_day[day])
-        return None
+
+        # Provider 2: yfinance fallback for historical bars
+        try:
+            return await self._price_on_date_yfinance(
+                symbol, target_date, max_forward_days
+            )
+        except Exception as e:
+            logger.warning("price_on_date_yfinance_failed", symbol=symbol, error=str(e))
+            return None
+
+    @staticmethod
+    async def _price_on_date_yfinance(
+        symbol: str, target_date: datetime, max_forward_days: int
+    ) -> float | None:
+        import asyncio
+        from datetime import timedelta as _td
+
+        import yfinance as yf
+
+        def _sync() -> float | None:
+            # Pad both directions so weekend/holiday + market-still-open scenarios
+            # both resolve. Forward scan picks the next trading day; if none yet
+            # (target is today and close not posted), back off to the previous
+            # trading day so the snapshot lands rather than retry forever.
+            start = (target_date - _td(days=4)).date()
+            end = (target_date + _td(days=max_forward_days + 2)).date()
+            df = yf.Ticker(symbol).history(
+                start=start.isoformat(), end=end.isoformat(), auto_adjust=False
+            )
+            if df is None or df.empty:
+                return None
+            available = {
+                idx.strftime("%Y-%m-%d"): row["Close"] for idx, row in df.iterrows()
+            }
+            target_day = target_date.date()
+
+            # Forward scan first (preferred)
+            for offset in range(max_forward_days + 1):
+                key = (target_day + _td(days=offset)).isoformat()
+                if key in available:
+                    return float(available[key])
+            # Backward fallback (handles weekend horizons when forward window
+            # ends today/future and yfinance hasn't posted the next close yet)
+            for offset in range(1, 4):
+                key = (target_day - _td(days=offset)).isoformat()
+                if key in available:
+                    return float(available[key])
+            return None
+
+        return await asyncio.to_thread(_sync)
 
     async def get_options(self, symbol: str) -> list[OptionContract]:
         """

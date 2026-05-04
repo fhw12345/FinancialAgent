@@ -51,7 +51,14 @@ async def snapshot_decision(
     if not order.decision_price or order.decision_price <= 0:
         return None
 
-    target_dt = order.created_at + timedelta(days=horizon_days)
+    # Mongo returns naive datetimes by default; coerce to UTC-aware so the
+    # comparison with utcnow() (aware) doesn't raise TypeError.
+    from datetime import UTC as _UTC
+
+    created = order.created_at
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=_UTC)
+    target_dt = created + timedelta(days=horizon_days)
     if target_dt > utcnow():
         return None  # Horizon hasn't elapsed yet — try again later
 

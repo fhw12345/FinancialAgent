@@ -45,12 +45,19 @@ class PortfolioOrderRepository:
             [("analysis_id", 1)],
             name="idx_analysis_orders",
         )
-        # Unique on Alpaca id (sparse - allows nulls)
+        # Unique on Alpaca id, but only for documents that actually have one.
+        # `sparse=True` doesn't help here because pydantic always writes the
+        # field as null; partialFilterExpression is the correct mongo idiom.
+        # If an old `idx_alpaca_order` index exists from before, drop it first.
+        try:
+            await self.collection.drop_index("idx_alpaca_order")
+        except Exception:
+            pass  # Index didn't exist, fine
         await self.collection.create_index(
             [("alpaca_order_id", 1)],
             name="idx_alpaca_order",
             unique=True,
-            sparse=True,
+            partialFilterExpression={"alpaca_order_id": {"$type": "string"}},
         )
         # Status filter
         await self.collection.create_index(

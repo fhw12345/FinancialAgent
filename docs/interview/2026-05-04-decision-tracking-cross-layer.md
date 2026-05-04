@@ -107,3 +107,24 @@ fundagent-backend-1        0.0.0.0:8000->8000/tcp
 ## 相关
 - [2026-05-04-ghost-compose-project.md](2026-05-04-ghost-compose-project.md) — 同一个"多 repo 命名空间冲突"家族，上次是容器名互撞，这次是端口
 - [2026-05-04-finnhub-fallback-chain.md](2026-05-04-finnhub-fallback-chain.md) — 同一个"DataManager 是 single source of truth"模式的延续；本次复用了 fallback chain
+
+## 后记：E2E 跑出来的 4 个 bug（这才是真正的"发布前"）
+
+写完代码、unit test 13 个全过、`/api/decisions` 返 `count:0` 我就准备 commit 了。然后被问"改完之后有 E2E 测过吗"——没有。补跑后**4 个 bug 一个都不被 unit test 抓到**：
+
+| # | Bug | 单测为什么没抓到 |
+|---|------|-----------------|
+| 1 | `get_price_on_date` 全返回 None（AV 限流后没 fallback）| 我 mock 了 `get_price_on_date` 直接返回 110.0；从不真调 |
+| 2 | mongo `idx_alpaca_order` `sparse=True` 没保护 null（第二个 HOLD 写入就 DuplicateKeyError）| 我 mock 了 repo 的 `update_pnl_snapshot`；从不真写 |
+| 3 | `created_at` naive vs `utcnow()` aware 比较挂 | 我 fixture 里 `created_at=datetime.now(UTC)` 是 aware 的，prod 走 mongo 是 naive |
+| 4 | yfinance window 太窄 + horizon 落周末 + 当天 close 未出 | mock 直接返回价；从不真走 yfinance |
+
+这 4 个 bug 全都是**"假数据 vs 真数据形状不一致"**——同一个家族，跟之前 [token-extraction-getattr-on-dict](2026-05-04-token-extraction-getattr-on-dict.md) 里的 `Mock(input_tokens=100)` 遮蔽 dict 形状是同根问题。
+
+**通用教训**：mock 测试只验证"代码路径不崩"，不验证"代码路径在 prod 数据形状下做对"。fallback chain、外部 API、mongo 序列化、时区处理——这四类全是单测的盲区。**端到端测试不是"加分项"，是 "fallback / 兜底 / 边界" 类代码的唯一可信验证。**
+
+本次 4 个 bug + commit `2bf73d4` 时遇到的 mock 假数据救场（assertion 期望 281 实际拿到真实 280.14），构成同一个反模式的连续四次出现。下次类似工作的纪律：
+1. 写完直接跑一次 E2E，**插假老数据 + 真跑 cron + 看 db 真值**
+2. 任何带"fallback to X" / "网络外部依赖" 的代码，单测必须 mock 出 X 也失败的路径
+3. mongo 写入路径的测试必须真写到 mongomock 或 testcontainers，而不是 mock repo
+4. 涉及时区的 datetime 比较，要造一个 naive 一个 aware 的 fixture 验证

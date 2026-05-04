@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-05-04
+
+### Fixed (decision tracking E2E surfaced 4 bugs)
+- fix(data-manager): `get_price_on_date` always returned None when Alpha Vantage was rate-limited (it only walked AV; Finnhub free tier has no historical bars). Now falls back to yfinance for the historical lookup path; also handles weekend horizons + market-still-open edge case via 4-day forward + 3-day backward scan window.
+- fix(repo): `idx_alpaca_order` was unique+sparse, but `sparse=True` doesn't help when pydantic writes `alpaca_order_id` as null (field exists, just is null). Switched to `partialFilterExpression={"alpaca_order_id": {"$type": "string"}}` so the unique constraint only applies to documents that actually have a broker id. Without this fix, the second HOLD signal in any portfolio analysis run would fail with `DuplicateKeyError`.
+- fix(pnl-service): `snapshot_decision` crashed with "can't compare offset-naive and offset-aware datetimes" when reading PortfolioOrder from mongo (pymongo returns naive datetimes by default). Coerce `created_at` to UTC-aware before the horizon comparison.
+- fix(yfinance-fallback): the previous `_price_on_date_yfinance` window was too narrow (`-2d ... +max_forward+1d`) and used inefficient row-by-row dataframe filtering; rewrote as a `dict[date_str → close]` lookup with a 4-day pre-pad, and added backward fallback for the "horizon ends on a weekend or today before market close" case.
+
+### Added
+- All four bugs above were caught by an actual end-to-end run (insert 3 fake aged decisions → run cron → verify pnl_snapshots in mongo → hit /api/decisions). Documented in the cross-layer case study.
+
 ## [0.13.0] - 2026-05-04
 
 ### Added — Decision Tracking Dashboard
