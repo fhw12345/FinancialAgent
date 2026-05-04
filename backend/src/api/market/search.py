@@ -232,51 +232,65 @@ async def get_market_movers(
     """
     Get today's top market movers with 30-minute caching.
 
+    Source priority: yfinance (primary, no rate limit) → Alpha Vantage (fallback,
+    25 req/day free tier). yfinance is preferred because the AV free key is
+    exhausted within a few page loads. AV is kept as a backup in case Yahoo's
+    public screener endpoint is down.
+
     Returns:
     - top_gainers: Top 20 stocks with highest price increase (% and $)
     - top_losers: Top 20 stocks with largest price decrease (% and $)
     - most_actively_traded: Top 20 stocks by trading volume
+    - source: "yfinance" or "alpha_vantage" — which provider actually served this
 
     Each entry includes: ticker, price, change_amount, change_percentage, volume
 
-    Cache Duration: 30 minutes (configured in cache_utils.py)
-    - Market movers change throughout trading day but not every second
-    - 30-min refresh balances freshness vs API efficiency
-    - Reduces Alpha Vantage API calls by 12x per 6-hour period
+    Cache Duration: 30 minutes — applies to whichever source succeeded.
     """
+    from src.services.market_data import yfinance_movers
+
+    logger.info("Market movers request")
+    cache_key = "market_movers:top_gainers_losers"
+
+    cached_data = await redis_cache.get(cache_key)
+    if cached_data is not None:
+        logger.info("Market movers cache hit")
+        return cached_data  # type: ignore[no-any-return]
+
+    logger.info("Market movers cache miss, trying yfinance first")
+
+    data: dict[str, Any] | None = None
+    yf_error: str | None = None
     try:
-        logger.info("Market movers request")
-
-        # Generate cache key
-        cache_key = "market_movers:top_gainers_losers"
-
-        # Check cache first
-        cached_data = await redis_cache.get(cache_key)
-        if cached_data is not None:
-            logger.info("Market movers cache hit")
-            return cached_data  # type: ignore[no-any-return]
-
-        logger.info("Market movers cache miss, fetching from API")
-
-        # Fetch from Alpha Vantage API
-        data = await service.get_top_gainers_losers()
-
-        # Cache with 30-minute TTL (configured in TOOL_TTL_MAP)
-        ttl = get_tool_ttl("TOP_GAINERS_LOSERS")  # Returns 1800 seconds (30 minutes)
-        await redis_cache.set(cache_key, data, ttl_seconds=ttl)
-
-        logger.info(
-            "Market movers fetched and cached",
-            gainers_count=len(data.get("top_gainers", [])),
-            losers_count=len(data.get("top_losers", [])),
-            active_count=len(data.get("most_actively_traded", [])),
-            ttl_seconds=ttl,
-        )
-
-        return data
-
+        data = await yfinance_movers.get_market_movers()
     except Exception as e:
-        logger.error("Market movers fetch failed", error=str(e))
-        raise HTTPException(
-            status_code=500, detail=f"Failed to fetch market movers: {str(e)}"
-        ) from e
+        yf_error = str(e)
+        logger.warning("yfinance market movers failed, falling back to Alpha Vantage", error=yf_error)
+
+    if data is None:
+        try:
+            data = await service.get_top_gainers_losers()
+            data.setdefault("source", "alpha_vantage")
+        except Exception as e:
+            logger.error(
+                "Both yfinance and Alpha Vantage market movers failed",
+                yfinance_error=yf_error,
+                alpha_vantage_error=str(e),
+            )
+            raise HTTPException(
+                status_code=503,
+                detail="Market movers temporarily unavailable (upstream sources failed)",
+            ) from e
+
+    ttl = get_tool_ttl("TOP_GAINERS_LOSERS")
+    await redis_cache.set(cache_key, data, ttl_seconds=ttl)
+
+    logger.info(
+        "Market movers fetched and cached",
+        source=data.get("source"),
+        gainers_count=len(data.get("top_gainers", [])),
+        losers_count=len(data.get("top_losers", [])),
+        active_count=len(data.get("most_actively_traded", [])),
+        ttl_seconds=ttl,
+    )
+    return data

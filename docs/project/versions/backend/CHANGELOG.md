@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.2] - 2026-05-05
+
+### Changed
+- **feat(market-movers): yfinance 升为主源，Alpha Vantage 退到 fallback** — Alpha Vantage 免费 API key 每日 25 次配额几次页面加载就用完，导致 `加载市场行情失败 / 500`。yfinance (`yf.screen("day_gainers"/"day_losers"/"most_actives")`) 无 key、无每日上限、字段全。新加 `services/market_data/yfinance_movers.py` 适配器把 yfinance quote dict 映射成 AV 的 `{ticker, price, change_amount, change_percentage, volume}` 形状，前端零改动。`/api/market/market-movers` 路由现在先 yfinance；失败才回落 AV；都失败返 503（不是 500，因为不是我们崩了）。响应里加 `source` 字段标识本次数据来源。
+
+## [0.17.1] - 2026-05-05
+
+### Fixed
+- **fix(holdings): cascade-delete user_transactions when a holding is deleted** — previously deleting a holding via the Holdings UI left orphan rows in `user_transactions`. The next attempt to delete those orphans called `apply_transaction(sign=-1)` which tried to SELL from a holding that no longer existed → `NoHoldingToSellError` → 409. Now `DELETE /api/portfolio/holdings/{id}` first removes all `user_transactions` for that symbol, then deletes the holding, keeping the ledger and holdings collection in sync. New `UserTransactionRepository.delete_by_symbol()` plus a regression test in `test_holdings_crud.py::TestDeleteHolding::test_cascades_transactions_for_symbol`.
+
 ## [0.17.0] - 2026-05-04
 
 ### Added — manual transactions ledger
