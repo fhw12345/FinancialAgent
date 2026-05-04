@@ -87,6 +87,31 @@ async def add_to_watchlist(
                         error=str(quote_error),
                     )
 
+            # Final fallback: use DataManager (Finnhub → AV → yfinance chain).
+            # Catches symbols AV doesn't know (recent IPOs like CRWV) and
+            # also survives AV rate-limiting.
+            if not exact_match:
+                dm = getattr(request.app.state, "data_manager", None)
+                if dm is not None:
+                    try:
+                        q = await dm.get_quote(symbol_upper)
+                        if q and getattr(q, "price", 0):
+                            logger.info(
+                                "Symbol validated via DataManager fallback chain",
+                                symbol=symbol_upper,
+                                price=q.price,
+                            )
+                            exact_match = {
+                                "symbol": symbol_upper,
+                                "name": "Verified via DataManager (Finnhub/AV/yfinance)",
+                            }
+                    except Exception as dm_error:
+                        logger.debug(
+                            "DataManager fallback failed",
+                            symbol=symbol_upper,
+                            error=str(dm_error),
+                        )
+
             if not exact_match:
                 logger.warning(
                     "Symbol validation failed - not found in market",

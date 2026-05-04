@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-05-04
+
+### Fixed
+- fix(watchlist): adding symbols Alpha Vantage doesn't know (recent IPOs like CRWV, also any symbol when AV is rate-limited) failed with "Symbol not found in market" 400. Watchlist validation went straight to AV and didn't fall back. Added DataManager fallback (Finnhub → AV → yfinance) as a third validation layer in `backend/src/api/watchlist.py:add_to_watchlist`. CRWV now validates via Finnhub at $128.20 and saves successfully.
+
 ## [0.15.0] - 2026-05-04
 
 ### Added — Two-button portfolio analysis
