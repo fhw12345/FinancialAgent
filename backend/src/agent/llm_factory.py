@@ -27,17 +27,21 @@ MAESTRO_AUTH_TOKEN = os.getenv("MAESTRO_AUTH_TOKEN", "Powered by Agent Maestro")
 # Per-role model assignments
 # ---------------------------------------------------------------------------
 MODELS: dict[str, str] = {
-    "deep_planner": os.getenv("MODEL_DEEP_PLANNER", "claude-opus-4.7"),
-    "sub_financial": os.getenv("MODEL_SUB_FINANCIAL", "gpt-5.5"),
-    "sub_technical": os.getenv("MODEL_SUB_TECHNICAL", "claude-sonnet-4.6"),
-    "sub_news": os.getenv("MODEL_SUB_NEWS", "gemini-3-flash-preview"),
-    "sub_debater": os.getenv("MODEL_SUB_DEBATER", "gemini-3.1-pro-preview"),
+    # — Anthropic Opus 4.7 family — long-context for tool-heavy + deep reasoning
+    # 1m-internal: 935k context window (best for ReAct + 24 tools + history)
+    "deep_planner": os.getenv("MODEL_DEEP_PLANNER", "claude-opus-4.7-xhigh"),
+    "react_agent": os.getenv("MODEL_REACT_AGENT", "claude-opus-4.7-1m-internal"),
+    "portfolio_decisions": os.getenv("MODEL_PORTFOLIO_DECISIONS", "claude-opus-4.7-xhigh"),
+    "verdict": os.getenv("MODEL_VERDICT", "claude-opus-4.7-xhigh"),
+    "sub_technical": os.getenv("MODEL_SUB_TECHNICAL", "claude-opus-4.7"),
     "simple_chat": os.getenv("MODEL_SIMPLE_CHAT", "claude-haiku-4.5"),
-    "react_agent": os.getenv("MODEL_REACT_AGENT", "gpt-5.5"),
+    # — GPT-5.5 — best OpenAI flagship for structured extraction
+    "sub_financial": os.getenv("MODEL_SUB_FINANCIAL", "gpt-5.5"),
     "portfolio_research": os.getenv("MODEL_PORTFOLIO_RESEARCH", "gpt-5.5"),
-    "portfolio_decisions": os.getenv("MODEL_PORTFOLIO_DECISIONS", "claude-opus-4.7"),
-    "summary": os.getenv("MODEL_SUMMARY", "gemini-3-flash-preview"),
-    "verdict": os.getenv("MODEL_VERDICT", "claude-opus-4.7"),
+    # — Gemini 3.1 Pro — cross-vendor diversity for adversarial debate
+    "sub_debater": os.getenv("MODEL_SUB_DEBATER", "gemini-3.1-pro-preview"),
+    "sub_news": os.getenv("MODEL_SUB_NEWS", "gemini-3.1-pro-preview"),
+    "summary": os.getenv("MODEL_SUMMARY", "gemini-3.1-pro-preview"),
 }
 
 

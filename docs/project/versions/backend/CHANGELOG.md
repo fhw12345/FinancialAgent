@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-05-04
+
+### Fixed (the v0.16.0 known issue is now resolved)
+- **fix(react-agent): system prompt was a callable returning a string** — `create_react_agent(prompt=<callable>)` in newer langgraph expects either a string or a callable returning `list[BaseMessage]`. We were passing `(state) -> str`. langgraph silently treated the returned string as a user-role utterance, so the actual financial-analyst system prompt **never reached the LLM**. Result: every Phase 1 invocation returned generic "I'm ready to help" with `tool_executions=0`. Fixed by passing a static prompt string built at agent init. Date drift over a 24h cycle is acceptable (agent restarts on deploy).
+- **fix(timeout): `react_agent` LLM timeout 30s → 180s** — Claude with 24 tool schemas needs ≥30s/step; 30s caused `APITimeoutError` swallowed by langgraph and surfaced as a zero-tool response.
+
+### Changed — model assignments to top-tier per vendor
+- `react_agent` → **claude-opus-4.7-1m-internal** (935k context — needed for 24 tools + history headroom)
+- `deep_planner`, `portfolio_decisions`, `verdict` → **claude-opus-4.7-xhigh** (extra reasoning budget)
+- `sub_technical` → **claude-opus-4.7**
+- `sub_news`, `summary` → **gemini-3.1-pro-preview** (was -3-flash; now Gemini's flagship)
+- `sub_debater` → **gemini-3.1-pro-preview** (unchanged — still cross-vendor for debate diversity)
+- `sub_financial`, `portfolio_research` → **gpt-5.5** (unchanged — OpenAI flagship)
+- `simple_chat` → **claude-haiku-4.5** (unchanged — fast cheap chat doesn't need flagship)
+- All overrides removed from `.env.development` so per-vendor flagships flow through from `.env.base`.
+
+### Verified
+- Holdings flow on 3 holdings: ~90s end-to-end. Each symbol triggered 5-8 real tool calls (`tool_executions=5,8,8`), produced 1500+ char Chinese research reports citing concrete prices, RSI levels, news ("芯片股 4 月飙升 70%+"). For unknown OTC tickers (CRWCY) the agent transparently tried `get_stock_quote`, `get_company_overview`, `search_ticker("crown holdings")` and reported the data gap.
+
 ## [0.16.0] - 2026-05-04
 
 ### Changed — full Phase 1+2 pipeline behind both dashboard buttons

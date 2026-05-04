@@ -77,9 +77,21 @@ class Phase1ResearchMixin:
 
             # Pure research prompt - NO portfolio context, NO trading decisions
             # Decisions will be made in Phase 2 with full portfolio visibility
+            #
+            # IMPORTANT: lead with an explicit imperative "first action" line so
+            # Claude does not interpret the structured "## Research Requirements"
+            # block as a meta-description and respond with a generic "I'm ready
+            # to help" introduction (observed Apr 2026 with sonnet-4.6 + 24 tools).
             prompt = f"""# Symbol Research: {symbol}
 
-Conduct comprehensive technical and fundamental research for {symbol}.
+**FIRST ACTION REQUIRED**: Call `get_stock_quote` with symbol="{symbol}" and
+`get_company_overview` with symbol="{symbol}" IMMEDIATELY as your opening
+tool calls. Do not write any introduction. Do not list your capabilities.
+Use the tools NOW.
+
+After you have the basic data, use additional tools (fibonacci_analysis_tool,
+get_news_sentiment, get_momentum_indicator, get_financial_statements, etc.)
+to satisfy the research below.
 
 ## Research Requirements
 

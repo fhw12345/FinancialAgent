@@ -186,10 +186,14 @@ class FinancialAnalysisReActAgent:
             self.stochastic_analyzer = None
 
         # Initialize LLM via Agent Maestro (W8)
+        # timeout=180s: with 24+ tools the JSON schema sent on every turn is
+        # large; Claude routinely needs 30-90s per LLM step. The previous 30s
+        # caused APITimeoutError → langgraph swallowed it → the agent
+        # returned a generic "I'm ready to help" with zero tool calls.
         self.llm = get_llm(
             "react_agent",
             temperature=settings.default_llm_temperature,
-            timeout=30,
+            timeout=180,
         )
 
         # Create compressed local tools (Fibonacci + Stochastic + Historical Prices)
@@ -254,38 +258,32 @@ class FinancialAnalysisReActAgent:
         insights_tool_count = len(insights_tools)
         pcr_tool_count = len(pcr_tools)
 
-        # Create ReAct agent with memory and DYNAMIC system prompt
-        # The prompt is a callable that generates fresh date context on each invocation
-        # This fixes the bug where date was frozen at service startup time
+        # Create ReAct agent with memory.
+        #
+        # Previously used a callable `prompt=_dynamic_system_prompt` to inject
+        # fresh date on each invocation. langgraph 0.x's create_react_agent
+        # expected (state, runtime) -> list[BaseMessage] but our callable
+        # returned a plain string — silently treated as a user-role utterance,
+        # so the actual system prompt never reached the LLM. Result: model
+        # decoded the request as a generic chitchat session and refused to
+        # call tools (observed Apr 2026). We now pass a static string built at
+        # init; date drift across a 24h cycle is acceptable since the agent
+        # restarts at deploy time.
         self.checkpointer = MemorySaver()
 
-        def _dynamic_system_prompt(state: dict) -> str:
-            """Generate system prompt with current date on each agent invocation.
+        from datetime import timedelta
 
-            This callable is invoked by LangGraph before each LLM call, ensuring
-            the date context is always fresh (not frozen at service startup).
-
-            Args:
-                state: LangGraph state dict (contains messages, etc.)
-
-            Returns:
-                System prompt string with current date injected
-            """
-            from datetime import timedelta
-
-            current_date = datetime.now().strftime("%Y-%m-%d")
-            six_months_ago = (datetime.now() - timedelta(days=180)).strftime("%Y-%m-%d")
-
-            return FINANCIAL_AGENT_SYSTEM_PROMPT_TEMPLATE.format(
-                current_date=current_date,
-                six_months_ago=six_months_ago,
-            )
+        _today = datetime.now()
+        _system_prompt_str = FINANCIAL_AGENT_SYSTEM_PROMPT_TEMPLATE.format(
+            current_date=_today.strftime("%Y-%m-%d"),
+            six_months_ago=(_today - timedelta(days=180)).strftime("%Y-%m-%d"),
+        )
 
         self.agent = create_react_agent(
             self.llm,
             self.tools,
             checkpointer=self.checkpointer,
-            prompt=_dynamic_system_prompt,  # Callable for dynamic date injection
+            prompt=_system_prompt_str,  # Static string — see comment above
         )
 
         logger.info(
