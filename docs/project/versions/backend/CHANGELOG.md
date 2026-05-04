@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-05-04
+
+### Added
+- feat(holdings): nightly cron `scripts/refresh_holding_prices.py` walks every holding, calls `DataManager.get_quote` (Finnhub → AV → yfinance fallback), writes `current_price` + `market_value` + `unrealized_pl` back via `repo.update_price`. Wired into `portfolio-cron` loop alongside `run_portfolio_analysis.py` and `run_pnl_snapshots.py`. Closes the gap where `POST /holdings` enriched the response but never persisted to mongo, so subsequent GETs showed `current_price=null` until edited.
+- E2E verified: insert 3 holdings → GET shows curr=null → run script → GET shows live prices + P&L for all three.
+
 ## [0.14.0] - 2026-05-04
 
 ### Added — Holdings CRUD

@@ -82,6 +82,8 @@ services:
         while true; do
           echo \"[$(date)] Running portfolio analysis...\";
           python scripts/run_portfolio_analysis.py;
+          echo \"[$(date)] Refreshing holding prices...\";
+          python scripts/refresh_holding_prices.py;
           echo \"[$(date)] Computing decision P&L snapshots...\";
           python scripts/run_pnl_snapshots.py;
           echo \"[$(date)] Cycle complete. Next run in $$INTERVAL minutes.\";
