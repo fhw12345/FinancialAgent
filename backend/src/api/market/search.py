@@ -71,10 +71,15 @@ async def search_symbols(
     Provider chain:
       1. Local CSV (515 S&P 500 + Nasdaq 100 symbols) — instant, zero network
       2. Alpha Vantage SYMBOL_SEARCH — broader coverage but rate-limited (25/day on free)
+      3. yfinance Search / Ticker probe — no key, no daily cap; catches recent
+         IPOs and small-caps the local CSV misses (e.g. CRWV / CoreWeave)
 
-    The local CSV covers the bulk of common queries. AV is only consulted
-    when CSV returns nothing (rare symbols, ADRs, recent IPOs).
+    The local CSV covers the bulk of common queries. AV is consulted next for
+    its richer match metadata. yfinance is the final safety net when AV fails
+    or returns nothing — common because the AV free tier is quickly exhausted.
     """
+    from src.services.market_data import yfinance_search
+
     try:
         query = q.strip()
         if len(query) < 1:
@@ -93,21 +98,41 @@ async def search_symbols(
             return SymbolSearchResponse(query=query, results=local_results)
 
         # Provider 2: Alpha Vantage (slower, rate-limited, but broader)
-        raw_results = await service.search_symbols(query, limit=10)
-        results = [
-            SymbolSearchResult(
-                symbol=r["symbol"],
-                name=r["name"],
-                exchange=r["exchange"],
-                type=r["type"],
-                match_type=r["match_type"],
-                confidence=r["confidence"],
+        results: list[SymbolSearchResult] = []
+        try:
+            raw_results = await service.search_symbols(query, limit=10)
+            results = [
+                SymbolSearchResult(
+                    symbol=r["symbol"],
+                    name=r["name"],
+                    exchange=r["exchange"],
+                    type=r["type"],
+                    match_type=r["match_type"],
+                    confidence=r["confidence"],
+                )
+                for r in raw_results
+            ]
+        except Exception as e:
+            logger.warning(
+                "Alpha Vantage symbol search failed, will try yfinance",
+                query=query,
+                error=str(e),
             )
-            for r in raw_results
-        ]
+
+        # Provider 3: yfinance (free, no cap) — kicks in when AV failed OR
+        # returned nothing (e.g. recent IPOs not yet in AV's index).
+        if not results:
+            yf_raw = await yfinance_search.search_symbols(query, limit=10)
+            results = [SymbolSearchResult(**r) for r in yf_raw]
+            if results:
+                logger.info(
+                    "Symbol search served from yfinance fallback",
+                    query=query,
+                    result_count=len(results),
+                )
 
         logger.info(
-            "Symbol search completed via AV fallback",
+            "Symbol search completed",
             query=query,
             result_count=len(results),
         )

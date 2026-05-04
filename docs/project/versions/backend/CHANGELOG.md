@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.3] - 2026-05-05
+
+### Added
+- **feat(symbol-search): yfinance 兜底，能查到本地 CSV + AV 都没有的票（如 CRWV）** — 用户搜 CRWV (CoreWeave，2025-03 IPO) 自动补全空的，因为本地 `sector_universe.csv` 只有 S&P 500 + Nasdaq 100 共 515 只，AV `SYMBOL_SEARCH` 又被 25 次/天的免费配额卡死。新增 `services/market_data/yfinance_search.py`：精确 ticker 走 `yf.Ticker(q).info`，模糊查询走 `yf.Search(q)`，结果过滤只留美股交易所（NMS/NYQ/PCX 等，不带点号），输出 `SymbolSearchResult` 形状直接复用前端契约。`/api/market/search` 现在三级链路 CSV → AV → yfinance，AV 抛错被吞，最终返空也不再 500。
+
 ## [0.17.2] - 2026-05-05
 
 ### Changed
