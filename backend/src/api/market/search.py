@@ -66,23 +66,34 @@ async def search_symbols(
     service: AlphaVantageMarketDataService = Depends(get_market_service),
 ) -> SymbolSearchResponse:
     """
-    Search for stock symbols using Alpaca assets with fuzzy matching.
+    Search for stock symbols.
 
-    Supports queries like 'apple', 'microsoft', 'AAPL', etc.
-    Uses client-side fuzzy matching on Alpaca's asset list.
+    Provider chain:
+      1. Local CSV (515 S&P 500 + Nasdaq 100 symbols) — instant, zero network
+      2. Alpha Vantage SYMBOL_SEARCH — broader coverage but rate-limited (25/day on free)
+
+    The local CSV covers the bulk of common queries. AV is only consulted
+    when CSV returns nothing (rare symbols, ADRs, recent IPOs).
     """
     try:
-        # Clean query
         query = q.strip()
         if len(query) < 1:
             raise ValueError("Search query must be at least 1 character")
 
         logger.info("Symbol search started", query=query)
 
-        # Use hybrid service
-        raw_results = await service.search_symbols(query, limit=10)
+        # Provider 1: local sector_universe.csv (instant)
+        local_results = _search_local_universe(query, limit=10)
+        if local_results:
+            logger.info(
+                "Symbol search served from local universe",
+                query=query,
+                result_count=len(local_results),
+            )
+            return SymbolSearchResponse(query=query, results=local_results)
 
-        # Convert to response model
+        # Provider 2: Alpha Vantage (slower, rate-limited, but broader)
+        raw_results = await service.search_symbols(query, limit=10)
         results = [
             SymbolSearchResult(
                 symbol=r["symbol"],
@@ -96,7 +107,7 @@ async def search_symbols(
         ]
 
         logger.info(
-            "Symbol search completed",
+            "Symbol search completed via AV fallback",
             query=query,
             result_count=len(results),
         )
@@ -112,6 +123,60 @@ async def search_symbols(
         raise HTTPException(
             status_code=500, detail=f"Symbol search failed: {str(e)}"
         ) from e
+
+
+def _search_local_universe(query: str, limit: int) -> list[SymbolSearchResult]:
+    """
+    Search the committed sector_universe.csv (515 large-caps).
+
+    Ranking:
+      1. Exact symbol match (confidence 1.0)
+      2. Symbol prefix match (0.9)
+      3. Name prefix match (0.8)
+      4. Substring match in symbol or name (0.6)
+    """
+    from ...data.sector_universe import load_universe
+
+    q_upper = query.upper()
+    q_lower = query.lower()
+    rows = load_universe()
+    if not rows:
+        return []
+
+    scored: list[tuple[float, str, SymbolSearchResult]] = []
+    for r in rows:
+        sym_u = r.symbol.upper()
+        name_l = r.name.lower()
+        match_type = ""
+        confidence = 0.0
+        if sym_u == q_upper:
+            match_type, confidence = "exact_symbol", 1.0
+        elif sym_u.startswith(q_upper):
+            match_type, confidence = "symbol_prefix", 0.9
+        elif name_l.startswith(q_lower):
+            match_type, confidence = "name_prefix", 0.8
+        elif q_upper in sym_u or q_lower in name_l:
+            match_type, confidence = "fuzzy", 0.6
+        else:
+            continue
+        scored.append(
+            (
+                confidence,
+                sym_u,
+                SymbolSearchResult(
+                    symbol=r.symbol,
+                    name=r.name,
+                    exchange="",  # CSV has no exchange field
+                    type="Equity",
+                    match_type=match_type,
+                    confidence=confidence,
+                ),
+            )
+        )
+
+    # Sort: confidence desc, then symbol asc (deterministic tiebreak)
+    scored.sort(key=lambda t: (-t[0], t[1]))
+    return [s[2] for s in scored[:limit]]
 
 
 @router.get("/info/{symbol}")

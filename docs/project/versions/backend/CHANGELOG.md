@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.3] - 2026-05-04
+
+### Fixed
+- fix(search): `GET /api/market/search` returned empty results because Alpha Vantage rate-limited the container's outbound IP (25/day on free tier; the same IP was already exhausted by other AV calls earlier in the session). Made search local-first: query the committed `sector_universe.csv` (515 large-caps) before falling back to AV. Result: instant exact/prefix/name matches for the bulk of common symbols, zero network. AV is only consulted when the local universe has no hit (rare ADRs, tiny caps).
+- This is the same root-cause family as v0.13.1 + v0.15.1: code calling AV directly without DataManager fallback. Long-term cleanup wave still pending.
+
 ## [0.15.2] - 2026-05-04
 
 ### Changed
