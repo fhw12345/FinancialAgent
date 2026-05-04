@@ -149,6 +149,26 @@ class CacheKeys:
         return f"{CacheKeys.INSIGHTS}:{category_id.lower()}:{suffix.lower()}"
 
     @staticmethod
+    def company_news(symbol: str, from_date: str, to_date: str) -> str:
+        """
+        Cache key for symbol-scoped company news (Finnhub primary, AV/yfinance fallback).
+
+        Returns:
+            Cache key like 'sentiment:news:AAPL:2026-04-01:2026-05-01'
+        """
+        return f"{CacheKeys.SENTIMENT}:news:{symbol.upper()}:{from_date}:{to_date}"
+
+    @staticmethod
+    def insider_trades(symbol: str) -> str:
+        """
+        Cache key for insider trades (Finnhub primary, AV/yfinance fallback).
+
+        Returns:
+            Cache key like 'market:insider:AAPL'
+        """
+        return f"{CacheKeys.MARKET}:insider:{symbol.upper()}"
+
+    @staticmethod
     def parse(key: str) -> dict[str, str]:
         """
         Parse a cache key into its components.

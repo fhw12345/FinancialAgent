@@ -43,6 +43,10 @@ TOOL_CATEGORIES: dict[str, str] = {
     # Independent Verification Tools (debater only)
     "fetch_yfinance_news": "independent",
     "search_web_exa": "independent",
+    # Finnhub-backed tools (route via DataManager fallback chain)
+    "finnhub_quote": "financial",
+    "finnhub_news": "news",
+    "finnhub_insider_trades": "financial",
 }
 
 

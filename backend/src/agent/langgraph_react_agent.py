@@ -238,6 +238,16 @@ class FinancialAnalysisReActAgent:
             pcr_tools = create_pcr_tools(self.data_manager)
             self.tools.extend(pcr_tools)
 
+        # Finnhub tools (primary for quote/news/insider with AV+yfinance fallback).
+        # Always register: tools route through DataManager which gracefully falls
+        # back to AV/yfinance when finnhub_service is None or returns errors.
+        finnhub_tools = []
+        if self.data_manager:
+            from .tools.finnhub import create_finnhub_tools
+
+            finnhub_tools = create_finnhub_tools(self.data_manager)
+            self.tools.extend(finnhub_tools)
+
         # Track tool counts for logging
         base_tool_count = len(base_tools)
         alpha_vantage_tool_count = len(alpha_vantage_tools)

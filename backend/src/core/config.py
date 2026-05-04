@@ -89,7 +89,9 @@ class Settings(BaseSettings):
     compact_threshold_ratio: float = 0.75
     compact_target_ratio: float = 0.25
     tail_messages_keep: int = 3
-    summarization_model: str = "claude-haiku-4-5"  # informational; routing via llm_factory
+    summarization_model: str = (
+        "claude-haiku-4-5"  # informational; routing via llm_factory
+    )
 
     # External APIs - Market Data
     # W7: All paid market-data keys removed. yfinance (free, no key) is the
@@ -97,6 +99,12 @@ class Settings(BaseSettings):
     # already have one — when empty the service falls back to yfinance.
     alpha_vantage_api_key: str = ""  # optional, falls back to yfinance when empty
     fred_api_key: str = ""  # FRED API key (free, register at fred.stlouisfed.org)
+    exa_api_key: str = (
+        ""  # Exa search key for debater independent verification (free 1k/mo, dashboard.exa.ai)
+    )
+    finnhub_api_key: str = (
+        ""  # Finnhub key (free 60/min, register at finnhub.io). Primary for quote/news/insider.
+    )
 
     # Development mode settings
     dev_bypass_email_verification: bool = False  # Skip actual email sending in dev mode

@@ -143,9 +143,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
             # Story 2.5: Initialize DataManager and InsightsSnapshotService
             # for cache-first reads in AI tools (< 100ms response time)
+            finnhub_service = None
+            if settings.finnhub_api_key:
+                from src.services.finnhub import FinnhubService
+
+                finnhub_service = FinnhubService(api_key=settings.finnhub_api_key)
+                logger.info(
+                    "Finnhub service initialized (primary for quote/news/insider)"
+                )
+
             data_manager = DataManager(
                 redis_cache=redis_cache,
                 alpha_vantage_service=market_service,
+                finnhub_service=finnhub_service,
             )
             snapshot_service = InsightsSnapshotService(
                 mongodb=mongodb,

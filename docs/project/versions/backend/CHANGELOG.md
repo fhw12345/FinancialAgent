@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-05-04
+
+### Added
+- feat(market-data): Finnhub as third provider with three-tier fallback chain
+  - New `FinnhubService` (`backend/src/services/finnhub/`) — 60/min free tier, no daily cap
+  - Three new LangChain tools: `finnhub_quote`, `finnhub_news`, `finnhub_insider_trades` (categorized into `news` and `financial` sub-agent groups)
+  - Provider chain: Finnhub (primary) → Alpha Vantage → yfinance for quote / company news / insider trades
+  - All three tools route through `DataManager`, never call `FinnhubService` directly — establishes the pattern future tools should follow
+  - Tools register unconditionally; when `FINNHUB_API_KEY` is empty, `DataManager` silently starts at AV
+  - 19 new tests (`test_finnhub_service.py` + `test_data_manager_fallback.py`) covering all 5 fallback states per method
+
+### Fixed
+- fix(data-manager): broken AV→yfinance fallback that was claimed in comments but never implemented
+  - `_fetch_quote` previously caught all exceptions and re-raised `DataFetchError("alpha_vantage")` — there was no fallback branch
+  - Now correctly routes to yfinance when both Finnhub and AV fail; only raises `DataFetchError("all_providers")` when all three providers fail
+
+### Added — config
+- `finnhub_api_key: str = ""` in `Settings` (declared in `core/config.py`)
+- New cache key generators: `CacheKeys.company_news`, `CacheKeys.insider_trades`
+
+### Added — interview docs
+- `docs/interview/2026-05-04-finnhub-fallback-chain.md` — case study covering the integration plus the "stale comment lying about a runtime branch" pattern (third entry in the running interview-prep series)
+
 ## [0.11.2] - 2026-05-04
 
 ### Fixed

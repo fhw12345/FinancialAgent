@@ -66,6 +66,7 @@ class DataManager:
         self,
         redis_cache: Any,
         alpha_vantage_service: Any,
+        finnhub_service: Any = None,
     ):
         """
         Initialize the Data Manager.
@@ -73,10 +74,15 @@ class DataManager:
         Args:
             redis_cache: RedisCache instance for caching
             alpha_vantage_service: AlphaVantageMarketDataService for API calls
+            finnhub_service: Optional FinnhubService; primary for quote/news/insider
         """
         self._cache = CacheOperations(redis_cache)
         self._av_service = alpha_vantage_service
-        logger.info("data_manager_initialized")
+        self._finnhub_service = finnhub_service
+        logger.info(
+            "data_manager_initialized",
+            finnhub_enabled=finnhub_service is not None,
+        )
 
     # =========================================================================
     # Market Data (OHLCV)
@@ -504,9 +510,21 @@ class DataManager:
         return QuoteData.from_dict(cached)
 
     async def _fetch_quote(self, symbol: str) -> QuoteData:
-        """Internal: Fetch quote from Alpha Vantage."""
+        """Internal: Fetch quote with Finnhub → AV → yfinance fallback chain."""
+        # Provider 1: Finnhub (primary if configured)
+        if self._finnhub_service is not None:
+            try:
+                return await self._finnhub_service.fetch_quote(symbol)
+            except Exception as e:
+                logger.warning(
+                    "quote_provider_failed",
+                    provider="finnhub",
+                    symbol=symbol,
+                    error=str(e),
+                )
+
+        # Provider 2: Alpha Vantage
         try:
-            # Reuse existing get_quote() from QuotesMixin
             data = await self._av_service.get_quote(symbol)
             return QuoteData(
                 symbol=data["symbol"],
@@ -521,8 +539,212 @@ class DataManager:
                 low=data["low"],
             )
         except Exception as e:
-            logger.error("quote_fetch_failed", symbol=symbol, error=str(e))
-            raise DataFetchError(str(e), "alpha_vantage") from e
+            logger.warning(
+                "quote_provider_failed",
+                provider="alpha_vantage",
+                symbol=symbol,
+                error=str(e),
+            )
+
+        # Provider 3: yfinance (ultimate fallback, no key required)
+        try:
+            return await self._fetch_quote_yfinance(symbol)
+        except Exception as e:
+            logger.error("quote_all_providers_failed", symbol=symbol, error=str(e))
+            raise DataFetchError(
+                f"All providers failed for {symbol}: {e}", "all_providers"
+            ) from e
+
+    @staticmethod
+    async def _fetch_quote_yfinance(symbol: str) -> QuoteData:
+        """yfinance fallback. Runs sync yfinance in thread to keep async loop free."""
+        import asyncio
+
+        import yfinance as yf
+
+        def _sync() -> QuoteData:
+            t = yf.Ticker(symbol)
+            fi = t.fast_info
+            price = float(fi.last_price)
+            prev = float(fi.previous_close)
+            change = price - prev
+            change_pct = (change / prev * 100) if prev else 0.0
+            return QuoteData(
+                symbol=symbol.upper(),
+                price=price,
+                volume=int(getattr(fi, "last_volume", 0) or 0),
+                latest_trading_day=datetime.now(UTC).strftime("%Y-%m-%d"),
+                previous_close=prev,
+                change=change,
+                change_percent=change_pct,
+                open=float(getattr(fi, "open", 0.0) or 0.0),
+                high=float(getattr(fi, "day_high", 0.0) or 0.0),
+                low=float(getattr(fi, "day_low", 0.0) or 0.0),
+            )
+
+        return await asyncio.to_thread(_sync)
+
+    # =========================================================================
+    # Company News (Finnhub primary → AV → yfinance)
+    # =========================================================================
+
+    async def get_company_news(
+        self, symbol: str, from_date: str, to_date: str
+    ) -> list[NewsData]:
+        """
+        Symbol-scoped company news with three-provider fallback.
+
+        Args:
+            symbol: Ticker symbol
+            from_date: YYYY-MM-DD inclusive
+            to_date: YYYY-MM-DD inclusive
+        """
+        symbol = symbol.upper()
+        cache_key = CacheKeys.company_news(symbol, from_date, to_date)
+
+        async def fetch_func():
+            data = await self._fetch_company_news(symbol, from_date, to_date)
+            return [d.to_dict() for d in data]
+
+        cached = await self._cache.get_with_fetch(cache_key, fetch_func, self.TTL_NEWS)
+        if cached is None:
+            return []
+        return [NewsData.from_dict(d) for d in cached]
+
+    async def _fetch_company_news(
+        self, symbol: str, from_date: str, to_date: str
+    ) -> list[NewsData]:
+        if self._finnhub_service is not None:
+            try:
+                return await self._finnhub_service.fetch_company_news(
+                    symbol, from_date, to_date
+                )
+            except Exception as e:
+                logger.warning(
+                    "news_provider_failed",
+                    provider="finnhub",
+                    symbol=symbol,
+                    error=str(e),
+                )
+
+        # AV fallback: NEWS_SENTIMENT scoped to ticker
+        try:
+            return await self._fetch_news_sentiment(topic=None, tickers=[symbol])
+        except Exception as e:
+            logger.warning(
+                "news_provider_failed",
+                provider="alpha_vantage",
+                symbol=symbol,
+                error=str(e),
+            )
+
+        try:
+            return await self._fetch_company_news_yfinance(symbol)
+        except Exception as e:
+            logger.error("news_all_providers_failed", symbol=symbol, error=str(e))
+            raise DataFetchError(
+                f"All providers failed for news/{symbol}: {e}", "all_providers"
+            ) from e
+
+    @staticmethod
+    async def _fetch_company_news_yfinance(symbol: str) -> list[NewsData]:
+        import asyncio
+
+        import yfinance as yf
+
+        def _sync() -> list[NewsData]:
+            items = yf.Ticker(symbol).news or []
+            out: list[NewsData] = []
+            for it in items:
+                ts = it.get("providerPublishTime") or 0
+                try:
+                    dt = (
+                        datetime.fromtimestamp(int(ts), tz=UTC)
+                        if ts
+                        else datetime.now(UTC)
+                    )
+                except (TypeError, ValueError):
+                    dt = datetime.now(UTC)
+                out.append(
+                    NewsData(
+                        date=dt,
+                        sentiment_score=0.0,
+                        ticker_relevance=1.0,
+                        title=str(it.get("title", "")),
+                        source=str(it.get("publisher", "yfinance")),
+                    )
+                )
+            return out
+
+        return await asyncio.to_thread(_sync)
+
+    # =========================================================================
+    # Insider Trades (Finnhub primary → AV → yfinance)
+    # =========================================================================
+
+    async def get_insider_trades(self, symbol: str) -> list[dict[str, Any]]:
+        """
+        Recent insider transactions with three-provider fallback.
+        Returns a list of dicts (provider-shape preserved); callers format.
+        """
+        symbol = symbol.upper()
+        cache_key = CacheKeys.insider_trades(symbol)
+
+        async def fetch_func():
+            return await self._fetch_insider_trades(symbol)
+
+        cached = await self._cache.get_with_fetch(cache_key, fetch_func, self.TTL_NEWS)
+        return cached or []
+
+    async def _fetch_insider_trades(self, symbol: str) -> list[dict[str, Any]]:
+        if self._finnhub_service is not None:
+            try:
+                return await self._finnhub_service.fetch_insider_transactions(symbol)
+            except Exception as e:
+                logger.warning(
+                    "insider_provider_failed",
+                    provider="finnhub",
+                    symbol=symbol,
+                    error=str(e),
+                )
+
+        # AV fallback: INSIDER_TRANSACTIONS (premium endpoint, may 403)
+        try:
+            if hasattr(self._av_service, "get_insider_transactions"):
+                data = await self._av_service.get_insider_transactions(symbol)
+                if isinstance(data, dict) and "data" in data:
+                    return list(data["data"])
+                if isinstance(data, list):
+                    return data
+        except Exception as e:
+            logger.warning(
+                "insider_provider_failed",
+                provider="alpha_vantage",
+                symbol=symbol,
+                error=str(e),
+            )
+
+        try:
+            return await self._fetch_insider_trades_yfinance(symbol)
+        except Exception as e:
+            logger.error("insider_all_providers_failed", symbol=symbol, error=str(e))
+            raise DataFetchError(
+                f"All providers failed for insider/{symbol}: {e}", "all_providers"
+            ) from e
+
+    @staticmethod
+    async def _fetch_insider_trades_yfinance(symbol: str) -> list[dict[str, Any]]:
+        import asyncio
+
+        import yfinance as yf
+
+        def _sync() -> list[dict[str, Any]]:
+            df = yf.Ticker(symbol).insider_transactions
+            if df is None or df.empty:
+                return []
+            return df.to_dict(orient="records")
+
+        return await asyncio.to_thread(_sync)
 
     async def get_options(self, symbol: str) -> list[OptionContract]:
         """
