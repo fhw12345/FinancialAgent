@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-05-05
+
+### Changed
+- **change(technical-indicators): yfinance + pandas-ta-classic 升为主源，AV 降级 fallback** — `agent/tools/alpha_vantage/technical.py` 里 3 个 AV-direct 工具（`get_trend_indicator` SMA/EMA/VWAP、`get_momentum_indicator` RSI/MACD/STOCH、`get_volume_indicator` AD/OBV/ADX/AROON/BBANDS）现在先走本地 pandas-ta-classic 计算（基于 yfinance OHLCV 全量历史 bars），AV `TECHNICAL_INDICATOR` endpoint 只在 yfinance 失败时兜底。原因：AV free-tier 25 req/day 几次页面加载就被烤干，之前一旦超 quota 这 11 个指标全部消失，LLM 给 entry/stop/take_profit 的论据就掉一半；本地算法没 quota，跟之前 commit `1b2fee3`（"yfinance + FRED primary, Alpha Vantage demoted to fallback"）的方向一致。
+  - 新建 `services/market_data/yfinance_indicators.py:compute_indicator(symbol, function, interval, time_period)`，每个 AV `function` 映射到 pandas-ta-classic 调用，输出列名重命名以匹配 `format_technical_indicator` 的契约（MACD → `MACD`/`MACD_Hist`/`MACD_Signal`；BBANDS → `Real Upper/Middle/Lower Band`；其余按 AV 风格起名）
+  - `services/formatters/technical.py` 和 `services/formatters/__init__.py` 的 `format_technical_indicator(...)` 加 `data_source: str = "yfinance_local"` 参数；输出顶部那行 `Data Source: ...` 现在反映实际服务路径（happy path 显示 `yfinance_local`，AV 兜底显示 `alpha_vantage_fallback`）
+  - 新依赖 `pandas-ta-classic>=0.5.44`（pandas-ta 的 numpy 2.x 兼容 fork；原版 `from numpy import NaN` 在 numpy 2.x 已删，装不上）
+
+### Migration
+- **必须 rebuild backend image**：deps 改了，`docker compose up -d --force-recreate backend` 不够，要先 `docker compose build backend` 再 up
+
+
 ## [0.20.6] - 2026-05-05
 
 ### Added

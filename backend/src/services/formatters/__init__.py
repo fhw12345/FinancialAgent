@@ -120,10 +120,11 @@ class AlphaVantageResponseFormatter:
         function: str,
         interval: str,
         invoked_at: str,
+        data_source: str = "yfinance_local",
     ) -> str:
         """Format technical indicator with current value and signal."""
         return self._technical.format_technical_indicator(
-            df, symbol, function, interval, invoked_at
+            df, symbol, function, interval, invoked_at, data_source
         )
 
     # Legacy static methods for backward compatibility

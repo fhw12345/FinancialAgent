@@ -124,6 +124,7 @@ class TechnicalFormatter:
         function: str,
         interval: str,
         invoked_at: str,
+        data_source: str = "yfinance_local",
     ) -> str:
         """
         Format technical indicator with current value and signal.
@@ -134,13 +135,17 @@ class TechnicalFormatter:
             function: Indicator name (RSI, MACD, etc.)
             interval: Time interval
             invoked_at: Timestamp when tool was invoked
+            data_source: Where the indicator was computed.
+                "yfinance_local" — pandas-ta on yfinance bars (default, primary path).
+                "alpha_vantage_fallback" — AV's TECHNICAL_INDICATOR endpoint
+                (used only when yfinance fails).
 
         Returns:
             Formatted technical indicator markdown
         """
         output = [
             f"# {function}: {symbol}",
-            f"*{interval.title()} | Data Source: Alpha Vantage | Invoked: {invoked_at}*",
+            f"*{interval.title()} | Data Source: {data_source} | Invoked: {invoked_at}*",
             "",
         ]
 

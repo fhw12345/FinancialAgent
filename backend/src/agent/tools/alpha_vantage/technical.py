@@ -11,8 +11,47 @@ from langchain_core.tools import tool
 
 from src.services.alphavantage_market_data import AlphaVantageMarketDataService
 from src.services.alphavantage_response_formatter import AlphaVantageResponseFormatter
+from src.services.market_data import yfinance_indicators
 
 logger = structlog.get_logger()
+
+
+async def _resolve_indicator_df(
+    service: AlphaVantageMarketDataService,
+    symbol: str,
+    indicator_upper: str,
+    interval: str,
+    time_period: int | None,
+    av_series_type: str | None = "close",
+):
+    """yfinance-first → AV fallback. Returns (df, data_source) so the
+    formatter can render which path served the response."""
+    try:
+        df = await yfinance_indicators.compute_indicator(
+            symbol=symbol,
+            function=indicator_upper,
+            interval=interval,
+            time_period=time_period,
+        )
+        if df.empty:
+            raise RuntimeError("yfinance compute returned empty")
+        return df, "yfinance_local"
+    except Exception as yf_err:
+        logger.warning(
+            "yfinance indicator failed; falling back to Alpha Vantage",
+            symbol=symbol,
+            indicator=indicator_upper,
+            interval=interval,
+            error=str(yf_err),
+        )
+        df = await service.get_technical_indicator(
+            symbol=symbol,
+            function=indicator_upper,
+            interval=interval,
+            time_period=time_period,
+            series_type=av_series_type,
+        )
+        return df, "alpha_vantage_fallback"
 
 
 def create_technical_tools(
@@ -142,12 +181,12 @@ def create_technical_tools(
             if indicator_upper not in supported:
                 return f"Unsupported trend indicator: {indicator}. Use one of: {', '.join(supported)}"
 
-            df = await service.get_technical_indicator(
+            df, data_source = await _resolve_indicator_df(
+                service=service,
                 symbol=symbol,
-                function=indicator_upper,
+                indicator_upper=indicator_upper,
                 interval=interval,
                 time_period=time_period if indicator_upper != "VWAP" else None,
-                series_type="close",
             )
 
             if df.empty:
@@ -159,6 +198,7 @@ def create_technical_tools(
                 function=indicator_upper,
                 interval=interval,
                 invoked_at=datetime.now(UTC).isoformat(),
+                data_source=data_source,
             )
         except Exception as e:
             logger.error(
@@ -203,12 +243,12 @@ def create_technical_tools(
             if indicator_upper not in supported:
                 return f"Unsupported momentum indicator: {indicator}. Use one of: {', '.join(supported)}"
 
-            df = await service.get_technical_indicator(
+            df, data_source = await _resolve_indicator_df(
+                service=service,
                 symbol=symbol,
-                function=indicator_upper,
+                indicator_upper=indicator_upper,
                 interval=interval,
                 time_period=time_period if indicator_upper == "RSI" else None,
-                series_type="close",
             )
 
             if df.empty:
@@ -220,6 +260,7 @@ def create_technical_tools(
                 function=indicator_upper,
                 interval=interval,
                 invoked_at=datetime.now(UTC).isoformat(),
+                data_source=data_source,
             )
         except Exception as e:
             logger.error(
@@ -270,14 +311,17 @@ def create_technical_tools(
             if indicator_upper == "BBANDS" and time_period == 14:
                 time_period = 20
 
-            df = await service.get_technical_indicator(
+            df, data_source = await _resolve_indicator_df(
+                service=service,
                 symbol=symbol,
-                function=indicator_upper,
+                indicator_upper=indicator_upper,
                 interval=interval,
                 time_period=(
                     time_period if indicator_upper not in ["AD", "OBV"] else None
                 ),
-                series_type="close" if indicator_upper not in ["AD", "OBV"] else None,
+                av_series_type=(
+                    "close" if indicator_upper not in ["AD", "OBV"] else None
+                ),
             )
 
             if df.empty:
@@ -289,6 +333,7 @@ def create_technical_tools(
                 function=indicator_upper,
                 interval=interval,
                 invoked_at=datetime.now(UTC).isoformat(),
+                data_source=data_source,
             )
         except Exception as e:
             logger.error(

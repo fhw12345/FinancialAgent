@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "financial-agent-backend"
-version = "0.20.6"
+version = "0.21.0"
 description = "AI-Enhanced Financial Analysis Platform Backend"
 authors = []
 # readme = "README.md"
@@ -41,6 +41,7 @@ dependencies = [
     "tiktoken>=0.7.0",                  # Token counting for context window management
     "deepagents>=0.3.12",                # Deep hierarchical agent framework
     "yfinance>=0.2.0",                    # Yahoo Finance — primary free market data source
+    "pandas-ta-classic>=0.5.44",          # Local technical indicator computation (numpy 2.x compatible fork of pandas-ta)
     "feedparser>=6.0.0",                  # RSS parsing for free web search fallback
 ]
 
