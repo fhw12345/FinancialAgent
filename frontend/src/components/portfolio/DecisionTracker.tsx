@@ -12,6 +12,7 @@
  */
 
 import { useMemo, useState, Fragment } from "react";
+import { useTranslation } from "react-i18next";
 import { Translated } from "../Translated";
 import {
   ArrowUpCircle,
@@ -30,6 +31,7 @@ import {
   YAxis,
 } from "recharts";
 import { useDecisions, type DecisionRow } from "../../hooks/useDecisions";
+import { formatDate } from "../../utils/timeFormatter";
 
 const HORIZONS = ["7d", "30d", "90d"] as const;
 type Horizon = (typeof HORIZONS)[number];
@@ -363,6 +365,7 @@ interface DecisionRowsProps {
   onOpenResearch: (state: ResearchModalState) => void;
   /** Visual indent flag for history rows under a group header */
   indented?: boolean;
+  locale: string;
 }
 
 function DecisionRows({
@@ -371,6 +374,7 @@ function DecisionRows({
   onToggle,
   onOpenResearch,
   indented,
+  locale,
 }: DecisionRowsProps) {
   const reasoning = d.metadata?.reasoning ?? "";
   const conf = d.metadata?.confidence;
@@ -408,7 +412,7 @@ function DecisionRows({
           <PnlCell pct={d.pnl_snapshots?.["90d"]?.pnl_pct} side={d.side} />
         </td>
         <td className="py-2 pr-3 text-xs text-gray-500">
-          {new Date(d.created_at).toLocaleDateString()}
+          {formatDate(d.created_at, locale)}
         </td>
         <td className="py-2 pr-3 text-xs text-gray-500">{d.decision_type}</td>
       </tr>
@@ -451,6 +455,7 @@ function DecisionRows({
 }
 
 export function DecisionTracker() {
+  const { i18n } = useTranslation();
   const [symbolFilter, setSymbolFilter] = useState("");
   const [tab, setTab] = useState<SourceTab>("all");
   const [expandedReasoning, setExpandedReasoning] = useState<Set<string>>(
@@ -590,6 +595,7 @@ export function DecisionTracker() {
                           isOpen={expandedReasoning.has(g.latest.order_id)}
                           onToggle={() => toggleReasoning(g.latest.order_id)}
                           onOpenResearch={setResearchModal}
+                          locale={i18n.language}
                         />
                         {moreCount > 0 && (
                           <tr className="bg-white">
@@ -615,6 +621,7 @@ export function DecisionTracker() {
                               onToggle={() => toggleReasoning(h.order_id)}
                               onOpenResearch={setResearchModal}
                               indented
+                              locale={i18n.language}
                             />
                           ))}
                       </Fragment>

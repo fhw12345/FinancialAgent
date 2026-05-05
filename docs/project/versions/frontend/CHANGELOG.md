@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-05-05
+
+### Added
+- **feat(i18n-time): 中文界面时间统一按 UTC+8 (Asia/Shanghai) 渲染** — 后端 `datetime.now(UTC).isoformat()` 写出来的全是 UTC ISO，前端原来散在 11 个组件里直接 `new Date(iso).toLocaleString("en-US", ...)` / `.toLocaleDateString()`，UI 是中文但日期/时分按浏览器本地时区算（比如美国用户跑这个本地 fork，看到的就是美东时间 + 中文文案）。新加 `src/utils/timeFormatter.ts` 一层薄包装，导出 `formatTimestamp(iso, locale, options?)` / `formatDate` / `formatTime`：locale 以 `zh` 开头时把 `timeZone` 强制成 `Asia/Shanghai`，否则交给浏览器默认。`null/undefined/""` 直接短路返空串，`Number.isNaN(date.getTime())` 兜住非法字符串。日历类常量 (`ChatSidebar` 的 `selectedDate` 是 `YYYY-MM-DD`) 显式 `timeZone: "UTC"` 防 TZ rollover。
+  - **触达组件**：`ToolMessageWrapper` (tool 调用时间), `ChatMessages` (消息时间), `ChatListItem` / `ChatSidebar` (chat 列表 + 日历 picker), `PortfolioDashboard` (analysis timestamps), `HealthPage` ("Last updated"), `InsightsPage` (category last_updated), `WatchlistPanel` (added_at), `DecisionTracker` (decision created_at — 通过 `locale` prop 传到 `DecisionRows`), `RecentTransactions` (transaction executed_at), `MarketMovers` (lastUpdated)
+  - **不触达**：chart 轴标签 / candle tooltip (`useChart.ts`, `ExpandedTrendChart.tsx`) — 走自己的 chart 时间语义，不强加 zh-CN 默认时区；LLM 输出的 markdown 字符串 (`analysisFormatters.ts`) — 由 markdown 翻译管道处理，是另一条路径
+
+### Tests
+- 新加 `timeFormatter.test.ts` (7 tests)：UTC 04:00 → 北京 12:00、`timeZone` override 优先于 locale 默认、`null/undefined/""/invalid` 全部空串短路、`Date` 对象直接接受、`formatDate` 跨 UTC midnight 正确翻到北京次日；240/240 vitest 全过
+
 ## [0.14.1] - 2026-05-05
 
 ### Fixed

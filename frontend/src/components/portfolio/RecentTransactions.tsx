@@ -7,6 +7,7 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowDownCircle, ArrowUpCircle, Pencil, Trash2 } from "lucide-react";
 import {
   useDeleteUserTransaction,
@@ -18,10 +19,11 @@ import {
   AddTransactionModal,
   type TransactionFormValues,
 } from "./AddTransactionModal";
+import { formatTimestamp } from "../../utils/timeFormatter";
 
-function formatDate(s: string): string {
+function formatTxDate(s: string, locale: string): string {
   try {
-    return new Date(s).toLocaleString();
+    return formatTimestamp(s, locale);
   } catch {
     return s;
   }
@@ -45,6 +47,7 @@ function SideBadge({ side }: { side: UserTransaction["side"] }) {
 }
 
 export function RecentTransactions() {
+  const { i18n } = useTranslation();
   const { data: txs = [], isLoading, error } = useUserTransactions();
   const updateMut = useUpdateUserTransaction();
   const deleteMut = useDeleteUserTransaction();
@@ -139,7 +142,7 @@ export function RecentTransactions() {
                   className="border-b border-gray-100 hover:bg-gray-50"
                 >
                   <td className="py-2 pr-3 text-xs text-gray-500">
-                    {formatDate(tx.executed_at)}
+                    {formatTxDate(tx.executed_at, i18n.language)}
                   </td>
                   <td className="py-2 pr-3 font-mono font-medium text-gray-900">
                     {tx.symbol}

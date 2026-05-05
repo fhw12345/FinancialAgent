@@ -15,6 +15,7 @@ import type { ChatMessage } from "../../types/api";
 import { ToolMessageWrapper } from "./ToolMessageWrapper";
 import { useTranslated } from "../../hooks/useTranslated";
 import { ToolExecutionProgress } from "./ToolExecutionProgress";
+import { formatTime } from "../../utils/timeFormatter";
 
 interface ChatMessagesProps {
   messages: ChatMessage[];
@@ -27,8 +28,8 @@ interface ChatMessagesProps {
   deepAccordion?: React.ReactNode; // Deep agent accordion tree (v4-deep mode)
 }
 
-const formatTimestamp = (timestamp: string) => {
-  return new Date(timestamp).toLocaleTimeString("en-US", {
+const formatTimestamp = (timestamp: string, locale: string) => {
+  return formatTime(timestamp, locale, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -54,7 +55,7 @@ const parseThinkingContent = (content: string): { thinking: string[]; mainConten
 };
 
 // Memoized message component to prevent re-renders
-const MessageBubble = React.memo<{ msg: ChatMessage; t: (key: string, options?: Record<string, unknown>) => string }>(({ msg, t }) => {
+const MessageBubble = React.memo<{ msg: ChatMessage; t: (key: string, options?: Record<string, unknown>) => string; locale: string }>(({ msg, t, locale }) => {
   // Memoize thinking content parsing to avoid re-parsing on every render
   const { thinking, mainContent } = useMemo(() => {
     return msg.role === "assistant"
@@ -235,7 +236,7 @@ const MessageBubble = React.memo<{ msg: ChatMessage; t: (key: string, options?: 
           )}
         </div>
         <div className="text-xs opacity-70 mt-1">
-          {formatTimestamp(msg.timestamp)}
+          {formatTimestamp(msg.timestamp, locale)}
         </div>
       </div>
     </div>
@@ -254,7 +255,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   sortOrder = "oldest", // Default to oldest first (chronological) for chat messages
   deepAccordion,
 }) => {
-  const { t } = useTranslation(['chat', 'common']);
+  const { t, i18n } = useTranslation(['chat', 'common']);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const lastUserMessageRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -426,10 +427,10 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
               ) : isToolMessage && msg.tool_call ? (
                 <ToolMessageWrapper
                   toolCall={msg.tool_call}
-                  content={<MessageBubble msg={msg} t={t} />}
+                  content={<MessageBubble msg={msg} t={t} locale={i18n.language} />}
                 />
               ) : (
-                <MessageBubble msg={msg} t={t} />
+                <MessageBubble msg={msg} t={t} locale={i18n.language} />
               )}
             </div>
             {/* Deep accordion appears right after the last user message */}

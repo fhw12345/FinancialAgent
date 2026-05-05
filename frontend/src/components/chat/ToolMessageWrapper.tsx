@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight } from "lucide-react";
 import type { ToolCall } from "../../types/api";
+import { formatTimestamp } from "../../utils/timeFormatter";
 
 interface ToolMessageWrapperProps {
   toolCall: ToolCall;
@@ -22,11 +23,10 @@ export function ToolMessageWrapper({
   content,
   className = "",
 }: ToolMessageWrapperProps) {
-  const { t } = useTranslation(['chat', 'common']);
+  const { t, i18n } = useTranslation(['chat', 'common']);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Format timestamp to readable format
-  const formattedTime = new Date(toolCall.invoked_at).toLocaleString("en-US", {
+  const formattedTime = formatTimestamp(toolCall.invoked_at, i18n.language, {
     month: "short",
     day: "numeric",
     hour: "2-digit",

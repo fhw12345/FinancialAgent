@@ -3,7 +3,9 @@
  */
 
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { authStorage } from "../services/authService";
+import { formatTimestamp } from "../utils/timeFormatter";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
@@ -96,6 +98,7 @@ const mockNodes: NodeMetric[] = [
 ];
 
 export default function HealthPage() {
+  const { i18n } = useTranslation();
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -187,7 +190,7 @@ export default function HealthPage() {
             System Health Dashboard
           </h1>
           <p className="text-gray-600">
-            Last updated: {new Date(metrics.timestamp).toLocaleString()}
+            Last updated: {formatTimestamp(metrics.timestamp, i18n.language)}
           </p>
         </div>
 

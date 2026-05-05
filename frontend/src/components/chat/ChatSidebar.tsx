@@ -5,6 +5,7 @@
 
 import { useState, useMemo, memo } from "react";
 import { useTranslation } from "react-i18next";
+import { formatDate } from "../../utils/timeFormatter";
 import {
   Plus,
   Archive,
@@ -50,7 +51,7 @@ export const ChatSidebar = memo(function ChatSidebar({
   analysisType,
   onAnalysisTypeChange,
 }: ChatSidebarProps) {
-  const { t } = useTranslation(['chat', 'common', 'portfolio']);
+  const { t, i18n } = useTranslation(['chat', 'common', 'portfolio']);
   const [showArchived, setShowArchived] = useState(false);
   // Use controlled sort order if provided, otherwise use internal state
   const [internalSortOrder, setInternalSortOrder] = useState<"newest" | "oldest">("newest");
@@ -185,7 +186,7 @@ export const ChatSidebar = memo(function ChatSidebar({
             </div>
             {selectedDate && (
               <p className="text-xs text-gray-500 mt-1 px-1">
-                {t('chat:sidebar.showingChatsFor')} {new Date(selectedDate).toLocaleDateString()}
+                {t('chat:sidebar.showingChatsFor')} {formatDate(selectedDate, i18n.language, { timeZone: "UTC" })}
               </p>
             )}
           </div>

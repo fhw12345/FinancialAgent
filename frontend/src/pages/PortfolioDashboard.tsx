@@ -23,6 +23,7 @@ import { ChatSidebar } from "../components/chat/ChatSidebar";
 import { ChatMessages } from "../components/chat/ChatMessages";
 import { formatPL, getPLColor } from "../services/portfolioApi";
 import { authStorage } from "../services/authService";
+import { formatTimestamp } from "../utils/timeFormatter";
 
 type Period = "1D" | "1M" | "1Y" | "All";
 
@@ -34,7 +35,7 @@ interface AnalysisMarker {
 }
 
 export default function PortfolioDashboard() {
-  const { t } = useTranslation(['portfolio', 'common']);
+  const { t, i18n } = useTranslation(['portfolio', 'common']);
   const [period, setPeriod] = useState<Period>("1D");
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const [symbolAnalyses, setSymbolAnalyses] = useState<AnalysisMarker[]>([]);
@@ -322,7 +323,7 @@ export default function PortfolioDashboard() {
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {new Date(analysis.timestamp).toLocaleString("en-US", {
+                            {formatTimestamp(analysis.timestamp, i18n.language, {
                               month: "short",
                               day: "numeric",
                               year: "numeric",

@@ -19,6 +19,7 @@ import {
   MetricCardSkeleton,
 } from "../components/insights";
 import { useCategories, useCategory, useInsightTrend, useRefreshCategory } from "../hooks/useInsights";
+import { formatTimestamp } from "../utils/timeFormatter";
 
 /** Available days options for trend history */
 const DAYS_OPTIONS = [30, 60, 90] as const;
@@ -31,7 +32,7 @@ function CategoryDetail({
   categoryId: string;
   onBack: () => void;
 }) {
-  const { t } = useTranslation(["insights", "common"]);
+  const { t, i18n } = useTranslation(["insights", "common"]);
   const { data: category, isLoading, isError } = useCategory(categoryId);
   const refreshMutation = useRefreshCategory();
   const [expandedMetrics, setExpandedMetrics] = useState<Set<string>>(new Set());
@@ -159,7 +160,7 @@ function CategoryDetail({
       {/* Last updated footer */}
       <div className="text-xs text-gray-500 text-right pt-4 border-t border-gray-100">
         {t("insights:category.last_updated")}:{" "}
-        {new Date(category.last_updated).toLocaleString()}
+        {formatTimestamp(category.last_updated, i18n.language)}
       </div>
     </div>
   );

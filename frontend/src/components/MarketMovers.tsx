@@ -26,6 +26,7 @@ import {
 import { alphaVantageApi } from "../services/alphaVantageApi";
 import type { MarketMover } from "../types/alphaVantage";
 import { parseNumericString, formatLargeNumber } from "../types/alphaVantage";
+import { formatTime } from "../utils/timeFormatter";
 
 interface MarketMoversProps {
   /** Optional callback when ticker is clicked */
@@ -45,7 +46,7 @@ export const MarketMovers: React.FC<MarketMoversProps> = ({
   limit = 5,
   className = "",
 }) => {
-  const { t } = useTranslation(["market", "common"]);
+  const { t, i18n } = useTranslation(["market", "common"]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [gainers, setGainers] = useState<MarketMover[]>([]);
@@ -279,7 +280,7 @@ export const MarketMovers: React.FC<MarketMoversProps> = ({
             {/* Footer */}
             {lastUpdated && getCurrentData().length > 0 && (
               <div className="text-xs text-gray-500 text-center mt-4 pt-4 border-t border-gray-200">
-                {t("market:movers.lastUpdated", { time: lastUpdated.toLocaleTimeString() })}
+                {t("market:movers.lastUpdated", { time: formatTime(lastUpdated, i18n.language) })}
               </div>
             )}
           </div>

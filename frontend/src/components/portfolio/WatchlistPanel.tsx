@@ -13,6 +13,7 @@ import {
   useRemoveFromWatchlist,
   useTriggerWatchlistAnalysis,
 } from "../../hooks/useWatchlist";
+import { formatDate } from "../../utils/timeFormatter";
 
 // Helper to format time ago
 function formatTimeAgo(date: Date): string {
@@ -46,7 +47,7 @@ function formatCountdown(targetDate: Date): string {
 }
 
 export function WatchlistPanel() {
-  const { t } = useTranslation(['portfolio', 'common']);
+  const { t, i18n } = useTranslation(['portfolio', 'common']);
   const [newSymbol, setNewSymbol] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -142,7 +143,7 @@ export function WatchlistPanel() {
                   <div className="text-sm text-gray-500">{item.notes}</div>
                 )}
                 <div className="text-xs text-gray-400 mt-1">
-                  {t('portfolio:watchlistPanel.added')}: {new Date(item.added_at).toLocaleDateString()}
+                  {t('portfolio:watchlistPanel.added')}: {formatDate(item.added_at, i18n.language)}
                   {item.last_analyzed_at && (
                     <span className="ml-2">
                       • {t('portfolio:watchlistPanel.lastAnalyzed')}: {formatTimeAgo(new Date(item.last_analyzed_at))}

@@ -7,6 +7,7 @@ import { MessageSquare, Clock, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Chat } from "../../types/api";
 import { Translated } from "../Translated";
+import { formatDate } from "../../utils/timeFormatter";
 
 interface ChatListItemProps {
   chat: Chat;
@@ -39,7 +40,7 @@ export function ChatListItem({
     if (diffHours < 24) return t('chat:sidebar.hoursAgo', { count: diffHours });
     if (diffDays < 7) return t('chat:sidebar.daysAgo', { count: diffDays });
 
-    return date.toLocaleDateString(i18n.language === 'zh-CN' ? 'zh-CN' : 'en-US', {
+    return formatDate(date, i18n.language, {
       month: "short",
       day: "numeric",
     });
