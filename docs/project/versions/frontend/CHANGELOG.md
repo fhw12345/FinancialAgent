@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-05-05
+
+### Fixed
+- **fix(watchlist): WatchlistPanel「立即分析」按钮 422** — 按钮原来打 `/api/admin/portfolio/trigger-analysis`（Nov 2025 那次重构留下的），但 backend v0.15.0 把这个 endpoint 拆成 `?flow=holdings|picks` 两个流，无 `flow` 参数 422 "Field required"，而且这俩 flow 都不分析 watchlist——holdings 只看持仓，picks 从 S&P/Nasdaq universe 里挑。改回去打专门的 `/api/watchlist/analyze`，名副其实，202 Accepted，后台跑 `WatchlistAnalyzer.run_analysis_cycle(force=True)`。配套更新 `watchlistApi.test.ts` 的 endpoint 断言, 233/233 vitest 全过。
+
 ## [0.14.0] - 2026-05-05
 
 ### Added — 写入时翻译消费 (UI 不再二次打 `/api/translate`)

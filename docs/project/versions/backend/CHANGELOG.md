@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-05-05
+
+### Fixed
+- **fix(watchlist): 「等待首次分析」永远不消失** — `WatchlistAnalyzer.run_analysis_cycle()` 里 `for item in items` 循环读 `item.user_id`, 但 W5b 已经把 `user_id` 从 `WatchlistItem` 上拿掉了，每次手动触发都 `AttributeError: 'WatchlistItem' object has no attribute 'user_id'` 直接挂。把循环里几处 `item.user_id` 全删了——`analyze_symbol()` 和 `update_last_analyzed()` 自身的 `user_id` 形参都是 ignored optional，调用点不传也没事。修完以后 SNDK/GOOGL/NVDA/CRWV 的 `last_analyzed_at` 都正常落地了（finally 块兜底，单只 symbol 数据源失败不会卡住下一只）。
+
 ## [0.20.0] - 2026-05-05
 
 ### Added — 写入时翻译 (LLM 内容 zh-CN 上墙更快、Redis 1 天 TTL 不再失效)
