@@ -13,12 +13,16 @@
 
 import { useMemo, useState, Fragment } from "react";
 import { useTranslation } from "react-i18next";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Translated } from "../Translated";
+import { useTranslated } from "../../hooks/useTranslated";
 import {
   ArrowUpCircle,
   ArrowDownCircle,
   CircleDot,
   Activity,
+  CheckCircle2,
 } from "lucide-react";
 import {
   CartesianGrid,
@@ -30,7 +34,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useDecisions, type DecisionRow } from "../../hooks/useDecisions";
+import { useDecisions, useMarkOrderExecuted, type DecisionRow } from "../../hooks/useDecisions";
+import { usePortfolioSettings } from "./SettingsPanel";
+import { useHoldings } from "../../hooks/usePortfolio";
 import { formatDate } from "../../utils/timeFormatter";
 
 const HORIZONS = ["7d", "30d", "90d"] as const;
@@ -159,6 +165,13 @@ type SourceTab = "all" | "holdings" | "picks";
 interface ResearchModalState {
   symbol: string;
   text: string;
+  text_zh?: string | null;
+}
+
+interface MarkExecutedModalState {
+  decision: DecisionRow;
+  defaultQty: number;
+  defaultPrice: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -355,6 +368,120 @@ function KpiBar({ kpis }: { kpis: Kpis }) {
 }
 
 // ---------------------------------------------------------------------------
+// Full-research modal body — rendered markdown with translation.
+// Uses the same `useTranslated` hook as ChatMessages so server-precomputed
+// `full_research_zh` short-circuits the /api/translate round-trip; the
+// resulting (English or Chinese) markdown is then run through ReactMarkdown
+// instead of being dumped as raw text.
+// ---------------------------------------------------------------------------
+function ResearchBody({
+  text,
+  precomputed,
+}: {
+  text: string;
+  precomputed: string | null;
+}) {
+  const { text: shown, isLoading } = useTranslated(text, { precomputed });
+  return (
+    <div
+      className="markdown-content text-sm max-w-none"
+      style={isLoading ? { opacity: 0.7 } : undefined}
+    >
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ children }) => (
+            <h1 className="text-xl font-bold mb-3 text-gray-900">{children}</h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-lg font-bold mb-3 text-gray-900">{children}</h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-base font-bold mb-2 text-gray-800">
+              {children}
+            </h3>
+          ),
+          p: ({ children }) => (
+            <p className="mb-3 last:mb-0 leading-relaxed text-sm">{children}</p>
+          ),
+          ul: ({ children }) => (
+            <ul className="list-disc list-inside mb-3 space-y-1 ml-2">
+              {children}
+            </ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="list-decimal list-inside mb-3 space-y-1 ml-2">
+              {children}
+            </ol>
+          ),
+          li: ({ children }) => (
+            <li className="text-sm leading-relaxed">{children}</li>
+          ),
+          strong: ({ children }) => (
+            <strong className="font-semibold text-gray-900">{children}</strong>
+          ),
+          em: ({ children }) => <em className="italic">{children}</em>,
+          code: ({ className, children, ...props }) => {
+            const isInline = !className;
+            return isInline ? (
+              <code
+                className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs font-mono"
+                {...props}
+              >
+                {children}
+              </code>
+            ) : (
+              <code
+                className={`block bg-gray-800 text-gray-100 p-3 rounded text-xs font-mono overflow-x-auto ${className}`}
+                {...props}
+              >
+                {children}
+              </code>
+            );
+          },
+          pre: ({ children }) => (
+            <pre className="mb-3 rounded overflow-hidden">{children}</pre>
+          ),
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-4 border-blue-500 pl-4 my-3 italic text-gray-700">
+              {children}
+            </blockquote>
+          ),
+          table: ({ children }) => (
+            <div className="overflow-x-auto mb-3">
+              <table className="min-w-full border-collapse border border-gray-300 text-xs">
+                {children}
+              </table>
+            </div>
+          ),
+          th: ({ children }) => (
+            <th className="border border-gray-300 px-2 py-1 bg-gray-100 font-semibold text-left">
+              {children}
+            </th>
+          ),
+          td: ({ children }) => (
+            <td className="border border-gray-300 px-2 py-1">{children}</td>
+          ),
+          hr: () => <hr className="my-4 border-gray-200" />,
+          a: ({ children, href }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              {children}
+            </a>
+          ),
+        }}
+      >
+        {shown}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Decision row + (optionally) its reasoning expansion. Pulled out so the
 // per-symbol grouping wrapper stays readable.
 // ---------------------------------------------------------------------------
@@ -363,6 +490,7 @@ interface DecisionRowsProps {
   isOpen: boolean;
   onToggle: () => void;
   onOpenResearch: (state: ResearchModalState) => void;
+  onMarkExecuted: (d: DecisionRow) => void;
   /** Visual indent flag for history rows under a group header */
   indented?: boolean;
   locale: string;
@@ -373,6 +501,7 @@ function DecisionRows({
   isOpen,
   onToggle,
   onOpenResearch,
+  onMarkExecuted,
   indented,
   locale,
 }: DecisionRowsProps) {
@@ -430,16 +559,50 @@ function DecisionRows({
           {formatDate(d.created_at, locale)}
         </td>
         <td className="py-2 pr-3 text-xs text-gray-500">{d.decision_type}</td>
+        <td className="py-2 pr-3" onClick={(e) => e.stopPropagation()}>
+          {d.decision_type === "order" && (d.side === "buy" || d.side === "sell") ? (
+            d.status === "filled" ? (
+              <span
+                className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700"
+                title={
+                  d.filled_at
+                    ? `Executed ${formatDate(d.filled_at, locale)}`
+                    : "Executed"
+                }
+              >
+                <CheckCircle2 className="h-3 w-3" />
+                {d.filled_avg_price != null
+                  ? `@ $${d.filled_avg_price.toFixed(2)}`
+                  : "Executed"}
+              </span>
+            ) : d.status === "suggested" ? (
+              <button
+                onClick={() => onMarkExecuted(d)}
+                className="rounded border border-blue-300 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 hover:bg-blue-100"
+              >
+                Mark Executed
+              </button>
+            ) : (
+              <span className="text-[11px] text-gray-400">{d.status}</span>
+            )
+          ) : null}
+        </td>
       </tr>
       {isOpen && hasDetail && (
         <tr className="bg-blue-50/40">
           <td></td>
-          <td colSpan={12} className="py-3 pr-3 text-sm text-gray-700">
+          <td colSpan={13} className="py-3 pr-3 text-sm text-gray-700">
             <div className="whitespace-pre-wrap leading-relaxed">
               <span className="text-xs uppercase text-gray-500 font-semibold mr-2">
                 AI Reasoning:
               </span>
-              <Translated text={reasoning} />
+              <Translated
+                text={reasoning}
+                precomputed={
+                  (d.metadata?.reasoning_zh as string | null | undefined) ??
+                  null
+                }
+              />
               {d.metadata?.position_size_percent != null && (
                 <span className="ml-3 text-xs text-gray-500">
                   · suggested size: {d.metadata.position_size_percent}%
@@ -453,6 +616,11 @@ function DecisionRows({
                       onOpenResearch({
                         symbol: d.symbol,
                         text: String(d.metadata?.full_research || ""),
+                        text_zh:
+                          (d.metadata?.full_research_zh as
+                            | string
+                            | null
+                            | undefined) ?? null,
                       });
                     }}
                     className="inline-flex items-center gap-1 rounded border border-blue-300 bg-white px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
@@ -479,6 +647,12 @@ export function DecisionTracker() {
   const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
   const [researchModal, setResearchModal] =
     useState<ResearchModalState | null>(null);
+  const [markModal, setMarkModal] = useState<MarkExecutedModalState | null>(
+    null,
+  );
+  const { data: settings } = usePortfolioSettings();
+  const { data: holdings } = useHoldings();
+  const markMut = useMarkOrderExecuted();
   const { data, isLoading, error } = useDecisions(
     symbolFilter || undefined,
     tab === "all" ? undefined : tab,
@@ -486,6 +660,28 @@ export function DecisionTracker() {
   );
 
   const decisions = data?.decisions ?? [];
+
+  const openMarkModal = (d: DecisionRow) => {
+    const entry = (d.metadata?.entry_price as number | null | undefined) ?? null;
+    const sizePct =
+      (d.metadata?.position_size_percent as number | null | undefined) ?? null;
+    const cash = settings?.cash_balance ?? 0;
+    const px = entry ?? d.decision_price ?? 0;
+    let qty = 0;
+    if (d.side === "buy") {
+      if (px > 0 && sizePct != null && cash > 0) {
+        qty = Math.floor((cash * (sizePct / 100)) / px);
+      }
+    } else if (d.side === "sell") {
+      const h = (holdings ?? []).find((x) => x.symbol === d.symbol);
+      qty = h?.quantity ?? 0;
+    }
+    setMarkModal({
+      decision: d,
+      defaultQty: qty > 0 ? qty : 1,
+      defaultPrice: px > 0 ? px : 0,
+    });
+  };
 
   const groups = useMemo(() => groupBySymbol(decisions), [decisions]);
   const kpis = useMemo(() => computeKpis(decisions), [decisions]);
@@ -600,6 +796,7 @@ export function DecisionTracker() {
                     <th className="py-2 pr-3">90d</th>
                     <th className="py-2 pr-3">Date</th>
                     <th className="py-2 pr-3">Type</th>
+                    <th className="py-2 pr-3">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -613,12 +810,13 @@ export function DecisionTracker() {
                           isOpen={expandedReasoning.has(g.latest.order_id)}
                           onToggle={() => toggleReasoning(g.latest.order_id)}
                           onOpenResearch={setResearchModal}
+                          onMarkExecuted={openMarkModal}
                           locale={i18n.language}
                         />
                         {moreCount > 0 && (
                           <tr className="bg-white">
                             <td></td>
-                            <td colSpan={12} className="py-1 pr-3">
+                            <td colSpan={13} className="py-1 pr-3">
                               <button
                                 onClick={() => toggleHistory(g.symbol)}
                                 className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
@@ -638,6 +836,7 @@ export function DecisionTracker() {
                               isOpen={expandedReasoning.has(h.order_id)}
                               onToggle={() => toggleReasoning(h.order_id)}
                               onOpenResearch={setResearchModal}
+                              onMarkExecuted={openMarkModal}
                               indented
                               locale={i18n.language}
                             />
@@ -714,9 +913,12 @@ export function DecisionTracker() {
                 ×
               </button>
             </div>
-            <div className="overflow-y-auto px-4 py-4 text-sm text-gray-800 whitespace-pre-wrap font-sans leading-relaxed">
+            <div className="overflow-y-auto px-4 py-4 text-sm text-gray-800 leading-relaxed">
               {researchModal.text ? (
-                <Translated text={researchModal.text} as="div" />
+                <ResearchBody
+                  text={researchModal.text}
+                  precomputed={researchModal.text_zh ?? null}
+                />
               ) : (
                 "(no research text recorded for this decision)"
               )}
@@ -732,6 +934,156 @@ export function DecisionTracker() {
           </div>
         </div>
       )}
+
+      {markModal && (
+        <MarkExecutedModal
+          state={markModal}
+          isPending={markMut.isPending}
+          error={markMut.error as Error | null}
+          onClose={() => {
+            setMarkModal(null);
+            markMut.reset();
+          }}
+          onSubmit={async (qty, price) => {
+            const result = await markMut.mutateAsync({
+              orderId: markModal.decision.order_id,
+              payload: { filled_qty: qty, filled_avg_price: price },
+            });
+            setMarkModal(null);
+            markMut.reset();
+            if (result.cash_warning) {
+              window.alert(result.cash_warning);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+interface MarkExecutedModalProps {
+  state: MarkExecutedModalState;
+  isPending: boolean;
+  error: Error | null;
+  onClose: () => void;
+  onSubmit: (qty: number, price: number) => void | Promise<void>;
+}
+
+function MarkExecutedModal({
+  state,
+  isPending,
+  error,
+  onClose,
+  onSubmit,
+}: MarkExecutedModalProps) {
+  const { decision, defaultQty, defaultPrice } = state;
+  const [qtyStr, setQtyStr] = useState<string>(String(defaultQty));
+  const [priceStr, setPriceStr] = useState<string>(defaultPrice.toFixed(2));
+  const qty = Number(qtyStr);
+  const price = Number(priceStr);
+  const total =
+    Number.isFinite(qty) && Number.isFinite(price) ? qty * price : 0;
+  const valid = qty > 0 && price > 0;
+  const sideLabel = decision.side === "buy" ? "BUY" : "SELL";
+  const sideClass =
+    decision.side === "buy" ? "text-green-700" : "text-red-700";
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !isPending) onClose();
+      }}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+          <h3 className="text-base font-semibold text-gray-900">
+            Mark Executed —{" "}
+            <span className={sideClass}>{sideLabel}</span>{" "}
+            <span className="font-mono">{decision.symbol}</span>
+          </h3>
+          <button
+            onClick={onClose}
+            disabled={isPending}
+            className="text-gray-400 hover:text-gray-600 text-xl leading-none disabled:opacity-50"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+        <div className="px-4 py-4 space-y-3">
+          <div className="text-xs text-gray-500">
+            LLM suggested:{" "}
+            {decision.metadata?.entry_price != null
+              ? `entry $${(decision.metadata.entry_price as number).toFixed(2)}`
+              : "no entry price"}
+            {decision.metadata?.position_size_percent != null
+              ? ` · size ${decision.metadata.position_size_percent}%`
+              : ""}
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Filled Quantity
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={qtyStr}
+              onChange={(e) => setQtyStr(e.target.value)}
+              disabled={isPending}
+              className="w-full rounded border border-gray-300 px-2 py-1 text-sm font-mono focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Fill Price (USD)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={priceStr}
+              onChange={(e) => setPriceStr(e.target.value)}
+              disabled={isPending}
+              className="w-full rounded border border-gray-300 px-2 py-1 text-sm font-mono focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+          <div className="text-xs text-gray-600">
+            Total:{" "}
+            <span className="font-mono font-semibold text-gray-900">
+              ${total.toFixed(2)}
+            </span>
+            <span className="text-gray-400">
+              {" "}
+              (cash will{" "}
+              {decision.side === "buy" ? "decrease" : "increase"} by this amount)
+            </span>
+          </div>
+          {error && (
+            <div className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
+              {error.message}
+            </div>
+          )}
+        </div>
+        <div className="border-t border-gray-200 px-4 py-2 flex items-center justify-end gap-2">
+          <button
+            onClick={onClose}
+            disabled={isPending}
+            className="rounded border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => valid && onSubmit(qty, price)}
+            disabled={!valid || isPending}
+            className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {isPending ? "Submitting…" : "Confirm"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
