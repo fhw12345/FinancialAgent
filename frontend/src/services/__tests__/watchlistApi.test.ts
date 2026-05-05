@@ -180,7 +180,7 @@ describe("watchlistApi", () => {
 
       // Assert
       expect(apiClient.post).toHaveBeenCalledWith(
-        "/api/admin/portfolio/trigger-analysis"
+        "/api/watchlist/analyze"
       );
       expect(result.status).toBe("success");
       expect(result.message).toBe("Analysis triggered for 5 symbols");

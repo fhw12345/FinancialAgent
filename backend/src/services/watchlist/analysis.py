@@ -401,19 +401,17 @@ REASONING: [your analysis]
             # Analyze each symbol
             for item in items:
                 try:
-                    success = await self.analyze_symbol(item.symbol, item.user_id)
+                    success = await self.analyze_symbol(item.symbol)
 
                     if not success:
                         logger.warning(
                             "Analysis returned failure",
                             symbol=item.symbol,
-                            user_id=item.user_id,
                         )
                 except Exception as e:
                     logger.error(
                         "Analysis failed with exception",
                         symbol=item.symbol,
-                        user_id=item.user_id,
                         error=str(e),
                         error_type=type(e).__name__,
                     )
@@ -423,7 +421,6 @@ REASONING: [your analysis]
                     # Even on failure, we don't want to retry immediately
                     await self.watchlist_repo.update_last_analyzed(
                         watchlist_id=item.watchlist_id,
-                        user_id=item.user_id,
                         timestamp=utcnow(),
                     )
 

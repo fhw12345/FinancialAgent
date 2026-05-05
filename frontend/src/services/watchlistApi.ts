@@ -32,22 +32,16 @@ export async function removeFromWatchlist(watchlistId: string): Promise<void> {
 }
 
 /**
- * Manually trigger complete portfolio analysis (holdings + watchlist + market movers).
- * Uses the same endpoint as the CronJob for consistency.
+ * Manually trigger analysis for the watchlist symbols.
+ * Returns 202 immediately; analysis runs in the background.
  */
 export async function triggerWatchlistAnalysis(): Promise<{
   status: string;
-  run_id: string;
   message: string;
-  note?: string;
 }> {
   const response = await apiClient.post<{
     status: string;
-    run_id: string;
     message: string;
-    note?: string;
-  }>(
-    "/api/admin/portfolio/trigger-analysis"
-  );
+  }>("/api/watchlist/analyze");
   return response.data;
 }
