@@ -20,6 +20,12 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
+
+# All "today/now" defaults shown to the LLM and to the user use Beijing time.
+# The user is in CN; UTC midnight rollover would otherwise show "yesterday"
+# for half the day.
+_LOCAL_TZ = ZoneInfo("Asia/Shanghai")
 
 
 @dataclass
@@ -41,12 +47,12 @@ class AgentContext:
 
     # Time context (critical for relative date queries)
     current_date: str = field(
-        default_factory=lambda: datetime.now().strftime("%Y-%m-%d")
+        default_factory=lambda: datetime.now(_LOCAL_TZ).strftime("%Y-%m-%d")
     )
     six_months_ago: str = field(
-        default_factory=lambda: (datetime.now() - timedelta(days=180)).strftime(
-            "%Y-%m-%d"
-        )
+        default_factory=lambda: (
+            datetime.now(_LOCAL_TZ) - timedelta(days=180)
+        ).strftime("%Y-%m-%d")
     )
 
     # Configuration
@@ -84,10 +90,12 @@ class AgentContext:
             user_id=data.get("user_id", "anonymous"),
             symbol=data.get("symbol", "AAPL"),
             analysis_type=data.get("analysis_type", "investment"),
-            current_date=data.get("current_date", datetime.now().strftime("%Y-%m-%d")),
+            current_date=data.get(
+                "current_date", datetime.now(_LOCAL_TZ).strftime("%Y-%m-%d")
+            ),
             six_months_ago=data.get(
                 "six_months_ago",
-                (datetime.now() - timedelta(days=180)).strftime("%Y-%m-%d"),
+                (datetime.now(_LOCAL_TZ) - timedelta(days=180)).strftime("%Y-%m-%d"),
             ),
             max_debate_rounds=data.get("max_debate_rounds", 3),
             risk_tolerance=data.get("risk_tolerance", "moderate"),

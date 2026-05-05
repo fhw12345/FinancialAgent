@@ -274,8 +274,9 @@ class FinancialAnalysisReActAgent:
         self.checkpointer = MemorySaver()
 
         from datetime import timedelta
+        from zoneinfo import ZoneInfo
 
-        _today = datetime.now()
+        _today = datetime.now(ZoneInfo("Asia/Shanghai"))
         _system_prompt_str = FINANCIAL_AGENT_SYSTEM_PROMPT_TEMPLATE.format(
             current_date=_today.strftime("%Y-%m-%d"),
             six_months_ago=(_today - timedelta(days=180)).strftime("%Y-%m-%d"),

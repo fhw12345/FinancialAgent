@@ -3,7 +3,7 @@ Macro market sentiment analysis engine.
 Analyzes economic indicators from AlphaVantage for market sentiment assessment.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
@@ -72,7 +72,7 @@ class MacroAnalyzer:
             )
 
             response = MacroSentimentResponse(
-                analysis_date=datetime.now().isoformat(),
+                analysis_date=datetime.now(UTC).isoformat(),
                 vix_level=commodity_level,
                 vix_interpretation=commodity_interpretation,
                 fear_greed_score=fear_greed_score,

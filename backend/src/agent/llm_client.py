@@ -224,9 +224,11 @@ You MUST NOT:
 def get_financial_agent_system_prompt() -> str:
     """Get the financial agent system prompt with current date injected."""
     from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
 
-    current_date = datetime.now().strftime("%Y-%m-%d")
-    six_months_ago = (datetime.now() - timedelta(days=180)).strftime("%Y-%m-%d")
+    today = datetime.now(ZoneInfo("Asia/Shanghai"))
+    current_date = today.strftime("%Y-%m-%d")
+    six_months_ago = (today - timedelta(days=180)).strftime("%Y-%m-%d")
     return FINANCIAL_AGENT_SYSTEM_PROMPT_TEMPLATE.format(
         current_date=current_date,
         six_months_ago=six_months_ago,

@@ -142,7 +142,7 @@ class FibonacciAnalyzer:
                 end_date=end_date,
                 timeframe=timeframe,
                 current_price=current_price,
-                analysis_date=datetime.now().isoformat(),
+                analysis_date=datetime.now(UTC).isoformat(),
                 fibonacci_levels=fibonacci_levels,
                 market_structure=market_structure,
                 confidence_score=confidence_score,

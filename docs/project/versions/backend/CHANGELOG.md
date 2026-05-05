@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.3] - 2026-05-05
+
+### Fixed
+- **fix(time): 报告生成时间和 LLM 看到的"今天"不对** — 上一版只修了**前端展示层**的 UTC+8 渲染，但**源头**还有大量 `datetime.now()`（无 tz）输出 ISO 字符串发给前端，前端 `new Date(naive_iso)` 把它当机器本地时间解析，结果中文界面下时间还是漂的。这版分两类修：
+  - **写出去给前端显示的 ISO**：换成 `datetime.now(UTC).isoformat()`，输出带 `+00:00`，前端 `formatTimestamp` 看到 tz-aware 才能按 zh-CN 转 Asia/Shanghai。触达 `core/analysis/stochastic_analyzer.py`、`core/analysis/macro_analyzer.py`、`core/analysis/fibonacci/analyzer.py`（`analysis_date` 字段）；`api/analysis/technical.py`（`generation_date`）；`api/market/prices.py`（`last_updated` / `timestamp`）。
+  - **塞进 prompt 给 LLM 看的"今天"**：换成 `datetime.now(ZoneInfo("Asia/Shanghai"))`。本地工具的目标用户在中国，UTC 比北京慢 8 小时，深夜跑分析时给 LLM 写"今天是昨天"。触达 `agent/llm_client.py:get_financial_agent_system_prompt()`、`agent/langgraph_react_agent.py:_today`、`agent/context.py:AgentContext.current_date/six_months_ago`（含 `from_dict` 兜底分支）、`services/formatters/base.py:current_year`（财务季度过滤）、`services/watchlist/analysis.py:end_date`（fibonacci 窗口端点）、`core/data/ticker_data_service.py:today`（缓存 TTL 判断）。
+  - **不动**：`langgraph_react_agent.py:723,725` 的 `trace_id` / `thread_name`，纯字符串 ID，不渲染、不参与时间比较。
+
+### Why
+v0.15.0 (frontend) 加了 `formatTimestamp` 把 zh-CN locale 强制转 Asia/Shanghai，但前提是**输入的 ISO 字符串已经带 tz**（比如 `+00:00` 或 `Z`）。老代码大量 `datetime.now().isoformat()` 输出 naive 字符串，浏览器侧 `new Date()` 看到 naive 字符串会按浏览器本地时区当真——于是用户看到的"报告生成时间"会差一个时区偏移。源头修干净后，所有面向 UI 的时间戳都是显式 UTC，前端再统一按 locale 渲染，链路自洽。
+
 ## [0.20.2] - 2026-05-05
 
 ### Fixed

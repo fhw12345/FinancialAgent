@@ -120,7 +120,7 @@ class StochasticAnalyzer:
                 end_date=end_date,
                 timeframe=timeframe,
                 current_price=current_price,
-                analysis_date=datetime.now().isoformat(),
+                analysis_date=datetime.now(UTC).isoformat(),
                 k_period=k_period,
                 d_period=d_period,
                 current_k=current_k,

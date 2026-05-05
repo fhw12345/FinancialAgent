@@ -6,7 +6,8 @@ Handles LLM agent invocation, fallback Fibonacci analysis, and analysis cycles.
 
 import asyncio
 import re
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import structlog
 
@@ -96,7 +97,7 @@ class AnalysisEngine:
         try:
             # Generate analysis_id if not provided (format: symbol_YYYYMMDD_HHMMSS)
             if analysis_id is None:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
                 analysis_id = f"{symbol}_{timestamp}"
 
             logger.info(
@@ -320,7 +321,7 @@ REASONING: [your analysis]
                 return False
 
             analyzer = FibonacciAnalyzer(self.data_manager)
-            end_date = datetime.now().date()
+            end_date = datetime.now(ZoneInfo("Asia/Shanghai")).date()
             start_date = end_date - timedelta(days=180)
 
             result = await analyzer.analyze(

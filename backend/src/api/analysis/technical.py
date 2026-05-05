@@ -6,7 +6,7 @@ chart generation, and other technical analysis tools for market timing.
 """
 
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -196,7 +196,7 @@ async def generate_chart(
 
         # For now, return chart data structure that frontend can use
         # Chart image generation will be implemented in next phase
-        generation_date = datetime.now().isoformat()
+        generation_date = datetime.now(UTC).isoformat()
         chart_data: dict[str, Any] = {
             "symbol": request.symbol,
             "start_date": request.start_date,
@@ -227,7 +227,7 @@ async def generate_chart(
             chart_type=request.chart_type,
             chart_url=None,
             chart_data={},
-            generation_date=datetime.now().isoformat(),
+            generation_date=datetime.now(UTC).isoformat(),
             success=False,
             error_message=str(e),
         )

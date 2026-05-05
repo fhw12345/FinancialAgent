@@ -4,7 +4,7 @@ Price and quote data endpoints.
 Handles real-time quotes and historical price data using Alpha Vantage API.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from functools import lru_cache
 
 import pandas as pd
@@ -214,7 +214,7 @@ async def get_price_data(
             symbol=symbol,
             interval=interval,
             data=price_points,
-            last_updated=datetime.now().isoformat(),
+            last_updated=datetime.now(UTC).isoformat(),
         )
 
         # Cache with interval-appropriate TTL
@@ -298,7 +298,7 @@ async def get_quote(
             previous_close=float(quote_data.get("previous_close", 0)),
             change=float(quote_data.get("change", 0)),
             change_percent=quote_data.get("change_percent", "0%"),
-            timestamp=datetime.now().isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
         )
 
         # Cache for 60 seconds (quote data is frequently updated)

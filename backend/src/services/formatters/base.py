@@ -6,6 +6,7 @@ Provides common utilities used across all formatter modules.
 
 from datetime import datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from src.shared.formatters import (
     calculate_qoq_growth,
@@ -63,7 +64,7 @@ def extract_current_year_quarters(
         List of quarters from current year, sorted chronologically
     """
     if current_year is None:
-        current_year = datetime.now().year
+        current_year = datetime.now(ZoneInfo("Asia/Shanghai")).year
 
     current_year_quarters = [
         q

@@ -260,6 +260,7 @@ class TickerDataService:
             TTL in seconds
         """
         from datetime import datetime
+        from zoneinfo import ZoneInfo
 
         # Base TTL by interval
         base_ttl_map = {
@@ -274,7 +275,7 @@ class TickerDataService:
         base_ttl = base_ttl_map.get(interval, self.default_ttl)
 
         # Historical data can be cached longer
-        today = datetime.now().date().strftime("%Y-%m-%d")
+        today = datetime.now(ZoneInfo("Asia/Shanghai")).date().strftime("%Y-%m-%d")
         is_current_data = end_date == today
 
         if not is_current_data:
