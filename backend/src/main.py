@@ -76,7 +76,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("Message indexes created")
 
         # Phase 2 indexes: Chat and Tool Execution
-        chat_repo = ChatRepository(mongodb.get_collection("chats"))
+        chat_repo = ChatRepository(mongodb.get_collection("chats"), redis_cache)
         await chat_repo.ensure_indexes()
         logger.info("Chat indexes created (symbol-per-chat pattern)")
 

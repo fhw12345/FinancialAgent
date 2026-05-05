@@ -7,14 +7,18 @@ ignored parameter so existing call sites stay valid; queries no longer
 filter by user_id.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from motor.motor_asyncio import AsyncIOMotorCollection
 
 from src.core.utils.date_utils import utcnow
+from src.services.persistence_translator import translate_for_persistence
 
 from ...models.chat import Chat, ChatCreate, ChatUpdate, UIState
+
+if TYPE_CHECKING:
+    from src.database.redis import RedisCache
 
 logger = structlog.get_logger()
 
@@ -22,8 +26,13 @@ logger = structlog.get_logger()
 class ChatRepository:
     """Repository for chat data access operations."""
 
-    def __init__(self, collection: AsyncIOMotorCollection):
+    def __init__(
+        self,
+        collection: AsyncIOMotorCollection,
+        redis_cache: "RedisCache",
+    ):
         self.collection = collection
+        self._redis = redis_cache
 
     async def ensure_indexes(self) -> None:
         """Create indexes for optimal query performance."""
@@ -42,12 +51,19 @@ class ChatRepository:
 
         chat_id = f"chat_{uuid.uuid4().hex[:12]}"
 
+        translations = await translate_for_persistence(
+            {"title": chat_create.title},
+            redis_cache=self._redis,
+        )
+
         chat = Chat(
             chat_id=chat_id,
             title=chat_create.title,
+            title_zh=translations.get("title_zh"),
             is_archived=False,
             ui_state=UIState(),
             last_message_preview=None,
+            last_message_preview_zh=None,
             created_at=utcnow(),
             updated_at=utcnow(),
             last_message_at=None,
@@ -89,14 +105,24 @@ class ChatRepository:
     async def update(self, chat_id: str, chat_update: ChatUpdate) -> Chat | None:
         update_dict: dict[str, Any] = {"updated_at": utcnow()}
 
+        translatable: dict[str, str] = {}
         if chat_update.title is not None:
             update_dict["title"] = chat_update.title
+            translatable["title"] = chat_update.title
+        if chat_update.last_message_preview is not None:
+            update_dict["last_message_preview"] = chat_update.last_message_preview
+            translatable["last_message_preview"] = chat_update.last_message_preview
         if chat_update.is_archived is not None:
             update_dict["is_archived"] = chat_update.is_archived
         if chat_update.ui_state is not None:
             update_dict["ui_state"] = chat_update.ui_state.model_dump()
-        if chat_update.last_message_preview is not None:
-            update_dict["last_message_preview"] = chat_update.last_message_preview
+
+        if translatable:
+            translations = await translate_for_persistence(
+                translatable, redis_cache=self._redis
+            )
+            for tk, tv in translations.items():
+                update_dict[tk] = tv
 
         result = await self.collection.find_one_and_update(
             {"chat_id": chat_id},

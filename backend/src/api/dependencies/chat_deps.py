@@ -37,10 +37,13 @@ def get_redis() -> RedisCache:
     return redis_cache
 
 
-def get_chat_repository(mongodb: MongoDB = Depends(get_mongodb)) -> ChatRepository:
+def get_chat_repository(
+    mongodb: MongoDB = Depends(get_mongodb),
+    redis_cache: RedisCache = Depends(get_redis),
+) -> ChatRepository:
     """Get chat repository instance."""
     chats_collection = mongodb.get_collection("chats")
-    return ChatRepository(chats_collection)
+    return ChatRepository(chats_collection, redis_cache)
 
 
 def get_message_repository(

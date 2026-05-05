@@ -37,10 +37,31 @@ def mock_collection():
     return collection
 
 
+class _FakeRedis:
+    """Minimal RedisCache stand-in for unit tests; translator is patched anyway."""
+
+    async def get(self, k):  # noqa: ARG002
+        return None
+
+    async def set(self, k, v, ttl_seconds=None):  # noqa: ARG002
+        return None
+
+
 @pytest.fixture
-def repository(mock_collection):
+def fake_redis():
+    return _FakeRedis()
+
+
+@pytest.fixture
+def repository(mock_collection, fake_redis):
     """Create ChatRepository instance"""
-    return ChatRepository(mock_collection)
+    return ChatRepository(mock_collection, fake_redis)
+
+
+@pytest.fixture
+def chat_repository(mock_collection, fake_redis):
+    """Alias used by write-time translation tests."""
+    return ChatRepository(mock_collection, fake_redis)
 
 
 @pytest.fixture
@@ -639,3 +660,131 @@ class TestDelete:
 
         # Assert
         assert result is False
+
+
+# ===== Write-Time Translation Tests =====
+
+
+def _doc_from_update(chat_id: str, update_dict: dict) -> dict:
+    """Build a fake Mongo document reflecting the $set payload sent by update()."""
+    now = datetime.now(UTC)
+    base = {
+        "_id": "mongo_id",
+        "chat_id": chat_id,
+        "user_id": None,
+        "title": "x",
+        "title_zh": None,
+        "is_archived": False,
+        "ui_state": {
+            "current_symbol": None,
+            "current_interval": "1d",
+            "current_date_range": {"start": None, "end": None},
+            "active_overlays": {},
+        },
+        "last_message_preview": None,
+        "last_message_preview_zh": None,
+        "created_at": now,
+        "updated_at": now,
+        "last_message_at": None,
+    }
+    base.update(update_dict)
+    return base
+
+
+@pytest.mark.asyncio
+async def test_create_persists_title_zh(chat_repository, mock_collection):
+    from unittest.mock import AsyncMock, patch
+
+    from src.models.chat import ChatCreate
+
+    with patch(
+        "src.database.repositories.chat_repository.translate_for_persistence",
+        new=AsyncMock(return_value={"title_zh": "新会话"}),
+    ):
+        chat = await chat_repository.create(ChatCreate(title="New Chat"))
+
+    assert chat.title == "New Chat"
+    assert chat.title_zh == "新会话"
+    mock_collection.insert_one.assert_awaited_once()
+    inserted_doc = mock_collection.insert_one.await_args.args[0]
+    assert inserted_doc["title"] == "New Chat"
+    assert inserted_doc["title_zh"] == "新会话"
+
+
+@pytest.mark.asyncio
+async def test_update_translates_title_and_preview_when_provided(
+    chat_repository, mock_collection
+):
+    from unittest.mock import AsyncMock, patch
+
+    from src.models.chat import ChatCreate, ChatUpdate
+
+    with patch(
+        "src.database.repositories.chat_repository.translate_for_persistence",
+        new=AsyncMock(return_value={"title_zh": None}),
+    ):
+        chat = await chat_repository.create(ChatCreate(title="x"))
+
+    # Mongo returns the updated document, mirroring what update() $set
+    mock_collection.find_one_and_update.return_value = _doc_from_update(
+        chat.chat_id,
+        {
+            "title": "AAPL Analysis",
+            "title_zh": "苹果分析",
+            "last_message_preview": "Based on Fibonacci...",
+            "last_message_preview_zh": "基于斐波那契…",
+        },
+    )
+
+    with patch(
+        "src.database.repositories.chat_repository.translate_for_persistence",
+        new=AsyncMock(
+            return_value={
+                "title_zh": "苹果分析",
+                "last_message_preview_zh": "基于斐波那契…",
+            }
+        ),
+    ) as mock_t:
+        updated = await chat_repository.update(
+            chat.chat_id,
+            ChatUpdate(
+                title="AAPL Analysis", last_message_preview="Based on Fibonacci..."
+            ),
+        )
+
+    assert updated is not None
+    assert updated.title_zh == "苹果分析"
+    assert updated.last_message_preview_zh == "基于斐波那契…"
+    args, _ = mock_t.call_args
+    assert args[0] == {
+        "title": "AAPL Analysis",
+        "last_message_preview": "Based on Fibonacci...",
+    }
+
+
+@pytest.mark.asyncio
+async def test_update_skips_translation_when_no_text_fields_change(
+    chat_repository, mock_collection
+):
+    from unittest.mock import AsyncMock, patch
+
+    from src.models.chat import ChatCreate, ChatUpdate
+
+    with patch(
+        "src.database.repositories.chat_repository.translate_for_persistence",
+        new=AsyncMock(return_value={}),
+    ):
+        chat = await chat_repository.create(ChatCreate(title="x"))
+
+    mock_collection.find_one_and_update.return_value = _doc_from_update(
+        chat.chat_id, {"is_archived": True}
+    )
+
+    mock_t = AsyncMock()
+    with patch(
+        "src.database.repositories.chat_repository.translate_for_persistence",
+        new=mock_t,
+    ):
+        await chat_repository.update(chat.chat_id, ChatUpdate(is_archived=True))
+
+    mock_t.assert_not_called()

@@ -41,7 +41,7 @@ async def main():
 
     # Initialize repositories
     user_repo = UserRepository(users_collection)
-    chat_repo = ChatRepository(chats_collection)
+    chat_repo = ChatRepository(chats_collection, redis_cache)
     message_repo = MessageRepository(messages_collection, redis_cache)
 
     # ===== Test UserRepository =====

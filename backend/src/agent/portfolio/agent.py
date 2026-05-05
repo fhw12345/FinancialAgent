@@ -78,7 +78,7 @@ class PortfolioAnalysisAgent(
         # Repositories
         self.user_repo = UserRepository(mongodb.get_collection("users"))
         self.watchlist_repo = WatchlistRepository(mongodb.get_collection("watchlist"))
-        self.chat_repo = ChatRepository(mongodb.get_collection("chats"))
+        self.chat_repo = ChatRepository(mongodb.get_collection("chats"), redis_cache)
         self.message_repo = MessageRepository(
             mongodb.get_collection("messages"), redis_cache
         )
