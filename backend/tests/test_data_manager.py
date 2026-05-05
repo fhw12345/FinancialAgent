@@ -10,7 +10,7 @@ Tests cover:
 """
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pandas as pd
 import pytest
@@ -552,10 +552,19 @@ class TestDataManager:
 
     @pytest.mark.asyncio
     async def test_get_ohlcv_daily_fetches_on_miss(self, data_manager, mock_av_service):
-        """Daily OHLCV should fetch from API on cache miss."""
-        result = await data_manager.get_ohlcv("AAPL", "daily")
+        """Daily OHLCV should fetch from API on cache miss.
 
-        # Should have fetched from API
+        DataManager now tries yfinance first; we patch its bars adapter to
+        raise so the fallback chain falls through to the AV mock — that's the
+        path this test was originally written to cover.
+        """
+        with patch(
+            "src.services.market_data.yfinance_bars.get_bars",
+            side_effect=RuntimeError("yfinance disabled in unit test"),
+        ):
+            result = await data_manager.get_ohlcv("AAPL", "daily")
+
+        # Should have fetched from AV after yfinance failed
         mock_av_service.get_daily_bars.assert_called_once()
         assert len(result) == 2
         assert result[0].close == 151.0
@@ -564,17 +573,33 @@ class TestDataManager:
     async def test_get_ohlcv_intraday_always_fresh(
         self, data_manager, mock_redis, mock_av_service
     ):
-        """Intraday OHLCV should NOT be cached - always fresh."""
-        result = await data_manager.get_ohlcv("AAPL", "1min")
+        """Intraday OHLCV should NOT be cached - always fresh.
+
+        Same yfinance-disabled patch as the daily test: we want this unit test
+        to exercise the AV branch deterministically without hitting the live
+        Yahoo endpoint.
+        """
+        with patch(
+            "src.services.market_data.yfinance_bars.get_bars",
+            side_effect=RuntimeError("yfinance disabled in unit test"),
+        ):
+            result = await data_manager.get_ohlcv("AAPL", "1min")
 
         assert len(result) == 2
-        # Verify API was called
         mock_av_service.get_intraday_bars.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_treasury_fetches_on_miss(self, data_manager, mock_av_service):
-        """Treasury data should fetch from API on cache miss."""
-        result = await data_manager.get_treasury("2y")
+        """Treasury data should fall back to AV when FRED is unavailable.
+
+        Patch FREDService.get_series to raise so the fallback chain falls
+        through to AV — same path this test was originally written for.
+        """
+        with patch(
+            "src.services.market_data.fred.FREDService.get_series",
+            side_effect=RuntimeError("fred disabled in unit test"),
+        ):
+            result = await data_manager.get_treasury("2y")
 
         mock_av_service.get_treasury_yield.assert_called_once()
         assert len(result) == 2
@@ -583,11 +608,25 @@ class TestDataManager:
 
     @pytest.mark.asyncio
     async def test_prefetch_shared_parallel(self, data_manager, mock_av_service):
-        """Prefetch should fetch multiple items in parallel."""
-        context = await data_manager.prefetch_shared(
-            symbols=["NVDA", "MSFT"],
-            treasury_maturities=["2y", "10y"],
-        )
+        """Prefetch should fetch multiple items in parallel.
+
+        Patch yfinance bars + FRED off so OHLCV + treasury both fall through
+        to AV mocks, as before.
+        """
+        with (
+            patch(
+                "src.services.market_data.yfinance_bars.get_bars",
+                side_effect=RuntimeError("yfinance disabled in unit test"),
+            ),
+            patch(
+                "src.services.market_data.fred.FREDService.get_series",
+                side_effect=RuntimeError("fred disabled in unit test"),
+            ),
+        ):
+            context = await data_manager.prefetch_shared(
+                symbols=["NVDA", "MSFT"],
+                treasury_maturities=["2y", "10y"],
+            )
 
         # Should have data for symbols (from parallel fetches)
         assert "NVDA" in context.ohlcv

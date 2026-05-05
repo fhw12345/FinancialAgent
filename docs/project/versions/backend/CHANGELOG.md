@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-05-05
+
+### Changed — yfinance / FRED 升主源，AV 退 fallback (~80% 配额释放)
+Alpha Vantage 免费 25 req/day 几次页面加载就用光，导致 "Data sources are
+severely rate-limited" 反复出现。把所有有免费替代源的路径全部翻转：
+
+- **`DataManager._fetch_quote()`** 链路 `Finnhub → AV → yfinance` 改成
+  `Finnhub → yfinance → AV`. yfinance 没 key、没每日上限，字段一致。
+  这是单页加载里 quote 调用最密集的入口（每个 holding 都打一次）。
+- **`DataManager._fetch_company_news()`** 同样：`Finnhub → AV → yfinance`
+  改成 `Finnhub → yfinance → AV`. 注意 yfinance news 只有标题没有 sentiment
+  打分；要打分仍会落到 AV。
+- **`DataManager._fetch_ohlcv()`** 改成 yfinance 主、AV 备。新建
+  `services/market_data/yfinance_bars.py` 适配器，把 yfinance Ticker.history
+  的 1m/5m/15m/30m/60m/1d/1wk/1mo 映射到现有 Granularity，输出列名
+  Open/High/Low/Close/Volume 跟 AV 一致，DataManager._dataframe_to_ohlcv
+  零修改。验证 AAPL daily 61 bars / 1min 390 bars 全正确。
+- **`DataManager._fetch_treasury()`** 改成 FRED 主、AV 备。FRED 是美联储官方
+  数据源（DGS3MO/DGS2/DGS5/DGS10/DGS30），权威性高于 AV，且有现成的
+  `FREDService`。FRED 不可用时回退 AV 兼容旧契约。
+- **Agent quote tool** (`get_stock_quote`) 注入 DataManager，复用上面的
+  Finnhub → yfinance → AV 链路。Tool schema 不变，只换实现。
+- 新增 `tests/test_yfinance_adapters_parity.py` (5 项) — 验证 yfinance
+  bars / quote / movers / search 的字段形状跟 AV 兼容。标记为
+  `@pytest.mark.integration` 默认跳过，运行 `pytest -m integration`。
+  pyproject 注册了 `integration` marker 并默认 `-m "not integration"` 。
+- 修复 4 个 DataManager 单元测试 — 原本断言 AV mock 被调用，新链路下要先
+  patch yfinance / FRED 失败才能断言 AV 落到。增量逻辑无回归。
+
+仍然走 AV 的情形（无替代源）: insider transactions, earnings history,
+ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配额
+释放后不再卡。
+
 ## [0.18.1] - 2026-05-05
 
 ### Fixed

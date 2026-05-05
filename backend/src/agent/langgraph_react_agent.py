@@ -209,9 +209,12 @@ class FinancialAnalysisReActAgent:
         # Create formatter for Alpha Vantage responses
         alpha_vantage_formatter = AlphaVantageResponseFormatter()
 
-        # Add Alpha Vantage tools (search, overview, news, financials, movers)
+        # Add Alpha Vantage tools (search, overview, news, financials, movers).
+        # Pass data_manager so the quote tool routes through the
+        # Finnhub → yfinance → AV fallback chain instead of always burning
+        # the AV daily quota.
         alpha_vantage_tools = create_alpha_vantage_tools(
-            market_service, alpha_vantage_formatter
+            market_service, alpha_vantage_formatter, data_manager=data_manager
         )
         self.tools.extend(alpha_vantage_tools)
 

@@ -4,6 +4,8 @@ Stock Quote and Symbol Search Tools.
 Provides tools for getting current stock prices and searching ticker symbols.
 """
 
+from typing import Any
+
 import structlog
 from langchain_core.tools import tool
 
@@ -12,12 +14,21 @@ from src.services.alphavantage_market_data import AlphaVantageMarketDataService
 logger = structlog.get_logger()
 
 
-def create_quote_tools(service: AlphaVantageMarketDataService) -> list:
+def create_quote_tools(
+    service: AlphaVantageMarketDataService,
+    data_manager: Any | None = None,
+) -> list:
     """
     Create quote and symbol search tools.
 
     Args:
-        service: Initialized AlphaVantageMarketDataService instance
+        service: Initialized AlphaVantageMarketDataService instance. Still
+            required for market_status and as the eventual fallback for the
+            search tool — both of which are AV-only paths today.
+        data_manager: Optional DataManager. When provided, the quote tool
+            routes through DataManager.get_quote() so it benefits from the
+            Finnhub → yfinance → AV fallback chain instead of burning the
+            25/day AV quota on every quote.
 
     Returns:
         List of quote-related LangChain tools
@@ -56,8 +67,24 @@ def create_quote_tools(service: AlphaVantageMarketDataService) -> list:
             - symbol="9988.HK", region="Hong Kong" → Alibaba HK with HK market status
         """
         try:
-            # Get quote data from Alpha Vantage (with delayed entitlement)
-            quote_data = await service.get_quote(symbol)
+            # Quote: prefer DataManager (Finnhub → yfinance → AV fallback chain)
+            # so we don't burn the AV daily quota on every quote. Fall back to
+            # the AV service if no DataManager was wired in.
+            if data_manager is not None:
+                qd = await data_manager.get_quote(symbol)
+                quote_data = {
+                    "symbol": qd.symbol,
+                    "price": qd.price,
+                    "open": qd.open,
+                    "high": qd.high,
+                    "low": qd.low,
+                    "volume": qd.volume,
+                    "change_percent": str(qd.change_percent),
+                    "latest_trading_day": qd.latest_trading_day,
+                    "previous_close": qd.previous_close,
+                }
+            else:
+                quote_data = await service.get_quote(symbol)
 
             if not quote_data or quote_data.get("price", 0) == 0:
                 return f"No quote data available for {symbol}"

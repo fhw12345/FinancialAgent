@@ -11,6 +11,8 @@ This module is organized into the following submodules:
 - technical: Market movers, commodities, and technical indicators
 """
 
+from typing import Any
+
 from src.services.alphavantage_market_data import AlphaVantageMarketDataService
 from src.services.alphavantage_response_formatter import AlphaVantageResponseFormatter
 
@@ -23,7 +25,9 @@ __all__ = ["create_alpha_vantage_tools"]
 
 
 def create_alpha_vantage_tools(
-    service: AlphaVantageMarketDataService, formatter: AlphaVantageResponseFormatter
+    service: AlphaVantageMarketDataService,
+    formatter: AlphaVantageResponseFormatter,
+    data_manager: Any | None = None,
 ) -> list:
     """
     Create Alpha Vantage agent tools with service dependency injection.
@@ -31,6 +35,9 @@ def create_alpha_vantage_tools(
     Args:
         service: Initialized AlphaVantageMarketDataService instance
         formatter: AlphaVantageResponseFormatter for consistent markdown output
+        data_manager: Optional DataManager. When provided, the quote tool
+            routes through the Finnhub → yfinance → AV fallback chain instead
+            of always calling AV directly.
 
     Returns:
         List of LangChain tools for agent access
@@ -39,7 +46,7 @@ def create_alpha_vantage_tools(
     tools = []
 
     # Quote tools (get_stock_quote, search_ticker)
-    tools.extend(create_quote_tools(service))
+    tools.extend(create_quote_tools(service, data_manager=data_manager))
 
     # Fundamental tools (company_overview, financial_statements, insider_activity, etf_holdings)
     tools.extend(create_fundamental_tools(service, formatter))

@@ -150,20 +150,37 @@ class DataManager:
         granularity: Granularity,
         outputsize: str,
     ) -> list[OHLCVData]:
-        """Internal: Fetch OHLCV from Alpha Vantage."""
+        """Internal: Fetch OHLCV bars. yfinance is the primary source (no key,
+        no daily cap); Alpha Vantage is the fallback when yfinance fails."""
+        # Provider 1: yfinance — same OHLCV columns, ~unlimited rate, no key
+        try:
+            from src.services.market_data import yfinance_bars
+
+            df = await yfinance_bars.get_bars(
+                symbol, granularity.value, outputsize
+            )
+            return self._dataframe_to_ohlcv(df)
+        except Exception as e:
+            logger.warning(
+                "ohlcv_provider_failed",
+                provider="yfinance",
+                symbol=symbol,
+                granularity=granularity.value,
+                error=str(e),
+            )
+
+        # Provider 2: Alpha Vantage (last resort, burns 25/day quota)
         try:
             if granularity.is_intraday or granularity in (
                 Granularity.MIN_30,
                 Granularity.MIN_60,
             ):
-                # Intraday API
                 df = await self._av_service.get_intraday_bars(
                     symbol=symbol,
                     interval=granularity.value,
                     outputsize=outputsize,
                 )
             else:
-                # Daily/Weekly/Monthly API
                 method_map = {
                     Granularity.DAILY: self._av_service.get_daily_bars,
                     Granularity.WEEKLY: self._av_service.get_weekly_bars,
@@ -176,12 +193,12 @@ class DataManager:
 
         except Exception as e:
             logger.error(
-                "ohlcv_fetch_failed",
+                "ohlcv_all_providers_failed",
                 symbol=symbol,
                 granularity=granularity.value,
                 error=str(e),
             )
-            raise DataFetchError(str(e), "alpha_vantage") from e
+            raise DataFetchError(str(e), "all_providers") from e
 
     def _dataframe_to_ohlcv(self, df: pd.DataFrame) -> list[OHLCVData]:
         """Convert pandas DataFrame to list of OHLCVData."""
@@ -253,9 +270,64 @@ class DataManager:
         return [TreasuryData.from_dict(d) for d in cached]
 
     async def _fetch_treasury(self, maturity: str, interval: str) -> list[TreasuryData]:
-        """Internal: Fetch treasury from Alpha Vantage."""
+        """Internal: Fetch treasury yield. FRED is the primary source (no daily
+        cap, authoritative since FRED *is* the Federal Reserve); Alpha Vantage
+        is the fallback when FRED is unreachable or no FRED key is configured.
+
+        `interval` is currently ignored — FRED returns daily values; weekly /
+        monthly aggregation can be added later if needed.
+        """
+        # Provider 1: FRED (free, no daily cap, authoritative)
         try:
-            # Map short maturity to API format
+            from src.core.config import get_settings
+            from src.services.market_data.fred import FREDService
+
+            settings = get_settings()
+            if settings.fred_api_key:
+                # FRED series IDs for constant-maturity Treasury rates
+                fred_map = {
+                    "3m": "DGS3MO",
+                    "2y": "DGS2",
+                    "5y": "DGS5",
+                    "10y": "DGS10",
+                    "30y": "DGS30",
+                }
+                series_id = fred_map.get(maturity.lower())
+                if series_id is not None:
+                    fred = FREDService(api_key=settings.fred_api_key)
+                    try:
+                        df = await fred.get_series(series_id, days=365)
+                    finally:
+                        await fred.close()
+                    if df is not None and not df.empty:
+                        result: list[TreasuryData] = []
+                        for idx, row in df.iterrows():
+                            dt = (
+                                idx.to_pydatetime()
+                                if isinstance(idx, pd.Timestamp)
+                                else datetime.fromisoformat(str(idx))
+                            )
+                            if dt.tzinfo is None:
+                                dt = dt.replace(tzinfo=UTC)
+                            result.append(
+                                TreasuryData(
+                                    date=dt,
+                                    yield_value=float(row.get("value", row.iloc[0])),
+                                    maturity=maturity.lower(),
+                                )
+                            )
+                        result.sort(key=lambda x: x.date, reverse=True)
+                        return result
+        except Exception as e:
+            logger.warning(
+                "treasury_provider_failed",
+                provider="fred",
+                maturity=maturity,
+                error=str(e),
+            )
+
+        # Provider 2: Alpha Vantage (fallback)
+        try:
             maturity_map = {
                 "2y": "2year",
                 "5y": "5year",
@@ -290,13 +362,12 @@ class DataManager:
                     )
                 )
 
-            # Sort newest first
             result.sort(key=lambda x: x.date, reverse=True)
             return result
 
         except Exception as e:
-            logger.error("treasury_fetch_failed", maturity=maturity, error=str(e))
-            raise DataFetchError(str(e), "alpha_vantage") from e
+            logger.error("treasury_all_providers_failed", maturity=maturity, error=str(e))
+            raise DataFetchError(str(e), "all_providers") from e
 
     async def get_ipo_calendar(self) -> list[IPOData]:
         """
@@ -510,8 +581,15 @@ class DataManager:
         return QuoteData.from_dict(cached)
 
     async def _fetch_quote(self, symbol: str) -> QuoteData:
-        """Internal: Fetch quote with Finnhub → AV → yfinance fallback chain."""
-        # Provider 1: Finnhub (primary if configured)
+        """Internal: Fetch quote with Finnhub → yfinance → AV fallback chain.
+
+        yfinance moved ahead of Alpha Vantage because the AV free-tier key is
+        capped at 25 req/day and gets exhausted in a few page loads. yfinance
+        has no key, no daily cap, and returns the same fields. AV is kept as
+        a last-resort fallback for the rare case Yahoo's public endpoint is
+        down.
+        """
+        # Provider 1: Finnhub (primary if configured — fastest + most accurate)
         if self._finnhub_service is not None:
             try:
                 return await self._finnhub_service.fetch_quote(symbol)
@@ -523,7 +601,18 @@ class DataManager:
                     error=str(e),
                 )
 
-        # Provider 2: Alpha Vantage
+        # Provider 2: yfinance (free, no daily cap)
+        try:
+            return await self._fetch_quote_yfinance(symbol)
+        except Exception as e:
+            logger.warning(
+                "quote_provider_failed",
+                provider="yfinance",
+                symbol=symbol,
+                error=str(e),
+            )
+
+        # Provider 3: Alpha Vantage (last resort — burns the 25/day quota)
         try:
             data = await self._av_service.get_quote(symbol)
             return QuoteData(
@@ -538,17 +627,6 @@ class DataManager:
                 high=data["high"],
                 low=data["low"],
             )
-        except Exception as e:
-            logger.warning(
-                "quote_provider_failed",
-                provider="alpha_vantage",
-                symbol=symbol,
-                error=str(e),
-            )
-
-        # Provider 3: yfinance (ultimate fallback, no key required)
-        try:
-            return await self._fetch_quote_yfinance(symbol)
         except Exception as e:
             logger.error("quote_all_providers_failed", symbol=symbol, error=str(e))
             raise DataFetchError(
@@ -627,19 +705,21 @@ class DataManager:
                     error=str(e),
                 )
 
-        # AV fallback: NEWS_SENTIMENT scoped to ticker
+        # yfinance: free, no daily cap. Headlines only — sentiment_score is 0.
+        # If a caller needs sentiment scoring it'll fall through to AV below.
         try:
-            return await self._fetch_news_sentiment(topic=None, tickers=[symbol])
+            return await self._fetch_company_news_yfinance(symbol)
         except Exception as e:
             logger.warning(
                 "news_provider_failed",
-                provider="alpha_vantage",
+                provider="yfinance",
                 symbol=symbol,
                 error=str(e),
             )
 
+        # AV last resort (NEWS_SENTIMENT scoped to ticker — burns 25/day quota)
         try:
-            return await self._fetch_company_news_yfinance(symbol)
+            return await self._fetch_news_sentiment(topic=None, tickers=[symbol])
         except Exception as e:
             logger.error("news_all_providers_failed", symbol=symbol, error=str(e))
             raise DataFetchError(
