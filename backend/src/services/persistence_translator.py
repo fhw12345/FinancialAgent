@@ -31,6 +31,7 @@ def _is_empty(value: str | None) -> bool:
 
 async def translate_for_persistence(
     fields: dict[str, str],
+    *,
     redis_cache: RedisCache,
     target_lang: str = DEFAULT_TARGET_LANG,
 ) -> dict[str, str | None]:
@@ -60,7 +61,7 @@ async def translate_for_persistence(
         translations = await translate_batch(payload_texts, target_lang, redis_cache)
     except Exception as exc:
         logger.warning(
-            "persistence_translation_failed",
+            "translation_persistence_failed",
             error=str(exc),
             field_count=len(payload_texts),
         )
