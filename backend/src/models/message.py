@@ -148,6 +148,10 @@ class Message(BaseModel):
         ..., description="Message role"
     )
     content: str = Field(..., description="Message text content")
+    content_zh: str | None = Field(
+        default=None,
+        description="Simplified Chinese translation of content; None when translation failed or not yet computed",
+    )
     source: Literal["user", "llm", "tool"] = Field(
         ...,
         description="Message source: 'user' (user input), 'llm' (LLM response), 'tool' (tool output). Use metadata.selected_tool to identify specific tool.",

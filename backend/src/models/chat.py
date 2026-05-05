@@ -78,6 +78,14 @@ class Chat(BaseModel):
     last_message_preview: str | None = Field(
         None, max_length=200, description="Preview of last message"
     )
+    title_zh: str | None = Field(
+        default=None,
+        description="Simplified Chinese translation of title",
+    )
+    last_message_preview_zh: str | None = Field(
+        default=None,
+        description="Simplified Chinese translation of last_message_preview",
+    )
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
