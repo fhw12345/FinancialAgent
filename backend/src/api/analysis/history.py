@@ -37,8 +37,9 @@ async def get_analysis_history(
 
         # Get MongoDB connection from app state
         mongodb = request.app.state.mongodb
+        redis_cache = request.app.state.redis
         messages_collection = mongodb.get_collection("messages")
-        message_repo = MessageRepository(messages_collection)
+        message_repo = MessageRepository(messages_collection, redis_cache)
 
         # Query analysis messages
         messages = await message_repo.get_analysis_messages(

@@ -7,7 +7,7 @@ Main orchestration class that coordinates the 3-phase analysis flow:
 - Phase 3: Execution (order placement)
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
@@ -26,6 +26,9 @@ from ..order_optimizer import OrderOptimizer
 from .phase1_research import Phase1ResearchMixin
 from .phase2_decisions import Phase2DecisionsMixin
 from .phase3_execution import Phase3ExecutionMixin
+
+if TYPE_CHECKING:
+    from ...database.redis import RedisCache
 
 logger = structlog.get_logger()
 
@@ -50,9 +53,9 @@ class PortfolioAnalysisAgent(
         mongodb: MongoDB,
         react_agent: FinancialAnalysisReActAgent,
         settings: Settings,
+        redis_cache: "RedisCache",
         market_service=None,  # AlphaVantageMarketDataService
         trading_service=None,  # AlpacaTradingService
-        redis_cache=None,  # DEPRECATED: Not used, kept for compatibility
     ):
         """
         Initialize portfolio analysis agent.
@@ -61,13 +64,14 @@ class PortfolioAnalysisAgent(
             mongodb: MongoDB connection
             react_agent: ReAct agent with MCP tools
             settings: Application settings
+            redis_cache: Redis cache used by the write-time translator in repos
             market_service: Alpha Vantage market data service
             trading_service: Alpaca trading service for order placement
-            redis_cache: DEPRECATED - Not used, parameter kept for backward compatibility
         """
         self.mongodb = mongodb
         self.react_agent = react_agent
         self.settings = settings
+        self.redis_cache = redis_cache
         self.market_service = market_service
         self.trading_service = trading_service
 
@@ -75,7 +79,9 @@ class PortfolioAnalysisAgent(
         self.user_repo = UserRepository(mongodb.get_collection("users"))
         self.watchlist_repo = WatchlistRepository(mongodb.get_collection("watchlist"))
         self.chat_repo = ChatRepository(mongodb.get_collection("chats"))
-        self.message_repo = MessageRepository(mongodb.get_collection("messages"))
+        self.message_repo = MessageRepository(
+            mongodb.get_collection("messages"), redis_cache
+        )
         self.order_repo = PortfolioOrderRepository(
             mongodb.get_collection("portfolio_orders")
         )

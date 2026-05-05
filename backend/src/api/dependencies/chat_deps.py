@@ -45,10 +45,11 @@ def get_chat_repository(mongodb: MongoDB = Depends(get_mongodb)) -> ChatReposito
 
 def get_message_repository(
     mongodb: MongoDB = Depends(get_mongodb),
+    redis_cache: RedisCache = Depends(get_redis),
 ) -> MessageRepository:
     """Get message repository instance."""
     messages_collection = mongodb.get_collection("messages")
-    return MessageRepository(messages_collection)
+    return MessageRepository(messages_collection, redis_cache)
 
 
 # ===== Service Dependencies =====

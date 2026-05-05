@@ -69,7 +69,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             ToolExecutionRepository,
         )
 
-        message_repo = MessageRepository(mongodb.get_collection("messages"))
+        message_repo = MessageRepository(
+            mongodb.get_collection("messages"), redis_cache
+        )
         await message_repo.ensure_indexes()
         logger.info("Message indexes created")
 
@@ -214,6 +216,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                     settings=settings,
                     mongodb=mongodb,
                     react_agent=react_agent,
+                    redis_cache=redis_cache,
                     market_service=market_service,
                     trading_service=None,  # Alpaca removed in W5a
                 )

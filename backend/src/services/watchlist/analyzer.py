@@ -40,7 +40,7 @@ class WatchlistAnalyzer:
     ):
         """Initialize watchlist analyzer."""
         self.watchlist_repo = WatchlistRepository(watchlist_collection)
-        self.message_repo = MessageRepository(messages_collection)
+        self.message_repo = MessageRepository(messages_collection, redis_cache)
         self.chat_repo = ChatRepository(chats_collection)
         self.redis_cache = redis_cache
         self.market_service = market_service

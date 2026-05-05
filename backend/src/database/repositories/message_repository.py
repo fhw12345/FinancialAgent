@@ -3,12 +3,18 @@ Message repository for conversation history.
 Handles CRUD operations for message collection.
 """
 
+from typing import TYPE_CHECKING
+
 import structlog
 from motor.motor_asyncio import AsyncIOMotorCollection
 
 from src.core.utils.date_utils import utcnow
+from src.services.persistence_translator import translate_for_persistence
 
 from ...models.message import Message, MessageCreate, MessageMetadata
+
+if TYPE_CHECKING:
+    from src.database.redis import RedisCache
 
 logger = structlog.get_logger()
 
@@ -16,14 +22,20 @@ logger = structlog.get_logger()
 class MessageRepository:
     """Repository for message data access operations."""
 
-    def __init__(self, collection: AsyncIOMotorCollection):
+    def __init__(
+        self,
+        collection: AsyncIOMotorCollection,
+        redis_cache: "RedisCache",
+    ):
         """
         Initialize message repository.
 
         Args:
             collection: MongoDB collection for messages
+            redis_cache: Redis cache used by the write-time translator
         """
         self.collection = collection
+        self._redis = redis_cache
 
     async def ensure_indexes(self) -> None:
         """
@@ -44,7 +56,7 @@ class MessageRepository:
 
     async def create(self, message_create: MessageCreate) -> Message:
         """
-        Create a new message.
+        Create a new message with zh-CN translation persisted alongside.
 
         Args:
             message_create: Message creation data
@@ -57,11 +69,19 @@ class MessageRepository:
 
         message_id = f"msg_{uuid.uuid4().hex[:12]}"
 
+        # Translate user-visible English to zh-CN before insert.
+        # Failure path: returns {"content_zh": None}; English still persists.
+        translations = await translate_for_persistence(
+            {"content": message_create.content},
+            redis_cache=self._redis,
+        )
+
         message = Message(
             message_id=message_id,
             chat_id=message_create.chat_id,
             role=message_create.role,
             content=message_create.content,
+            content_zh=translations.get("content_zh"),
             source=message_create.source,
             timestamp=utcnow(),
             metadata=message_create.metadata,
@@ -79,6 +99,7 @@ class MessageRepository:
             message_id=message_id,
             chat_id=message_create.chat_id,
             source=message_create.source,
+            translated=translations.get("content_zh") is not None,
         )
 
         return message

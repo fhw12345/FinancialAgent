@@ -4,9 +4,11 @@ Run with: python -m scripts.test_repositories
 """
 
 import asyncio
+import os
 
 from motor.motor_asyncio import AsyncIOMotorClient
 
+from src.database.redis import RedisCache
 from src.database.repositories import ChatRepository, MessageRepository, UserRepository
 from src.models.chat import ChatCreate, ChatUpdate, UIState
 from src.models.message import MessageCreate, MessageMetadata
@@ -19,6 +21,11 @@ async def main():
     # Connect to MongoDB (use 'mongodb' hostname when running in Docker)
     client = AsyncIOMotorClient("mongodb://mongodb:27017")
     db = client["financial_agent_test"]
+
+    # Connect to Redis (used by MessageRepository's write-time translator)
+    redis_cache = RedisCache()
+    redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
+    await redis_cache.connect(redis_url)
 
     # Get collections
     users_collection = db["users"]
@@ -35,7 +42,7 @@ async def main():
     # Initialize repositories
     user_repo = UserRepository(users_collection)
     chat_repo = ChatRepository(chats_collection)
-    message_repo = MessageRepository(messages_collection)
+    message_repo = MessageRepository(messages_collection, redis_cache)
 
     # ===== Test UserRepository =====
     print("📝 Testing UserRepository...")
@@ -181,6 +188,7 @@ async def main():
     print("✨ All repository tests passed!")
 
     # Close connection
+    await redis_cache.disconnect()
     client.close()
 
 

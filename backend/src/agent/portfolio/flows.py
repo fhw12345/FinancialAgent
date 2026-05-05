@@ -82,9 +82,10 @@ async def run_analyze_holdings(app: Any, settings: PortfolioSettings) -> dict[st
     if mongo is None or dm is None:
         raise RuntimeError("app.state.mongodb / data_manager missing")
 
+    redis_cache = app.state.redis
     holding_repo = HoldingRepository(mongo.get_collection("holdings"))
     order_repo = PortfolioOrderRepository(mongo.get_collection("portfolio_orders"))
-    message_repo = MessageRepository(mongo.get_collection("messages"))
+    message_repo = MessageRepository(mongo.get_collection("messages"), redis_cache)
 
     holdings = await holding_repo.list_by_user()
     if not holdings:
@@ -194,7 +195,7 @@ async def run_today_picks(
     finalists = finalists[:PICKS_PHASE1_CAP]
 
     order_repo = PortfolioOrderRepository(mongo.get_collection("portfolio_orders"))
-    message_repo = MessageRepository(mongo.get_collection("messages"))
+    message_repo = MessageRepository(mongo.get_collection("messages"), app.state.redis)
 
     context = {
         "total_equity": settings.cash_balance,
