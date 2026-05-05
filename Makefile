@@ -141,3 +141,6 @@ setup-hooks:
 	cp scripts/pre-commit .git/hooks/pre-commit
 	chmod +x .git/hooks/pre-commit
 	@echo "✅ Git hooks installed"
+
+backfill-translations:
+	docker compose exec backend python -m scripts.backfill_translations --collection all
