@@ -826,3 +826,42 @@ async def test_update_skips_zh_merge_when_translator_returns_all_none(
 
     assert "title" in captured_update
     assert "title_zh" not in captured_update
+
+
+@pytest.mark.asyncio
+async def test_update_writes_only_non_none_zh_fields(chat_repository, mock_collection):
+    """Per-key filter: a None entry for one field must not pollute update_dict
+    even if a sibling field's translation succeeded."""
+    from unittest.mock import AsyncMock, patch
+
+    from src.models.chat import ChatCreate, ChatUpdate
+
+    with patch(
+        "src.database.repositories.chat_repository.translate_for_persistence",
+        new=AsyncMock(
+            return_value={"title_zh": "AAPL 分析", "last_message_preview_zh": None}
+        ),
+    ):
+        chat = await chat_repository.create(ChatCreate(title="x"))
+
+    captured_update: dict = {}
+
+    async def _capture(filter_, update_, **_kw):
+        captured_update.update(update_["$set"])
+        return _doc_from_update(chat.chat_id, update_["$set"])
+
+    mock_collection.find_one_and_update.side_effect = _capture
+
+    with patch(
+        "src.database.repositories.chat_repository.translate_for_persistence",
+        new=AsyncMock(
+            return_value={"title_zh": "AAPL 分析", "last_message_preview_zh": None}
+        ),
+    ):
+        await chat_repository.update(
+            chat.chat_id,
+            ChatUpdate(title="AAPL Analysis", last_message_preview="   "),
+        )
+
+    assert captured_update["title_zh"] == "AAPL 分析"
+    assert "last_message_preview_zh" not in captured_update

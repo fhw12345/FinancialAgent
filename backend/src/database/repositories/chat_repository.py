@@ -120,11 +120,13 @@ class ChatRepository:
             translations = await translate_for_persistence(
                 translatable, redis_cache=self._redis
             )
-            # Skip merge on whole-batch translator failure so a transient LLM
-            # hiccup can't overwrite a previously-good <field>_zh with None.
+            # Per-key filter: only write a `<field>_zh` when translation actually
+            # produced a value. A None entry — whether from whole-batch translator
+            # failure (all None) or a whitespace-only source field (single None) —
+            # must not overwrite an existing good `_zh` on a partial update.
             # `create()` doesn't need this guard — nothing to clobber on insert.
-            if any(v is not None for v in translations.values()):
-                for tk, tv in translations.items():
+            for tk, tv in translations.items():
+                if tv is not None:
                     update_dict[tk] = tv
 
         result = await self.collection.find_one_and_update(
