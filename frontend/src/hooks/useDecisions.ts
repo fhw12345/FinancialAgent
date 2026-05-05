@@ -14,6 +14,9 @@ export interface PnlSnapshot {
 export interface DecisionMetadata {
   confidence?: number;
   position_size_percent?: number | null;
+  entry_price?: number | null;
+  stop_loss?: number | null;
+  take_profit?: number | null;
   reasoning?: string;
   // any other fields the backend stuffs in here
   [key: string]: unknown;

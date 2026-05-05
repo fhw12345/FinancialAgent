@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-05-05
+
+### Added
+- **feat(decision-tracker): Entry / Stop / Target 三列上桌** — 配套 backend v0.20.6：`hooks/useDecisions.ts` 的 `DecisionMetadata` 加 `entry_price` / `stop_loss` / `take_profit` 三个 `number | null` 字段。`components/portfolio/DecisionTracker.tsx` 表头从 10 列扩到 13 列，新加 Entry / Stop / Target 三列：Entry 中性灰、Stop 红字（止损=亏，配色暗示）、Target 绿字（止盈=赢），数字用 `font-mono text-xs` 保证对齐。展开 reasoning 行的 `colSpan` 从 9 跟着升到 12，"show earlier decisions" 按钮的 `colSpan` 也同步。空值显示 `—` 而不是 `$NaN`。
+
 ## [0.15.2] - 2026-05-05
 
 ### Fixed

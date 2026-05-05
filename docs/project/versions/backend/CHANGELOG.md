@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.6] - 2026-05-05
+
+### Added
+- **feat(decisions): Phase 2 决策三件套 entry / stop / target，且必须引用工具里的位** — `models/trading_decision.py` 的 `TradingDecision` 加三个 `float | None` 字段：`entry_price`（限价入场）、`stop_loss`（止损）、`take_profit`（止盈）。`gt=0` 校验，HOLD 必须为 None，BUY/SELL 必须填。`reasoning_summary` 同步要求"MUST cite the specific tool-derived levels you used"——光说"看好"没用，得点出 fib 0.618 / swing low / 阻力位这种工具里实际跑出来的位才行。`agent/portfolio/phase2_decisions.py` 在系统提示里加了一整节 "Price Levels (REQUIRED for BUY/SELL)"，逐条列清楚 BUY 的 stop 在 entry 下面、TP 在上面、SELL 反过来；同时给了样例 reasoning。落库走 `agent/portfolio/flows.py:_persist_decisions`：`entry_price → PortfolioOrder.limit_price`、`stop_loss → stop_price`，三个都额外塞 `metadata` 兜底（前端读 metadata 拿 take_profit，因为 PortfolioOrder 没有原生的 take_profit 列）。Phase 2 落库的 markdown 表格也从 4 列扩成 7 列：Symbol / Decision / Size % / Entry / Stop / Target / Confidence。
+
 ## [0.20.5] - 2026-05-05
 
 ### Fixed

@@ -62,9 +62,43 @@ class TradingDecision(BaseModel):
         le=10,
         description="Conviction level 1-10 (10 = highest confidence in decision)",
     )
+    entry_price: float | None = Field(
+        default=None,
+        gt=0,
+        description=(
+            "Limit-order price to enter the position. REQUIRED for BUY/SELL "
+            "(use a price near current market that aligns with a support/"
+            "resistance/fibonacci level from the tools); None for HOLD."
+        ),
+    )
+    stop_loss: float | None = Field(
+        default=None,
+        gt=0,
+        description=(
+            "Stop-loss price — exit if the trade moves against you. REQUIRED "
+            "for BUY/SELL (anchor to a level the LLM saw in tools, e.g. swing "
+            "low / fib 0.786); None for HOLD. For BUY: below entry_price. "
+            "For SELL: above entry_price."
+        ),
+    )
+    take_profit: float | None = Field(
+        default=None,
+        gt=0,
+        description=(
+            "Take-profit target price. REQUIRED for BUY/SELL (anchor to a "
+            "tool-derived level, e.g. fib 1.618 extension / prior swing high); "
+            "None for HOLD. For BUY: above entry_price. For SELL: below "
+            "entry_price."
+        ),
+    )
     reasoning_summary: str = Field(
         max_length=500,
-        description="Brief reasoning for the trading decision",
+        description=(
+            "Brief reasoning. MUST cite the specific tool-derived levels you "
+            "used to set entry_price/stop_loss/take_profit (e.g. 'Entry at "
+            "fib 0.618=$182, stop below swing low $175, target at fib 1.618="
+            "$210')."
+        ),
     )
 
     model_config = {
@@ -76,7 +110,13 @@ class TradingDecision(BaseModel):
                     "position_size_percent": 10,
                     "swap_from_symbol": None,
                     "confidence": 8,
-                    "reasoning_summary": "Strong technical setup with Fibonacci support at $180. Bullish earnings momentum.",
+                    "entry_price": 182.50,
+                    "stop_loss": 175.00,
+                    "take_profit": 210.00,
+                    "reasoning_summary": (
+                        "Entry at fib 0.618 retracement ($182.50). Stop below "
+                        "swing low ($175). Target at fib 1.618 extension ($210)."
+                    ),
                 },
                 {
                     "symbol": "TSLA",
@@ -84,7 +124,13 @@ class TradingDecision(BaseModel):
                     "position_size_percent": 50,
                     "swap_from_symbol": None,
                     "confidence": 7,
-                    "reasoning_summary": "Taking profits after 30% gain. RSI overbought, resistance at $280.",
+                    "entry_price": 278.00,
+                    "stop_loss": 290.00,
+                    "take_profit": 250.00,
+                    "reasoning_summary": (
+                        "Sell at resistance $278. Stop above prior swing high "
+                        "$290. Target at fib 0.382 retracement ($250)."
+                    ),
                 },
                 {
                     "symbol": "NVDA",
@@ -92,6 +138,9 @@ class TradingDecision(BaseModel):
                     "position_size_percent": None,
                     "swap_from_symbol": None,
                     "confidence": 6,
+                    "entry_price": None,
+                    "stop_loss": None,
+                    "take_profit": None,
                     "reasoning_summary": "Neutral signals. Wait for clearer trend direction.",
                 },
             ]
@@ -289,6 +338,9 @@ class PortfolioDecisionList(BaseModel):
                             "position_size_percent": None,
                             "swap_from_symbol": None,
                             "confidence": 7,
+                            "entry_price": None,
+                            "stop_loss": None,
+                            "take_profit": None,
                             "reasoning_summary": "Position already optimal, maintaining exposure",
                         },
                         {
@@ -297,7 +349,13 @@ class PortfolioDecisionList(BaseModel):
                             "position_size_percent": 30,
                             "swap_from_symbol": None,
                             "confidence": 8,
-                            "reasoning_summary": "Taking profits to rebalance, reducing concentration",
+                            "entry_price": 278.00,
+                            "stop_loss": 290.00,
+                            "take_profit": 250.00,
+                            "reasoning_summary": (
+                                "Exit at resistance $278. Stop above swing high "
+                                "$290. Target at fib 0.382 ($250) to rebalance."
+                            ),
                         },
                         {
                             "symbol": "NVDA",
@@ -305,7 +363,13 @@ class PortfolioDecisionList(BaseModel):
                             "position_size_percent": 15,
                             "swap_from_symbol": None,
                             "confidence": 8,
-                            "reasoning_summary": "Adding AI exposure with available buying power",
+                            "entry_price": 132.00,
+                            "stop_loss": 124.00,
+                            "take_profit": 156.00,
+                            "reasoning_summary": (
+                                "Entry at fib 0.5 ($132). Stop below swing low "
+                                "($124). Target at prior high ($156)."
+                            ),
                         },
                     ],
                     "portfolio_assessment": "Rebalancing to reduce TSLA concentration (was 35% of portfolio) and add diversification via NVDA. SELL proceeds fund BUY with remaining buying power.",

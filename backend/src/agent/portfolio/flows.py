@@ -302,6 +302,9 @@ def _trading_decisions_to_dicts(trading_decisions: list[Any]) -> list[dict[str, 
                 ),
                 "position_size_percent": d.position_size_percent,
                 "confidence": d.confidence,
+                "entry_price": getattr(d, "entry_price", None),
+                "stop_loss": getattr(d, "stop_loss", None),
+                "take_profit": getattr(d, "take_profit", None),
                 "reasoning_summary": d.reasoning_summary,
             }
         )
@@ -483,6 +486,14 @@ async def _persist_decisions(
             continue
 
         decision_type = "order" if action != "hold" else "signal"
+        # Phase 2 outputs three concrete prices anchored to tool-derived
+        # levels. Map them onto the existing PortfolioOrder fields:
+        #   entry_price → limit_price (the limit-order price)
+        #   stop_loss   → stop_price  (the protective stop)
+        #   take_profit → metadata.take_profit (no native column)
+        entry_price = d.get("entry_price")
+        stop_loss = d.get("stop_loss")
+        take_profit = d.get("take_profit")
         row = PortfolioOrder(
             order_id=f"{source}_{uuid.uuid4().hex[:12]}",
             chat_id=f"{source}_flow",
@@ -494,8 +505,8 @@ async def _persist_decisions(
             order_type="market",
             side=side,
             quantity=0.0,  # we don't translate position_size_percent → shares here
-            limit_price=None,
-            stop_price=None,
+            limit_price=entry_price,
+            stop_price=stop_loss,
             time_in_force="day",
             status="signal" if decision_type == "signal" else "suggested",
             filled_qty=0.0,
@@ -509,6 +520,9 @@ async def _persist_decisions(
             metadata={
                 "confidence": d.get("confidence"),
                 "position_size_percent": d.get("position_size_percent"),
+                "entry_price": entry_price,
+                "stop_loss": stop_loss,
+                "take_profit": take_profit,
                 "reasoning": d.get("reasoning_summary", "")[:500],
                 "full_research": research_by_symbol.get(sym, ""),
             },

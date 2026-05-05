@@ -399,6 +399,21 @@ function DecisionRows({
         <td className="py-2 pr-3 text-gray-700">
           {d.decision_price ? `$${d.decision_price.toFixed(2)}` : "—"}
         </td>
+        <td className="py-2 pr-3 text-gray-700 font-mono text-xs">
+          {d.metadata?.entry_price != null
+            ? `$${(d.metadata.entry_price as number).toFixed(2)}`
+            : "—"}
+        </td>
+        <td className="py-2 pr-3 text-red-600 font-mono text-xs">
+          {d.metadata?.stop_loss != null
+            ? `$${(d.metadata.stop_loss as number).toFixed(2)}`
+            : "—"}
+        </td>
+        <td className="py-2 pr-3 text-green-600 font-mono text-xs">
+          {d.metadata?.take_profit != null
+            ? `$${(d.metadata.take_profit as number).toFixed(2)}`
+            : "—"}
+        </td>
         <td className="py-2 pr-3 text-gray-700 text-xs">
           {conf != null ? `${conf}/10` : "—"}
         </td>
@@ -419,7 +434,7 @@ function DecisionRows({
       {isOpen && hasDetail && (
         <tr className="bg-blue-50/40">
           <td></td>
-          <td colSpan={9} className="py-3 pr-3 text-sm text-gray-700">
+          <td colSpan={12} className="py-3 pr-3 text-sm text-gray-700">
             <div className="whitespace-pre-wrap leading-relaxed">
               <span className="text-xs uppercase text-gray-500 font-semibold mr-2">
                 AI Reasoning:
@@ -576,6 +591,9 @@ export function DecisionTracker() {
                     <th className="py-2 pr-3">Symbol</th>
                     <th className="py-2 pr-3">Side</th>
                     <th className="py-2 pr-3">Decision $</th>
+                    <th className="py-2 pr-3">Entry</th>
+                    <th className="py-2 pr-3">Stop</th>
+                    <th className="py-2 pr-3">Target</th>
                     <th className="py-2 pr-3">Conf</th>
                     <th className="py-2 pr-3">7d</th>
                     <th className="py-2 pr-3">30d</th>
@@ -600,7 +618,7 @@ export function DecisionTracker() {
                         {moreCount > 0 && (
                           <tr className="bg-white">
                             <td></td>
-                            <td colSpan={9} className="py-1 pr-3">
+                            <td colSpan={12} className="py-1 pr-3">
                               <button
                                 onClick={() => toggleHistory(g.symbol)}
                                 className="text-xs text-blue-600 hover:text-blue-800 hover:underline"

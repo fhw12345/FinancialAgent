@@ -111,6 +111,33 @@ For EACH analyzed symbol, decide ONE action:
 
 - **HOLD**: No action needed
   - position_size_percent should be null
+  - entry_price / stop_loss / take_profit MUST be null
+
+## Price Levels (REQUIRED for BUY/SELL)
+
+For every BUY or SELL decision you MUST set three concrete prices, each
+ANCHORED to a specific level that appeared in the symbol's research above
+(fibonacci retracement/extension, support/resistance, swing high/low,
+pressure zone). DO NOT make prices up — every number must be traceable to
+a tool output.
+
+- **entry_price**: limit-order price to enter the position
+  - BUY: a price near current market that aligns with a support / fib
+    retracement (e.g. 0.382, 0.5, 0.618) / pressure zone
+  - SELL: a price near current market at a resistance / fib level / prior
+    swing high
+- **stop_loss**: where you'd cut the trade if it goes against you
+  - BUY: BELOW entry_price, just under the next major support / swing low
+  - SELL: ABOVE entry_price, just above the nearest resistance / swing high
+- **take_profit**: where you'd close the trade in profit
+  - BUY: ABOVE entry_price, at a fib extension (1.272, 1.618) or prior high
+  - SELL: BELOW entry_price, at a fib retracement (0.382, 0.236) or
+    next-down support
+
+The `reasoning_summary` MUST cite the specific tool-derived levels you
+used. Example: "Entry at fib 0.618=$182. Stop below swing low $175.
+Target at fib 1.618=$210." A reasoning that does NOT name the levels is
+not acceptable.
 
 ## Important Considerations
 
@@ -236,8 +263,12 @@ Include short reasoning (1-2 sentences) for each decision.
             # horizontal scroll), followed by per-decision reasoning blocks
             # so each rationale gets its own readable paragraph.
             message_content += "### Trading Decisions\n\n"
-            message_content += "| Symbol | Decision | Size % | Confidence |\n"
-            message_content += "|--------|----------|--------|------------|\n"
+            message_content += (
+                "| Symbol | Decision | Size % | Entry | Stop | Target | Confidence |\n"
+            )
+            message_content += (
+                "|--------|----------|--------|-------|------|--------|------------|\n"
+            )
 
             for decision in decision_result.decisions:
                 size_str = (
@@ -245,9 +276,25 @@ Include short reasoning (1-2 sentences) for each decision.
                     if decision.position_size_percent
                     else "-"
                 )
+                entry_str = (
+                    f"${decision.entry_price:.2f}"
+                    if decision.entry_price is not None
+                    else "—"
+                )
+                stop_str = (
+                    f"${decision.stop_loss:.2f}"
+                    if decision.stop_loss is not None
+                    else "—"
+                )
+                target_str = (
+                    f"${decision.take_profit:.2f}"
+                    if decision.take_profit is not None
+                    else "—"
+                )
                 message_content += (
                     f"| {decision.symbol} | {decision.decision.value} | "
-                    f"{size_str} | {decision.confidence}/10 |\n"
+                    f"{size_str} | {entry_str} | {stop_str} | {target_str} | "
+                    f"{decision.confidence}/10 |\n"
                 )
 
             message_content += "\n#### Reasoning\n\n"
