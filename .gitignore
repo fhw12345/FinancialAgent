@@ -127,3 +127,6 @@ docker-compose.override.yml
 e2e_test.py
 e2e_report.json
 e2e_screens/
+
+# Git worktrees (superpowers isolation)
+.worktrees/
