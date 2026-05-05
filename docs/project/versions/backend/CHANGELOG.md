@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-05-05
+
+### Fixed
+- **fix(translation): research 报告开头的免责声明仍是英文** — Opus 4.7 看到 "Alpha Vantage rate-limited, but Finnhub data is sufficient..." 这种数据源元注释，会模糊地当成"非正文"保留原样不翻，导致 CRWV / AAPL 的 View Full Research 中段落混语种。强化 system prompt：明确要求"translate EVERY sentence — including disclaimers, data-source notes, error messages, and meta-commentary; no English sentence should remain"。同时加强 markdown 保护规则（headers / tables / lists 逐字保留，不合并不重排）。所有已污染的 zh-CN 缓存已清空，会按新 prompt 重新生成。
+
 ## [0.18.0] - 2026-05-05
 
 ### Added — i18n 翻译层 (Prompt 全英 + 展示前翻译)

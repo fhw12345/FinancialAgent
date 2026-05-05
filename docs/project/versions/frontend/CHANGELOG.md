@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-05-05
+
+### Added
+- **feat(i18n): 聊天里 LLM 整段 markdown 也走翻译** — Phase 2 的 "📊 Portfolio Trading Decisions" 整段 markdown（标题 + 表格 + 决策说明）原本不经过 `<Translated>`，所以中文 UI 下全英。`ChatMessages.MessageBubble` 现在对 `role === "assistant"` 的整段 `mainContent` 调 `useTranslated`，翻译后再交给 ReactMarkdown 渲染。表格、emoji、ticker、百分比通过 system prompt 规则保留。等待中给容器加 `opacity: 0.7`，无 spinner 不撑布局。
+
 ## [0.12.0] - 2026-05-05
 
 ### Added — LLM 内容自动翻译

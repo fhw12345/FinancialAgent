@@ -13,6 +13,7 @@ import rehypeRaw from "rehype-raw";
 import { Loader2 } from "lucide-react";
 import type { ChatMessage } from "../../types/api";
 import { ToolMessageWrapper } from "./ToolMessageWrapper";
+import { useTranslated } from "../../hooks/useTranslated";
 import { ToolExecutionProgress } from "./ToolExecutionProgress";
 
 interface ChatMessagesProps {
@@ -61,6 +62,15 @@ const MessageBubble = React.memo<{ msg: ChatMessage; t: (key: string, options?: 
       : { thinking: [], mainContent: msg.content };
   }, [msg.role, msg.content]);
 
+  // Translate assistant LLM markdown when UI is in a non-English locale.
+  // Backend prompts stay English; we translate before render. Falls back to
+  // the original on any error (handled inside useTranslated).
+  const { text: translatedMain, isLoading: translating } = useTranslated(
+    msg.role === "assistant" ? mainContent : null
+  );
+  const renderedContent =
+    msg.role === "assistant" ? translatedMain || mainContent : mainContent;
+
   return (
     <div
       className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
@@ -90,7 +100,10 @@ const MessageBubble = React.memo<{ msg: ChatMessage; t: (key: string, options?: 
           </details>
         )}
 
-        <div className="markdown-content text-sm max-w-none">
+        <div
+          className="markdown-content text-sm max-w-none"
+          style={translating ? { opacity: 0.7 } : undefined}
+        >
           {msg.role === "user" ? (
             <p className="text-sm">{msg.content}</p>
           ) : (
@@ -214,7 +227,7 @@ const MessageBubble = React.memo<{ msg: ChatMessage; t: (key: string, options?: 
                 ),
               }}
             >
-              {mainContent}
+              {renderedContent}
             </ReactMarkdown>
           )}
         </div>
