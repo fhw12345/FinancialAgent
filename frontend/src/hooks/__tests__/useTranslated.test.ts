@@ -120,3 +120,39 @@ describe("useTranslated", () => {
     expect(translateApi.translateBatch).not.toHaveBeenCalled();
   });
 });
+
+describe("useTranslated precomputed", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockLanguage = "zh-CN";
+  });
+
+  it("returns precomputed value without calling translateBatch", () => {
+    const { result } = renderHook(
+      () => useTranslated("Hello world", { precomputed: "你好世界" }),
+      { wrapper: wrapper() }
+    );
+    expect(result.current.text).toBe("你好世界");
+    expect(result.current.isTranslated).toBe(true);
+    expect(result.current.isLoading).toBe(false);
+    expect(translateApi.translateBatch).not.toHaveBeenCalled();
+  });
+
+  it("falls through to lazy path when precomputed is null", () => {
+    vi.mocked(translateApi.translateBatch).mockResolvedValue(["你好"]);
+    const { result } = renderHook(
+      () => useTranslated("Hello", { precomputed: null }),
+      { wrapper: wrapper() }
+    );
+    expect(result.current.isLoading).toBe(true);
+    expect(translateApi.translateBatch).toHaveBeenCalled();
+  });
+
+  it("falls through to lazy path when precomputed is empty string", () => {
+    vi.mocked(translateApi.translateBatch).mockResolvedValue(["你好"]);
+    renderHook(() => useTranslated("Hello", { precomputed: "" }), {
+      wrapper: wrapper(),
+    });
+    expect(translateApi.translateBatch).toHaveBeenCalled();
+  });
+});

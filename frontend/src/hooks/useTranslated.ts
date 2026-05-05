@@ -5,6 +5,9 @@
  * - If the active i18n language starts with "en", returns the original text
  *   immediately and never hits the network. Backend prompts are English, so
  *   English UI users see the model output verbatim.
+ * - If a non-empty `precomputed` value is supplied (write-time translation
+ *   already persisted to MongoDB), returns it immediately and skips the
+ *   /api/translate call entirely.
  * - Otherwise, calls /api/translate and caches the result via TanStack Query.
  *   The backend has its own Redis cache, but the React-Query cache prevents
  *   even one network round-trip per render after the first.
@@ -27,11 +30,28 @@ interface Result {
   isTranslated: boolean;
 }
 
-export function useTranslated(text: string | null | undefined): Result {
+interface Options {
+  /**
+   * Server-precomputed translation (e.g. `Message.content_zh`). When the
+   * active locale matches and this value is a non-empty string, the hook
+   * returns it directly without calling /api/translate. A null or empty
+   * string falls through to the lazy translation path.
+   */
+  precomputed?: string | null;
+}
+
+export function useTranslated(
+  text: string | null | undefined,
+  opts: Options = {}
+): Result {
   const { i18n } = useTranslation();
   const lang = i18n.language || "en";
-  const shouldTranslate =
-    !!text && !lang.startsWith("en") && SUPPORTED_TARGETS.has(lang);
+  const isZh = !lang.startsWith("en") && SUPPORTED_TARGETS.has(lang);
+
+  const hasPrecomputed =
+    isZh && typeof opts.precomputed === "string" && opts.precomputed.length > 0;
+
+  const shouldTranslate = !!text && isZh && !hasPrecomputed;
 
   const query = useQuery({
     queryKey: ["translate", lang, text],
@@ -47,7 +67,13 @@ export function useTranslated(text: string | null | undefined): Result {
   });
 
   if (!text) return { text: "", isLoading: false, isTranslated: false };
-  if (!shouldTranslate) return { text, isLoading: false, isTranslated: false };
+  if (!isZh) return { text, isLoading: false, isTranslated: false };
+  if (hasPrecomputed)
+    return {
+      text: opts.precomputed as string,
+      isLoading: false,
+      isTranslated: true,
+    };
   if (query.isLoading) return { text, isLoading: true, isTranslated: false };
   if (query.isError || !query.data)
     return { text, isLoading: false, isTranslated: false };
