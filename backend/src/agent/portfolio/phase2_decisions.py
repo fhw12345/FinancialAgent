@@ -231,14 +231,13 @@ Include short reasoning (1-2 sentences) for each decision.
             message_content += "### Portfolio Assessment\n\n"
             message_content += f"{decision_result.portfolio_assessment}\n\n"
 
-            # Individual decisions table
+            # Individual decisions: a compact at-a-glance table (no reasoning
+            # column — long sentences blow up table columns and force a
+            # horizontal scroll), followed by per-decision reasoning blocks
+            # so each rationale gets its own readable paragraph.
             message_content += "### Trading Decisions\n\n"
-            message_content += (
-                "| Symbol | Decision | Size % | Confidence | Reasoning |\n"
-            )
-            message_content += (
-                "|--------|----------|--------|------------|----------|\n"
-            )
+            message_content += "| Symbol | Decision | Size % | Confidence |\n"
+            message_content += "|--------|----------|--------|------------|\n"
 
             for decision in decision_result.decisions:
                 size_str = (
@@ -246,13 +245,18 @@ Include short reasoning (1-2 sentences) for each decision.
                     if decision.position_size_percent
                     else "-"
                 )
-                # Truncate reasoning for table display
-                reasoning = decision.reasoning_summary
-                if len(reasoning) > 80:
-                    reasoning = reasoning[:77] + "..."
                 message_content += (
-                    f"| {decision.symbol} | {decision.decision.value} | {size_str} | "
-                    f"{decision.confidence}/10 | {reasoning} |\n"
+                    f"| {decision.symbol} | {decision.decision.value} | "
+                    f"{size_str} | {decision.confidence}/10 |\n"
+                )
+
+            message_content += "\n#### Reasoning\n\n"
+            for decision in decision_result.decisions:
+                # Full reasoning — no truncation. Each decision gets its own
+                # block so long paragraphs don't crowd the table.
+                message_content += (
+                    f"**{decision.symbol} ({decision.decision.value})** — "
+                    f"{decision.reasoning_summary}\n\n"
                 )
 
             # Create metadata for filtering

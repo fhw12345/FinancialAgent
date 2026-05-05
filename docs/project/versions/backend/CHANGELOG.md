@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.2] - 2026-05-05
+
+### Changed
+- **change(phase2-decisions): reasoning 不再截断 + 主表去掉 Reasoning 列** — 之前每条 decision 的 reasoning 在表格里被砍到 80 字加 `...`，关键判断丢了。把 Reasoning 列从主表里移除（长句撑表格列宽，强制横向滚动），改成表格下方 `#### Reasoning` 子段落，每条 decision 一行 `**SYMBOL (DECISION)** — 完整 reasoning`。表格保持 4 列紧凑可读，全文 reasoning 单独段落呼吸。仅影响新跑的分析；MongoDB 里已存在的旧 message 截断版本保持原样。
+
 ## [0.19.1] - 2026-05-05
 
 ### Changed
