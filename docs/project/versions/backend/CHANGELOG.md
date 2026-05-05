@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-05-06
+
+### Added
+- **feat(mark-executed): 把"LLM 建议链"和"实际成交链"接上，一键 Mark Executed 同步 cash + holdings + transactions + orders 四张表** — 之前 DecisionTracker 只能看 LLM 给的 BUY/SELL 建议，但实际有没有按它做、做了多少、cash 还剩多少，跟决策本身完全脱钩。现在每条 `status="suggested"` 的 BUY/SELL order 旁边一个 `Mark Executed` 按钮，点开 modal（默认 qty 自动按 `position_size_percent * cash / entry_price` floor 算、默认 price 用 LLM 给的 `entry_price`、SELL 默认填当前 holding qty），用户改完确认。
+  - 新建 `services/order_execution_service.py:mark_order_executed`，5 步带补偿回滚的编排：(1) 校验 order 存在 & status=suggested & side∈{buy,sell}；(2) 写 `user_transactions` 行（带 `portfolio_order_id` 反指针）；(3) 调 `holdings_ledger.apply_transaction` 走加权均价 BUY / 减仓 SELL；(4) `$inc` 调整 `user_settings.cash_balance`（BUY 减 / SELL 加，**允许变负数 + warning**）；(5) `portfolio_orders` 翻成 `status=filled` 带 `user_transaction_id` 正向指针。任一步失败回滚前面的步骤——单用户本地工具不上 multi-doc transaction 是有意为之，补偿模式买的简单性比 ACID 更值。
+  - 新接口 `POST /api/portfolio/orders/{order_id}/mark-executed`，map service 异常到 404/409/400/500：`OrderNotFoundError` 404、`OrderAlreadyFilledError` 409、`OrderNotExecutableError`/oversell/no-cash 400
+  - `models/user_transaction.py` 加 `portfolio_order_id` 字段（→ orders 反指针）
+  - `models/portfolio.py:PortfolioOrder` 加 `user_transaction_id` 字段（→ transactions 正指针）
+  - `database/repositories/portfolio_order_repository.py` 加 `mark_filled()` / `revert_filled()` 方法（key 在 `order_id`，不是 `alpaca_order_id`，因为这些 order 根本没经过 Alpaca）
+  - `api/portfolio/decisions.py` 在响应里暴露 `filled_qty` / `filled_avg_price` / `filled_at` / `user_transaction_id`，前端可以渲染 `✓ Executed @ $X.XX` 状态 chip
+- **feat(history-titles): 分析历史卡片用中文分类前缀** — 持仓分析/今日推荐 走 metadata.flow 区分，单股 Phase 2 / 个股聊天用 个股分析 兜底
+  - `agent/portfolio/phase2_decisions.py:_store_portfolio_decision_message` 新增 `flow: str | None` 参数，写进 `metadata.raw_data.flow`
+  - `agent/portfolio/flows.py` holdings 路径传 `flow="holdings"`、picks 路径传 `flow="picks"`
+  - `api/portfolio/chats.py:get_portfolio_chat_history` 卡片 title 生成读 `flow` 字段：`holdings → 持仓分析 · ...`、`picks → 今日推荐 · ...`、单 symbol Phase 2 / non-portfolio chat → `个股分析 · ...`
+
+### Removed
+- **chore(dead-code): 删掉 `_write_summary_chat` 孤儿消息路径** — 之前每跑一次 holdings/picks 都会向一个虚拟的 `system-run-{flow}-{date}` chat_id 写一条 summary message，但**那个 chat_id 从来没在 `chats` collection 创建过**，所以这些消息是"没爹"的孤儿，sidebar 历史压根读不出来。真正写历史的是 `_store_portfolio_decision_message`（往 `Portfolio Decisions` chat 里塞 message），summary chat 完全是浪费。一并删掉 `flows.py` 里两处 `message_repo` 局部变量、`MessageRepository` / `MessageCreate` / `MessageMetadata` 三个 import。
+
+## [0.21.4] - 2026-05-05
+
+### Fixed
+- **fix(picks-flow): `_SymbolStub` 没有 `watchlist_id` 字段，picks 流程在 Phase 1 收尾时崩** — 用户跑 today's picks 时报 `AttributeError: '_SymbolStub' object has no attribute 'watchlist_id'`。根因：`agent/portfolio/phase1_research.py:_run_phase1_research` 在 watchlist 分支收尾时无脑调 `watchlist_repo.update_last_analyzed(watchlist_item.watchlist_id, ...)`，假设入参一定是真实 `WatchlistItem`；但 picks 流程为 sector-filtered 候选股传的是 `_SymbolStub(symbol=...)` 鸭子类型对象（这些股票根本不在用户 watchlist 里，没 `watchlist_id` 可言）。改成 `wl_id = getattr(watchlist_item, "watchlist_id", None); if wl_id is not None: ...`——只在真 WatchlistItem 上戳 last-analyzed 时间戳，stub 直接跳过。
+
+## [0.21.3] - 2026-05-05
+
+### Changed
+- **change(decisions): full_research 也走写入时预翻译，停掉点开 Full Research 时的 12 秒 LLM 等待** — 用户反馈"点开 full research 时明明已经显示中文了，还在灰色等翻译"。根因：`reasoning_zh` 上一版已经预翻译，但 `full_research`（Phase 1 给每个 symbol 的完整研究 markdown，几 KB）从来没存过中文版，前端 modal 里 `<Translated text={researchModal.text} />` 没传 `precomputed`，每次开 modal 都要现调一次 `/api/translate` 走 12-15 秒 Qwen 翻译，看到的"已经是中文"是 React Query 内存缓存命中而 `isLoading=true` 仍在挂着，所以一直灰着。
+  - `agent/portfolio/flows.py:_persist_decisions` 现在同时预翻译 reasoning + full_research，但策略不同：reasoning 走原来的批量（一次 LLM 调用翻所有 symbol），full_research 因为单条几 KB 体积太大，每个 symbol **独立调用、并发跑**——一次性塞多条长 markdown 到 system+user prompt 风险高（容易超 `max_tokens=4096` 上限、JSON 数组解析容易被未转义引号搞崩、一条失败拖垮全批）。并发 + 独立成败让一个 symbol 翻失败不影响其它。
+  - `services/translation_service.py:_llm_translate` 的 `max_tokens` 从 4096 提到 16384。中文 token 比英文密 ~1.5x，5-10KB 英文 markdown 翻成中文很容易超过 4096 → 之前长文本翻译其实是被静默截断的。短文（reasoning）实际消耗不到 1000 token，调高上限没成本。
+  - `metadata.full_research_zh` 字段新加，`_persist_decisions` 写入时填充
+
+## [0.21.2] - 2026-05-05
+
+### Changed
+- **change(decisions): Phase 2 写入时预翻译 `reasoning_zh`，停掉 DecisionTracker 的实时 LLM 调用** — 用户反馈"Decision Tracker 那边的翻译还是有问题：他还是第一次就是实时的 call llm 翻译，而不是直接显示已经有的翻译"。根因：`agent/portfolio/flows.py:_persist_decisions` 把 `reasoning_summary` 写进 `metadata.reasoning` 时从来没调过 `translate_for_persistence`，所以前端 `<Translated text={reasoning} />` 第一次渲染时只能现调 `/api/translate`，每条都要等一次 Qwen 翻译往返。修法跟 `chat_repository.py:title_zh` 完全一样：写入前批量喂给 `translate_for_persistence`，把 `reasoning_zh` 一起塞进 `metadata`，让前端用 `precomputed=` prop 直接显示存好的中文。`_persist_decisions` 加 `redis_cache` 参数，4 个调用点（holdings/picks 的 fallback 和 full pipeline 路径）都从 `app.state.redis` 透传进去。一次运行所有决策的 reasoning 走一次 batch 翻译，比按行触发省 LLM 调用数。注意：MongoDB 里已存的旧行没有 `reasoning_zh`，下次跑 Phase 2 之前展开旧 row 还会 fallback 到 lazy 路径，这是预期行为。
+
 ## [0.21.1] - 2026-05-05
 
 ### Changed

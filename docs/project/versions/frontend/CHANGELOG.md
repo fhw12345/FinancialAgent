@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-05-06
+
+### Added
+- **feat(decision-tracker): Mark Executed UI——把 LLM 建议链跟实际成交链接通** — DecisionTracker 表格右侧多一列 `Action`，逻辑分三态：(1) `status=suggested` 的 BUY/SELL → 蓝色 `Mark Executed` 按钮；(2) `status=filled` → 绿色 `✓ @ $X.XX` chip 带 `Executed YYYY-MM-DD HH:MM` tooltip；(3) HOLD/signal 类的行 → 不显示按钮（HOLD 没东西可执行，per PRD spec）。点 `Mark Executed` 弹 modal：
+  - **默认 qty**：BUY 走 `floor(cash_balance * position_size_percent / 100 / entry_price)`、SELL 走当前 holding qty（找不到就 fallback 到 1）
+  - **默认 price**：LLM 给的 `metadata.entry_price`，没有时退回 `decision_price`
+  - **Total 行实时计算**：显示成交金额 + 提示 cash 会增减多少
+  - **错误展示**：mutation 报错时 modal 内 inline 红框显示，比 toast 容易和操作上下文对齐
+  - **cash_warning 弹 alert**：如果 BUY 后 cash_balance 变负数，后端返 `cash_warning`，前端用 `window.alert` 提示（per PRD：允许负数但显眼提醒）
+  - 模态背景 `onMouseDown + e.target===e.currentTarget` 关闭，避免拖选文本不小心关 modal（沿用 v0.11.7 AddTransactionModal 的约定）
+- **feat(history-titles): 分析历史卡片中文分类前缀** — 后端 `chat-history` 返回的 title 现在直接带 `持仓分析` / `今日推荐` / `个股分析` 前缀，前端不需要任何改动就能展示。同一时间段内一眼能区分三种来源，之前所有卡片都是 `Analysis · symbols · time` 没法分
+
+### Added (hooks)
+- `useMarkOrderExecuted()`（`hooks/useDecisions.ts`）：包 `POST /api/portfolio/orders/{id}/mark-executed`，成功后级联 invalidate `["decisions"]` / `["portfolio-settings"]` / `["holdings"]` / `["user-transactions"]` 四张缓存，让 DecisionTracker、SettingsPanel cash 显示、Holdings 表三处自动刷新
+- `DecisionRow` 接口扩展 `filled_qty` / `filled_avg_price` / `filled_at` / `user_transaction_id` 四个字段，用来渲染状态 chip 和点回 transaction 详情（后续）
+
+## [0.16.4] - 2026-05-06
+
+### Fixed
+- **fix(vite): Windows Docker 下 HMR 失效** — `vite.config.ts` 的 `server.watch` 加 `usePolling: true` + `interval: 1000`。根因：Windows 主机 + Docker bind mount 下，主机端文件改动不会在容器里触发 inotify 事件——文件**内容是同步过来的**（容器 grep 立刻能看到新内容），但 Vite 的 chokidar watcher 收不到事件，于是 HMR 默默失效，每次改前端代码都要手动 `docker compose restart frontend`。开 polling 让 watcher 每秒 stat 一次文件，绕过 inotify。代价：watcher 进程持续占 ~2-3% CPU。表象记录：v0.16.3 改完 `<ResearchBody>` 之后浏览器还在显示 raw markdown，因为 Vite 完全没察觉文件变了——bundle 还是旧的。
+
+## [0.16.3] - 2026-05-05
+
+### Fixed
+- **fix(decision-tracker): Full Research 弹窗按 markdown 渲染，不再显示 raw `#` `**` `-` 字符** — 之前 modal body 用 `<Translated text={...} as="div">` 配合 `whitespace-pre-wrap`，等于把 markdown 当纯文本贴出来，所有标题/列表/粗体/表格全是源码字符。新增内联 `<ResearchBody>` 组件，把 `useTranslated` hook 的输出（precomputed 中文 → 直出，否则走 `/api/translate` 兜底）喂给 `react-markdown` + `remark-gfm`，components map 抄 `ChatMessages.tsx` 的精简版（h1-h3、p、ul/ol/li、strong/em、code/pre、blockquote、table/th/td、hr、a）。modal 容器去掉 `whitespace-pre-wrap`/`font-sans`（会跟 markdown 渲染冲突），保留 `leading-relaxed` 让段落有呼吸感。翻译进行中 `opacity 0.7` 的 loading 提示从 `<Translated>` 迁到 `<ResearchBody>` 内层 div 上，行为一致。
+
+## [0.16.2] - 2026-05-05
+
+### Changed
+- **change(decision-tracker): Full Research 弹窗也走 `precomputed=` 通道** — 配套 backend v0.21.3：`hooks/useDecisions.ts` 的 `DecisionMetadata` 加 `full_research_zh?: string | null`；`components/portfolio/DecisionTracker.tsx` 的 `ResearchModalState` 加 `text_zh` 字段，"View Full Research" 按钮 `onClick` 把 `d.metadata?.full_research_zh` 一起带进 modal state，modal 里 `<Translated text={researchModal.text} as="div" precomputed={researchModal.text_zh ?? null} />` 直接用后端写入时存好的中文，停掉 zh-CN 模式下 12-15 秒的 `/api/translate` 实时调用和灰色 loading 状态。后端没写 `full_research_zh`（旧行/翻译失败）时 fallback 到 lazy 翻译路径，行为兼容。
+
+## [0.16.1] - 2026-05-05
+
+### Changed
+- **change(decision-tracker): reasoning 走 `precomputed=` 通道，不再现调 `/api/translate`** — 配套 backend v0.21.2：`hooks/useDecisions.ts` 的 `DecisionMetadata` 加 `reasoning_zh?: string | null`；`components/portfolio/DecisionTracker.tsx` 把 `<Translated text={reasoning} />` 换成 `<Translated text={reasoning} precomputed={(d.metadata?.reasoning_zh as string | null) ?? null} />`，AI Reasoning 展开行第一次渲染就直接拿后端写入时存好的中文，省掉 zh-CN locale 下的实时 LLM 翻译。后端没写 `reasoning_zh`（旧行/翻译失败）时 `precomputed=null`，回落到原有的 lazy 翻译路径，行为兼容。
+
 ## [0.16.0] - 2026-05-05
 
 ### Added
