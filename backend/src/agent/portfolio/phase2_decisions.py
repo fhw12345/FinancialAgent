@@ -134,10 +134,27 @@ a tool output.
   - SELL: BELOW entry_price, at a fib retracement (0.382, 0.236) or
     next-down support
 
+**Important — SELL semantics when closing an existing long position:**
+When the SELL is to exit a holding the user already owns (the common case
+in this portfolio flow, NOT opening a short), the three prices mean:
+  - `entry_price` = the limit price to PLACE THE SELL ORDER AT (e.g. $645)
+  - `stop_loss` = if price moves AGAINST your sell thesis (i.e. UP past
+    this level), the trend hasn't reversed yet → CANCEL the sell order,
+    don't dump at a worse price. NOT a literal "buy back at a loss" stop.
+  - `take_profit` = if your sell order doesn't fill and price falls all
+    the way down to this level, this is the LAST-RESORT exit price; you
+    should have already sold by now, but at minimum sell here.
+In your `reasoning_summary` for a SELL, you MUST explicitly state which
+of these two interpretations applies (closing a long vs. opening a
+short). Example for closing a long: "Sell limit $645 at resistance
+$651.74. Cancel-above $655 if breakout confirms uptrend continuation.
+Last-resort exit at $576 fib 0.382 support if the sell limit doesn't
+fill."
+
 The `reasoning_summary` MUST cite the specific tool-derived levels you
-used. Example: "Entry at fib 0.618=$182. Stop below swing low $175.
-Target at fib 1.618=$210." A reasoning that does NOT name the levels is
-not acceptable.
+used for ALL THREE prices (entry/stop/take), not just two. A reasoning
+that names the stop and target but leaves the entry-price anchor
+unspecified is not acceptable.
 
 ## Important Considerations
 

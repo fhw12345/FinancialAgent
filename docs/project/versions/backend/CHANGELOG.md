@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-05-05
+
+### Changed
+- **change(phase2-prompt): SELL 平多仓语义说清，reasoning 必须 cite 三个位的 anchor** — 用户反馈 MU 那条 SELL 决策的 entry $645 没在 reasoning 里点出锚点，只点了 stop $652 和 target $576。同时 SELL 平掉已有持仓时 stop_loss / take_profit 的字面语义有点拧巴（"涨破 $655 砍仓回平"在没有空仓的语境下不通），LLM 自己有时也写得含糊。`agent/portfolio/phase2_decisions.py` 的 Price Levels 章节加一段，明确 SELL=平多仓时三个价位的真实意思：`entry_price` = 挂卖单价，`stop_loss` = 价反向涨破就**撤单**别卖（不是真止损），`take_profit` = 卖单不成交时跌到这是补救 last-resort 平仓价。同时强制 reasoning_summary 必须为**三个价位都**点 anchor，不只是 stop/target。
+
 ## [0.21.0] - 2026-05-05
 
 ### Changed
