@@ -111,7 +111,11 @@ async def _llm_translate(texts: list[str]) -> list[str] | None:
     if not texts:
         return []
     try:
-        llm = get_llm(TRANSLATION_ROLE, temperature=0.0, max_tokens=4096)
+        # max_tokens=16384: full_research can be 5-10KB of markdown; Chinese
+        # output is ~1.5x token-dense than English, so 4096 was being silently
+        # truncated for long bodies. Reasoning translations cost a few hundred
+        # tokens — the higher cap costs nothing for the small case.
+        llm = get_llm(TRANSLATION_ROLE, temperature=0.0, max_tokens=16384)
         messages = [
             SystemMessage(content=_SYSTEM_PROMPT),
             HumanMessage(content=_build_user_prompt(texts)),

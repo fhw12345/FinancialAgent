@@ -8,6 +8,14 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 3000,
     strictPort: true,
+    // Docker on Windows: bind-mounted file changes don't fire inotify events,
+    // so Vite's default fs watcher misses HMR triggers and you have to
+    // restart the container after every edit. Polling at 1s catches changes
+    // without inotify; cost is a few % CPU for the watcher process.
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
   },
   preview: {
     host: "0.0.0.0",

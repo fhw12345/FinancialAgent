@@ -438,11 +438,18 @@ Technical terms can include English in parentheses for clarity.
                             all_analysis_results.append(result)
                             result_summary["watchlist_analyzed"] += 1
                             analyzed_symbols.add(watchlist_item.symbol)
-                            await self.watchlist_repo.update_last_analyzed(
-                                watchlist_item.watchlist_id,
-                                user_id,
-                                utcnow(),
-                            )
+                            # Picks flow passes _SymbolStub objects (no
+                            # watchlist_id) for sector-filtered candidates
+                            # that aren't actually in the user's watchlist —
+                            # nothing to update there. Only stamp last-analyzed
+                            # on real WatchlistItem objects.
+                            wl_id = getattr(watchlist_item, "watchlist_id", None)
+                            if wl_id is not None:
+                                await self.watchlist_repo.update_last_analyzed(
+                                    wl_id,
+                                    user_id,
+                                    utcnow(),
+                                )
                         else:
                             result_summary["errors"].append(
                                 {
