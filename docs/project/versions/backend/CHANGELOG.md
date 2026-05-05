@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.2] - 2026-05-05
+
+### Fixed
+- **fix(analysis): 混合 naive/aware datetime 触发 `Tz-aware datetime.datetime cannot be converted to datetime64`** — Redis 缓存里旧的 OHLCV 条目走 `OHLCVData.from_dict()` 时 `datetime.fromisoformat()` 保留原字符串的 tz 信息（早期写入的可能是 naive），新拉的 yfinance 数据在 `DataManager._fetch_ohlcv_yfinance()` 里被强制 UTC-aware。两批拼起来时 `pd.DatetimeIndex([...])` 拒绝混合输入。把 `stochastic_analyzer.py` 和 `fibonacci/analyzer.py` 里的 `pd.DatetimeIndex(...)` 全换成 `pd.to_datetime(..., utc=True)`，这个调用会把混合列表里的所有 datetime 统一规整到 UTC-aware。`langgraph_react_agent.py` 里 `df.index >= pd.Timestamp(cutoff_date)` 比较前先 `tz_localize("UTC")`（market_service 返回的 index 可能是 naive，cutoff_date 是 tz-aware）。修完以后 SNDK/GOOGL/NVDA/CRWV 的 stochastic + fibonacci 指标都能正常算出来。
+
 ## [0.20.1] - 2026-05-05
 
 ### Fixed

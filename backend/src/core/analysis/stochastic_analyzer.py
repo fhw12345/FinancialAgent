@@ -197,7 +197,10 @@ class StochasticAnalyzer:
                     }
                     for d in ohlcv_list
                 ],
-                index=pd.DatetimeIndex([d.date for d in ohlcv_list]),
+                # `pd.to_datetime(..., utc=True)` normalizes a list that may mix
+                # naive and tz-aware datetimes (e.g. old cache entries vs fresh
+                # yfinance pulls) into a single UTC-aware DatetimeIndex.
+                index=pd.to_datetime([d.date for d in ohlcv_list], utc=True),
             )
 
             # Sort by date ascending (oldest first) for stochastic calculation

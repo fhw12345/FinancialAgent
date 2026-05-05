@@ -39,7 +39,6 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import structlog
-
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
@@ -546,6 +545,11 @@ Summary: {result.analysis_summary}"""
 
                 if df.empty:
                     return f"No historical data available for {symbol}"
+
+                # market_service may return a naive DatetimeIndex; cutoff_date is
+                # tz-aware (UTC). Localize the index so the comparison matches.
+                if df.index.tz is None:
+                    df.index = df.index.tz_localize("UTC")
 
                 # Filter to requested period
                 df_filtered = df[df.index >= pd.Timestamp(cutoff_date)]
