@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-05-05
+
+### Added — 写入时翻译 (LLM 内容 zh-CN 上墙更快、Redis 1 天 TTL 不再失效)
+之前 LLM 生成的英文内容（chat 消息正文 / chat 标题 / 最近一条预览）通过前端 `POST /api/translate` 按需翻译，命中 Redis 1 天 TTL；TTL 一过同一段又得重新打 LLM。这版改成写入 MongoDB **之前** 同步翻译，`<field>_zh` 持久化在 sibling 字段，前端拿到就直接渲染，不打 `/api/translate`。
+
+- **`src/services/persistence_translator.py`** — 写路径翻译边界。包一层 `translate_batch(...)`：批量空字段短路、整批失败返 `{f"{k}_zh": None}` 不抛（前端走原本的 lazy fallback，不会破坏写入）。
+- **`MessageRepository.create()`** — 构造 Message 之前对 `content` 翻一次，存到 `content_zh`。构造方法签名加 `redis_cache: RedisCache`（无 default，必传，避免静默走 lazy 路径）。
+- **`ChatRepository.create()` / `update()`** — `title` 和 `last_message_preview` 同样处理。`update()` 路径有显式守卫：整批 translator 失败时（全 None）不把 `_zh` 写回 update 文档，避免一次 LLM 抖动把已有的好翻译覆成 None。`create()` 不需要这个守卫——insert 没有可覆盖的旧值。
+- **`scripts/backfill_translations.py`** — 历史文档一次性回填。幂等：查询条件 `{ field: 非空 } AND { field_zh: missing/null }`，per-doc 再过滤防 race。`--dry-run` / `--collection messages|chats|all` / `--batch-size` / `--limit` 都齐了。失败的 doc 计入 `failed` 但不阻塞批次。`Makefile` 新加 `backfill-translations` target。
+- **8 个调用点同步改造** — `main.py`、`chat_deps.py`、`history.py`、`portfolio/agent.py`、`portfolio/flows.py`、`watchlist/analyzer.py`、`scripts/test_repositories.py` 全部改成把 `redis_cache` 透传到 repository 构造。`PortfolioAnalysisAgent` 也加 `redis_cache` 参数。
+
+### Tests
+新加 17 个测试: `test_persistence_translator.py` (3) + `test_message_repository.py` (3) + `test_backfill_translations.py` (3) + `test_chat_repository.py` 写入时分支 (4 含 transient-failure 守卫回归)。所有 17 个全过。
+现有的 29 个失败测试是 W5b user-id 移除等旧 refactor 的遗留 baseline，与本次修改无关（在父 commit 上同样失败）。
+
 ## [0.19.2] - 2026-05-05
 
 ### Changed

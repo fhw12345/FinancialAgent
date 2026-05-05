@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-05-05
+
+### Added — 写入时翻译消费 (UI 不再二次打 `/api/translate`)
+后端 v0.20.0 把 `_zh` 翻译做成写入时的 sibling 字段。前端这边消费它：
+
+- **`hooks/useTranslated.ts`** — 新加 `Options.precomputed?: string | null`。当前语言是 zh-CN 且传入了非空 `precomputed` 时，hook 直接同步返回 `{text: precomputed, isLoading: false, isTranslated: true}`，**不发 `/api/translate` 请求、不查 Redis**。precomputed 缺失（null/空）时退回原来的 lazy fetch 路径。
+- **`components/Translated.tsx`** — 透传 `precomputed` 给 hook。
+- **`types/api.ts`** — `Message`、`ChatMessage` 加 `content_zh?: string | null`；`Chat` 加 `title_zh?: string | null`、`last_message_preview_zh?: string | null`。
+- **`ChatMessages.tsx`** — assistant 消息的整段 markdown 翻译现在以 `content_zh` 为 precomputed source；首次渲染零等待。
+- **`ChatListItem.tsx`** — `chat.title` 和 `chat.last_message_preview` 现在用 `<Translated>` 包裹（之前直接 raw 渲染，zh-CN 下侧栏全英），分别拿 `title_zh` / `last_message_preview_zh` 做 precomputed。
+
+### Tests
+`useTranslated.test.ts` 新加 3 个 case 覆盖 precomputed 分支（zh-CN + 有 precomputed → 不打网络；zh-CN + null precomputed → 走 fetch；en + 任意 precomputed → 直返原文）。233/233 vitest 测试通过。
+
 ## [0.13.0] - 2026-05-05
 
 ### Added — Decision Tracker 升级
