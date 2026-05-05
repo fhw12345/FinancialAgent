@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-05-05
+
+### Changed
+- **change(portfolio-chats): 分析历史每次跑都出独立卡片** — 之前 `/api/portfolio/chat-history` 按 chat 标题分组，所有 portfolio 分析都被塞进同一个 `Portfolio Decisions` chat，结果用户跑 N 次只看到 1 张侧边栏卡。现在改成"每条 message → 一张卡"，title 自动生成为 `Analysis · MU, AAPL, CRWV · 04:45`（symbols 截断 +N，时间精确到分）。`chat_id` 字段沿用 `message_id`，前端契约（`Chat[]` 形状）零修改。新加 `parent_chat_id` 字段方便调试。
+- **change(portfolio-chats): DELETE / GET `/chats/{id}` 支持 message_id** — 路径参数以 `msg_` 开头时按 message 操作（删/读单条），其它形状沿用 chat 级行为，保留遗留删除路径不破坏。
+
 ## [0.19.0] - 2026-05-05
 
 ### Changed — yfinance / FRED 升主源，AV 退 fallback (~80% 配额释放)

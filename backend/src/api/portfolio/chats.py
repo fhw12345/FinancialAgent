@@ -126,90 +126,124 @@ async def get_portfolio_chat_history(
             end_date=end_date,
         )
 
-        # Build result: one entry per chat (symbol)
-        result_chats = []
+        # Build result: ONE CARD PER MESSAGE.
+        #
+        # Old behaviour grouped messages under their parent chat ("Portfolio
+        # Decisions" or "<SYMBOL> Analysis"), so 12 reruns of portfolio
+        # analysis collapsed into 1 sidebar card. Users expect one card per
+        # analysis run, so we now flatten: each portfolio/analysis message
+        # becomes its own card. The frontend's chat_id/messages contract is
+        # preserved by mapping `chat_id := message_id` and putting the
+        # single message into a one-element `messages` list.
+        #
+        # The DELETE /chats/{chat_id} route below was updated alongside this
+        # to interpret chat_id as a message_id when it starts with "msg_".
+        result_chats: list[dict] = []
 
         for chat in portfolio_chats:
             chat_id = chat["chat_id"]
             title = chat.get("title", "Unknown")
             is_portfolio_decisions_chat = title == "Portfolio Decisions"
 
-            # Extract symbol from title (format: "{symbol} Analysis")
-            # For "Portfolio Decisions" chat, symbol is None (aggregated across symbols)
-            chat_symbol = (
-                None
-                if is_portfolio_decisions_chat
-                else (title.split(" ")[0] if " " in title else title)
-            )
-
             # Build message query
             message_query: dict = {"chat_id": chat_id}
             if date_start and date_end:
-                # Filter messages by date range
                 message_query["timestamp"] = {"$gte": date_start, "$lt": date_end}
             elif date_start:
-                # Filter messages from start date onwards
                 message_query["timestamp"] = {"$gte": date_start}
             elif date_end:
-                # Filter messages up to end date
                 message_query["timestamp"] = {"$lt": date_end}
 
             # Filter by analysis_type if specified
-            # For backward compatibility: "individual" also matches messages with null/missing analysis_type
-            # (all messages created before this feature are individual symbol analyses)
             if analysis_type:
                 if analysis_type == "individual":
-                    # Match "individual" OR null/missing (backward compatibility)
+                    # Match "individual" OR null/missing (backward compat)
                     message_query["$or"] = [
                         {"metadata.analysis_type": "individual"},
                         {"metadata.analysis_type": None},
                         {"metadata.analysis_type": {"$exists": False}},
                     ]
                 else:
-                    # For "portfolio", exact match only
                     message_query["metadata.analysis_type"] = analysis_type
 
-            # For Portfolio Decisions chat with symbol filter, filter by symbols_analyzed
+            # For Portfolio Decisions chat with symbol filter, scope to runs
+            # that analyzed that symbol.
             if is_portfolio_decisions_chat and symbol:
                 message_query["metadata.raw_data.symbols_analyzed"] = symbol
 
-            # Get messages for this chat (filtered by date and analysis_type if specified)
-            # Sort newest first (most recent analysis at top)
+            # Newest first so the chronological-newest card appears first.
             messages = (
                 await messages_collection.find(message_query)
                 .sort("timestamp", -1)
                 .to_list(length=None)
-            )  # Sort newest first
-
-            # Skip chats with no messages matching the filters
-            if (date or analysis_type) and not messages:
-                continue
-
-            # Clean messages
+            )
             for msg in messages:
                 msg.pop("_id", None)
 
-            # Get most recent message timestamp for sorting (first message since sorted newest first)
-            latest_timestamp = (
-                messages[0].get("timestamp", datetime.min) if messages else datetime.min
-            )
+            for msg in messages:
+                msg_id = msg.get("message_id") or ""
+                msg_meta = msg.get("metadata") or {}
+                msg_ts = msg.get("timestamp", datetime.min)
+                ts_iso = (
+                    msg_ts.isoformat()
+                    if isinstance(msg_ts, datetime)
+                    else str(msg_ts)
+                )
 
-            result_chats.append(
-                {
-                    "chat_id": chat_id,
-                    "symbol": chat_symbol,  # None for "Portfolio Decisions" chat
-                    "title": title,
-                    "message_count": len(messages),
-                    "messages": messages,
-                    "latest_timestamp": (
-                        latest_timestamp.isoformat()
-                        if isinstance(latest_timestamp, datetime)
-                        else str(latest_timestamp)
-                    ),
-                }
-            )
+                # Card title — most informative first:
+                #   1. analyzed symbols + time (portfolio decisions)
+                #   2. parent chat title + time (single-symbol analysis)
+                if is_portfolio_decisions_chat:
+                    syms = (msg_meta.get("raw_data") or {}).get(
+                        "symbols_analyzed"
+                    ) or []
+                    sym_str = ", ".join(syms[:3]) if syms else "Portfolio"
+                    if len(syms) > 3:
+                        sym_str += f" +{len(syms) - 3}"
+                    time_str = (
+                        msg_ts.strftime("%H:%M")
+                        if isinstance(msg_ts, datetime)
+                        else ""
+                    )
+                    card_title = (
+                        f"Analysis · {sym_str} · {time_str}"
+                        if time_str
+                        else f"Analysis · {sym_str}"
+                    )
+                    card_symbol = syms[0] if len(syms) == 1 else None
+                else:
+                    parent_symbol = (
+                        title.split(" ")[0] if " " in title else title
+                    )
+                    time_str = (
+                        msg_ts.strftime("%H:%M")
+                        if isinstance(msg_ts, datetime)
+                        else ""
+                    )
+                    card_title = (
+                        f"{parent_symbol} · {time_str}"
+                        if time_str
+                        else parent_symbol
+                    )
+                    card_symbol = parent_symbol
 
-        # Sort chats by most recent message (newest first)
+                result_chats.append(
+                    {
+                        # chat_id contract preserved; frontend uses it as
+                        # React key + DELETE target. The trailing message_id
+                        # makes each card unique even when many cards share
+                        # the same parent chat.
+                        "chat_id": msg_id or chat_id,
+                        "parent_chat_id": chat_id,
+                        "symbol": card_symbol,
+                        "title": card_title,
+                        "message_count": 1,
+                        "messages": [msg],
+                        "latest_timestamp": ts_iso,
+                    }
+                )
+
+        # Sort cards globally by their (single) message timestamp, newest first.
         result_chats.sort(key=lambda c: c.get("latest_timestamp", ""), reverse=True)
 
         logger.info(
@@ -242,32 +276,44 @@ async def get_portfolio_chat_detail(
     chat_id: str,
     limit: int | None = None,
     chat_service: ChatService = Depends(get_chat_service),
+    mongodb: MongoDB = Depends(get_mongodb),
 ) -> dict:
     """
-    Get portfolio agent chat detail with messages.
+    Get portfolio analysis card detail.
 
-    Args:
-        chat_id: Chat identifier
-        limit: Optional message limit (default: 100)
-
-    Returns:
-        Chat detail with messages
+    Cards are now per-message (one analysis run = one card). When chat_id
+    starts with `msg_`, we look up that single message and return it
+    alongside its parent chat. Otherwise we fall back to the legacy
+    chat-level fetch (returns the whole chat with up to `limit` messages).
     """
     try:
+        # Per-message detail path — what the sidebar uses now.
+        if chat_id.startswith("msg_"):
+            messages_coll = mongodb.get_collection("messages")
+            msg = await messages_coll.find_one({"message_id": chat_id})
+            if not msg:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Portfolio analysis card not found",
+                )
+            msg.pop("_id", None)
+            chat = await chat_service.get_chat(msg["chat_id"])
+            logger.info(
+                "Portfolio analysis card retrieved",
+                message_id=chat_id,
+                parent_chat_id=msg.get("chat_id"),
+            )
+            return {"chat": chat, "messages": [msg]}
+
+        # Legacy: full chat with all messages.
         chat = await chat_service.get_chat(chat_id)
-
         messages = await chat_service.get_chat_messages(chat_id, limit=limit)
-
         logger.info(
             "Portfolio chat detail retrieved",
             chat_id=chat_id,
             message_count=len(messages),
         )
-
-        return {
-            "chat": chat,
-            "messages": messages,
-        }
+        return {"chat": chat, "messages": messages}
 
     except Exception as e:
         logger.error(
@@ -288,25 +334,38 @@ async def delete_portfolio_chat(
     chat_id: str,
     _: None = Depends(require_admin),  # Admin only
     chat_service: ChatService = Depends(get_chat_service),
+    mongodb: MongoDB = Depends(get_mongodb),
 ) -> None:
     """
-    Delete a portfolio agent chat and all its messages.
+    Delete a portfolio analysis card.
 
-    **Admin only** - Requires admin privileges to delete portfolio analysis chats.
+    Cards are now per-message (one analysis run = one card), so the path
+    parameter is interpreted as a `message_id` whenever it starts with
+    `msg_`. Falls back to deleting the entire chat (legacy behaviour) for
+    any other id shape — keeps the route safe for direct chat-level
+    cleanups via the API.
 
-    Args:
-        chat_id: Chat identifier
-
-    Returns:
-        204 No Content on success
-
-    Raises:
-        HTTPException: 403 if not admin, 404 if chat not found
+    **Admin only**.
     """
     try:
-        # Delete chat with portfolio_agent as owner
-        deleted = await chat_service.delete_chat(chat_id)
+        # Per-message delete path — what the sidebar uses now.
+        if chat_id.startswith("msg_"):
+            messages_coll = mongodb.get_collection("messages")
+            result = await messages_coll.delete_one({"message_id": chat_id})
+            if result.deleted_count == 0:
+                logger.warning(
+                    "Portfolio analysis card not found for deletion",
+                    message_id=chat_id,
+                )
+                raise HTTPException(
+                    status_code=404,
+                    detail="Portfolio analysis card not found",
+                )
+            logger.info("Portfolio analysis card deleted", message_id=chat_id)
+            return
 
+        # Legacy: delete the whole chat.
+        deleted = await chat_service.delete_chat(chat_id)
         if not deleted:
             logger.warning(
                 "Portfolio chat not found for deletion",
@@ -316,11 +375,7 @@ async def delete_portfolio_chat(
                 status_code=404,
                 detail="Portfolio chat not found",
             )
-
-        logger.info(
-            "Portfolio chat deleted",
-            chat_id=chat_id,
-        )
+        logger.info("Portfolio chat deleted", chat_id=chat_id)
 
     except HTTPException:
         raise
