@@ -7,6 +7,7 @@ ignored parameter so existing call sites stay valid; queries no longer
 filter by user_id.
 """
 
+import uuid
 from typing import TYPE_CHECKING, Any
 
 import structlog
@@ -47,8 +48,6 @@ class ChatRepository:
         logger.info("Chat indexes ensured")
 
     async def create(self, chat_create: ChatCreate) -> Chat:
-        import uuid
-
         chat_id = f"chat_{uuid.uuid4().hex[:12]}"
 
         translations = await translate_for_persistence(
@@ -121,8 +120,12 @@ class ChatRepository:
             translations = await translate_for_persistence(
                 translatable, redis_cache=self._redis
             )
-            for tk, tv in translations.items():
-                update_dict[tk] = tv
+            # Skip merge on whole-batch translator failure so a transient LLM
+            # hiccup can't overwrite a previously-good <field>_zh with None.
+            # `create()` doesn't need this guard — nothing to clobber on insert.
+            if any(v is not None for v in translations.values()):
+                for tk, tv in translations.items():
+                    update_dict[tk] = tv
 
         result = await self.collection.find_one_and_update(
             {"chat_id": chat_id},

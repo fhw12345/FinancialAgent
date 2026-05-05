@@ -788,3 +788,41 @@ async def test_update_skips_translation_when_no_text_fields_change(
         await chat_repository.update(chat.chat_id, ChatUpdate(is_archived=True))
 
     mock_t.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_update_skips_zh_merge_when_translator_returns_all_none(
+    chat_repository, mock_collection
+):
+    """Transient LLM failure must not clobber existing _zh fields with None.
+
+    persistence_translator returns all-None on whole-batch failure. The repo
+    must detect this and skip merging _zh into update_dict so a previously-good
+    Chinese title survives the failed update.
+    """
+    from unittest.mock import AsyncMock, patch
+
+    from src.models.chat import ChatCreate, ChatUpdate
+
+    with patch(
+        "src.database.repositories.chat_repository.translate_for_persistence",
+        new=AsyncMock(return_value={"title_zh": None}),
+    ):
+        chat = await chat_repository.create(ChatCreate(title="x"))
+
+    captured_update: dict = {}
+
+    async def _capture(filter_, update_, **_kw):
+        captured_update.update(update_["$set"])
+        return _doc_from_update(chat.chat_id, update_["$set"])
+
+    mock_collection.find_one_and_update.side_effect = _capture
+
+    with patch(
+        "src.database.repositories.chat_repository.translate_for_persistence",
+        new=AsyncMock(return_value={"title_zh": None}),
+    ):
+        await chat_repository.update(chat.chat_id, ChatUpdate(title="AAPL Analysis"))
+
+    assert "title" in captured_update
+    assert "title_zh" not in captured_update
