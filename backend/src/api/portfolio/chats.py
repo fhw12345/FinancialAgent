@@ -195,22 +195,30 @@ async def get_portfolio_chat_history(
                     else str(msg_ts)
                 )
 
-                # Card title — most informative first:
-                #   1. analyzed symbols + time (portfolio decisions)
-                #   2. parent chat title + time (single-symbol analysis)
+                # Card title — use Chinese category prefix:
+                #   持仓分析 (holdings flow) / 今日推荐 (picks flow) /
+                #   个股分析 (single-symbol Phase 2 / non-portfolio chats).
+                # The category comes from metadata.raw_data.flow which the
+                # phase2_decisions writer stamps on holdings + picks runs.
                 # Embed the full tz-aware ISO so the frontend renders it in
                 # the user's locale; raw `HH:MM` would freeze the value as UTC.
                 if is_portfolio_decisions_chat:
-                    syms = (msg_meta.get("raw_data") or {}).get(
-                        "symbols_analyzed"
-                    ) or []
+                    raw_data = msg_meta.get("raw_data") or {}
+                    syms = raw_data.get("symbols_analyzed") or []
+                    flow = raw_data.get("flow")
                     sym_str = ", ".join(syms[:3]) if syms else "Portfolio"
                     if len(syms) > 3:
                         sym_str += f" +{len(syms) - 3}"
+                    if flow == "holdings":
+                        category = "持仓分析"
+                    elif flow == "picks":
+                        category = "今日推荐"
+                    else:
+                        category = "个股分析" if len(syms) == 1 else "Analysis"
                     card_title = (
-                        f"Analysis · {sym_str} · {ts_iso}"
+                        f"{category} · {sym_str} · {ts_iso}"
                         if isinstance(msg_ts, datetime)
-                        else f"Analysis · {sym_str}"
+                        else f"{category} · {sym_str}"
                     )
                     card_symbol = syms[0] if len(syms) == 1 else None
                 else:
@@ -218,9 +226,9 @@ async def get_portfolio_chat_history(
                         title.split(" ")[0] if " " in title else title
                     )
                     card_title = (
-                        f"{parent_symbol} · {ts_iso}"
+                        f"个股分析 · {parent_symbol} · {ts_iso}"
                         if isinstance(msg_ts, datetime)
-                        else parent_symbol
+                        else f"个股分析 · {parent_symbol}"
                     )
                     card_symbol = parent_symbol
 

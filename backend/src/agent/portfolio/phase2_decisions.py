@@ -239,6 +239,7 @@ Include short reasoning (1-2 sentences) for each decision.
         decision_result: "PortfolioDecisionList",
         symbol_analyses: list[SymbolAnalysisResult],
         portfolio_context: dict[str, Any],
+        flow: str | None = None,
     ) -> None:
         """
         Store Phase 2 portfolio decision as a chat message for history viewing.
@@ -325,16 +326,22 @@ Include short reasoning (1-2 sentences) for each decision.
 
             # Create metadata for filtering
             analyzed_symbols = [a.symbol for a in symbol_analyses]
+            raw_data: dict[str, Any] = {
+                "decisions_count": len(decision_result.decisions),
+                "symbols_analyzed": analyzed_symbols,
+                "total_equity": portfolio_context.get("total_equity", 0),
+                "buying_power": portfolio_context.get("buying_power", 0),
+            }
+            if flow:
+                # Used by GET /api/portfolio/chat-history to label cards as
+                # 持仓分析 (holdings) / 今日推荐 (picks). Single-symbol Phase 2
+                # runs have no flow tag and fall through to 个股分析.
+                raw_data["flow"] = flow
             metadata = MessageMetadata(
                 symbol=None,  # Portfolio-level, not symbol-specific
                 analysis_id=analysis_id,
                 analysis_type="portfolio",  # Phase 2 = portfolio decision
-                raw_data={
-                    "decisions_count": len(decision_result.decisions),
-                    "symbols_analyzed": analyzed_symbols,
-                    "total_equity": portfolio_context.get("total_equity", 0),
-                    "buying_power": portfolio_context.get("buying_power", 0),
-                },
+                raw_data=raw_data,
             )
 
             # Create and store the message
@@ -370,6 +377,7 @@ Include short reasoning (1-2 sentences) for each decision.
         portfolio_context: dict[str, Any],
         user_id: str,
         dry_run: bool,
+        flow: str | None = None,
     ) -> tuple[Any, list[Any]]:
         """
         Run Phase 2: Make portfolio-wide trading decisions.
@@ -419,6 +427,7 @@ Include short reasoning (1-2 sentences) for each decision.
                 decision_result=decision_result,
                 symbol_analyses=all_analysis_results,
                 portfolio_context=portfolio_context,
+                flow=flow,
             )
 
         return decision_result, trading_decisions

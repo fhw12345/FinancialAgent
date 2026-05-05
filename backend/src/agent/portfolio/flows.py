@@ -20,6 +20,7 @@ _phase2_for_symbols (preserves v0.15.0 behavior).
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from dataclasses import dataclass
 from typing import Any
@@ -28,13 +29,12 @@ import structlog
 
 from ...core.utils.date_utils import utcnow
 from ...database.repositories.holding_repository import HoldingRepository
-from ...database.repositories.message_repository import MessageRepository
 from ...database.repositories.portfolio_order_repository import (
     PortfolioOrderRepository,
 )
-from ...models.message import MessageCreate, MessageMetadata
 from ...models.portfolio import PortfolioOrder
 from ...models.portfolio_analysis import PortfolioSettings
+from ...services.persistence_translator import translate_for_persistence
 from .context_builder import build_context_from_mongo
 from .universe_filter import filter_by_risk
 
@@ -85,7 +85,6 @@ async def run_analyze_holdings(app: Any, settings: PortfolioSettings) -> dict[st
     redis_cache = app.state.redis
     holding_repo = HoldingRepository(mongo.get_collection("holdings"))
     order_repo = PortfolioOrderRepository(mongo.get_collection("portfolio_orders"))
-    message_repo = MessageRepository(mongo.get_collection("messages"), redis_cache)
 
     holdings = await holding_repo.list_by_user()
     if not holdings:
@@ -106,6 +105,7 @@ async def run_analyze_holdings(app: Any, settings: PortfolioSettings) -> dict[st
             order_repo,
             source="holdings",
             run_id=f"holdings_{uuid.uuid4().hex[:8]}",
+            redis_cache=redis_cache,
         )
         return {
             "message": f"[fallback] Analyzed {len(symbols)} holding(s); persisted {written}.",
@@ -140,6 +140,7 @@ async def run_analyze_holdings(app: Any, settings: PortfolioSettings) -> dict[st
         portfolio_context=context,
         user_id="local",
         dry_run=False,
+        flow="holdings",
     )
     decisions = _trading_decisions_to_dicts(trading_decisions)
     written = await _persist_decisions(
@@ -149,8 +150,8 @@ async def run_analyze_holdings(app: Any, settings: PortfolioSettings) -> dict[st
         source="holdings",
         run_id=run_id,
         research_by_symbol=research_by_symbol,
+        redis_cache=redis_cache,
     )
-    await _write_summary_chat(message_repo, "holdings", run_id, decisions)
     return {
         "message": f"Researched {len(phase1_results)} holding(s); persisted {written} decision(s).",
         "result_count": written,
@@ -195,7 +196,6 @@ async def run_today_picks(
     finalists = finalists[:PICKS_PHASE1_CAP]
 
     order_repo = PortfolioOrderRepository(mongo.get_collection("portfolio_orders"))
-    message_repo = MessageRepository(mongo.get_collection("messages"), app.state.redis)
 
     context = {
         "total_equity": settings.cash_balance,
@@ -223,6 +223,7 @@ async def run_today_picks(
             order_repo,
             source="picks",
             run_id=f"picks_{uuid.uuid4().hex[:8]}",
+            redis_cache=app.state.redis,
         )
         return {
             "message": f"[fallback] Analyzed {len(symbols)} candidate(s); persisted {written}.",
@@ -257,6 +258,7 @@ async def run_today_picks(
         portfolio_context=context,
         user_id="local",
         dry_run=False,
+        flow="picks",
     )
     # Picks: only keep BUY recommendations, capped at Top 5 by confidence
     buys = [
@@ -273,8 +275,8 @@ async def run_today_picks(
         source="picks",
         run_id=run_id,
         research_by_symbol=research_by_symbol,
+        redis_cache=app.state.redis,
     )
-    await _write_summary_chat(message_repo, "picks", run_id, top5)
     msg = (
         f"Researched {len(phase1_results)} candidate(s); persisted {written} pick(s)."
         if written
@@ -309,52 +311,6 @@ def _trading_decisions_to_dicts(trading_decisions: list[Any]) -> list[dict[str, 
             }
         )
     return out
-
-
-async def _write_summary_chat(
-    message_repo: MessageRepository,
-    flow: str,
-    run_id: str,
-    decisions: list[dict[str, Any]],
-) -> None:
-    """One aggregated summary message per run — keeps the chat list clean."""
-    date_str = utcnow().strftime("%Y-%m-%d")
-    chat_id = f"system-run-{flow}-{date_str}"
-    title = "Holdings Analysis" if flow == "holdings" else "Today's Picks"
-    if decisions:
-        lines = [
-            f"- **{d['symbol']}** {d['decision'].upper()}"
-            f" (conf {d.get('confidence', '?')}/10)"
-            f" — {d.get('reasoning_summary', '')[:160]}"
-            for d in decisions
-        ]
-        body = "\n".join(lines)
-        content = (
-            f"### {title} — {date_str}\n"
-            f"_run id: `{run_id}`_\n\n"
-            f"{body}\n\n"
-            f"_Click any decision row in the dashboard to see the full per-symbol research._"
-        )
-    else:
-        content = (
-            f"### {title} — {date_str}\n"
-            f"_run id: `{run_id}`_\n\n"
-            f"No actionable decisions produced this run."
-        )
-    try:
-        await message_repo.create(
-            MessageCreate(
-                chat_id=chat_id,
-                role="assistant",
-                content=content,
-                source="llm",
-                metadata=MessageMetadata(
-                    analysis_id=run_id, analysis_type="portfolio_run_summary"
-                ),
-            )
-        )
-    except Exception as e:
-        logger.warning("summary_chat_write_failed", run_id=run_id, error=str(e))
 
 
 # ---------------------------------------------------------------------------
@@ -461,13 +417,79 @@ async def _persist_decisions(
     source: str,
     run_id: str,
     research_by_symbol: dict[str, str] | None = None,
+    redis_cache: Any = None,
 ) -> int:
     """Write each decision as a PortfolioOrder row tagged with source + run_id.
 
     If `research_by_symbol` is provided, the per-symbol Phase 1 research text
     is embedded into `metadata.full_research` so the dashboard can show it.
+
+    If `redis_cache` is provided, both `reasoning_summary` and the much-larger
+    `full_research` are pre-translated to `metadata.reasoning_zh` /
+    `metadata.full_research_zh` so the DecisionTracker UI can render Chinese
+    immediately instead of triggering a live `/api/translate` LLM call per
+    row on first view (the full-research call was ~12s for long bodies).
     """
     research_by_symbol = research_by_symbol or {}
+
+    # Pre-translation strategy:
+    # - reasoning is short (<500 chars) → batch all of them in one LLM call
+    # - full_research is long (multi-KB markdown) → translate one symbol at a
+    #   time, in parallel. A single batch with multiple long markdown bodies
+    #   risks exceeding max_tokens (4096) and/or breaking the JSON-array
+    #   parser if any body contains unescaped quotes. Per-symbol calls also
+    #   isolate failures: one symbol's translation failing shouldn't poison
+    #   the rest.
+    reasoning_zh_by_symbol: dict[str, str | None] = {}
+    research_zh_by_symbol: dict[str, str | None] = {}
+    if redis_cache is not None:
+        reasoning_to_translate: dict[str, str] = {}
+        research_symbols_to_translate: list[tuple[str, str]] = []
+        for d in decisions:
+            sym = d["symbol"].upper()
+            reasoning_text = (d.get("reasoning_summary") or "")[:500]
+            if reasoning_text.strip():
+                reasoning_to_translate[sym] = reasoning_text
+            research_text = research_by_symbol.get(sym, "")
+            if research_text.strip():
+                research_symbols_to_translate.append((sym, research_text))
+
+        if reasoning_to_translate:
+            try:
+                translations = await translate_for_persistence(
+                    reasoning_to_translate, redis_cache=redis_cache
+                )
+                for sym in reasoning_to_translate:
+                    reasoning_zh_by_symbol[sym] = translations.get(f"{sym}_zh")
+            except Exception as e:
+                logger.warning("reasoning_pretranslate_failed", error=str(e))
+
+        if research_symbols_to_translate:
+            # Parallel per-symbol translation. Each call is ~10-15s; run all
+            # symbols concurrently so the wall-clock cost is the slowest
+            # single translation, not their sum.
+            async def _translate_one(sym: str, text: str) -> tuple[str, str | None]:
+                try:
+                    out = await translate_for_persistence(
+                        {"r": text}, redis_cache=redis_cache
+                    )
+                    return sym, out.get("r_zh")
+                except Exception as e:
+                    logger.warning(
+                        "research_pretranslate_failed", symbol=sym, error=str(e)
+                    )
+                    return sym, None
+
+            results = await asyncio.gather(
+                *(
+                    _translate_one(sym, text)
+                    for sym, text in research_symbols_to_translate
+                ),
+                return_exceptions=False,
+            )
+            for sym, zh in results:
+                research_zh_by_symbol[sym] = zh
+
     written = 0
     for d in decisions:
         sym = d["symbol"].upper()
@@ -524,7 +546,9 @@ async def _persist_decisions(
                 "stop_loss": stop_loss,
                 "take_profit": take_profit,
                 "reasoning": d.get("reasoning_summary", "")[:500],
+                "reasoning_zh": reasoning_zh_by_symbol.get(sym),
                 "full_research": research_by_symbol.get(sym, ""),
+                "full_research_zh": research_zh_by_symbol.get(sym),
             },
         )
         try:
