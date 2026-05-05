@@ -1,12 +1,14 @@
 /**
- * Decision Tracker — table + per-symbol P&L line chart.
+ * Decision Tracker — table + per-symbol P&L chart + AI scorecard.
  *
  * Surfaces every AI decision (BUY/SELL orders + HOLD signals + Deep ReAct
  * verdicts) with ex-post P&L snapshots at 7d / 30d / 90d horizons computed
  * by the run_pnl_snapshots.py cron.
  *
- * Visual style matches RecentTransactions (light theme, white card, gray-200
- * borders, gray-900 text on white) so it sits naturally on the dashboard.
+ * Layout:
+ *   [KPI bar — hit rate, avg P&L per horizon, confidence calibration]
+ *   [Per-symbol grouped table — latest decision shown, history expandable]
+ *   [P&L line chart — latest decision per symbol across horizons]
  */
 
 import { useMemo, useState, Fragment } from "react";
@@ -32,19 +34,55 @@ import { useDecisions, type DecisionRow } from "../../hooks/useDecisions";
 const HORIZONS = ["7d", "30d", "90d"] as const;
 type Horizon = (typeof HORIZONS)[number];
 
-function PnlCell({ pct }: { pct: number | undefined }) {
+// HOLD is "right" if the price barely moved. Symmetric band around 0.
+const HOLD_NEUTRAL_BAND_PCT = 2.0;
+
+/**
+ * Was this decision "right" at the given horizon?
+ *   BUY  → right if price went up
+ *   SELL → right if price went down
+ *   HOLD → right if price stayed within ±HOLD_NEUTRAL_BAND_PCT
+ * Returns null when the snapshot for that horizon doesn't exist yet
+ * (decision too recent), so callers can ignore N/A from hit-rate math.
+ */
+function decisionWasRight(
+  side: DecisionRow["side"],
+  pnlPct: number | undefined | null,
+): boolean | null {
+  if (pnlPct === undefined || pnlPct === null) return null;
+  switch (side) {
+    case "buy":
+      return pnlPct > 0;
+    case "sell":
+      return pnlPct < 0;
+    case "hold":
+      return Math.abs(pnlPct) < HOLD_NEUTRAL_BAND_PCT;
+  }
+}
+
+/** Same color contract as PnlCell, but parameterized by "good for the
+ * decision" rather than "price went up". A SELL with -8% P&L is GREEN
+ * because the AI was right, even though the raw number is negative. */
+function PnlCell({
+  pct,
+  side,
+}: {
+  pct: number | undefined | null;
+  side: DecisionRow["side"];
+}) {
   if (pct === undefined || pct === null) {
     return <span className="text-gray-400">—</span>;
   }
+  const right = decisionWasRight(side, pct);
   const cls =
-    pct > 0
+    right === true
       ? "text-green-700 font-medium"
-      : pct < 0
+      : right === false
         ? "text-red-700 font-medium"
         : "text-gray-600";
   const sign = pct > 0 ? "+" : "";
   return (
-    <span className={cls}>
+    <span className={cls} title={right === true ? "AI was right" : right === false ? "AI was wrong" : "neutral"}>
       {sign}
       {pct.toFixed(2)}%
     </span>
@@ -85,22 +123,17 @@ interface SeriesPoint {
   [symbol: string]: number | string;
 }
 
-function buildSeries(decisions: DecisionRow[]): {
+function buildSeries(latestPerSymbol: DecisionRow[]): {
   data: SeriesPoint[];
   symbols: string[];
 } {
-  // Latest decision per symbol (decisions arrive newest-first from API).
-  const latestBySymbol = new Map<string, DecisionRow>();
-  for (const d of decisions) {
-    if (!latestBySymbol.has(d.symbol)) latestBySymbol.set(d.symbol, d);
-  }
-  const symbols = Array.from(latestBySymbol.keys());
+  const symbols = latestPerSymbol.map((d) => d.symbol);
   const data: SeriesPoint[] = HORIZONS.map((h) => {
     const point: SeriesPoint = { horizon: h };
-    for (const sym of symbols) {
-      const snap = latestBySymbol.get(sym)?.pnl_snapshots?.[h];
+    for (const d of latestPerSymbol) {
+      const snap = d.pnl_snapshots?.[h];
       if (snap?.pnl_pct !== undefined) {
-        point[sym] = snap.pnl_pct;
+        point[d.symbol] = snap.pnl_pct;
       }
     }
     return point;
@@ -126,11 +159,306 @@ interface ResearchModalState {
   text: string;
 }
 
+// ---------------------------------------------------------------------------
+// Grouping: collapse history per symbol so the table doesn't drown in noise.
+// API returns decisions newest-first, so the first occurrence of a symbol
+// is the latest decision. We preserve that order across groups.
+// ---------------------------------------------------------------------------
+interface SymbolGroup {
+  symbol: string;
+  latest: DecisionRow;
+  history: DecisionRow[]; // older, newest-first; excludes `latest`
+}
+
+function groupBySymbol(decisions: DecisionRow[]): SymbolGroup[] {
+  const groups = new Map<string, SymbolGroup>();
+  for (const d of decisions) {
+    const existing = groups.get(d.symbol);
+    if (!existing) {
+      groups.set(d.symbol, { symbol: d.symbol, latest: d, history: [] });
+    } else {
+      existing.history.push(d);
+    }
+  }
+  return Array.from(groups.values());
+}
+
+// ---------------------------------------------------------------------------
+// KPI bar — answers "is the AI actually any good?" at a glance.
+// All metrics computed against currently-filtered decisions only, so tab/
+// symbol filter naturally scope the scorecard.
+// ---------------------------------------------------------------------------
+interface Kpis {
+  scoredCount: number; // decisions with at least one horizon snapshot
+  hitRate7d: number | null; // 0-1, null if no 7d data
+  hitRate30d: number | null;
+  hitRate90d: number | null;
+  avgPnl7d: number | null; // signed, in percent (price-direction, not "right")
+  avgPnl30d: number | null;
+  avgPnl90d: number | null;
+  highConfHitRate: number | null; // confidence >= 7
+  lowConfHitRate: number | null; // confidence <= 5
+}
+
+function computeKpis(decisions: DecisionRow[]): Kpis {
+  const hits: Record<Horizon, number[]> = { "7d": [], "30d": [], "90d": [] };
+  const pnls: Record<Horizon, number[]> = { "7d": [], "30d": [], "90d": [] };
+  const high: number[] = [];
+  const low: number[] = [];
+  let scoredCount = 0;
+
+  for (const d of decisions) {
+    let scored = false;
+    for (const h of HORIZONS) {
+      const pct = d.pnl_snapshots?.[h]?.pnl_pct;
+      const right = decisionWasRight(d.side, pct);
+      if (right === null) continue;
+      scored = true;
+      hits[h].push(right ? 1 : 0);
+      if (typeof pct === "number") pnls[h].push(pct);
+    }
+    if (scored) scoredCount += 1;
+
+    // Confidence calibration uses the 7d hit only — longest available horizon
+    // would bias toward older decisions; 7d is the leading indicator.
+    const r7 = decisionWasRight(d.side, d.pnl_snapshots?.["7d"]?.pnl_pct);
+    const conf = d.metadata?.confidence;
+    if (r7 !== null && typeof conf === "number") {
+      if (conf >= 7) high.push(r7 ? 1 : 0);
+      else if (conf <= 5) low.push(r7 ? 1 : 0);
+    }
+  }
+
+  const mean = (xs: number[]) =>
+    xs.length === 0 ? null : xs.reduce((a, b) => a + b, 0) / xs.length;
+
+  return {
+    scoredCount,
+    hitRate7d: mean(hits["7d"]),
+    hitRate30d: mean(hits["30d"]),
+    hitRate90d: mean(hits["90d"]),
+    avgPnl7d: mean(pnls["7d"]),
+    avgPnl30d: mean(pnls["30d"]),
+    avgPnl90d: mean(pnls["90d"]),
+    highConfHitRate: mean(high),
+    lowConfHitRate: mean(low),
+  };
+}
+
+function fmtPct(v: number | null, opts: { signed?: boolean } = {}) {
+  if (v === null || Number.isNaN(v)) return "—";
+  const pct = v * (opts.signed === false ? 1 : 1); // pass-through
+  const sign = opts.signed && pct > 0 ? "+" : "";
+  return `${sign}${(pct * (opts.signed ? 1 : 100)).toFixed(opts.signed ? 2 : 0)}%`;
+}
+
+// hit rate is 0-1 → render as integer percent
+function fmtHit(v: number | null) {
+  if (v === null) return "—";
+  return `${Math.round(v * 100)}%`;
+}
+
+// signed P&L pct (already in percent units) → "+12.34%" / "-1.20%"
+function fmtPnlPct(v: number | null) {
+  if (v === null) return "—";
+  const sign = v > 0 ? "+" : "";
+  return `${sign}${v.toFixed(2)}%`;
+}
+
+function KpiBar({ kpis }: { kpis: Kpis }) {
+  if (kpis.scoredCount === 0) {
+    return (
+      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 text-xs text-gray-500">
+        No scored decisions yet — P&L snapshots fill in 7+ days after each
+        decision. Come back later to see the AI scorecard.
+      </div>
+    );
+  }
+  const Cell = ({
+    label,
+    value,
+    tooltip,
+  }: {
+    label: string;
+    value: string;
+    tooltip?: string;
+  }) => (
+    <div className="flex flex-col" title={tooltip}>
+      <span className="text-[10px] uppercase tracking-wider text-gray-500">
+        {label}
+      </span>
+      <span className="text-sm font-semibold text-gray-900 tabular-nums">
+        {value}
+      </span>
+    </div>
+  );
+  // Color for hit-rate: green ≥60%, amber 45-59%, red <45%
+  const hitColor = (v: number | null) =>
+    v === null
+      ? "text-gray-400"
+      : v >= 0.6
+        ? "text-green-700"
+        : v >= 0.45
+          ? "text-amber-700"
+          : "text-red-700";
+  return (
+    <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-x-6 gap-y-3">
+      <Cell
+        label="Scored"
+        value={`${kpis.scoredCount}`}
+        tooltip="Decisions with at least one P&L snapshot"
+      />
+      <div className="flex flex-col" title="BUY right if up, SELL right if down, HOLD right if |Δ| < 2%">
+        <span className="text-[10px] uppercase tracking-wider text-gray-500">
+          Hit 7d
+        </span>
+        <span className={`text-sm font-semibold tabular-nums ${hitColor(kpis.hitRate7d)}`}>
+          {fmtHit(kpis.hitRate7d)}
+        </span>
+      </div>
+      <div className="flex flex-col">
+        <span className="text-[10px] uppercase tracking-wider text-gray-500">
+          Hit 30d
+        </span>
+        <span className={`text-sm font-semibold tabular-nums ${hitColor(kpis.hitRate30d)}`}>
+          {fmtHit(kpis.hitRate30d)}
+        </span>
+      </div>
+      <div className="flex flex-col">
+        <span className="text-[10px] uppercase tracking-wider text-gray-500">
+          Hit 90d
+        </span>
+        <span className={`text-sm font-semibold tabular-nums ${hitColor(kpis.hitRate90d)}`}>
+          {fmtHit(kpis.hitRate90d)}
+        </span>
+      </div>
+      <Cell label="Avg 7d P&L" value={fmtPnlPct(kpis.avgPnl7d)} />
+      <Cell label="Avg 30d P&L" value={fmtPnlPct(kpis.avgPnl30d)} />
+      <Cell label="Avg 90d P&L" value={fmtPnlPct(kpis.avgPnl90d)} />
+      <div
+        className="flex flex-col"
+        title="Hit rate at 7d for high-confidence (≥7) vs low-confidence (≤5) decisions. Should diverge if AI is well-calibrated."
+      >
+        <span className="text-[10px] uppercase tracking-wider text-gray-500">
+          Conf calib (≥7 / ≤5)
+        </span>
+        <span className="text-sm font-semibold tabular-nums">
+          <span className={hitColor(kpis.highConfHitRate)}>{fmtHit(kpis.highConfHitRate)}</span>
+          <span className="text-gray-400"> / </span>
+          <span className={hitColor(kpis.lowConfHitRate)}>{fmtHit(kpis.lowConfHitRate)}</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Decision row + (optionally) its reasoning expansion. Pulled out so the
+// per-symbol grouping wrapper stays readable.
+// ---------------------------------------------------------------------------
+interface DecisionRowsProps {
+  d: DecisionRow;
+  isOpen: boolean;
+  onToggle: () => void;
+  onOpenResearch: (state: ResearchModalState) => void;
+  /** Visual indent flag for history rows under a group header */
+  indented?: boolean;
+}
+
+function DecisionRows({
+  d,
+  isOpen,
+  onToggle,
+  onOpenResearch,
+  indented,
+}: DecisionRowsProps) {
+  const reasoning = d.metadata?.reasoning ?? "";
+  const conf = d.metadata?.confidence;
+  const hasDetail = !!reasoning;
+  return (
+    <>
+      <tr
+        className={`border-b border-gray-100 ${hasDetail ? "cursor-pointer hover:bg-blue-50" : "hover:bg-gray-50"} ${indented ? "bg-gray-50/50" : ""}`}
+        onClick={() => hasDetail && onToggle()}
+      >
+        <td className="py-2 pr-3 text-gray-400">
+          {hasDetail ? (isOpen ? "▼" : "▶") : ""}
+        </td>
+        <td
+          className={`py-2 pr-3 font-mono text-gray-900 ${indented ? "pl-4 text-xs text-gray-500" : "font-medium"}`}
+        >
+          {indented ? `↳ ${d.symbol}` : d.symbol}
+        </td>
+        <td className="py-2 pr-3">
+          <SideBadge side={d.side} />
+        </td>
+        <td className="py-2 pr-3 text-gray-700">
+          {d.decision_price ? `$${d.decision_price.toFixed(2)}` : "—"}
+        </td>
+        <td className="py-2 pr-3 text-gray-700 text-xs">
+          {conf != null ? `${conf}/10` : "—"}
+        </td>
+        <td className="py-2 pr-3">
+          <PnlCell pct={d.pnl_snapshots?.["7d"]?.pnl_pct} side={d.side} />
+        </td>
+        <td className="py-2 pr-3">
+          <PnlCell pct={d.pnl_snapshots?.["30d"]?.pnl_pct} side={d.side} />
+        </td>
+        <td className="py-2 pr-3">
+          <PnlCell pct={d.pnl_snapshots?.["90d"]?.pnl_pct} side={d.side} />
+        </td>
+        <td className="py-2 pr-3 text-xs text-gray-500">
+          {new Date(d.created_at).toLocaleDateString()}
+        </td>
+        <td className="py-2 pr-3 text-xs text-gray-500">{d.decision_type}</td>
+      </tr>
+      {isOpen && hasDetail && (
+        <tr className="bg-blue-50/40">
+          <td></td>
+          <td colSpan={9} className="py-3 pr-3 text-sm text-gray-700">
+            <div className="whitespace-pre-wrap leading-relaxed">
+              <span className="text-xs uppercase text-gray-500 font-semibold mr-2">
+                AI Reasoning:
+              </span>
+              <Translated text={reasoning} />
+              {d.metadata?.position_size_percent != null && (
+                <span className="ml-3 text-xs text-gray-500">
+                  · suggested size: {d.metadata.position_size_percent}%
+                </span>
+              )}
+              {d.metadata?.full_research && (
+                <div className="mt-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenResearch({
+                        symbol: d.symbol,
+                        text: String(d.metadata?.full_research || ""),
+                      });
+                    }}
+                    className="inline-flex items-center gap-1 rounded border border-blue-300 bg-white px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                  >
+                    📄 View Full Research
+                  </button>
+                </div>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
 export function DecisionTracker() {
   const [symbolFilter, setSymbolFilter] = useState("");
   const [tab, setTab] = useState<SourceTab>("all");
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [researchModal, setResearchModal] = useState<ResearchModalState | null>(null);
+  const [expandedReasoning, setExpandedReasoning] = useState<Set<string>>(
+    new Set(),
+  );
+  const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
+  const [researchModal, setResearchModal] =
+    useState<ResearchModalState | null>(null);
   const { data, isLoading, error } = useDecisions(
     symbolFilter || undefined,
     tab === "all" ? undefined : tab,
@@ -138,19 +466,35 @@ export function DecisionTracker() {
   );
 
   const decisions = data?.decisions ?? [];
+
+  const groups = useMemo(() => groupBySymbol(decisions), [decisions]);
+  const kpis = useMemo(() => computeKpis(decisions), [decisions]);
+
+  // Chart series: only the latest decision per symbol — plotting every
+  // historical decision would create criss-crossing lines that no longer
+  // tell a clear story.
+  const latestPerSymbol = useMemo(() => groups.map((g) => g.latest), [groups]);
   const { data: chartData, symbols: chartSymbols } = useMemo(
-    () => buildSeries(decisions),
-    [decisions],
+    () => buildSeries(latestPerSymbol),
+    [latestPerSymbol],
   );
 
-  const toggleExpanded = (id: string) => {
-    setExpanded((prev) => {
+  const toggleReasoning = (id: string) =>
+    setExpandedReasoning((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
+
+  const toggleHistory = (symbol: string) =>
+    setExpandedHistory((prev) => {
+      const next = new Set(prev);
+      if (next.has(symbol)) next.delete(symbol);
+      else next.add(symbol);
+      return next;
+    });
+
   const showChart =
     chartSymbols.length > 0 &&
     chartData.some((p) => chartSymbols.some((s) => typeof p[s] === "number"));
@@ -197,6 +541,8 @@ export function DecisionTracker() {
         </div>
       </div>
 
+      {!isLoading && !error && decisions.length > 0 && <KpiBar kpis={kpis} />}
+
       <div className="p-4">
         {isLoading && (
           <div className="text-sm text-gray-500">Loading decisions…</div>
@@ -234,84 +580,43 @@ export function DecisionTracker() {
                   </tr>
                 </thead>
                 <tbody>
-                  {decisions.map((d) => {
-                    const reasoning = d.metadata?.reasoning ?? "";
-                    const conf = d.metadata?.confidence;
-                    const isOpen = expanded.has(d.order_id);
-                    const hasDetail = !!reasoning;
+                  {groups.map((g) => {
+                    const histOpen = expandedHistory.has(g.symbol);
+                    const moreCount = g.history.length;
                     return (
-                      <Fragment key={d.order_id}>
-                        <tr
-                          className={`border-b border-gray-100 ${hasDetail ? "cursor-pointer hover:bg-blue-50" : "hover:bg-gray-50"}`}
-                          onClick={() => hasDetail && toggleExpanded(d.order_id)}
-                        >
-                          <td className="py-2 pr-3 text-gray-400">
-                            {hasDetail ? (isOpen ? "▼" : "▶") : ""}
-                          </td>
-                          <td className="py-2 pr-3 font-mono text-gray-900 font-medium">
-                            {d.symbol}
-                          </td>
-                          <td className="py-2 pr-3">
-                            <SideBadge side={d.side} />
-                          </td>
-                          <td className="py-2 pr-3 text-gray-700">
-                            {d.decision_price
-                              ? `$${d.decision_price.toFixed(2)}`
-                              : "—"}
-                          </td>
-                          <td className="py-2 pr-3 text-gray-700 text-xs">
-                            {conf != null ? `${conf}/10` : "—"}
-                          </td>
-                          <td className="py-2 pr-3">
-                            <PnlCell pct={d.pnl_snapshots?.["7d"]?.pnl_pct} />
-                          </td>
-                          <td className="py-2 pr-3">
-                            <PnlCell pct={d.pnl_snapshots?.["30d"]?.pnl_pct} />
-                          </td>
-                          <td className="py-2 pr-3">
-                            <PnlCell pct={d.pnl_snapshots?.["90d"]?.pnl_pct} />
-                          </td>
-                          <td className="py-2 pr-3 text-xs text-gray-500">
-                            {new Date(d.created_at).toLocaleDateString()}
-                          </td>
-                          <td className="py-2 pr-3 text-xs text-gray-500">
-                            {d.decision_type}
-                          </td>
-                        </tr>
-                        {isOpen && hasDetail && (
-                          <tr className="bg-blue-50/40">
+                      <Fragment key={g.symbol}>
+                        <DecisionRows
+                          d={g.latest}
+                          isOpen={expandedReasoning.has(g.latest.order_id)}
+                          onToggle={() => toggleReasoning(g.latest.order_id)}
+                          onOpenResearch={setResearchModal}
+                        />
+                        {moreCount > 0 && (
+                          <tr className="bg-white">
                             <td></td>
-                            <td colSpan={9} className="py-3 pr-3 text-sm text-gray-700">
-                              <div className="whitespace-pre-wrap leading-relaxed">
-                                <span className="text-xs uppercase text-gray-500 font-semibold mr-2">
-                                  AI Reasoning:
-                                </span>
-                                <Translated text={reasoning} />
-                                {d.metadata?.position_size_percent != null && (
-                                  <span className="ml-3 text-xs text-gray-500">
-                                    · suggested size: {d.metadata.position_size_percent}%
-                                  </span>
-                                )}
-                                {d.metadata?.full_research && (
-                                  <div className="mt-2">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setResearchModal({
-                                          symbol: d.symbol,
-                                          text: String(d.metadata?.full_research || ""),
-                                        });
-                                      }}
-                                      className="inline-flex items-center gap-1 rounded border border-blue-300 bg-white px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
-                                    >
-                                      📄 View Full Research
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
+                            <td colSpan={9} className="py-1 pr-3">
+                              <button
+                                onClick={() => toggleHistory(g.symbol)}
+                                className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                              >
+                                {histOpen
+                                  ? `▼ Hide ${moreCount} earlier decision${moreCount === 1 ? "" : "s"} for ${g.symbol}`
+                                  : `▶ Show ${moreCount} earlier decision${moreCount === 1 ? "" : "s"} for ${g.symbol}`}
+                              </button>
                             </td>
                           </tr>
                         )}
+                        {histOpen &&
+                          g.history.map((h) => (
+                            <DecisionRows
+                              key={h.order_id}
+                              d={h}
+                              isOpen={expandedReasoning.has(h.order_id)}
+                              onToggle={() => toggleReasoning(h.order_id)}
+                              onOpenResearch={setResearchModal}
+                              indented
+                            />
+                          ))}
                       </Fragment>
                     );
                   })}
@@ -358,18 +663,20 @@ export function DecisionTracker() {
         )}
       </div>
 
-      {/* Full-research modal — opened from per-row [View Full Research] button */}
+      {/* Full-research modal — opened from per-row [View Full Research] button.
+          Backdrop close uses onMouseDown + e.target===e.currentTarget so a
+          drag-select that overshoots into the backdrop doesn't close the
+          modal (same fix as AddTransactionModal v0.11.7). */}
       {researchModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setResearchModal(null)}
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setResearchModal(null);
+          }}
           role="dialog"
           aria-modal="true"
         >
-          <div
-            className="w-full max-w-3xl max-h-[80vh] flex flex-col rounded-lg bg-white shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="w-full max-w-3xl max-h-[80vh] flex flex-col rounded-lg bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
               <h3 className="text-base font-semibold text-gray-900">
                 Full Research — {researchModal.symbol}

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-05-05
+
+### Added — Decision Tracker 升级
+四件事一起做了:
+
+- **KPI 汇总行** — 表格顶部新增 8 项指标: scored 数、7d/30d/90d 命中率 (BUY 涨/SELL 跌/HOLD ±2% 内为"对")、对应平均 P&L、置信度校准 (≥7 vs ≤5 的命中率对比)。颜色档: ≥60% 绿、45-59% 黄、<45% 红。一眼看出 AI 这段时间到底准不准。Tab/symbol 过滤直接 scope 这一行的统计。
+- **按 symbol 折叠历史** — 表格主体改成 `groupBySymbol()`: 同一 symbol 默认只显示最新一条决策, 下方一行 `▶ Show N earlier decisions for SYMBOL` 按钮按需展开整段历史 (newest-first, 视觉缩进 + 浅灰背景)。Reasoning 展开和历史展开是两个独立状态 (`expandedReasoning` vs `expandedHistory`), 互不干扰。能一眼看出"AI 对 NVDA 5 月 BUY → 7 月 HOLD → 9 月 SELL"这种观点演变。
+- **SELL P&L 颜色翻转** — 之前 PnlCell 一律绿正红负, 但 SELL 的"跌"才是 AI 对。新加 `decisionWasRight(side, pct)` 三态返回, PnlCell 接收 `side` 后按"决策好坏"上色: SELL -8% 现在显示绿色 (AI 对了), BUY -3% 显示红色 (AI 错了), HOLD ±2% 内显示绿色。tooltip 也明确写 "AI was right/wrong/neutral"。数字本身保留原符号方便看价格方向。
+- **Research modal backdrop 拖选不关** — 跟 AddTransactionModal v0.11.7 同款 bug。改 `onClick` 为 `onMouseDown` + `e.target === e.currentTarget`, 拖选超出 modal 边界释放鼠标不再误关。
+
+230/230 vitest 测试通过, 无回归。
+
 ## [0.12.1] - 2026-05-05
 
 ### Added
