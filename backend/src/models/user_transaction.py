@@ -33,6 +33,11 @@ class UserTransaction(BaseModel):
     )
     executed_at: datetime = Field(..., description="When the trade filled")
     notes: str | None = Field(default=None, max_length=500)
+    portfolio_order_id: str | None = Field(
+        default=None,
+        description="Set when this transaction was created via DecisionTracker "
+        "Mark-Executed (back-pointer to the originating LLM-suggested order).",
+    )
     created_at: datetime
     updated_at: datetime
 
@@ -51,6 +56,11 @@ class UserTransactionCreate(BaseModel):
         default=None, description="If omitted, defaults to now (UTC)"
     )
     notes: str | None = Field(default=None, max_length=500)
+    portfolio_order_id: str | None = Field(
+        default=None,
+        description="Optional back-pointer to a portfolio_orders row when this "
+        "transaction is created via Mark-Executed.",
+    )
 
 
 class UserTransactionUpdate(BaseModel):

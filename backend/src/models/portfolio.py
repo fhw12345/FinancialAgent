@@ -112,6 +112,11 @@ class PortfolioOrder(BaseModel):
         None,
         description="Origin of this decision: 'holdings' (analyze-holdings flow), 'picks' (today's picks flow), or None for legacy rows",
     )
+    user_transaction_id: str | None = Field(
+        None,
+        description="Set when the user marks this order executed via DecisionTracker — "
+        "back-pointer to the user_transactions row that recorded the actual fill.",
+    )
 
     # Metadata
     metadata: dict = Field(

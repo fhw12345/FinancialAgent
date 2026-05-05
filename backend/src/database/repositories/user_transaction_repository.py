@@ -53,6 +53,7 @@ class UserTransactionRepository:
             total_amount=total,
             executed_at=payload.executed_at or now,
             notes=payload.notes,
+            portfolio_order_id=payload.portfolio_order_id,
             created_at=now,
             updated_at=now,
         )

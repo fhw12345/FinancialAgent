@@ -308,6 +308,67 @@ class PortfolioOrderRepository:
 
         return PortfolioOrder(**result)
 
+    async def mark_filled(
+        self,
+        order_id: str,
+        filled_qty: float,
+        filled_avg_price: float,
+        filled_at: datetime,
+        user_transaction_id: str | None,
+    ) -> PortfolioOrder | None:
+        """
+        Mark a locally-suggested order as executed by the user.
+
+        This is the DecisionTracker "Mark Executed" path — distinct from
+        `update_status` which keys on `alpaca_order_id` for live trading.
+        Here we key on our DB primary key `order_id` because the order never
+        went through Alpaca.
+        """
+        update_dict: dict[str, Any] = {
+            "status": "filled",
+            "filled_qty": filled_qty,
+            "filled_avg_price": filled_avg_price,
+            "filled_at": filled_at,
+            "user_transaction_id": user_transaction_id,
+            "updated_at": utcnow(),
+        }
+        result = await self.collection.find_one_and_update(
+            {"order_id": order_id},
+            {"$set": update_dict},
+            return_document=True,
+        )
+        if not result:
+            return None
+        result.pop("_id", None)
+        return PortfolioOrder(**result)
+
+    async def revert_filled(self, order_id: str) -> PortfolioOrder | None:
+        """
+        Revert a previously-filled order back to "suggested" state.
+
+        Used by the DELETE /user-transactions path so the originating order
+        is no longer marked executed when the corresponding transaction is
+        removed. We DO NOT clear `decision_price`, `decision_type`, or any
+        of the audit fields — only the fill state.
+        """
+        update_dict: dict[str, Any] = {
+            "status": "suggested",
+            "filled_qty": 0.0,
+            "filled_avg_price": None,
+            "filled_at": None,
+            "user_transaction_id": None,
+            "updated_at": utcnow(),
+        }
+        result = await self.collection.find_one_and_update(
+            {"order_id": order_id},
+            {"$set": update_dict},
+            return_document=True,
+        )
+        if not result:
+            return None
+        result.pop("_id", None)
+        return PortfolioOrder(**result)
+
     async def count_by_user(
         self, user_id: str | None = None, status: str | None = None
     ) -> int:
