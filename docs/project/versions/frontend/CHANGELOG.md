@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-05-05
+
+### Fixed
+- **fix(time): 「分析历史」卡片标题时间按语言渲染** — 配套 backend v0.20.5：后端 `card_title` 现在嵌入完整 ISO 而不是 raw `HH:MM`，前端 `ChatListItem` 用 `Translated` 的 `render` prop 包一层 `localizeTimestamps`，把 ISO 替换为当前 locale 的 `HH:MM`（zh → Asia/Shanghai 24h；其它 → 浏览器本地）。`localizeTimestamps` 加 `options?: Intl.DateTimeFormatOptions` 第三参数让调用方控制输出粒度（这里只要时分，不要日期）。
+- 新加 1 个 `localizeTimestamps` options 测试，245/245 vitest 全过
+
 ## [0.15.1] - 2026-05-05
 
 ### Fixed

@@ -107,5 +107,17 @@ describe("timeFormatter", () => {
     it("returns empty input as-is", () => {
       expect(localizeTimestamps("", "zh-CN")).toBe("");
     });
+
+    it("respects format options (HH:MM only) for chat list titles", () => {
+      const text = "AAPL · 2026-05-05T04:00:00+00:00";
+      const out = localizeTimestamps(text, "zh-CN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+      // Should contain the Beijing 12:00 hour-minute, no date.
+      expect(out).toContain("12:00");
+      expect(out).not.toContain("2026");
+    });
   });
 });

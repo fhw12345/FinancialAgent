@@ -7,7 +7,7 @@ import { MessageSquare, Clock, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Chat } from "../../types/api";
 import { Translated } from "../Translated";
-import { formatDate } from "../../utils/timeFormatter";
+import { formatDate, localizeTimestamps } from "../../utils/timeFormatter";
 
 interface ChatListItemProps {
   chat: Chat;
@@ -97,7 +97,16 @@ export function ChatListItem({
             ${isActive ? "text-gray-900" : "text-gray-800 group-hover:text-gray-900"}
           `}
           >
-            <Translated text={chat.title} precomputed={chat.title_zh ?? null} />
+            <Translated
+              text={chat.title}
+              precomputed={chat.title_zh ?? null}
+              render={(translated) =>
+                localizeTimestamps(translated, i18n.language, {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              }
+            />
           </h3>
 
           {/* Preview */}

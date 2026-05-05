@@ -86,15 +86,17 @@ const ISO_TIMESTAMP_RE =
 /**
  * Replace every ISO 8601 timestamp inside a markdown/plain-text string with
  * its locale-formatted equivalent. zh-* locales render in Beijing time; other
- * locales fall back to the browser's local zone.
+ * locales fall back to the browser's local zone. Pass `options` to control
+ * the output format (e.g. `{ hour: "2-digit", minute: "2-digit" }` for HH:MM).
  */
 export function localizeTimestamps(
   text: string,
   locale: string | undefined,
+  options?: Intl.DateTimeFormatOptions,
 ): string {
   if (!text) return text;
   return text.replace(ISO_TIMESTAMP_RE, (match) => {
-    const formatted = formatTimestamp(match, locale);
+    const formatted = formatTimestamp(match, locale, options);
     return formatted || match;
   });
 }

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.5] - 2026-05-05
+
+### Fixed
+- **fix(time): 「分析历史」卡片时间永远卡在 UTC** — `api/portfolio/chats.py` 给前端造的 `card_title` 是 `f"{symbol} · {msg_ts.strftime('%H:%M')}"`，UTC 13:49 直接拼成死字符串「`AAPL · 13:49`」，前端 i18n 救不了——它就是字面量。同一个文件的 `latest_timestamp` 也漏：Motor 默认 `tz_aware=False`，从 BSON UTC 读出来的 datetime 是 naive，`.isoformat()` 出来不带 `+00:00`，浏览器把它当**机器本地时间**解析（北京浏览器 = 北京视角），相对时间「N 分钟前」错 8 小时。这版两处都修：
+  - `msg_ts.replace(tzinfo=UTC)` 兜住 naive datetime，`.isoformat()` 出来带 `+00:00`，前端 `new Date(...)` / `formatTimestamp` 能正确转 zh → Asia/Shanghai
+  - `card_title` 改成嵌入完整 ISO 而不是 raw `HH:MM`：`f"{symbol} · {ts_iso}"`。前端 `ChatListItem` 配套加 `localizeTimestamps` 包装（frontend v0.15.2），把 ISO 替换为当前 locale 的 `HH:MM`
+
 ## [0.20.4] - 2026-05-05
 
 ### Fixed

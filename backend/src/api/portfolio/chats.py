@@ -7,7 +7,7 @@ Provides:
 - DELETE /chats/{chat_id}: Delete portfolio chat (admin only)
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -184,6 +184,11 @@ async def get_portfolio_chat_history(
                 msg_id = msg.get("message_id") or ""
                 msg_meta = msg.get("metadata") or {}
                 msg_ts = msg.get("timestamp", datetime.min)
+                # Mongo stores BSON UTC; Motor returns naive datetimes by
+                # default. Tag them as UTC so downstream `.isoformat()` emits
+                # `+00:00` and the browser can convert to the user's locale.
+                if isinstance(msg_ts, datetime) and msg_ts.tzinfo is None:
+                    msg_ts = msg_ts.replace(tzinfo=UTC)
                 ts_iso = (
                     msg_ts.isoformat()
                     if isinstance(msg_ts, datetime)
@@ -193,6 +198,8 @@ async def get_portfolio_chat_history(
                 # Card title — most informative first:
                 #   1. analyzed symbols + time (portfolio decisions)
                 #   2. parent chat title + time (single-symbol analysis)
+                # Embed the full tz-aware ISO so the frontend renders it in
+                # the user's locale; raw `HH:MM` would freeze the value as UTC.
                 if is_portfolio_decisions_chat:
                     syms = (msg_meta.get("raw_data") or {}).get(
                         "symbols_analyzed"
@@ -200,14 +207,9 @@ async def get_portfolio_chat_history(
                     sym_str = ", ".join(syms[:3]) if syms else "Portfolio"
                     if len(syms) > 3:
                         sym_str += f" +{len(syms) - 3}"
-                    time_str = (
-                        msg_ts.strftime("%H:%M")
-                        if isinstance(msg_ts, datetime)
-                        else ""
-                    )
                     card_title = (
-                        f"Analysis · {sym_str} · {time_str}"
-                        if time_str
+                        f"Analysis · {sym_str} · {ts_iso}"
+                        if isinstance(msg_ts, datetime)
                         else f"Analysis · {sym_str}"
                     )
                     card_symbol = syms[0] if len(syms) == 1 else None
@@ -215,14 +217,9 @@ async def get_portfolio_chat_history(
                     parent_symbol = (
                         title.split(" ")[0] if " " in title else title
                     )
-                    time_str = (
-                        msg_ts.strftime("%H:%M")
-                        if isinstance(msg_ts, datetime)
-                        else ""
-                    )
                     card_title = (
-                        f"{parent_symbol} · {time_str}"
-                        if time_str
+                        f"{parent_symbol} · {ts_iso}"
+                        if isinstance(msg_ts, datetime)
                         else parent_symbol
                     )
                     card_symbol = parent_symbol
