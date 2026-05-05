@@ -3,6 +3,7 @@ Health check endpoints for monitoring and connectivity verification.
 Following Factor 9: Error Handling and observability.
 """
 
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -62,7 +63,7 @@ async def health_check(
         "status": "ok" if all_healthy else "degraded",
         "environment": settings.environment,
         "version": "0.1.0",
-        "timestamp": "2025-01-20T00:00:00Z",  # Will be auto-generated in production
+        "timestamp": datetime.now(UTC).isoformat(),
         "dependencies": {
             "mongodb": mongodb_status,
             "redis": redis_status,

@@ -14,6 +14,7 @@ import type {
   StockFundamentalsResponse,
   StochasticAnalysisResponse,
 } from "../../services/analysis";
+import { formatDate, formatTimestamp } from "../../utils/timeFormatter";
 
 export function formatFibonacciResponse(
   result: FibonacciAnalysisResponse,
@@ -123,9 +124,10 @@ ${result.key_factors.map((factor) => `• ${factor}`).join("\n\n")}
 
 export function formatFundamentalsResponse(
   result: StockFundamentalsResponse,
+  locale: string,
 ): string {
   const priceChangeEmoji = result.price_change >= 0 ? "📈" : "📉";
-  const analysisDate = new Date().toLocaleDateString("en-US", {
+  const analysisDate = formatDate(new Date(), locale, {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -153,6 +155,7 @@ ${result.beta ? `**Beta** ${result.beta.toFixed(2)} • ` : ""}${result.dividend
 
 export function formatStochasticResponse(
   result: StochasticAnalysisResponse,
+  locale: string,
 ): string {
   // Signal interpretation with dynamic color intensity
   let signalMeaning = "";
@@ -182,7 +185,7 @@ export function formatStochasticResponse(
     signalMeaning = "NEUTRAL (No Clear Signal)";
   }
 
-  const analysisDate = new Date().toLocaleDateString("en-US", {
+  const analysisDate = formatDate(new Date(), locale, {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -382,6 +385,7 @@ ${result.negative_news
 
 export function formatMarketMoversResponse(
   result: MarketMoversResponse,
+  locale: string,
 ): string {
   // Use backend-generated markdown if available
   if (result.formatted_markdown) {
@@ -390,7 +394,7 @@ export function formatMarketMoversResponse(
 
   // Fallback to frontend formatting for backward compatibility
   return `## 📊 Market Movers
-*Last Updated: ${new Date(result.last_updated).toLocaleString()}*
+*Last Updated: ${formatTimestamp(result.last_updated, locale)}*
 
 ### 📈 Top Gainers
 

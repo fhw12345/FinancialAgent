@@ -6,7 +6,12 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { formatTimestamp, formatDate, formatTime } from "../timeFormatter";
+import {
+  formatTimestamp,
+  formatDate,
+  formatTime,
+  localizeTimestamps,
+} from "../timeFormatter";
 
 describe("timeFormatter", () => {
   // 2026-05-05T04:00:00Z corresponds to 12:00 Beijing time (UTC+8).
@@ -75,6 +80,32 @@ describe("timeFormatter", () => {
         hour12: false,
       });
       expect(result).toContain("12:00");
+    });
+  });
+
+  describe("localizeTimestamps", () => {
+    it("rewrites every ISO timestamp inside a markdown blob for zh-CN", () => {
+      const text = `**Invoked:** 2026-05-05T04:00:00+00:00\n*Last updated: 2026-05-05T04:00:00.000Z*`;
+      const out = localizeTimestamps(text, "zh-CN");
+      // Both occurrences should have been rewritten (no raw +00:00 / Z left).
+      expect(out).not.toContain("+00:00");
+      expect(out).not.toContain(".000Z");
+      // Beijing equivalent (12:00) should appear at least once.
+      expect(out).toMatch(/12:00/);
+    });
+
+    it("leaves text without ISO timestamps unchanged", () => {
+      const text = "no timestamps here, just words";
+      expect(localizeTimestamps(text, "zh-CN")).toBe(text);
+    });
+
+    it("ignores naive ISO without timezone (ambiguous)", () => {
+      const text = "Invoked: 2026-05-05T04:00:00";
+      expect(localizeTimestamps(text, "zh-CN")).toBe(text);
+    });
+
+    it("returns empty input as-is", () => {
+      expect(localizeTimestamps("", "zh-CN")).toBe("");
     });
   });
 });

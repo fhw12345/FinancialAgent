@@ -15,7 +15,7 @@ import type { ChatMessage } from "../../types/api";
 import { ToolMessageWrapper } from "./ToolMessageWrapper";
 import { useTranslated } from "../../hooks/useTranslated";
 import { ToolExecutionProgress } from "./ToolExecutionProgress";
-import { formatTime } from "../../utils/timeFormatter";
+import { formatTime, localizeTimestamps } from "../../utils/timeFormatter";
 
 interface ChatMessagesProps {
   messages: ChatMessage[];
@@ -74,6 +74,7 @@ const MessageBubble = React.memo<{ msg: ChatMessage; t: (key: string, options?: 
   );
   const renderedContent =
     msg.role === "assistant" ? translatedMain || mainContent : mainContent;
+  const localizedContent = localizeTimestamps(renderedContent, locale);
 
   return (
     <div
@@ -231,7 +232,7 @@ const MessageBubble = React.memo<{ msg: ChatMessage; t: (key: string, options?: 
                 ),
               }}
             >
-              {renderedContent}
+              {localizedContent}
             </ReactMarkdown>
           )}
         </div>

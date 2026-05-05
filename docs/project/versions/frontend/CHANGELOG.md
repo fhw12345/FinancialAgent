@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-05-05
+
+### Fixed
+- **fix(time): 聊天 markdown 里的 ISO 时间戳按 UI 语言渲染** — v0.20.3 把后端写出去的 ISO 都改成了 tz-aware（带 `+00:00`），前端组件级别用 `formatTimestamp` 也已经按 locale 转时区。但**报告 markdown 文本里直接拼的 ISO**（后端 `services/formatters/base.py` 的 `**Invoked:** {iso}`、`market.py` 的 `*Data Source: ... | Invoked: {iso}*`、`insights_tools.py` 的 `*Last updated: {iso}*`，以及前端 `analysisFormatters.ts` 自己拼的 `*Last Updated: ...*`）走 ReactMarkdown 渲染时是死字符串，formatTimestamp 救不了——用户在中文界面下看到的还是 UTC 时分。这版加 `localizeTimestamps(text, locale)`：扫描整段 markdown，把每个 ISO 8601（必须带 tz，naive 故意不匹配防误转）替换成当前 locale 对应的友好格式（zh-* → Asia/Shanghai；其它 → 浏览器本地）。`ChatMessages` 在喂 ReactMarkdown 前过一遍。配套把 `analysisFormatters.ts` 里 `formatFundamentalsResponse` / `formatStochasticResponse` / `formatMarketMoversResponse` 三个 hard-coded `new Date().toLocaleDateString("en-US", ...)` 也改成接 `locale` 参数走 `formatDate` / `formatTimestamp`，调用方 `useAnalysis.ts` 传 `i18n.language`。
+  - **正则**：`/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})\b/g` —— 量词全有界；naive ISO（无 tz）故意不匹配，免得对真·机器本地时间二次错转
+  - **不触达**：`ChatListItem` 的相对时间（"3 分钟前"）、`WatchlistPanel` 的 `formatTimeAgo` —— 走自己的相对时间逻辑，不需要走 ISO 替换路径
+
+### Tests
+- 新加 4 个 `localizeTimestamps` 测试：markdown 整段替换 zh-CN 把 04:00 UTC 翻成 12:00、纯文本不动、naive ISO 不动、空串短路；244/244 vitest 全过
+
 ## [0.15.0] - 2026-05-05
 
 ### Added

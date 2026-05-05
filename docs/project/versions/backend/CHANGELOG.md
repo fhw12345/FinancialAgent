@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.4] - 2026-05-05
+
+### Fixed
+- **fix(health): `/api/health` 的 `timestamp` 是死的桩字符串** — `api/health.py:65` 写死了 `"2025-01-20T00:00:00Z"`，注释说"will be auto-generated in production"，但根本没人改回来。线上每次 hit `/api/health` 都返这个 2025-01 的字符串，前端 HealthPage 拿来 `formatTimestamp` 渲染就一直是「2025-01-20」固定显示，跟实际服务状态完全脱钩。换成 `datetime.now(UTC).isoformat()`。
+
 ## [0.20.3] - 2026-05-05
 
 ### Fixed

@@ -347,7 +347,7 @@ export const useButtonAnalysis = (
           });
           response = {
             type: "stochastic",
-            content: formatStochasticResponse(result),
+            content: formatStochasticResponse(result, i18n.language),
             // Store only compact metadata, not full K/D arrays
             analysis_data: extractStochasticMetadata(result),
           };
@@ -397,7 +397,7 @@ export const useButtonAnalysis = (
           const result = await analysisService.marketMovers();
           response = {
             type: "market_movers",
-            content: formatMarketMoversResponse(result),
+            content: formatMarketMoversResponse(result, i18n.language),
           };
           break;
         }
