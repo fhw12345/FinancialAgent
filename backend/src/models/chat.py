@@ -80,11 +80,11 @@ class Chat(BaseModel):
     )
     title_zh: str | None = Field(
         default=None,
-        description="Simplified Chinese translation of title",
+        description="Simplified Chinese translation of title; None when translation failed or not yet computed",
     )
     last_message_preview_zh: str | None = Field(
         default=None,
-        description="Simplified Chinese translation of last_message_preview",
+        description="Simplified Chinese translation of last_message_preview; None when translation failed or not yet computed",
     )
 
     # Timestamps
