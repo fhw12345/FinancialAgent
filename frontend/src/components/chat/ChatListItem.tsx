@@ -6,6 +6,7 @@
 import { MessageSquare, Clock, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Chat } from "../../types/api";
+import { Translated } from "../Translated";
 
 interface ChatListItemProps {
   chat: Chat;
@@ -95,13 +96,16 @@ export function ChatListItem({
             ${isActive ? "text-gray-900" : "text-gray-800 group-hover:text-gray-900"}
           `}
           >
-            {chat.title}
+            <Translated text={chat.title} precomputed={chat.title_zh ?? null} />
           </h3>
 
           {/* Preview */}
           {chat.last_message_preview && (
             <p className="text-xs text-gray-600 line-clamp-2 mb-1">
-              {chat.last_message_preview}
+              <Translated
+                text={chat.last_message_preview}
+                precomputed={chat.last_message_preview_zh ?? null}
+              />
             </p>
           )}
 

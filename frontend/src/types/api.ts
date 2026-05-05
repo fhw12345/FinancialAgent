@@ -43,6 +43,8 @@ export interface HealthResponse {
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  /** Server-precomputed Chinese translation of `content`. */
+  content_zh?: string | null;
   timestamp: string;
   chart_url?: string;
   analysis_data?: Record<string, unknown>;
@@ -135,9 +137,13 @@ export interface UIState {
 export interface Chat {
   chat_id: string;
   title: string;
+  /** Server-precomputed Chinese translation of `title`. */
+  title_zh?: string | null;
   is_archived: boolean;
   ui_state?: UIState;
   last_message_preview?: string | null;
+  /** Server-precomputed Chinese translation of `last_message_preview`. */
+  last_message_preview_zh?: string | null;
   created_at: string;
   updated_at: string;
   last_message_at?: string | null;
@@ -165,6 +171,8 @@ export interface Message {
   chat_id: string;
   role: "user" | "assistant" | "system";
   content: string;
+  /** Server-precomputed Chinese translation of `content`. */
+  content_zh?: string | null;
   source:
     | "user"
     | "llm"

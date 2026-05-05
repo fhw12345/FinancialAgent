@@ -16,14 +16,20 @@ import { useTranslated } from "../hooks/useTranslated";
 
 interface Props {
   text: string | null | undefined;
+  /**
+   * Server-precomputed translation (e.g. `Message.content_zh`). When set
+   * to a non-empty string and the active locale matches, the hook returns
+   * it immediately without calling /api/translate.
+   */
+  precomputed?: string | null;
   as?: ElementType;
   className?: string;
   /** Optional renderer if you need to wrap the text (e.g. markdown). */
   render?: (translated: string) => ReactNode;
 }
 
-export function Translated({ text, as: Tag = "span", className, render }: Props) {
-  const { text: shown, isLoading } = useTranslated(text);
+export function Translated({ text, precomputed, as: Tag = "span", className, render }: Props) {
+  const { text: shown, isLoading } = useTranslated(text, { precomputed });
   const content = render ? render(shown) : shown;
   return (
     <Tag

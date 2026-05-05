@@ -64,9 +64,12 @@ const MessageBubble = React.memo<{ msg: ChatMessage; t: (key: string, options?: 
 
   // Translate assistant LLM markdown when UI is in a non-English locale.
   // Backend prompts stay English; we translate before render. Falls back to
-  // the original on any error (handled inside useTranslated).
+  // the original on any error (handled inside useTranslated). When the
+  // server has already persisted a Chinese translation (`content_zh`), the
+  // hook returns it instantly — no /api/translate round-trip.
   const { text: translatedMain, isLoading: translating } = useTranslated(
-    msg.role === "assistant" ? mainContent : null
+    msg.role === "assistant" ? mainContent : null,
+    { precomputed: msg.role === "assistant" ? (msg.content_zh ?? null) : null }
   );
   const renderedContent =
     msg.role === "assistant" ? translatedMain || mainContent : mainContent;
