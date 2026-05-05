@@ -102,24 +102,25 @@ async def translate_for_persistence(
 
 ### 5.3 数据模型变更
 
+> **修订（2026-05-05，写计划阶段发现）：** 实现探索表明 `TradingDecision.reasoning_summary` 和 `PortfolioDecisionList.portfolio_assessment` **没有独立持久化** —— `phase2_decisions.py:223-260` 把它们拼成 markdown 后写成一条 `messages` 文档。因此本期收敛到 **2 张 collection、3 个字段**：
+
 | Collection | 新增字段 | 类型 | 说明 |
 |---|---|---|---|
-| `messages` | `content_zh` | `Optional[str]` | `Message.content` 译文 |
-| `trading_decisions` | `reasoning_summary_zh` | `Optional[str]` | `TradingDecision.reasoning_summary` 译文 |
-| `portfolio_decisions` | `portfolio_assessment_zh` | `Optional[str]` | `PortfolioDecisionList.portfolio_assessment` 译文 |
-| `chats` | `title_zh` | `Optional[str]` | `Chat.title` 译文 |
+| `messages` | `content_zh` | `Optional[str]` | `Message.content` 译文（覆盖 chat + Phase 1 研究 + Phase 2 portfolio 决策报告 + disclaimers） |
+| `chats` | `title_zh` | `Optional[str]` | `Chat.title` 译文（侧边栏会话名） |
+| `chats` | `last_message_preview_zh` | `Optional[str]` | `Chat.last_message_preview` 译文（侧边栏预览片段） |
 
 Pydantic 模型加 `Optional[str] = None`，向后兼容。`None` / 缺失 / `""` 都被
 前端识别为"翻译未就绪 → 走 lazy"。
 
 ### 5.4 写入路径改造点
 
+> 修订后只剩 2 处实际写入边界（Phase 2 已被吸收进 `MessageRepository.create()`）：
+
 | 位置 | 当前行为 | 改造 |
 |---|---|---|
-| `backend/src/database/repositories/message_repository.py:create()` | `insert_one` 英文 doc | 调 `translate_for_persistence({"content": ...})`，把 `content_zh` 加进 doc 后再 insert |
-| `TradingDecisionRepository.save()` | 写 reasoning_summary | 同上，字段 `reasoning_summary` |
-| `backend/src/agent/portfolio/phase2_decisions.py:223-260`（PortfolioDecisionList 持久化点） | 写 portfolio_assessment | 同上，字段 `portfolio_assessment` |
-| Chat 创建/重命名 | 写 title | 同上，字段 `title` |
+| `backend/src/database/repositories/message_repository.py:create()` (line 45) | `insert_one` 英文 doc | 调 `translate_for_persistence({"content": ...})`，把 `content_zh` 加进 doc 后再 insert。覆盖 chat + Phase 1 研究 + Phase 2 portfolio 报告 |
+| `backend/src/database/repositories/chat_repository.py:create()` (line 40) 及 `update()` (line 89) | 写 `title` / `last_message_preview` | 同上，字段 `title` 和 `last_message_preview`（仅当 update 字典里出现这俩 key 时翻译） |
 
 每处改造**只加 ~3 行**：调 translator → merge `_zh` 进 doc dict → insert。
 
