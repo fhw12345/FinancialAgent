@@ -159,7 +159,9 @@ async def compute_indicator(
     if fn not in SUPPORTED_FUNCTIONS:
         raise ValueError(f"Unsupported indicator function: {function}")
 
-    bars = await yfinance_bars.get_bars(symbol, interval, outputsize="full")
+    bars = await yfinance_bars.get_bars(
+        symbol, interval, outputsize="full", prepost=False
+    )
     if bars.empty:
         raise RuntimeError(f"yfinance returned no bars for {symbol} ({interval})")
 

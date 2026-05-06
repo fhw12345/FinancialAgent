@@ -64,6 +64,11 @@ class FinnhubService:
         """
         GET /quote — real-time quote.
         Response: {c: current, d: change, dp: pct, h: high, l: low, o: open, pc: prev_close, t: ts}
+
+        NOTE: Finnhub /quote returns the last RTH trade only; it cannot
+        produce a pre/post extended-hours session label. We therefore stamp
+        session="regular" unconditionally. yfinance is the provider that
+        supplies extended-hours data.
         """
         body = await self._get("/quote", {"symbol": symbol.upper()})
         if not isinstance(body, dict) or "c" not in body or body.get("c") in (None, 0):
@@ -82,6 +87,7 @@ class FinnhubService:
             open=float(body.get("o", 0.0)),
             high=float(body.get("h", 0.0)),
             low=float(body.get("l", 0.0)),
+            session="regular",
         )
 
     async def fetch_company_news(

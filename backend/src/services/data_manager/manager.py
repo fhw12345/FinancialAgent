@@ -626,6 +626,8 @@ class DataManager:
                 open=data["open"],
                 high=data["high"],
                 low=data["low"],
+                # AV GLOBAL_QUOTE is RTH-only; session metadata is regular.
+                session="regular",
             )
         except Exception as e:
             logger.error("quote_all_providers_failed", symbol=symbol, error=str(e))
@@ -635,10 +637,21 @@ class DataManager:
 
     @staticmethod
     async def _fetch_quote_yfinance(symbol: str) -> QuoteData:
-        """yfinance fallback. Runs sync yfinance in thread to keep async loop free."""
+        """yfinance fallback. Runs sync yfinance in thread to keep async loop free.
+
+        Pulls a 1-minute prepost-inclusive history bar to derive the actual
+        trading session ("pre" / "regular" / "post" / "closed") from the last
+        bar's timestamp via get_market_session(). Falls back to "regular" only
+        if no bars are available.
+        """
         import asyncio
 
         import yfinance as yf
+
+        # Function-local import to avoid circular import at module load time
+        # (services.market_data.__init__ imports submodules that may transitively
+        # import data_manager).
+        from src.services.market_data import get_market_session
 
         def _sync() -> QuoteData:
             t = yf.Ticker(symbol)
@@ -647,6 +660,20 @@ class DataManager:
             prev = float(fi.previous_close)
             change = price - prev
             change_pct = (change / prev * 100) if prev else 0.0
+
+            # Derive session from latest minute bar including extended hours.
+            session: str = "regular"
+            try:
+                hist = t.history(period="1d", interval="1m", prepost=True)
+                if hist is not None and len(hist):
+                    last_ts = hist.index[-1]
+                    if last_ts.tz is None:
+                        last_ts = last_ts.tz_localize("UTC")
+                    session = get_market_session(last_ts)
+            except Exception:
+                # Keep default "regular" — session is best-effort metadata.
+                pass
+
             return QuoteData(
                 symbol=symbol.upper(),
                 price=price,
@@ -658,6 +685,7 @@ class DataManager:
                 open=float(getattr(fi, "open", 0.0) or 0.0),
                 high=float(getattr(fi, "day_high", 0.0) or 0.0),
                 low=float(getattr(fi, "day_low", 0.0) or 0.0),
+                session=session,  # type: ignore[arg-type]
             )
 
         return await asyncio.to_thread(_sync)

@@ -18,11 +18,21 @@ logger = structlog.get_logger()
 
 
 def _yf_quote_sync(symbol: str) -> dict[str, Any]:
-    """Synchronous yfinance quote fetch — runs in thread pool."""
+    """Synchronous yfinance quote fetch — runs in thread pool.
+
+    Uses prepost=True so the latest bar reflects extended-hours trading when
+    the regular session is closed. Derives session from the last bar's
+    timestamp via get_market_session().
+    """
+    # Function-local import to avoid circular import (this module is imported
+    # by services.market_data.__init__ which defines get_market_session).
+    from . import get_market_session
+
     ticker = yf.Ticker(symbol)
     info = ticker.info or {}
-    # Fall back to recent history if .info is sparse
-    hist = ticker.history(period="2d")
+    # Fall back to recent history if .info is sparse. prepost=True so the
+    # last bar can be a pre/post extended-hours bar when RTH is closed.
+    hist = ticker.history(period="2d", prepost=True)
     last_close = float(hist["Close"].iloc[-1]) if len(hist) else 0.0
     prev_close = (
         float(hist["Close"].iloc[-2])
@@ -39,6 +49,15 @@ def _yf_quote_sync(symbol: str) -> dict[str, Any]:
     last_day = (
         hist.index[-1].strftime("%Y-%m-%d") if len(hist) else ""
     )
+    # Derive session from last bar's timestamp. yfinance index entries can
+    # be tz-naive; force UTC before handing to get_market_session().
+    if len(hist):
+        last_ts = hist.index[-1]
+        if last_ts.tz is None:
+            last_ts = last_ts.tz_localize("UTC")
+        session = get_market_session(last_ts)
+    else:
+        session = "regular"
     return {
         "symbol": symbol,
         "price": price,
@@ -50,6 +69,7 @@ def _yf_quote_sync(symbol: str) -> dict[str, Any]:
         "open": open_p,
         "high": high_p,
         "low": low_p,
+        "session": session,
     }
 
 
@@ -235,6 +255,8 @@ class QuotesMixin(AlphaVantageBase):
                 "open": float(quote.get("02. open", 0)),
                 "high": float(quote.get("03. high", 0)),
                 "low": float(quote.get("04. low", 0)),
+                # AV GLOBAL_QUOTE returns RTH-only data; stamp session=regular.
+                "session": "regular",
             }
 
             logger.info(

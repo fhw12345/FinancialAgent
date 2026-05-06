@@ -49,8 +49,14 @@ _INTERVAL_MAP: dict[str, tuple[str, str, str]] = {
 }
 
 
-def _fetch_sync(symbol: str, granularity: str, outputsize: str) -> pd.DataFrame:
-    """Blocking yfinance call. Returns AV-shaped DataFrame indexed by datetime."""
+def _fetch_sync(
+    symbol: str, granularity: str, outputsize: str, prepost: bool = False
+) -> pd.DataFrame:
+    """Blocking yfinance call. Returns AV-shaped DataFrame indexed by datetime.
+
+    When prepost=True, includes pre-market (4:00-9:30 ET) and post-market
+    (16:00-20:00 ET) extended-hours bars in addition to RTH.
+    """
     spec = _INTERVAL_MAP.get(granularity)
     if spec is None:
         raise ValueError(f"Unsupported granularity for yfinance bars: {granularity}")
@@ -58,7 +64,9 @@ def _fetch_sync(symbol: str, granularity: str, outputsize: str) -> pd.DataFrame:
     period = period_full if outputsize == "full" else period_compact
 
     ticker = yf.Ticker(symbol)
-    df = ticker.history(period=period, interval=interval, auto_adjust=False)
+    df = ticker.history(
+        period=period, interval=interval, auto_adjust=False, prepost=prepost
+    )
     if df is None or df.empty:
         raise RuntimeError(f"yfinance returned no bars for {symbol} ({granularity})")
 
@@ -71,7 +79,18 @@ def _fetch_sync(symbol: str, granularity: str, outputsize: str) -> pd.DataFrame:
     return df
 
 
-async def get_bars(symbol: str, granularity: str, outputsize: str = "compact") -> pd.DataFrame:
+async def get_bars(
+    symbol: str,
+    granularity: str,
+    outputsize: str = "compact",
+    prepost: bool = False,
+) -> pd.DataFrame:
     """Async wrapper. Raises if yfinance can't return data so the caller's
-    fallback chain (→ AV) can take over."""
-    return await asyncio.to_thread(_fetch_sync, symbol, granularity, outputsize)
+    fallback chain (→ AV) can take over.
+
+    prepost=True includes extended-hours bars (pre 4:00-9:30 ET, post
+    16:00-20:00 ET). Default False keeps chart/indicator surfaces RTH-only.
+    """
+    return await asyncio.to_thread(
+        _fetch_sync, symbol, granularity, outputsize, prepost
+    )
