@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-05-06
+
+### Added
+- **feat(quotes): 引入盘前/盘后 (extended-hours) 报价支持** — 之前所有 holding 的 `current_price` 永远是上一根 RTH bar；财报后开盘前那段大幅波动看不到。现在 yfinance 路径用 `prepost=True` 取最新延长时段成交，按 yfinance 的 bar 顺序天然就是 `iloc[-1]` 胜出，匹配 Robinhood/Yahoo 主页行为。
+  - `QuoteData` 加 `session: Literal["pre","regular","post","closed"] = "regular"`；`to_dict`/`from_dict` 透传，旧缓存读出来默认 `regular`，零迁移
+  - `yfinance_bars.get_bars` 加 `prepost: bool = False` 参数；`yfinance_indicators.compute_indicator` 显式 `prepost=False` 锁意图（指标永远 RTH-only，避免 prepost bar 污染 SMA/EMA 等）
+  - `quotes._yf_quote_sync` + `DataManager._fetch_quote_yfinance` 都用 prepost 拿 last bar timestamp，调 `get_market_session(last_ts)` 推 session
+  - `Holding` 加 `last_session: str | None`；`HoldingResponse.last_session` 透出；`HoldingRepository.update_price(session=None)` 支持持久化（None 时不动旧值）
+  - `_enrich_with_quote` 把 quote.session 写到 `holding.last_session` + `repo.update_price(session=)`；`scripts/refresh_holding_prices.py` cron 同步
+  - **Phase 2 portfolio 决策 prompt 在非 regular 时段插「市场时段提示」** —— 警告 LLM 延长时段流动性薄、可能跳空，建议延后下单或调整 entry。warn-not-block，不阻断决策
+
+### Notes
+- **Finnhub `/quote` 和 Alpha Vantage `GLOBAL_QUOTE` 都做不到** —— 都是 RTH-only 接口，硬编码 `session="regular"` + docstring 说明限制。**只有 yfinance 路径**能产出 `pre`/`post`/`closed` 标签
+- 老 holdings 行没 `last_session` 字段 → 类型 `Optional[str]`，前端 null 时不显示 chip。零数据迁移
+- 循环导入用函数级 `from . import get_market_session` 规避（market_data.__init__ 反向 import quotes/manager 链路）
+- `current_price` / `market_value` / `unrealized_pl` 全部按"最新成交"算 —— 即使是稀薄的盘后偏离价。"prefer latest"是有意为之
+
+### Tests
+- `test_market_session_boundaries.py` — 14 case 覆盖 pre/regular/post/closed 切换 + 周末 + 时区转换
+- `test_phase2_session_stanza.py` — source-inspection 验 Phase 2 prompt 注入点 + 三个中文标签 + warn-not-block 约束
+
 ## [0.23.0] - 2026-05-06
 
 ### Fixed

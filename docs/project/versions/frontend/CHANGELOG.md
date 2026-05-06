@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-05-06
+
+### Added
+- **feat(ui): 持仓表头部加 session chip** — "Last updated: HH:MM · N ago" 后面跟一个橙色小标签：`盘前` / `盘后` / `休市`。RTH 时段和老数据（`last_session=null`）都不显示。提醒用户当前看到的 `current_price` / P/L 来自延长交易时段的成交，可能跟开盘价跳空。
+  - `Holding` 类型加 `last_session: "pre"|"regular"|"post"|"closed"|null`
+  - `pickLatestPriceUpdate` 现在返回 `{date, session}`（取 max-timestamp 那一行的 session 一起带出来，保证 chip 显示的 session 跟时间戳是同一行）
+  - 新增 i18n keys `portfolio:session.{pre,post,closed}`（intentionally 没有 `regular` 键，因为 RTH 不显示）
+
+### Notes
+- 数据来源依赖 backend v0.24.0 — 老 backend 不会返回 `last_session` 字段，前端 `?? null` 兜底，chip 隐藏
+
 ## [0.18.1] - 2026-05-06
 
 ### Changed
