@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.1] - 2026-05-06
+
+### Fixed
+- **fix(portfolio-chart): 图表恢复显示** — `/api/portfolio/history` 之前 W5a Alpaca 移除后**有意返回空 data_points**，前端图表区一直白板。现在用本地 holdings × yfinance OHLCV 回放出 portfolio value 时间序列：
+  - 1D → 5min bars (今日)
+  - 1M → daily bars (~30 天)
+  - 1Y → daily bars (~12 月)
+  - All → weekly bars (~5 年)
+  - 多 symbol 并发拉（最多 8）+ outer-join 时间索引 + ffill 防 halt 抖动
+  - 单 symbol 拉失败只 warning 不阻断
+  - **简化假设**：用当前持仓数量回算历史，忽略仓位变更（今天才买的 NVDA 在 1Y 视图里被当成全年都持有）。本地工具够用；要精确得 replay user_transactions
+
 ## [0.25.0] - 2026-05-06
 
 ### Added
