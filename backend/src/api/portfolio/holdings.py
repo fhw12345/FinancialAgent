@@ -104,6 +104,7 @@ async def _enrich_with_quote(
         price = float(getattr(quote, "price", 0) or 0)
         if price <= 0:
             return holding
+        session = getattr(quote, "session", None)
         holding.current_price = price
         holding.market_value = holding.quantity * price
         holding.unrealized_pl = holding.market_value - holding.cost_basis
@@ -112,9 +113,13 @@ async def _enrich_with_quote(
             if holding.cost_basis > 0
             else 0.0
         )
+        if session:
+            holding.last_session = session
         if persist and holding_repo is not None:
             try:
-                await holding_repo.update_price(holding.holding_id, price)
+                await holding_repo.update_price(
+                    holding.holding_id, price, session=session
+                )
             except Exception as e:
                 logger.warning(
                     "holding_price_persist_failed",

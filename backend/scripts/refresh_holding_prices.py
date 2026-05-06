@@ -74,7 +74,8 @@ async def main() -> int:
                     log.warning("refresh_skip_no_price", symbol=h.symbol)
                     failed += 1
                     continue
-                await repo.update_price(h.holding_id, price)
+                session = getattr(quote, "session", None)
+                await repo.update_price(h.holding_id, price, session=session)
                 log.info(
                     "refresh_ok",
                     symbol=h.symbol,
