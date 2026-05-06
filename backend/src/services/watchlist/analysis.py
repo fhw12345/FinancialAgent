@@ -382,6 +382,10 @@ REASONING: [your analysis]
         Args:
             force: If True, analyze all symbols regardless of last_analyzed_at.
                    If False, only analyze symbols not analyzed in last 5 minutes.
+
+        Filters out watchlist items whose symbol is already in `holdings`,
+        because those get covered by the dedicated portfolio (holdings) analysis
+        and re-running them here just wastes a quote+LLM call.
         """
         try:
             logger.info("Starting watchlist analysis cycle", force=force)
@@ -395,6 +399,39 @@ REASONING: [your analysis]
 
             if not items:
                 logger.debug("No symbols need analysis")
+                return
+
+            # Skip symbols that are already held — those run through the
+            # holdings analysis path. Use the same Mongo db that backs the
+            # watchlist repo (zero new injection points).
+            held_symbols: set[str] = set()
+            try:
+                db = self.watchlist_repo.collection.database
+                async for h in db["holdings"].find({}, {"symbol": 1, "_id": 0}):
+                    sym = h.get("symbol")
+                    if sym:
+                        held_symbols.add(str(sym).upper())
+            except Exception as e:
+                # Read failure should not block the cycle — log and proceed.
+                logger.warning(
+                    "holdings_dedup_lookup_failed",
+                    error=str(e),
+                    error_type=type(e).__name__,
+                )
+
+            if held_symbols:
+                before = len(items)
+                items = [i for i in items if i.symbol.upper() not in held_symbols]
+                skipped = before - len(items)
+                if skipped:
+                    logger.info(
+                        "Watchlist symbols skipped (already in holdings)",
+                        skipped=skipped,
+                        remaining=len(items),
+                    )
+
+            if not items:
+                logger.info("All watchlist symbols are held; nothing to analyze")
                 return
 
             logger.info("Found symbols to analyze", count=len(items))

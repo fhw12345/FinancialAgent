@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.2] - 2026-05-06
+
+### Changed
+- **change(watchlist-analysis): "立即分析"自动跳过已经在 holdings 里的 symbol** — `WatchlistAnalyzer.run_analysis_cycle` (force=True 路径) 在拿到 watchlist items 后，先 query mongo `holdings` collection 把已持仓的 symbol 集中起来，从待分析列表里 filter 掉。这些股票走"持仓分析"那条线就行，watchlist 这边再跑一遍是浪费 quote + LLM 调用。Mongo 读用 `watchlist_repo.collection.database["holdings"]`，零新注入点。读失败时只打 warning 不阻断（保守 fallback：宁可分析重也不能跑不出来）
+
 ## [0.24.1] - 2026-05-06
 
 ### Fixed
