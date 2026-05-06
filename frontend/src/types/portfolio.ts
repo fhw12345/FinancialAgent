@@ -27,39 +27,6 @@ export interface PortfolioSummary {
 }
 
 /**
- * Portfolio history for charting
- */
-export interface PortfolioHistoryDataPoint {
-  timestamp: string;
-  value: number;
-}
-
-export interface AnalysisMarker {
-  timestamp: string;
-  symbol: string;
-  recommendation: string | null;
-  summary: string | null;
-}
-
-export interface OrderMarker {
-  timestamp: string;
-  symbol: string;
-  side: string; // "buy" | "sell"
-  quantity: number;
-  status: string;
-  filled_avg_price: number | null;
-  order_id: string;
-}
-
-export interface PortfolioHistoryResponse {
-  data_points: PortfolioHistoryDataPoint[];
-  markers: AnalysisMarker[];
-  order_markers: OrderMarker[];
-  current_value: number | null;
-  period: string;
-}
-
-/**
  * Request types for holdings management
  */
 export interface NewHolding {

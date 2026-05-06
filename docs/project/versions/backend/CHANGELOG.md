@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-05-07
+
+### Removed
+- **change(portfolio-chart): 删掉 Robinhood 风格的 portfolio value 时间序列图表** — Alpaca 移除后没办法算真实历史净值。v0.25.1 用"当前持仓 × 历史价"回放出来一条线，但今天才买的股票被当作 1 年前就持有，昨天卖掉的根本不出现，这条线长得漂亮但**信息错的**，比空着还误导。
+  - 删 `backend/src/api/portfolio/history.py`、移除 router 注册
+  - 删 `PortfolioHistoryDataPoint` / `AnalysisMarker` / `OrderMarker` / `PortfolioHistoryResponse` schema 类
+  - holdings 表自己有 current_value、P/L、market_value，决策走 DecisionTracker，时间序列回放等真做 portfolio_snapshots 表 + SPY 基准时再加
+
 ## [0.25.2] - 2026-05-06
 
 ### Fixed

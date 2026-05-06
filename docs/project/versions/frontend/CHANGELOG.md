@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-05-07
+
+### Removed
+- **change(portfolio-chart): PortfolioChart 组件 + 1D/1M/1Y/All 时段按钮 + Refresh 按钮 + 分析 marker modal 全删** — 配套 backend v0.26.0。Dashboard 主区现在是：portfolio value header → holdings 表 → settings/analysis → watchlist。屏幕利用率高了一档，holdings 表自己就够看
+  - 删 `PortfolioChart.tsx`、`usePortfolioHistory` hook、`getPortfolioHistory` API、`PortfolioHistoryResponse`/`PortfolioHistoryDataPoint`/`AnalysisMarker`/`OrderMarker` 类型
+  - `currentValue` 现在直接读 `summary.total_market_value`（之前 fallback 链优先 `historyData.current_value`）
+
 ## [0.20.0] - 2026-05-06
 
 ### Added

@@ -15,7 +15,6 @@ export const portfolioKeys = {
   all: ["portfolio"] as const,
   holdings: () => [...portfolioKeys.all, "holdings"] as const,
   summary: () => [...portfolioKeys.all, "summary"] as const,
-  history: (period: string) => [...portfolioKeys.all, "history", period] as const,
 };
 
 /**
@@ -41,20 +40,6 @@ export function usePortfolioSummary() {
     queryFn: portfolioApi.getPortfolioSummary,
     refetchInterval: 30000,
     staleTime: 15000,
-  });
-}
-
-/**
- * Hook to fetch portfolio history for charting.
- *
- * @param period - Time period: "1D", "1M", "1Y", "All"
- */
-export function usePortfolioHistory(period: string = "1D") {
-  return useQuery({
-    queryKey: portfolioKeys.history(period),
-    queryFn: () => portfolioApi.getPortfolioHistory(period),
-    refetchInterval: 30000, // Refetch every 30 seconds
-    staleTime: 25000,
   });
 }
 

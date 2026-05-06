@@ -8,7 +8,6 @@
 import { apiClient } from "./api";
 import type {
   Holding,
-  PortfolioHistoryResponse,
   PortfolioSummary,
   NewHolding,
   UpdateHolding,
@@ -74,21 +73,6 @@ export function getPLColor(
   if (pl > 0) return "green";
   if (pl < 0) return "red";
   return "gray";
-}
-
-/**
- * Get portfolio value history for charting.
- *
- * @param period - Time period: "1D", "1M", "1Y", "All"
- * @returns Portfolio history data with analysis markers
- */
-export async function getPortfolioHistory(
-  period: string = "1D"
-): Promise<PortfolioHistoryResponse> {
-  const response = await apiClient.get<PortfolioHistoryResponse>(
-    `/api/portfolio/history?period=${period}`
-  );
-  return response.data;
 }
 
 /**
