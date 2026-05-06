@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-05-06
+
+### Changed
+- **chore(default-tab): App 启动后直接落到"投资组合"** — 之前默认 Market Insights，但日常使用主路径就是 PortfolioDashboard，每次手动切一下太啰嗦。e2e 脚本同步去掉 nav 点击步骤。
+
+### Added
+- `e2e_resize_columns.py` — Playwright 验证左右两列可拖拽 + 宽度持久化到 localStorage。
+
 ## [0.18.0] - 2026-05-06
 
 ### Added

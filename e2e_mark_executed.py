@@ -83,13 +83,8 @@ def main() -> int:
             print("[step 1] navigate to portfolio dashboard")
             page.goto(f"{FRONTEND_URL}/", wait_until="networkidle", timeout=30000)
             page.wait_for_timeout(2000)
-            # Landing is the Market Insights page; click "投资组合" / Portfolio nav
-            try:
-                page.get_by_role("link", name="投资组合").click()
-            except Exception:
-                page.get_by_text("投资组合").first.click()
-            page.wait_for_load_state("networkidle", timeout=15000)
-            page.wait_for_timeout(2000)
+            # Default landing tab is now "投资组合" (PortfolioDashboard) — no
+            # need to click a nav link.
             page.screenshot(path=SCREEN_DIR / "mark_exec_01_dashboard.png",
                             full_page=True)
 

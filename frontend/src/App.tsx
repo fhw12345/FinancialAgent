@@ -9,14 +9,13 @@ import HelpModal from "./components/HelpModal";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 
 // W3b: Auth removed. App always renders as a local single-user shell.
-// Default landing tab is Market Insights per the de-auth PRD.
 const LOCAL_IS_ADMIN = true;
 
 function App() {
   const { t } = useTranslation(["common", "auth"]);
   const [activeTab, setActiveTab] = useState<
     "health" | "chat" | "portfolio" | "insights"
-  >("insights");
+  >("portfolio");
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   const isAdmin = LOCAL_IS_ADMIN;
@@ -44,8 +43,7 @@ function App() {
                 </div>
               </div>
               {/* Mobile user info */}
-              <div className="flex items-center gap-2 sm:hidden">
-              </div>
+              <div className="flex items-center gap-2 sm:hidden"></div>
             </div>
 
             {/* Navigation - stacks vertically on mobile */}
