@@ -77,6 +77,33 @@ class Phase2DecisionsMixin:
             analyses_section += f"{result.analysis_text}\n"
             analyses_section += "---\n"
 
+        # 当前美股交易时段 — 非 regular 时给 LLM 加风险提示，不阻断决策
+        from datetime import UTC, datetime as _dt
+
+        import pandas as _pd
+
+        from ...services.market_data import get_market_session
+
+        _now_utc = _pd.Timestamp(_dt.now(UTC))
+        current_session = get_market_session(_now_utc)
+        if current_session == "regular":
+            session_stanza = ""
+        else:
+            _label = {
+                "pre": "盘前 (pre-market)",
+                "post": "盘后 (after-hours)",
+                "closed": "休市 (closed)",
+            }[current_session]
+            session_stanza = (
+                "\n## 市场时段提示 (Market Session Notice)\n\n"
+                f"当前为 **{_label}** 时段。下列研究中的最新价可能来自延长交易时段的成交，"
+                "流动性较薄，价差较大，开盘后可能出现明显跳空。请在做决策时考虑：\n"
+                "- 是否将下单时间延后至开盘后再确认价格行为；\n"
+                "- 若仍要使用延长时段价格作为锚点，是否需要将 entry 略微调整以预留跳空空间；\n"
+                "- stop_loss / take_profit 的风险距离是否仍然合理。\n"
+                "本提示不强制阻断决策，仅作为风险提醒。\n"
+            )
+
         # Build the holistic decision prompt
         decision_prompt = f"""# Portfolio Trading Decisions
 
@@ -92,7 +119,7 @@ considering the overall portfolio optimization, diversification, and risk manage
 
 **Current Holdings:**
 {positions_table}
-
+{session_stanza}
 ## Symbol Research Results
 {analyses_section}
 
