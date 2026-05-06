@@ -87,7 +87,10 @@ async def search_symbols(
 
         logger.info("Symbol search started", query=query)
 
-        # Provider 1: local sector_universe.csv (instant)
+        # Provider 1: local CSVs (instant) — sector_universe (curated 515 large-caps
+        # with sector data) UNION tickers_directory (~6800 actively listed tickers,
+        # symbol+name+exchange only). The directory ensures coverage for tickers
+        # outside the curated set (e.g. BE / Bloom Energy, recent IPOs, mid-caps).
         local_results = _search_local_universe(query, limit=10)
         if local_results:
             logger.info(
@@ -152,38 +155,53 @@ async def search_symbols(
 
 def _search_local_universe(query: str, limit: int) -> list[SymbolSearchResult]:
     """
-    Search the committed sector_universe.csv (515 large-caps).
+    Search local CSVs for matching symbols.
+
+    Two sources, merged with priority:
+      - sector_universe.csv (515 curated large-caps with sector + market_cap data)
+      - tickers_directory.csv (~6800 actively listed US tickers, narrow schema)
+
+    The directory provides wide coverage so tickers like "BE" (Bloom Energy)
+    that aren't in the curated set still surface; sector_universe still wins
+    on exchange field richness for the symbols it does cover.
 
     Ranking:
       1. Exact symbol match (confidence 1.0)
       2. Symbol prefix match (0.9)
       3. Name prefix match (0.8)
       4. Substring match in symbol or name (0.6)
+
+    Same symbol appearing in both sources is de-duped (sector_universe wins
+    because it has type + sector data the directory lacks).
     """
     from ...data.sector_universe import load_universe
+    from ...data.tickers_directory import load_directory
 
     q_upper = query.upper()
     q_lower = query.lower()
-    rows = load_universe()
-    if not rows:
-        return []
+
+    def _score(sym_u: str, name_l: str) -> tuple[str, float] | None:
+        if sym_u == q_upper:
+            return "exact_symbol", 1.0
+        if sym_u.startswith(q_upper):
+            return "symbol_prefix", 0.9
+        if name_l.startswith(q_lower):
+            return "name_prefix", 0.8
+        if q_upper in sym_u or q_lower in name_l:
+            return "fuzzy", 0.6
+        return None
 
     scored: list[tuple[float, str, SymbolSearchResult]] = []
-    for r in rows:
+    seen_symbols: set[str] = set()
+
+    # Pass 1: curated universe (richer, wins ties)
+    for r in load_universe():
         sym_u = r.symbol.upper()
-        name_l = r.name.lower()
-        match_type = ""
-        confidence = 0.0
-        if sym_u == q_upper:
-            match_type, confidence = "exact_symbol", 1.0
-        elif sym_u.startswith(q_upper):
-            match_type, confidence = "symbol_prefix", 0.9
-        elif name_l.startswith(q_lower):
-            match_type, confidence = "name_prefix", 0.8
-        elif q_upper in sym_u or q_lower in name_l:
-            match_type, confidence = "fuzzy", 0.6
-        else:
+        match = _score(sym_u, r.name.lower())
+        if match is None:
             continue
+        match_type, confidence = match
+        seen_symbols.add(sym_u)
         scored.append(
             (
                 confidence,
@@ -191,7 +209,31 @@ def _search_local_universe(query: str, limit: int) -> list[SymbolSearchResult]:
                 SymbolSearchResult(
                     symbol=r.symbol,
                     name=r.name,
-                    exchange="",  # CSV has no exchange field
+                    exchange="",  # sector_universe.csv has no exchange field
+                    type="Equity",
+                    match_type=match_type,
+                    confidence=confidence,
+                ),
+            )
+        )
+
+    # Pass 2: full directory (skip symbols already covered by curated universe)
+    for r in load_directory():
+        sym_u = r.symbol.upper()
+        if sym_u in seen_symbols:
+            continue
+        match = _score(sym_u, r.name.lower())
+        if match is None:
+            continue
+        match_type, confidence = match
+        scored.append(
+            (
+                confidence,
+                sym_u,
+                SymbolSearchResult(
+                    symbol=r.symbol,
+                    name=r.name,
+                    exchange=r.exchange,
                     type="Equity",
                     match_type=match_type,
                     confidence=confidence,

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.1] - 2026-05-06
+
+### Fixed
+- **fix(symbol-search): 热门股 BE / PLTR / HOOD / RIVN / SOFI 等搜不到** — `_search_local_universe` 之前只查 `sector_universe.csv`（515 只大盘），命中前缀/名字匹配就直接返回，**不再走 yfinance fallback**。结果用户搜 `BE` 拿到 BEN/BBY/BDX 但永远看不到 Bloom Energy 本身（不在 515 大盘里）。
+
+### Added
+- 新增 **`backend/data/tickers_directory.csv`**（6868 只活跃 US ticker）— 来自 Nasdaq Trader 公开发布的 `nasdaqlisted.txt` + `otherlisted.txt`，过滤 Test Issue / ETF / Rights / Warrants / Units。Schema 窄：`symbol,name,exchange`，专门给 search endpoint 用，跟 `sector_universe.csv`（带 sector/market_cap 富数据，picks 流程用）严格分离
+- 新增 `backend/scripts/build_tickers_directory.py` 拉取 + 过滤 + 去重，`docker compose exec backend python scripts/build_tickers_directory.py` 重新生成（Nasdaq Trader 每日发布，手动刷新即可）
+- 新增 `backend/src/data/tickers_directory.py` loader，`@lru_cache` 单例读
+
+### Changed
+- `_search_local_universe` 改成两表 union：sector_universe 优先（保留 sector 富数据），同 symbol 时 directory 表跳过避免重复。Ranking 逻辑不变（exact > prefix > name-prefix > fuzzy）
+
+### Notes
+- 没动 sector_universe.csv —— picks/portfolio 决策流程读它的 sector + market_cap 字段，不能污染
+- yfinance fallback 仍然保留（v0.17.3 加的），现在主要兜底"非 US 上市"或"超新 IPO 还没进 Nasdaq Trader 列表"的边缘场景
+
 ## [0.24.0] - 2026-05-06
 
 ### Added
