@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.2] - 2026-05-06
+
+### Fixed
+- **fix(watchlist-time): added_at / last_analyzed_at 带 UTC 后缀** — Mongo Motor 反序列化 BSON UTC 成 naive datetime，Pydantic 输出无 `Z` 的 ISO，前端 `new Date(iso)` 当本地时间解析 → "上次分析" 显示偏 8 小时。`_enrich_with_live_quote` 顺手把这俩字段补上 `tzinfo=UTC`。同 v0.23.0 holdings 的修法。
+- **fix(watchlist-prices): quote 超时从 3s 调到 6s** — 9 路并发但首次 cold-cache yfinance 往返常超过 3s（实测 9 行有 7 行 timeout）。改 6s 后 9 行 enrich 8 行成功（MU 之前看不到价现在 $660.74）。redis cache hit 还是 ~5ms，调高 timeout 不影响热路径
+
 ## [0.25.1] - 2026-05-06
 
 ### Fixed

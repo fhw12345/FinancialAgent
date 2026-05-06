@@ -22,7 +22,9 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/api/watchlist", tags=["watchlist"])
 
 # Hard timeout per quote so a slow vendor never blocks the whole list response.
-_QUOTE_TIMEOUT_SECONDS = 3.0
+# 6s leaves enough room for cold-cache yfinance round-trips (Finnhub/AV are
+# faster but we don't always pick them); cache hits return in ~5ms.
+_QUOTE_TIMEOUT_SECONDS = 6.0
 
 
 async def _enrich_with_live_quote(
@@ -33,8 +35,20 @@ async def _enrich_with_live_quote(
     row. Single-symbol failures are swallowed (just leave the row unenriched);
     if DataManager is missing, returns the items untouched.
 
+    Also coerces naive UTC datetimes (`added_at`, `last_analyzed_at`,
+    `last_price_update`) to tz-aware so Pydantic emits "...+00:00" and the
+    frontend's `new Date(iso)` correctly parses them as UTC instead of local.
+    Same fix as HoldingResponse from_holding (v0.23.0).
+
     DataManager has its own redis cache (~30s on quotes), so repeated GETs
     don't actually hit the upstream vendor for every refresh."""
+    # Pass 1: fix naive timestamps from Mongo Motor (BSON UTC → naive datetime)
+    for it in items:
+        if it.added_at is not None and it.added_at.tzinfo is None:
+            it.added_at = it.added_at.replace(tzinfo=UTC)
+        if it.last_analyzed_at is not None and it.last_analyzed_at.tzinfo is None:
+            it.last_analyzed_at = it.last_analyzed_at.replace(tzinfo=UTC)
+
     dm = getattr(request.app.state, "data_manager", None)
     if dm is None or not items:
         return items
@@ -53,10 +67,11 @@ async def _enrich_with_live_quote(
             if sess:
                 it.last_session = sess
         except (TimeoutError, Exception) as e:
-            logger.debug(
+            logger.warning(
                 "watchlist_quote_enrichment_failed",
                 symbol=it.symbol,
                 error=str(e),
+                error_type=type(e).__name__,
             )
 
     # Bound concurrency to avoid hammering vendor APIs on a long watchlist.
