@@ -180,7 +180,10 @@ class HoldingRepository:
         return Holding(**result)
 
     async def update_price(
-        self, holding_id: str, current_price: float
+        self,
+        holding_id: str,
+        current_price: float,
+        session: str | None = None,
     ) -> Holding | None:
         """
         Update current price and recalculate P/L.
@@ -188,6 +191,9 @@ class HoldingRepository:
         Args:
             holding_id: Holding identifier
             current_price: New market price
+            session: Optional market session label ("pre"|"regular"|"post"|"closed").
+                When provided, persisted to last_session. Omitted callers leave
+                the existing value unchanged.
 
         Returns:
             Updated holding if found, None otherwise
@@ -204,12 +210,14 @@ class HoldingRepository:
 
         # Update in database
         now = datetime.now(UTC)
-        update_dict = {
+        update_dict: dict = {
             "current_price": current_price,
             "last_price_update": now,
             "updated_at": now,
             **pl_metrics,  # Unpack market_value, unrealized_pl, unrealized_pl_pct
         }
+        if session is not None:
+            update_dict["last_session"] = session
 
         result = await self.collection.find_one_and_update(
             {"holding_id": holding_id},
@@ -228,6 +236,7 @@ class HoldingRepository:
             holding_id=holding_id,
             symbol=holding.symbol,
             current_price=current_price,
+            session=session,
             unrealized_pl=pl_metrics["unrealized_pl"],
         )
 

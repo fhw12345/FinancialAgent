@@ -38,6 +38,13 @@ class Holding(BaseModel):
     last_price_update: datetime | None = Field(
         None, description="Last time price was updated"
     )
+    last_session: str | None = Field(
+        None,
+        description=(
+            "Market session at the time the price was fetched: "
+            '"pre", "regular", "post", or "closed". None for legacy rows.'
+        ),
+    )
 
     class Config:
         """Pydantic config."""
@@ -56,6 +63,7 @@ class Holding(BaseModel):
                 "created_at": "2025-11-01T10:00:00Z",
                 "updated_at": "2025-11-01T10:30:00Z",
                 "last_price_update": "2025-11-01T10:30:00Z",
+                "last_session": "regular",
             }
         }
 

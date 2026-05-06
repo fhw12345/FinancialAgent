@@ -76,6 +76,13 @@ class HoldingResponse(BaseModel):
     last_price_update: datetime | None = Field(
         None, description="Last time price was updated"
     )
+    last_session: str | None = Field(
+        None,
+        description=(
+            'Market session of the latest price fetch: "pre" | "regular" | '
+            '"post" | "closed". None for legacy rows that predate this field.'
+        ),
+    )
 
     @classmethod
     def from_holding(cls, holding: Holding) -> "HoldingResponse":
@@ -96,6 +103,7 @@ class HoldingResponse(BaseModel):
             created_at=_as_utc(holding.created_at),
             updated_at=_as_utc(holding.updated_at),
             last_price_update=_as_utc(holding.last_price_update),
+            last_session=holding.last_session,
         )
 
     class Config:
@@ -115,6 +123,7 @@ class HoldingResponse(BaseModel):
                 "created_at": "2025-11-01T10:00:00Z",
                 "updated_at": "2025-11-01T10:30:00Z",
                 "last_price_update": "2025-11-01T10:30:00Z",
+                "last_session": "regular",
             }
         }
 
