@@ -24,14 +24,26 @@ interface PortfolioSummaryTableProps {
 // Most-recent timestamp from the holdings list. Backend stamps
 // `last_price_update` whenever a quote is persisted (POST/PATCH/refresh-prices),
 // so the max across rows is the real freshness signal for the whole table.
-function pickLatestPriceUpdate(holdings: Holding[]): Date | null {
+// Surface the session label of THAT specific row so the chip matches the time.
+type LatestUpdate = {
+  date: Date;
+  session: Holding["last_session"];
+} | null;
+
+function pickLatestPriceUpdate(holdings: Holding[]): LatestUpdate {
   let latestMs = 0;
+  let latestSession: Holding["last_session"] = null;
   for (const h of holdings) {
     if (!h.last_price_update) continue;
     const ms = new Date(h.last_price_update).getTime();
-    if (Number.isFinite(ms) && ms > latestMs) latestMs = ms;
+    if (Number.isFinite(ms) && ms > latestMs) {
+      latestMs = ms;
+      latestSession = h.last_session ?? null;
+    }
   }
-  return latestMs > 0 ? new Date(latestMs) : null;
+  return latestMs > 0
+    ? { date: new Date(latestMs), session: latestSession }
+    : null;
 }
 
 function formatRelativeAge(date: Date, now: Date): string {
@@ -49,7 +61,7 @@ export function PortfolioSummaryTable({
   holdings,
   summary,
 }: PortfolioSummaryTableProps) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const totalMarketValue = summary.total_market_value || 0;
   const totalPL = summary.total_unrealized_pl || 0;
   const totalPLPct = summary.total_unrealized_pl_pct || 0;
@@ -65,7 +77,9 @@ export function PortfolioSummaryTable({
     return () => window.clearInterval(id);
   }, []);
 
-  const latestPriceUpdate = pickLatestPriceUpdate(holdings);
+  const latest = pickLatestPriceUpdate(holdings);
+  const latestPriceUpdate = latest?.date ?? null;
+  const latestSession = latest?.session ?? null;
 
   const addMut = useAddHolding();
   const updateMut = useUpdateHolding();
@@ -199,6 +213,14 @@ export function PortfolioSummaryTable({
                 <span className="ml-1 text-gray-400">
                   · {formatRelativeAge(latestPriceUpdate, now)}
                 </span>
+                {latestSession && latestSession !== "regular" && (
+                  <span
+                    data-testid="session-chip"
+                    className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800"
+                  >
+                    {t(`portfolio:session.${latestSession}`)}
+                  </span>
+                )}
               </p>
             )}
           </div>

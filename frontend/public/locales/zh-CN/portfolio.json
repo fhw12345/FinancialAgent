@@ -210,5 +210,10 @@
     "allTypes": "全部类型",
     "individual": "个股分析",
     "portfolio": "组合决策"
+  },
+  "session": {
+    "pre": "盘前",
+    "post": "盘后",
+    "closed": "休市"
   }
 }

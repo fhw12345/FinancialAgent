@@ -210,5 +210,10 @@
     "allTypes": "All Types",
     "individual": "Individual Analysis",
     "portfolio": "Portfolio Decisions"
+  },
+  "session": {
+    "pre": "Pre-Market",
+    "post": "After-Hours",
+    "closed": "Closed"
   }
 }

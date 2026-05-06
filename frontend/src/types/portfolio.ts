@@ -15,6 +15,7 @@ export interface Holding {
   created_at: string;
   updated_at: string;
   last_price_update: string | null;
+  last_session: "pre" | "regular" | "post" | "closed" | null;
 }
 
 export interface PortfolioSummary {
