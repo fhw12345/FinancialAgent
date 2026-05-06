@@ -11,6 +11,7 @@ export interface WatchlistItem {
   current_price: number | null;
   last_price_update: string | null;
   last_session: "pre" | "regular" | "post" | "closed" | null;
+  day_change_percent: number | null;
 }
 
 export interface WatchlistItemCreate {

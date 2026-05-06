@@ -51,6 +51,10 @@ class WatchlistItem(BaseModel):
             '"closed". Response-only, not persisted.'
         ),
     )
+    day_change_percent: float | None = Field(
+        None,
+        description="Today's percent change vs previous close (response-only).",
+    )
 
     class Config:
         json_schema_extra = {

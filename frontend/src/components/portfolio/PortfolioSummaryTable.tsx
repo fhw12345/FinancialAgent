@@ -262,6 +262,7 @@ export function PortfolioSummaryTable({
                 <th className="text-right py-2 px-2">Qty</th>
                 <th className="text-right py-2 px-2">Avg Price</th>
                 <th className="text-right py-2 px-2">Current</th>
+                <th className="text-right py-2 px-2">Day %</th>
                 <th className="text-right py-2 px-2">Market Value</th>
                 <th className="text-right py-2 px-2">P/L</th>
                 <th className="text-right py-2 px-2">P/L%</th>
@@ -272,6 +273,7 @@ export function PortfolioSummaryTable({
               {holdings.map((holding) => {
                 const pl = holding.unrealized_pl || 0;
                 const plPct = holding.unrealized_pl_pct || 0;
+                const dayPct = holding.day_change_percent;
 
                 return (
                   <tr
@@ -287,6 +289,17 @@ export function PortfolioSummaryTable({
                       {holding.current_price
                         ? formatCurrency(holding.current_price)
                         : "-"}
+                    </td>
+                    <td
+                      className={`text-right py-2 px-2 ${
+                        dayPct == null
+                          ? "text-gray-400"
+                          : getPLColorClass(dayPct)
+                      }`}
+                    >
+                      {dayPct == null
+                        ? "-"
+                        : `${dayPct >= 0 ? "+" : ""}${dayPct.toFixed(2)}%`}
                     </td>
                     <td className="text-right py-2 px-2">
                       {holding.market_value
@@ -330,7 +343,7 @@ export function PortfolioSummaryTable({
             </tbody>
             <tfoot className="border-t-2 border-gray-300 font-bold bg-gray-50">
               <tr>
-                <td colSpan={4} className="py-2 px-2">
+                <td colSpan={5} className="py-2 px-2">
                   TOTAL
                 </td>
                 <td className="text-right py-2 px-2">

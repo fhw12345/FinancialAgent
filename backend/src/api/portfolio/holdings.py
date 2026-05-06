@@ -40,8 +40,25 @@ async def get_holdings(
     request: Request,
     holding_repo: HoldingRepository = Depends(get_holding_repository),
 ) -> list[HoldingResponse]:
-    """List portfolio holdings from local MongoDB (broker integration removed)."""
+    """List portfolio holdings from local MongoDB.
+
+    Each row is enriched in parallel with a live quote so `day_change_percent`
+    and the latest `current_price` reflect *now* rather than the value persisted
+    on the last POST/PATCH/refresh. DataManager has redis cache (~30s on quotes)
+    so repeated GETs don't hammer the upstream vendor."""
     holdings = await holding_repo.list_by_user()
+
+    # Parallel enrichment, persist=False — GET is read-only, mutating mongo on
+    # every dashboard render would cause write amplification + churn the
+    # last_price_update timestamps that the "Last updated" UI watches.
+    if holdings:
+        await asyncio.gather(
+            *(
+                _enrich_with_quote(request, h, persist=False)
+                for h in holdings
+            )
+        )
+
     logger.info("Holdings retrieved from MongoDB", count=len(holdings))
     return [HoldingResponse.from_holding(h) for h in holdings]
 
@@ -105,6 +122,14 @@ async def _enrich_with_quote(
         if price <= 0:
             return holding
         session = getattr(quote, "session", None)
+        change_pct = getattr(quote, "change_percent", None)
+        # AV branch returns change_percent as str ("0.4232") — yfinance/finnhub
+        # paths return float. Coerce to float, fall through to None on garbage.
+        if change_pct is not None and not isinstance(change_pct, (int, float)):
+            try:
+                change_pct = float(str(change_pct).rstrip("%"))
+            except (TypeError, ValueError):
+                change_pct = None
         holding.current_price = price
         holding.market_value = holding.quantity * price
         holding.unrealized_pl = holding.market_value - holding.cost_basis
@@ -115,6 +140,8 @@ async def _enrich_with_quote(
         )
         if session:
             holding.last_session = session
+        if change_pct is not None:
+            holding.day_change_percent = float(change_pct)
         if persist and holding_repo is not None:
             try:
                 await holding_repo.update_price(

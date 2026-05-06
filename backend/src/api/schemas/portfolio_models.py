@@ -83,6 +83,13 @@ class HoldingResponse(BaseModel):
             '"post" | "closed". None for legacy rows that predate this field.'
         ),
     )
+    day_change_percent: float | None = Field(
+        None,
+        description=(
+            "Today's percent change vs previous close (response-only). "
+            "None when live quote was unavailable."
+        ),
+    )
 
     @classmethod
     def from_holding(cls, holding: Holding) -> "HoldingResponse":
@@ -104,6 +111,7 @@ class HoldingResponse(BaseModel):
             updated_at=_as_utc(holding.updated_at),
             last_price_update=_as_utc(holding.last_price_update),
             last_session=holding.last_session,
+            day_change_percent=holding.day_change_percent,
         )
 
     class Config:

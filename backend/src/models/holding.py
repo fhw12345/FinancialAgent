@@ -45,6 +45,13 @@ class Holding(BaseModel):
             '"pre", "regular", "post", or "closed". None for legacy rows.'
         ),
     )
+    day_change_percent: float | None = Field(
+        None,
+        description=(
+            "Today's percent change vs previous close (response-only, not "
+            "persisted). Filled in from the live quote when available."
+        ),
+    )
 
     class Config:
         """Pydantic config."""

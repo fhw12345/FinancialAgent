@@ -66,6 +66,15 @@ async def _enrich_with_live_quote(
             sess = getattr(quote, "session", None)
             if sess:
                 it.last_session = sess
+            cp = getattr(quote, "change_percent", None)
+            if cp is not None:
+                if not isinstance(cp, (int, float)):
+                    try:
+                        cp = float(str(cp).rstrip("%"))
+                    except (TypeError, ValueError):
+                        cp = None
+                if cp is not None:
+                    it.day_change_percent = float(cp)
         except (TimeoutError, Exception) as e:
             logger.warning(
                 "watchlist_quote_enrichment_failed",

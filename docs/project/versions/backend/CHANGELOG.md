@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-05-07
+
+### Added
+- **feat(holdings/watchlist): 今日涨幅 (day_change_percent)** — 两表都暴露今日 vs 昨收 % 改变。复用 QuoteData.change_percent（三个 provider 都已经返回过来），enrich 阶段写到 transient 字段
+  - `Holding.day_change_percent: float | None`（不入 mongo）
+  - `WatchlistItem.day_change_percent: float | None`（不入 mongo）
+  - `HoldingResponse.day_change_percent` API 透出
+  - **GET /api/portfolio/holdings 现在并发 enrich 每行**（persist=False，不 mutate mongo 避免 last_price_update 抖动）。之前只在 POST/PATCH/refresh 时才有 current_price/day%，dashboard 一进去看到的是 mongo 里上次 enrich 时存的"过期价"
+  - AV 路径返回 change_percent 是 str ("0.4232")，yfinance/finnhub 是 float — `_enrich_with_quote` 加 coercion fallback
+
 ## [0.26.0] - 2026-05-07
 
 ### Removed

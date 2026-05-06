@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-05-07
+
+### Added
+- **feat(holdings/watchlist): 显示今日涨幅** — 配套 backend v0.27.0：
+  - `Holding` / `WatchlistItem` 类型都加 `day_change_percent: number | null`
+  - PortfolioSummaryTable 在 Current 和 Market Value 之间多一列 "Day %"，正数绿色 +X.XX%、负数红色 -X.XX%、null 灰色 -
+  - WatchlistPanel 行同上，紧挨价格显示，不占额外行高
+  - tfoot colSpan 从 4 调到 5（Symbol/Qty/Avg/Current/**Day%** = 5 列归 TOTAL）
+
 ## [0.21.0] - 2026-05-07
 
 ### Removed

@@ -160,6 +160,18 @@ export function WatchlistPanel() {
                       ${item.current_price.toFixed(2)}
                     </span>
                   )}
+                  {item.day_change_percent != null && (
+                    <span
+                      className={`font-mono text-sm ${
+                        item.day_change_percent >= 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {item.day_change_percent >= 0 ? "+" : ""}
+                      {item.day_change_percent.toFixed(2)}%
+                    </span>
+                  )}
                   {item.last_session && item.last_session !== "regular" && (
                     <span className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
                       {t(`portfolio:session.${item.last_session}`)}
