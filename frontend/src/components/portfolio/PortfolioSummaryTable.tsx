@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowLeftRight, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import type { Holding, PortfolioSummary } from "../../types/portfolio";
 import {
@@ -8,6 +9,7 @@ import {
   useRefreshHoldingPrices,
 } from "../../hooks/usePortfolio";
 import { useAddUserTransaction } from "../../hooks/useUserTransactions";
+import { formatTime } from "../../utils/timeFormatter";
 import { HoldingFormModal, type HoldingFormValues } from "./HoldingFormModal";
 import {
   AddTransactionModal,
@@ -19,10 +21,35 @@ interface PortfolioSummaryTableProps {
   summary: PortfolioSummary;
 }
 
+// Most-recent timestamp from the holdings list. Backend stamps
+// `last_price_update` whenever a quote is persisted (POST/PATCH/refresh-prices),
+// so the max across rows is the real freshness signal for the whole table.
+function pickLatestPriceUpdate(holdings: Holding[]): Date | null {
+  let latestMs = 0;
+  for (const h of holdings) {
+    if (!h.last_price_update) continue;
+    const ms = new Date(h.last_price_update).getTime();
+    if (Number.isFinite(ms) && ms > latestMs) latestMs = ms;
+  }
+  return latestMs > 0 ? new Date(latestMs) : null;
+}
+
+function formatRelativeAge(date: Date, now: Date): string {
+  const sec = Math.max(0, Math.floor((now.getTime() - date.getTime()) / 1000));
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  return `${day}d ago`;
+}
+
 export function PortfolioSummaryTable({
   holdings,
   summary,
 }: PortfolioSummaryTableProps) {
+  const { i18n } = useTranslation();
   const totalMarketValue = summary.total_market_value || 0;
   const totalPL = summary.total_unrealized_pl || 0;
   const totalPLPct = summary.total_unrealized_pl_pct || 0;
@@ -30,6 +57,15 @@ export function PortfolioSummaryTable({
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Holding | null>(null);
   const [txModalOpen, setTxModalOpen] = useState(false);
+  // Tick once a minute so the "N min ago" label re-renders without needing
+  // a holdings refetch.
+  const [now, setNow] = useState<Date>(() => new Date());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const latestPriceUpdate = pickLatestPriceUpdate(holdings);
 
   const addMut = useAddHolding();
   const updateMut = useUpdateHolding();
@@ -149,7 +185,23 @@ export function PortfolioSummaryTable({
     <>
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Portfolio Holdings</h2>
+          <div>
+            <h2 className="text-xl font-bold">Portfolio Holdings</h2>
+            {latestPriceUpdate && (
+              <p className="mt-0.5 text-xs text-gray-500">
+                Last updated:{" "}
+                <span className="font-medium text-gray-700">
+                  {formatTime(latestPriceUpdate, i18n.language, {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+                <span className="ml-1 text-gray-400">
+                  · {formatRelativeAge(latestPriceUpdate, now)}
+                </span>
+              </p>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => refreshMut.mutate()}
@@ -219,10 +271,14 @@ export function PortfolioSummaryTable({
                         ? formatCurrency(holding.market_value)
                         : "-"}
                     </td>
-                    <td className={`text-right py-2 px-2 ${getPLColorClass(pl)}`}>
+                    <td
+                      className={`text-right py-2 px-2 ${getPLColorClass(pl)}`}
+                    >
                       {getPLEmoji(pl)} {formatCurrency(pl)}
                     </td>
-                    <td className={`text-right py-2 px-2 ${getPLColorClass(plPct)}`}>
+                    <td
+                      className={`text-right py-2 px-2 ${getPLColorClass(plPct)}`}
+                    >
                       {formatPercentage(plPct)}
                     </td>
                     <td className="text-right py-2 px-2">
@@ -258,10 +314,14 @@ export function PortfolioSummaryTable({
                 <td className="text-right py-2 px-2">
                   {formatCurrency(totalMarketValue)}
                 </td>
-                <td className={`text-right py-2 px-2 ${getPLColorClass(totalPL)}`}>
+                <td
+                  className={`text-right py-2 px-2 ${getPLColorClass(totalPL)}`}
+                >
                   {formatCurrency(totalPL)}
                 </td>
-                <td className={`text-right py-2 px-2 ${getPLColorClass(totalPLPct)}`}>
+                <td
+                  className={`text-right py-2 px-2 ${getPLColorClass(totalPLPct)}`}
+                >
                   {formatPercentage(totalPLPct)}
                 </td>
                 <td></td>

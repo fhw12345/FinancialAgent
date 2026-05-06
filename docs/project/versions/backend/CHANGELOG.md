@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-05-06
+
+### Fixed
+- **fix(portfolio-schema): `last_price_update` / `created_at` / `updated_at` 在 `HoldingResponse` 里现在带 UTC 时区后缀** — Mongo Motor 把 BSON UTC datetime 反序列化成 naive `datetime`，Pydantic 默认输出 ISO `2026-05-06T03:37:37.780000` 不带 `Z`。前端 `new Date(str)` 把 naive ISO 当本地时间解析（按 ECMA-262），导致 zh-CN UI 显示 UTC 时间而不是北京时间。`portfolio_models.py:from_holding` 现在用 `_as_utc(dt)` 给 naive 字段补上 `tzinfo=UTC`，输出变成 `...+00:00`，前端能正确换算成 Asia/Shanghai。
+
+### Added
+- **feat(holdings): PATCH `/holdings/{id}` 现在也走 `_enrich_with_quote(persist=True)`** — 之前只有 POST/refresh-prices 会更新 `last_price_update`，PATCH 改持仓只动 `updated_at`、不刷价，导致"最后更新"显示和实际行情脱钩。现在编辑数量/均价后也会同步抓一次实时价、写回 mongo。
+
 ## [0.22.0] - 2026-05-06
 
 ### Added

@@ -4,11 +4,17 @@ Portfolio API request/response models.
 Separates API layer from domain models for clean architecture.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
 from ...models.holding import Holding
+
+
+def _as_utc(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    return dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
 
 
 class HoldingCreateRequest(BaseModel):
@@ -74,6 +80,9 @@ class HoldingResponse(BaseModel):
     @classmethod
     def from_holding(cls, holding: Holding) -> "HoldingResponse":
         """Convert domain model to API response."""
+        # Mongo Motor returns naive datetimes for BSON UTC fields. Re-attach UTC
+        # so Pydantic serializes "...+00:00" rather than a naive "..." string,
+        # which JS `new Date(str)` would otherwise interpret as local time.
         return cls(
             holding_id=holding.holding_id,
             symbol=holding.symbol,
@@ -84,9 +93,9 @@ class HoldingResponse(BaseModel):
             market_value=holding.market_value,
             unrealized_pl=holding.unrealized_pl,
             unrealized_pl_pct=holding.unrealized_pl_pct,
-            created_at=holding.created_at,
-            updated_at=holding.updated_at,
-            last_price_update=holding.last_price_update,
+            created_at=_as_utc(holding.created_at),
+            updated_at=_as_utc(holding.updated_at),
+            last_price_update=_as_utc(holding.last_price_update),
         )
 
     class Config:

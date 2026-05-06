@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-05-06
+
+### Added
+- **feat(portfolio): 持仓表头部新增 "Last updated: HH:MM · N ago" 全局时间戳** — 取所有 holding 的 `last_price_update` 最大值，按 zh-CN 走 Asia/Shanghai 渲染绝对时间，旁边再带相对老化（s/m/h/d ago）。每分钟 tick 一次自动刷新相对时间，不需要重新拉数据。
+- **feat(portfolio): 触发拉股价的两个动作完成后，自动刷新持仓 + 时间戳**：
+  - **(A) Phase 2 持仓分析跑完** → `onRunComplete` 现在除了 invalidate `decisions` 还顺手 `refreshHoldingPrices.mutate()`，把所有 holding 的 `current_price` / `last_price_update` 重抓一遍写回 mongo。**重点**：`onRunComplete` 必须 `useCallback` 包起来 + 把 `refreshMut.mutate` 提到稳定引用，否则 `AnalysisButtons` 里的 `useEffect([..., onRunComplete])` 会被每次重渲染时新生成的 inline closure 触发 → mutate → isPending 变化 → 父组件再渲 → 新闭包 → 无限循环（`Maximum update depth exceeded`）。React Query v5 的 `mutate()` 函数引用是稳定的，但包它的 mutation 对象不稳定，所以必须从 mutation 里把 `mutate` 解构出来作为 useCallback 依赖。
+  - **(C) PATCH /holdings/{id}** 编辑数量或均价 → 后端走 `_enrich_with_quote(persist=True)`，前端直接看到新的 `current_price` 和 `last_updated` 时间。
+
+### Fixed
+- **fix(holdings-time): 时间戳显示从 UTC 改回北京时间** — 之前 `formatTime` 接到的 `new Date(iso)` 因为后端 ISO 不带时区后缀，被 JS 当本地时间解析（看着像没换算）。后端 v0.23.0 修了序列化加 `Z` 后缀，前端这边不需要改代码，直接 `formatTime(date, i18n.language, {hour:'2-digit', minute:'2-digit'})` 就能拿到 `11:40` 而不是 `03:40`。
+
 ## [0.17.0] - 2026-05-06
 
 ### Added

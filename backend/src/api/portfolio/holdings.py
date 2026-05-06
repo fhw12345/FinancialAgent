@@ -19,12 +19,12 @@ from ...database.repositories.user_transaction_repository import (
 )
 from ...models.holding import Holding, HoldingCreate, HoldingUpdate
 from ..dependencies.portfolio_deps import get_holding_repository
-from .user_transactions import get_user_tx_repo
 from ..dependencies.rate_limit import limiter
 from ..schemas.portfolio_models import (
     HoldingResponse,
     PortfolioSummaryResponse,
 )
+from .user_transactions import get_user_tx_repo
 
 logger = structlog.get_logger()
 
@@ -217,6 +217,9 @@ async def update_holding(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Holding {holding_id} not found",
         )
+    updated = await _enrich_with_quote(
+        request, updated, persist=True, holding_repo=holding_repo
+    )
     return HoldingResponse.from_holding(updated)
 
 
