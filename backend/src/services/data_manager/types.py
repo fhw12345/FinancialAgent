@@ -8,7 +8,7 @@ ensuring consistent interfaces across all data consumers.
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 
 class MetricStatus(StrEnum):
@@ -195,6 +195,7 @@ class QuoteData:
     open: float
     high: float
     low: float
+    session: Literal["pre", "regular", "post", "closed"] = "regular"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -209,6 +210,7 @@ class QuoteData:
             "open": self.open,
             "high": self.high,
             "low": self.low,
+            "session": self.session,
         }
 
     @classmethod
@@ -225,6 +227,7 @@ class QuoteData:
             open=float(data["open"]),
             high=float(data["high"]),
             low=float(data["low"]),
+            session=data.get("session", "regular"),
         )
 
 
