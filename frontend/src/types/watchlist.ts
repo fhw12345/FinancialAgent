@@ -8,6 +8,9 @@ export interface WatchlistItem {
   added_at: string;
   last_analyzed_at: string | null;
   notes: string | null;
+  current_price: number | null;
+  last_price_update: string | null;
+  last_session: "pre" | "regular" | "post" | "closed" | null;
 }
 
 export interface WatchlistItemCreate {

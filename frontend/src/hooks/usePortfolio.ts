@@ -122,6 +122,10 @@ export function useRefreshHoldingPrices() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: portfolioKeys.holdings() });
       queryClient.invalidateQueries({ queryKey: portfolioKeys.summary() });
+      // Watchlist GET enriches with live quotes via DataManager (cache 30s);
+      // invalidating it forces a fresh round-trip so the watchlist column
+      // reflects the same numbers as the holdings table after a refresh.
+      queryClient.invalidateQueries({ queryKey: ["watchlist"] });
     },
   });
 }

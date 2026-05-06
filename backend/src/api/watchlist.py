@@ -2,6 +2,9 @@
 Watchlist API endpoints for managing watched stocks.
 """
 
+import asyncio
+from datetime import UTC, datetime
+
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pymongo.errors import DuplicateKeyError
@@ -17,6 +20,54 @@ from .dependencies.rate_limit import limiter
 logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/watchlist", tags=["watchlist"])
+
+# Hard timeout per quote so a slow vendor never blocks the whole list response.
+_QUOTE_TIMEOUT_SECONDS = 3.0
+
+
+async def _enrich_with_live_quote(
+    request: Request, items: list[WatchlistItem]
+) -> list[WatchlistItem]:
+    """Best-effort: parallel-fetch live quotes via DataManager and stamp
+    transient `current_price` / `last_price_update` / `last_session` on each
+    row. Single-symbol failures are swallowed (just leave the row unenriched);
+    if DataManager is missing, returns the items untouched.
+
+    DataManager has its own redis cache (~30s on quotes), so repeated GETs
+    don't actually hit the upstream vendor for every refresh."""
+    dm = getattr(request.app.state, "data_manager", None)
+    if dm is None or not items:
+        return items
+
+    async def _one(it: WatchlistItem) -> None:
+        try:
+            quote = await asyncio.wait_for(
+                dm.get_quote(it.symbol), timeout=_QUOTE_TIMEOUT_SECONDS
+            )
+            price = float(getattr(quote, "price", 0) or 0)
+            if price <= 0:
+                return
+            it.current_price = price
+            it.last_price_update = datetime.now(UTC)
+            sess = getattr(quote, "session", None)
+            if sess:
+                it.last_session = sess
+        except (TimeoutError, Exception) as e:
+            logger.debug(
+                "watchlist_quote_enrichment_failed",
+                symbol=it.symbol,
+                error=str(e),
+            )
+
+    # Bound concurrency to avoid hammering vendor APIs on a long watchlist.
+    sem = asyncio.Semaphore(8)
+
+    async def _bounded(it: WatchlistItem) -> None:
+        async with sem:
+            await _one(it)
+
+    await asyncio.gather(*(_bounded(it) for it in items))
+    return items
 
 
 @router.post("", response_model=WatchlistItem, status_code=201)
@@ -194,6 +245,10 @@ async def get_watchlist(
 
         items = await watchlist_repo.get_by_user(skip=skip, limit=limit)
 
+        # Best-effort live quote enrichment so the UI shows current price next
+        # to each row. Failures are silent (row just renders without price).
+        items = await _enrich_with_live_quote(request, items)
+
         logger.info(
             "Watchlist retrieved",
             count=len(items),
@@ -251,12 +306,16 @@ async def remove_from_watchlist(
 
 
 @router.post("/analyze", status_code=202)
-@limiter.limit("2/minute")
+@limiter.limit("10/minute")
 async def trigger_watchlist_analysis(
     request: Request,
+    symbol: str | None = None,
     _: None = Depends(require_admin),
 ) -> dict:
-    """Manually trigger analysis for all watchlist symbols."""
+    """Trigger analysis. Without `symbol`, analyzes the whole watchlist
+    (force=True, skips already-held symbols). With `?symbol=BE`, runs the
+    analysis for that single symbol regardless of whether it's in the
+    watchlist or held — used by per-row "Analyze" buttons in the UI."""
     try:
         if not hasattr(request.app.state, "watchlist_analyzer"):
             raise HTTPException(
@@ -265,7 +324,20 @@ async def trigger_watchlist_analysis(
 
         analyzer = request.app.state.watchlist_analyzer
 
-        logger.info("Manual watchlist analysis triggered")
+        if symbol:
+            sym_upper = symbol.strip().upper()
+            if not sym_upper or len(sym_upper) > 10 or not sym_upper.replace(".", "").isalnum():
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid symbol: {symbol!r}"
+                )
+            logger.info("Single-symbol watchlist analysis triggered", symbol=sym_upper)
+            success = await analyzer.analyze_symbol(sym_upper)
+            return {
+                "status": "analysis_completed" if success else "analysis_failed",
+                "symbol": sym_upper,
+            }
+
+        logger.info("Manual watchlist analysis triggered (all symbols)")
         await analyzer.run_analysis_cycle(force=True)
 
         return {

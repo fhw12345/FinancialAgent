@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-05-06
+
+### Added
+- **feat(watchlist): 每行显示现价 + session chip + 单股"分析"按钮**：
+  - WatchlistItem 类型加 `current_price` / `last_price_update` / `last_session` (依赖 backend v0.25.0 enrichment)
+  - 行渲染：`SYMBOL  $XXX.XX  [盘后]` 一行展示，session 非 regular 才显示橙色 chip
+  - 每行 "Analyze Now" 按钮 — `useTriggerWatchlistAnalysis(symbol)` 透传，调 `POST /api/watchlist/analyze?symbol=BE` 跑单股；`analyzingSymbol` 本地 state 让只有当前行显示 spinner，批量按钮也复用
+
+### Changed
+- **change(refresh-prices): "Refresh Prices" 顺手 invalidate watchlist** — 之前只刷 holdings + summary 两张缓存。Watchlist 行的 enrichment 走 backend GET，invalidate 强制重抓让两张表的价显示对得上
+
 ## [0.19.0] - 2026-05-06
 
 ### Added

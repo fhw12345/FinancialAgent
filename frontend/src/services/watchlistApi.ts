@@ -33,15 +33,21 @@ export async function removeFromWatchlist(watchlistId: string): Promise<void> {
 
 /**
  * Manually trigger analysis for the watchlist symbols.
- * Returns 202 immediately; analysis runs in the background.
+ * - No symbol → batch analyze all watchlist (skips already-held).
+ * - With symbol → run analysis for just that one (used by per-row buttons).
  */
-export async function triggerWatchlistAnalysis(): Promise<{
+export async function triggerWatchlistAnalysis(symbol?: string): Promise<{
   status: string;
-  message: string;
+  message?: string;
+  symbol?: string;
 }> {
+  const url = symbol
+    ? `/api/watchlist/analyze?symbol=${encodeURIComponent(symbol)}`
+    : "/api/watchlist/analyze";
   const response = await apiClient.post<{
     status: string;
-    message: string;
-  }>("/api/watchlist/analyze");
+    message?: string;
+    symbol?: string;
+  }>(url);
   return response.data;
 }

@@ -83,11 +83,24 @@ export function WatchlistPanel() {
     }
   };
 
-  const handleTriggerAnalysis = async () => {
+  const handleTriggerAnalysis = async (symbol?: string) => {
     try {
-      await triggerAnalysisMutation.mutateAsync();
+      await triggerAnalysisMutation.mutateAsync(symbol);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('portfolio:errors.loadFailed'));
+    }
+  };
+
+  // Track which row is currently being analyzed so only that row's spinner
+  // shows. The mutation itself is shared, so isPending alone can't distinguish
+  // a per-row click from the batch button.
+  const [analyzingSymbol, setAnalyzingSymbol] = useState<string | null>(null);
+  const handleAnalyzeOne = async (symbol: string) => {
+    setAnalyzingSymbol(symbol);
+    try {
+      await handleTriggerAnalysis(symbol);
+    } finally {
+      setAnalyzingSymbol(null);
     }
   };
 
@@ -96,11 +109,13 @@ export function WatchlistPanel() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900">{t('portfolio:watchlist.title')}</h2>
         <button
-          onClick={handleTriggerAnalysis}
+          onClick={() => handleTriggerAnalysis()}
           disabled={triggerAnalysisMutation.isPending || !watchlist || watchlist.length === 0}
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {triggerAnalysisMutation.isPending ? t('portfolio:watchlist.analyzing') : t('portfolio:watchlistPanel.analyzeNow')}
+          {triggerAnalysisMutation.isPending && analyzingSymbol === null
+            ? t('portfolio:watchlist.analyzing')
+            : t('portfolio:watchlistPanel.analyzeNow')}
         </button>
       </div>
 
@@ -137,8 +152,20 @@ export function WatchlistPanel() {
               key={item.watchlist_id}
               className="flex items-center justify-between p-3 bg-gray-50 rounded-md hover:bg-gray-100"
             >
-              <div className="flex-1">
-                <div className="font-medium text-gray-900">{item.symbol}</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3">
+                  <span className="font-medium text-gray-900">{item.symbol}</span>
+                  {item.current_price != null && (
+                    <span className="font-mono text-sm text-gray-700">
+                      ${item.current_price.toFixed(2)}
+                    </span>
+                  )}
+                  {item.last_session && item.last_session !== "regular" && (
+                    <span className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                      {t(`portfolio:session.${item.last_session}`)}
+                    </span>
+                  )}
+                </div>
                 {item.notes && (
                   <div className="text-sm text-gray-500">{item.notes}</div>
                 )}
@@ -156,13 +183,25 @@ export function WatchlistPanel() {
                   )}
                 </div>
               </div>
-              <button
-                onClick={() => handleRemove(item.watchlist_id)}
-                disabled={removeMutation.isPending}
-                className="ml-4 px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-md disabled:opacity-50"
-              >
-                {t('portfolio:watchlist.remove')}
-              </button>
+              <div className="ml-4 flex items-center gap-1">
+                <button
+                  onClick={() => handleAnalyzeOne(item.symbol)}
+                  disabled={triggerAnalysisMutation.isPending}
+                  className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={t('portfolio:watchlistPanel.analyzeNow')}
+                >
+                  {analyzingSymbol === item.symbol
+                    ? t('portfolio:watchlist.analyzing')
+                    : t('portfolio:watchlistPanel.analyzeNow')}
+                </button>
+                <button
+                  onClick={() => handleRemove(item.watchlist_id)}
+                  disabled={removeMutation.isPending}
+                  className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded disabled:opacity-50"
+                >
+                  {t('portfolio:watchlist.remove')}
+                </button>
+              </div>
             </div>
           ))}
         </div>

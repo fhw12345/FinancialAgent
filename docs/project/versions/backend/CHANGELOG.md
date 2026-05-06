@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-05-06
+
+### Added
+- **feat(watchlist): GET /api/watchlist 现在并发拉实时报价 enrich 每行** — `WatchlistItem` model 加 transient 字段 `current_price` / `last_price_update` / `last_session`（**不**写 mongo，纯 response-only）。GET 时通过 DataManager 并发拉 quote（最多 8 路并发，每个 quote 3s 超时），失败行静默跳过保留无 price 状态。借力 DataManager 自带的 redis 30s quote cache，重复 GET 不会真的撞到上游
+- **feat(watchlist): POST /api/watchlist/analyze?symbol=BE 单股分析分支** — 没传 symbol 时还是批量（force=True，跳已持仓），传 symbol 时调 `analyze_symbol(sym)` 直接跑那一只。rate limit 从 2/min 抬到 10/min（per-row 按钮场景需要）。symbol 校验 `[A-Z0-9.]{1,10}` 防注入
+
+### Notes
+- watchlist 字段是 transient 的（model 默认 None，mongo 里没列）—— 不破老数据，不需要 migration
+- DataManager.get_quote 有 redis 30s cache，watchlist 9 行的话首次 GET ~9 个 quote 调用、之后 30s 内重复 GET 几乎全 cache HIT
+
 ## [0.24.2] - 2026-05-06
 
 ### Changed

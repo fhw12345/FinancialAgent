@@ -34,6 +34,24 @@ class WatchlistItem(BaseModel):
     # Metadata
     notes: str | None = Field(None, description="Optional user notes")
 
+    # ---- Transient quote fields (NOT persisted to mongo) -------------------
+    # Filled in by GET /watchlist endpoint via best-effort live quote so the
+    # UI can show current price + session next to each row, the same way
+    # PortfolioSummaryTable does for holdings.
+    current_price: float | None = Field(
+        None, description="Live price (response-only, not persisted)"
+    )
+    last_price_update: datetime | None = Field(
+        None, description="When the live price was fetched (response-only)"
+    )
+    last_session: str | None = Field(
+        None,
+        description=(
+            'Market session of the live price: "pre" | "regular" | "post" | '
+            '"closed". Response-only, not persisted.'
+        ),
+    )
+
     class Config:
         json_schema_extra = {
             "example": {

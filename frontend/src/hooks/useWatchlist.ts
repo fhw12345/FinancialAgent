@@ -57,12 +57,15 @@ export function useRemoveFromWatchlist() {
 
 /**
  * Hook to manually trigger watchlist analysis.
+ *
+ * Pass a symbol to analyze just that one row; pass nothing to batch analyze
+ * the whole watchlist (backend skips already-held symbols).
  */
 export function useTriggerWatchlistAnalysis() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => watchlistApi.triggerWatchlistAnalysis(),
+    mutationFn: (symbol?: string) => watchlistApi.triggerWatchlistAnalysis(symbol),
     onSuccess: () => {
       // Invalidate watchlist to refresh "last_analyzed_at" timestamps
       queryClient.invalidateQueries({ queryKey: watchlistKeys.list() });
