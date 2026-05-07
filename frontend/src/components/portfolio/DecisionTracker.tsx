@@ -36,6 +36,7 @@ import {
 } from "recharts";
 import { useDecisions, useMarkOrderExecuted, type DecisionRow } from "../../hooks/useDecisions";
 import { usePortfolioSettings } from "./SettingsPanel";
+import { IntentBadge } from "./IntentBadge";
 import { useHoldings } from "../../hooks/usePortfolio";
 import { formatDate } from "../../utils/timeFormatter";
 
@@ -523,7 +524,19 @@ function DecisionRows({
           {indented ? `↳ ${d.symbol}` : d.symbol}
         </td>
         <td className="py-2 pr-3">
-          <SideBadge side={d.side} />
+          <div className="flex items-center gap-1">
+            <SideBadge side={d.side} />
+            <IntentBadge intent={d.intent} />
+            {d.metadata?.legacy_short_geometry === true && (
+              <span
+                data-testid="legacy-geometry-warning"
+                title="历史脏数据：原始决策的 stop/target 排布等同做空字段，已自动迁移并标记"
+                className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+              >
+                ⚠ 几何
+              </span>
+            )}
+          </div>
         </td>
         <td className="py-2 pr-3 text-gray-700">
           {d.decision_price ? `$${d.decision_price.toFixed(2)}` : "—"}

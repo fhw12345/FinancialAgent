@@ -48,6 +48,7 @@ async def list_decisions(
                     "order_id": d.order_id,
                     "symbol": d.symbol,
                     "side": d.side,
+                    "intent": getattr(d, "intent", None),
                     "decision_type": d.decision_type,
                     "decision_price": d.decision_price,
                     "quantity": d.quantity,

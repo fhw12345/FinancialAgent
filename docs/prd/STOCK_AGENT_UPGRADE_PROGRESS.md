@@ -16,8 +16,8 @@ Status: **IN PROGRESS**
 | ID | Task | Status | Commit | Notes |
 |---|---|---|---|---|
 | W1.1 | `OrderIntent` enum + Pydantic validator + unit test | ✅ | 41966dd | Reject CRWV-style payload (stop > limit on close_long). 11 tests pass. |
-| W1.2 | Migration script `migrate_order_intent.py` dry-run + apply | ✅ | (pending) | Backfilled 60/60 docs (37 hold / 8 open_long / 15 close_long), 8 flagged `legacy_short_geometry` |
-| W1.3 | Frontend OrderPreview intent badge + W1-E1 e2e | ⏳ | - | Mock close_long valid + invalid payload |
+| W1.2 | Migration script `migrate_order_intent.py` dry-run + apply | ✅ | f161bf3 | Backfilled 60/60 docs (37 hold / 8 open_long / 15 close_long), 8 flagged `legacy_short_geometry` |
+| W1.3 | Frontend OrderPreview intent badge + W1-E1 e2e | ✅ | (pending) | IntentBadge component + DecisionTracker integration + legacy_short_geometry warning chip. Backend PortfolioOrder model + decisions endpoint passthrough intent. e2e PASS: 3 badges + 1 legacy chip rendered correctly. |
 | W1.4 | yfinance fallback helper `_yf_fallback.py` | ⏳ | - | Single source of truth for AV→yf fallback |
 | W1.5 | `get_company_overview` connect fallback + unit test | ⏳ | - | Returns `{data, source, asof, degraded}` or `{unavailable: true}` |
 | W1.6 | `get_financial_statements` connect fallback + unit test | ⏳ | - | yfinance.income_stmt/balance_sheet/cashflow |

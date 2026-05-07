@@ -25,10 +25,25 @@ export interface DecisionMetadata {
   [key: string]: unknown;
 }
 
+export type OrderIntent =
+  | "open_long"
+  | "close_long"
+  | "open_short"
+  | "close_short"
+  | "hold";
+
 export interface DecisionRow {
   order_id: string;
   symbol: string;
   side: "buy" | "sell" | "hold";
+  /**
+   * Direction-aware intent (W1.1). Backfilled on existing docs by
+   * scripts/migrate_order_intent.py (W1.2). Frontend renders an extra
+   * badge so a "close_long" SELL can't be confused with an "open_short".
+   * Optional because docs created before the migration script ran on a
+   * given environment may still be missing it.
+   */
+  intent?: OrderIntent | null;
   decision_type: "order" | "signal";
   decision_price: number | null;
   quantity: number;

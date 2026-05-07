@@ -124,6 +124,19 @@ class PortfolioOrder(BaseModel):
         description="Additional data: stop_price, limit_price, time_in_force",
     )
 
+    # Direction-aware intent (W1.1). Mirrors TradingDecision.OrderIntent
+    # but as a plain string here to keep PortfolioOrder dependency-free.
+    # Values: "open_long" | "close_long" | "open_short" | "close_short" | "hold".
+    # Backfilled by scripts/migrate_order_intent.py (W1.2).
+    intent: str | None = Field(
+        default=None,
+        description=(
+            "Direction-aware intent: open_long / close_long / open_short / "
+            "close_short / hold. Frontend uses this to disambiguate a SELL "
+            "exit-of-long from a SELL open-of-short."
+        ),
+    )
+
     class Config:
         json_schema_extra = {
             "example": {
