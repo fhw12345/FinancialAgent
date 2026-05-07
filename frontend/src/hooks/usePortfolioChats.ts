@@ -11,6 +11,10 @@ interface Message {
   chat_id: string;
   role: string;
   content: string;
+  /** Server-precomputed Chinese translation. Null when the writer didn't
+   *  translate this message (or translation failed cleanly via post-fix
+   *  fallback that no longer dirties the field with English). */
+  content_zh?: string | null;
   timestamp: string;
   metadata?: {
     symbol?: string;
@@ -26,6 +30,7 @@ interface Chat {
   updated_at: string;
   is_archived: boolean;
   last_message_preview?: string;
+  last_message_preview_zh?: string | null;
   last_message_at?: string;
 }
 
@@ -66,16 +71,25 @@ async function fetchPortfolioChats(date?: string, analysisType?: string): Promis
 
   const data = response.data;
 
-  // Transform to chat structure
-  const chats: Chat[] = data.chats.map((symbolChat) => ({
-    chat_id: symbolChat.chat_id,
-    title: symbolChat.title,
-    created_at: symbolChat.latest_timestamp,
-    updated_at: symbolChat.latest_timestamp,
-    is_archived: false,
-    last_message_preview: symbolChat.messages[symbolChat.messages.length - 1]?.content?.substring(0, 100) || "",
-    last_message_at: symbolChat.latest_timestamp,
-  }));
+  // Transform to chat structure. Prefer content_zh for both the visible
+  // preview and the precomputed translation slot — when zh is present we
+  // can render it directly without triggering a /api/translate round-trip
+  // from ChatListItem's <Translated> wrapper.
+  const chats: Chat[] = data.chats.map((symbolChat) => {
+    const last = symbolChat.messages[symbolChat.messages.length - 1];
+    const lastEn = last?.content ?? "";
+    const lastZh = last?.content_zh ?? null;
+    return {
+      chat_id: symbolChat.chat_id,
+      title: symbolChat.title,
+      created_at: symbolChat.latest_timestamp,
+      updated_at: symbolChat.latest_timestamp,
+      is_archived: false,
+      last_message_preview: lastEn.substring(0, 100),
+      last_message_preview_zh: lastZh ? lastZh.substring(0, 100) : null,
+      last_message_at: symbolChat.latest_timestamp,
+    };
+  });
 
   return {
     chats,

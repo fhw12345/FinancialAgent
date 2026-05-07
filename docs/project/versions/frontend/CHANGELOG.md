@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.2] - 2026-05-07
+
+### Fixed
+- **fix(sidebar): portfolio chat preview 用 content_zh 而不是 content** — 配套 backend v0.27.2。`usePortfolioChats` 转 backend chat → 前端 Chat 时之前丢字段：`last_message_preview` 直接读 `messages[last].content`（英文原文），且没填 `last_message_preview_zh`。结果 ChatListItem 里 `<Translated precomputed={chat.last_message_preview_zh ?? null}>` 永远拿到 null → 每条 sidebar item 都现场调一次 `/api/translate`。
+  - `usePortfolioChats.ts` 的 `Message` 接口加 `content_zh?: string | null` 字段
+  - 转换时 `last_message_preview = content.substring(0, 100)`、`last_message_preview_zh = content_zh ? content_zh.substring(0, 100) : null`
+  - 后端 v0.27.2 修了脏数据后，绝大多数 message 现在 `content_zh` 是真翻译，sidebar preview 直接用 precomputed → 省掉 N 次 `/api/translate` 网络往返
+  - e2e 验证：sidebar 0 英文 marker、3 中文 marker
+  - title 字段保持现状：后端 chat-history endpoint 没返回 `title_zh`，title 模板已经渲染中文，依赖 ChatListItem 现有 `<Translated>` 兜底
+
 ## [0.22.1] - 2026-05-07
 
 ### Added
