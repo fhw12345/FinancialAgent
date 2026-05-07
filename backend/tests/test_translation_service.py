@@ -3,16 +3,16 @@
 Covers:
 - Cache hit short-circuit (no LLM call)
 - Cache miss → LLM batch call → results cached
-- LLM error → fall back to original English
+- LLM error → failed slots are None (write-path callers persist None)
 - Mixed hit/miss → only misses go to LLM, order preserved
 - English locale short-circuit
-- Route returns same length & order as input
-- Malformed LLM output → fall back to originals
+- Route returns same length & order as input, echoing English for None slots
+- Malformed / wrong-count LLM output → all miss slots None
+- Separator-protocol parser shape coverage
 """
 
 from __future__ import annotations
 
-import json
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -41,9 +41,9 @@ class FakeRedis:
 
 
 def _llm_resp(translations: list[str]) -> MagicMock:
-    """Build a fake AIMessage-like object with .content = JSON array."""
+    """Build a fake AIMessage-like object with .content = separator-joined body."""
     m = MagicMock()
-    m.content = json.dumps(translations, ensure_ascii=False)
+    m.content = f"\n{svc._SEPARATOR}\n".join(translations)
     return m
 
 
@@ -65,7 +65,10 @@ async def test_empty_input() -> None:
 @pytest.mark.asyncio
 async def test_full_cache_hit_skips_llm() -> None:
     texts = ["NVDA strong", "Maintain position"]
-    seed = {svc._cache_key(t, "zh-CN"): zh for t, zh in zip(texts, ["NVDA强劲", "维持仓位"])}
+    seed = {
+        svc._cache_key(t, "zh-CN"): zh
+        for t, zh in zip(texts, ["NVDA强劲", "维持仓位"], strict=True)
+    }
     redis = FakeRedis(seed=seed)
 
     fake_llm = MagicMock()
@@ -121,56 +124,141 @@ async def test_partial_cache_hit_only_misses_go_to_llm_and_order_preserved() -> 
 
 
 @pytest.mark.asyncio
-async def test_llm_error_falls_back_to_original() -> None:
+async def test_llm_error_returns_none_for_misses() -> None:
     texts = ["foo", "bar"]
     redis = FakeRedis()
     fake_llm = MagicMock()
     fake_llm.ainvoke = AsyncMock(side_effect=RuntimeError("upstream timeout"))
     with patch.object(svc, "get_llm", return_value=fake_llm):
         out = await svc.translate_batch(texts, "zh-CN", redis)  # type: ignore[arg-type]
-    assert out == ["foo", "bar"]
+    assert out == [None, None]
     # Nothing should have been cached on failure
     assert redis.set_calls == []
 
 
 @pytest.mark.asyncio
-async def test_malformed_llm_output_falls_back() -> None:
+async def test_malformed_llm_output_returns_none() -> None:
     texts = ["x", "y"]
     redis = FakeRedis()
     fake_llm = MagicMock()
     bad = MagicMock()
-    bad.content = "I refuse to translate. Sorry."
+    bad.content = "I refuse to translate. Sorry."  # one piece, expected two
     fake_llm.ainvoke = AsyncMock(return_value=bad)
     with patch.object(svc, "get_llm", return_value=fake_llm):
         out = await svc.translate_batch(texts, "zh-CN", redis)  # type: ignore[arg-type]
-    assert out == ["x", "y"]
+    assert out == [None, None]
     assert redis.set_calls == []
 
 
 @pytest.mark.asyncio
-async def test_wrong_count_falls_back() -> None:
+async def test_wrong_count_returns_none() -> None:
     texts = ["a", "b", "c"]
     redis = FakeRedis()
     fake_llm = MagicMock()
-    # Only two items returned, expected three
+    # Only two pieces returned, expected three
     fake_llm.ainvoke = AsyncMock(return_value=_llm_resp(["甲", "乙"]))
     with patch.object(svc, "get_llm", return_value=fake_llm):
         out = await svc.translate_batch(texts, "zh-CN", redis)  # type: ignore[arg-type]
-    assert out == ["a", "b", "c"]
+    assert out == [None, None, None]
 
 
 @pytest.mark.asyncio
-async def test_handles_markdown_fenced_json() -> None:
-    """Some models wrap JSON in ```json ... ``` despite instructions."""
+async def test_handles_markdown_fenced_output() -> None:
+    """Some models wrap output in ``` ... ``` despite instructions."""
     texts = ["hello"]
     redis = FakeRedis()
     fake_llm = MagicMock()
     fake_resp = MagicMock()
-    fake_resp.content = '```json\n["你好"]\n```'
+    fake_resp.content = "```\n你好\n```"
     fake_llm.ainvoke = AsyncMock(return_value=fake_resp)
     with patch.object(svc, "get_llm", return_value=fake_llm):
         out = await svc.translate_batch(texts, "zh-CN", redis)  # type: ignore[arg-type]
     assert out == ["你好"]
+
+
+# ---------- _parse_llm_output (separator protocol) ----------
+
+
+def test_parse_separator_simple() -> None:
+    raw = f"A{svc._SEPARATOR}B"
+    assert svc._parse_llm_output(raw, expected_count=2) == ["A", "B"]
+
+
+def test_parse_separator_with_newlines() -> None:
+    raw = f"译文A\n含多行\n内容{svc._SEPARATOR}译文B\n第二段"
+    out = svc._parse_llm_output(raw, expected_count=2)
+    assert out is not None
+    assert len(out) == 2
+    assert "译文A" in out[0] and "\n" in out[0]
+    assert out[1].startswith("译文B") and "第二段" in out[1]
+
+
+def test_parse_separator_strips_md_fence() -> None:
+    raw = f"```\nA{svc._SEPARATOR}B\n```"
+    assert svc._parse_llm_output(raw, expected_count=2) == ["A", "B"]
+
+
+def test_parse_separator_length_mismatch_returns_none() -> None:
+    raw = f"A{svc._SEPARATOR}B"
+    assert svc._parse_llm_output(raw, expected_count=3) is None
+
+
+def test_parse_separator_empty_returns_none() -> None:
+    assert svc._parse_llm_output("", expected_count=1) is None
+    assert svc._parse_llm_output("   \n  ", expected_count=1) is None
+
+
+# ---------- translate_batch None-element semantics ----------
+
+
+@pytest.mark.asyncio
+async def test_translate_batch_llm_fail_returns_none_elements() -> None:
+    redis = FakeRedis()
+    with patch.object(svc, "_llm_translate", AsyncMock(return_value=None)):
+        out = await svc.translate_batch(["x", "y", "z"], "zh-CN", redis)  # type: ignore[arg-type]
+    assert out == [None, None, None]
+    assert redis.set_calls == []
+
+
+@pytest.mark.asyncio
+async def test_translate_batch_partial_cache_hit_partial_llm_fail() -> None:
+    texts = ["A", "B", "C"]
+    seed = {svc._cache_key("A", "zh-CN"): "甲"}  # only A is cached
+    redis = FakeRedis(seed=seed)
+    with patch.object(svc, "_llm_translate", AsyncMock(return_value=None)):
+        out = await svc.translate_batch(texts, "zh-CN", redis)  # type: ignore[arg-type]
+    assert out == ["甲", None, None]
+
+
+@pytest.mark.asyncio
+async def test_translate_batch_all_cache_hit_no_llm_call() -> None:
+    texts = ["A", "B"]
+    seed = {
+        svc._cache_key("A", "zh-CN"): "甲",
+        svc._cache_key("B", "zh-CN"): "乙",
+    }
+    redis = FakeRedis(seed=seed)
+    mocked = AsyncMock(return_value=None)
+    with patch.object(svc, "_llm_translate", mocked):
+        out = await svc.translate_batch(texts, "zh-CN", redis)  # type: ignore[arg-type]
+    assert out == ["甲", "乙"]
+    mocked.assert_not_awaited()
+
+
+# ---------- persistence_translator None propagation ----------
+
+
+@pytest.mark.asyncio
+async def test_translate_for_persistence_handles_none_elements() -> None:
+    from src.services import persistence_translator as pt
+
+    fake = AsyncMock(return_value=[None, "中文"])
+    with patch.object(pt, "translate_batch", fake):
+        out = await pt.translate_for_persistence(
+            {"a": "Hello", "b": "World"},
+            redis_cache=FakeRedis(),  # type: ignore[arg-type]
+        )
+    assert out == {"a_zh": None, "b_zh": "中文"}
 
 
 # ---------- /api/translate route ----------
@@ -223,3 +311,20 @@ def test_route_handles_empty_array(client: TestClient) -> None:
     )
     assert r.status_code == 200
     assert r.json() == {"translations": []}
+
+
+def test_route_echoes_english_for_none_slots(client: TestClient) -> None:
+    """When translate_batch fails (None slots), the HTTP path returns English
+    so the frontend has something to render. Persistence callers handle None
+    differently (write None to mongo)."""
+    fake_llm = MagicMock()
+    bad = MagicMock()
+    bad.content = "garbage no separator"  # one piece, expected two → None all
+    fake_llm.ainvoke = AsyncMock(return_value=bad)
+    with patch.object(svc, "get_llm", return_value=fake_llm):
+        r = client.post(
+            "/api/translate",
+            json={"texts": ["foo", "bar"], "target_lang": "zh-CN"},
+        )
+    assert r.status_code == 200
+    assert r.json() == {"translations": ["foo", "bar"]}

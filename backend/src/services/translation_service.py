@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
 import re
 from typing import TYPE_CHECKING
 
@@ -44,6 +43,12 @@ CACHE_TTL_SECONDS = 86_400  # 1 day
 CACHE_KEY_PREFIX = "llm_translation"
 TRANSLATION_ROLE = "verdict"  # routes to claude-opus-4.7-xhigh via llm_factory
 
+# Sentinel separating translated passages in the model's raw response.
+# Replaces the previous JSON-array protocol — JSON parsing was choking on
+# bare newlines inside translated markdown blocks (Invalid control character),
+# silently dropping translations and persisting English originals.
+_SEPARATOR = "<<<TRANSLATION_SEPARATOR>>>"
+
 _SYSTEM_PROMPT = """You are a professional financial-translation engine.
 
 Translate each numbered English passage into Simplified Chinese (zh-CN). Rules:
@@ -59,15 +64,19 @@ Translate each numbered English passage into Simplified Chinese (zh-CN). Rules:
 5. Preserve all markdown formatting verbatim: headers (#, ##, ###), bold
    (**), italics, bullet points, numbered lists, tables (| col | col |),
    code fences, and line breaks. Do not collapse, reformat, or merge them.
-6. Output ONLY a JSON array of strings, in the same order as the input.
-   No prose before or after, no markdown fence, no keys — just a raw JSON array.
+6. Output ONLY the translated passages, separated by the literal token
+   `<<<TRANSLATION_SEPARATOR>>>` on its own line, in the same order as the
+   input. No JSON, no numbering, no markdown fence, no prose. Do NOT use the
+   separator token anywhere inside a translation; it is reserved.
 
 Example input:
 1. NVDA hit 52-week high on AI demand. Source: company filings.
 2. Maintain 5% portfolio weight.
 
 Example output:
-["NVDA 因 AI 需求创 52 周新高。资料来源:公司文件。", "维持 5% 的组合权重。"]
+NVDA 因 AI 需求创 52 周新高。资料来源:公司文件。
+<<<TRANSLATION_SEPARATOR>>>
+维持 5% 的组合权重。
 """
 
 
@@ -82,32 +91,37 @@ def _build_user_prompt(texts: list[str]) -> str:
 
 
 def _parse_llm_output(raw: str, expected_count: int) -> list[str] | None:
-    """Pull the JSON array out of the model's response. Returns None on shape mismatch."""
+    """Split the model's raw response on the separator sentinel.
+
+    Returns None on any shape mismatch (empty input or wrong piece count).
+    Length-mismatch is logged here so the caller doesn't double-log.
+    """
     s = raw.strip()
-    # Strip markdown fence if the model added one despite instructions
+    if not s:
+        logger.warning(
+            "translation_parse_failed", error_type="empty", expected=expected_count
+        )
+        return None
+    # Strip markdown fence if the model added one despite instructions.
     if s.startswith("```"):
-        s = re.sub(r"^```(?:json)?\s*", "", s)
+        s = re.sub(r"^```\w*\s*", "", s)
         s = re.sub(r"\s*```$", "", s)
-    try:
-        arr = json.loads(s)
-    except json.JSONDecodeError:
-        # Fallback: grab the first top-level [...] in case extra prose snuck in
-        m = re.search(r"\[[\s\S]*\]", s)
-        if not m:
-            return None
-        try:
-            arr = json.loads(m.group(0))
-        except json.JSONDecodeError:
-            return None
-    if not isinstance(arr, list) or len(arr) != expected_count:
+        s = s.strip()
+    parts = [p.strip() for p in s.split(_SEPARATOR)]
+    if len(parts) != expected_count:
+        logger.warning(
+            "translation_parse_failed",
+            error_type="length_mismatch",
+            expected=expected_count,
+            got=len(parts),
+            raw_preview=raw[:2000],
+        )
         return None
-    if not all(isinstance(x, str) for x in arr):
-        return None
-    return arr
+    return parts
 
 
 async def _llm_translate(texts: list[str]) -> list[str] | None:
-    """Single Anthropic round-trip translating every text. None on failure."""
+    """Single LLM round-trip translating every text. None on failure."""
     if not texts:
         return []
     try:
@@ -123,33 +137,37 @@ async def _llm_translate(texts: list[str]) -> list[str] | None:
         # ChatAnthropic.ainvoke returns AIMessage; .content is the str body.
         resp = await llm.ainvoke(messages)
         raw = resp.content if isinstance(resp.content, str) else str(resp.content)
-        out = _parse_llm_output(raw, expected_count=len(texts))
-        if out is None:
-            logger.warning(
-                "translation_parse_failed",
-                expected=len(texts),
-                raw_preview=raw[:200],
-            )
-        return out
+        # _parse_llm_output logs its own failure cause; no double-log here.
+        return _parse_llm_output(raw, expected_count=len(texts))
     except Exception as e:
-        logger.warning("translation_llm_call_failed", error=str(e), count=len(texts))
+        logger.warning(
+            "translation_llm_call_failed",
+            error=repr(e),
+            error_type=type(e).__name__,
+            count=len(texts),
+        )
         return None
 
 
 async def translate_batch(
     texts: list[str],
     target_lang: str,
-    redis_cache: "RedisCache",
-) -> list[str]:
+    redis_cache: RedisCache,
+) -> list[str | None]:
     """Translate `texts` to `target_lang`. Returns same length, same order.
 
     On cache miss, batches all misses into one LLM call.
-    On any error, the failed entries fall back to their English original."""
+    On any LLM/parse failure, the failed slots are None — callers decide how
+    to surface that (write None to mongo, echo English to the HTTP client,
+    etc.). Previously we silently echoed the English original, which let the
+    persistence layer write English into `<field>_zh` and fooled the frontend
+    into thinking a translation existed.
+    """
     if not texts:
         return []
     if target_lang == "en" or target_lang.startswith("en-"):
         # No-op for English — the caller should normally short-circuit before
-        # us, but defend anyway.
+        # us, but defend anyway. list[str] is a subtype of list[str | None].
         return list(texts)
 
     # Pull all cache hits in parallel
@@ -160,8 +178,8 @@ async def translate_batch(
 
     miss_indices: list[int] = []
     miss_texts: list[str] = []
-    out: list[str] = [""] * len(texts)
-    for i, (orig, cached) in enumerate(zip(texts, cached_results)):
+    out: list[str | None] = [None] * len(texts)
+    for i, (orig, cached) in enumerate(zip(texts, cached_results, strict=True)):
         if isinstance(cached, str):
             out[i] = cached
         else:
@@ -173,17 +191,17 @@ async def translate_batch(
 
     translated = await _llm_translate(miss_texts)
     if translated is None:
-        # LLM failed — fall back to originals for the misses, no caching.
-        for idx, orig in zip(miss_indices, miss_texts):
-            out[idx] = orig
+        # LLM/parse failed — leave miss slots as None. Don't cache.
         return out
 
     # Stash misses in cache and place into the output slots
     set_tasks = []
-    for idx, orig, zh in zip(miss_indices, miss_texts, translated):
+    for idx, orig, zh in zip(miss_indices, miss_texts, translated, strict=True):
         out[idx] = zh
         set_tasks.append(
-            redis_cache.set(_cache_key(orig, target_lang), zh, ttl_seconds=CACHE_TTL_SECONDS)
+            redis_cache.set(
+                _cache_key(orig, target_lang), zh, ttl_seconds=CACHE_TTL_SECONDS
+            )
         )
     # Don't fail the request if a cache write fails
     await asyncio.gather(*set_tasks, return_exceptions=True)

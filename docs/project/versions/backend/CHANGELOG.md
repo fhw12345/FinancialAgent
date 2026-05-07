@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.2] - 2026-05-07
+
+### Fixed
+- **fix(translation): 持仓分析显示英文 — separator 协议替换 JSON parse + fallback 不再伪装翻译** — Portfolio 分析历史里近两次"持仓分析"chat modal 显示英文（5/7 13:33、5/6 15:34）。根因不是 dashscope 断网，是 `_parse_llm_output` 用 `json.loads` 严格解析 LLM 返回的 JSON 数组，而 LLM 把 markdown 翻译里的真实换行直接写进 JSON string（违反 spec），`json.loads` 抛 `Invalid control character` → parser 返回 None → `translate_batch:175-179` 把英文原文当 "translated" 写进 out → `translate_for_persistence` 把英文原文写进 `Message.content_zh` → 前端 `useTranslated` 拿到非空 precomputed 直接返回 → 用户看到英文。Mongo 实测 13 条文档（2 messages + 11 portfolio_orders.full_research_zh）的 `_zh` 字段字面等于 `content`/`full_research`。
+  - **Prompt 协议从 JSON 数组换成 separator-delimited 纯文本**：`_SYSTEM_PROMPT` rule 6 + Example 改为用 `<<<TRANSLATION_SEPARATOR>>>` 分隔多段译文。彻底消除 escape 地狱。
+  - **`_parse_llm_output` 重写为 split + strip**：28 行，零 JSON 解析。
+  - **`translate_batch` LLM/parse fail 时返回 `None` 元素**（不再回填英文原文）。返回类型从 `list[str]` 改为 `list[str | None]`。
+  - **`/api/translate` HTTP route**（`backend/src/api/translate.py`）适配：None 槽 echo 英文原文（不破坏现场翻译契约；持久化路径才需要 None 触发前端兜底）。
+  - **`translate_for_persistence` 透传 None**（`out: dict[str, str | None]` 已合法，无需改动）。
+  - **`translation_parse_failed` log 增强**：`error_type` + `repr(e)` + raw_preview 上限 2000 字。
+  - **新增 `backend/scripts/cleanup_dirty_translations.py`** —— 扫 `messages` / `chats` / `portfolio_orders.metadata` 把 `<field>_zh == <field>` 的脏数据置 null。dry-run 默认，`--apply` 才动数据。本次清掉 13 条；前端 `useTranslated` 拿到 None 后走 `/api/translate` 兜底，新 separator parser 解析中文成功落地（实测 1924 字英文 → 1086 字中文，0.56× ratio 正常）。
+  - 新增 28 cases `tests/test_translation_service.py`（separator 解析正/反例 + batch None 传播）+ 6 cases `tests/test_cleanup_dirty_translations.py`（query 形状、dry-run/apply、嵌套 metadata）。
+  - **Follow-up（不在本 wave）**：`frontend/src/hooks/usePortfolioChats.ts:70-78` 把 backend chat 转前端 Chat 时丢 `title_zh` / `last_message_preview_zh`，preview 用 `.content` 而不是 `.content_zh`，导致 sidebar 反而靠"丢字段 + 现场 translate"绕过脏数据 —— 脆弱。
+
 ## [0.27.1] - 2026-05-07
 
 ### Fixed

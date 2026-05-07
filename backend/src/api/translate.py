@@ -44,6 +44,16 @@ async def translate(
 ) -> TranslateResponse:
     """Returns translations for each input text. Cached results served instantly,
     misses batched into one LLM round-trip. On any backend error the original
-    English string is returned for that slot — never raises 5xx."""
-    out = await translate_batch(payload.texts, payload.target_lang, redis_cache)
+    English string is returned for that slot — never raises 5xx.
+
+    `translate_batch` may emit None for slots where the LLM failed (write-path
+    callers persist None to mark the field as un-translated). For the on-demand
+    HTTP path the frontend wants a string to render right now, so we echo the
+    English original for any None slot.
+    """
+    raw = await translate_batch(payload.texts, payload.target_lang, redis_cache)
+    out = [
+        zh if zh is not None else orig
+        for orig, zh in zip(payload.texts, raw, strict=True)
+    ]
     return TranslateResponse(translations=out)
