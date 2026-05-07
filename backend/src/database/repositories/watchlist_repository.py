@@ -30,9 +30,7 @@ class WatchlistRepository:
     async def ensure_indexes(self) -> None:
         """Create indexes for optimal query performance."""
         # Unique index on symbol (no per-user partition)
-        await self.collection.create_index(
-            "symbol", unique=True, name="idx_symbol"
-        )
+        await self.collection.create_index("symbol", unique=True, name="idx_symbol")
         await self.collection.create_index(
             "last_analyzed_at", name="last_analyzed_at_1"
         )
@@ -66,12 +64,7 @@ class WatchlistRepository:
         self, user_id: str | None = None, skip: int = 0, limit: int = 50
     ) -> list[WatchlistItem]:
         """List watchlist items. user_id ignored."""
-        cursor = (
-            self.collection.find({})
-            .sort("added_at", -1)
-            .skip(skip)
-            .limit(limit)
-        )
+        cursor = self.collection.find({}).sort("added_at", -1).skip(skip).limit(limit)
 
         items = []
         async for item_dict in cursor:
@@ -89,9 +82,7 @@ class WatchlistRepository:
         item_dict.pop("_id", None)
         return WatchlistItem(**item_dict)
 
-    async def delete(
-        self, watchlist_id: str, user_id: str | None = None
-    ) -> bool:
+    async def delete(self, watchlist_id: str, user_id: str | None = None) -> bool:
         """Delete a watchlist item. user_id ignored."""
         result = await self.collection.delete_one({"watchlist_id": watchlist_id})
         deleted = result.deleted_count > 0
@@ -112,6 +103,33 @@ class WatchlistRepository:
         result = await self.collection.update_one(
             {"watchlist_id": watchlist_id},
             {"$set": {"last_analyzed_at": timestamp}},
+        )
+        return result.modified_count > 0
+
+    async def update_quote_snapshot(
+        self,
+        watchlist_id: str,
+        *,
+        current_price: float,
+        last_price_update: datetime,
+        last_session: str | None,
+        day_change_percent: float | None,
+    ) -> bool:
+        """Persist the latest live-quote snapshot so a future upstream
+        timeout falls back to the last known value rather than an empty
+        cell. Called from GET /watchlist enrichment after a successful
+        quote fetch. Failures here are non-fatal — the caller swallows
+        them since the in-memory item already has the fresh value."""
+        result = await self.collection.update_one(
+            {"watchlist_id": watchlist_id},
+            {
+                "$set": {
+                    "current_price": current_price,
+                    "last_price_update": last_price_update,
+                    "last_session": last_session,
+                    "day_change_percent": day_change_percent,
+                }
+            },
         )
         return result.modified_count > 0
 

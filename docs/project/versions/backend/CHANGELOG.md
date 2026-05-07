@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.3] - 2026-05-07
+
+### Fixed
+- **fix(watchlist): 间歇性"有些有价有些没有" — 超时调到 10s + quote snapshot 持久化** — 之前 `_enrich_with_live_quote` 每次 GET 实时拉每个 symbol 的 quote，6s 超时，单 symbol 失败就 swallow + log warning，那行 `current_price` 留空，前端 `item.current_price != null` 判定失败 → 该行不渲染价。开盘前后 yfinance 拥堵，6s 不够，log 实测 13:44–14:10 ET 共 27 次 `watchlist_quote_enrichment_failed error_type=TimeoutError`，每次不同 subset 中招（INTC/TSLA/MSFT/GOOGL/SNDK/BE/CRWV 都中过）。
+  - **A. 超时 6s → 10s**（`backend/src/api/watchlist.py:28`）。多数 timeout 立刻消失；cache hit 仍 ~5ms。
+  - **B. quote snapshot 持久化**：`WatchlistItem` 的 `current_price` / `last_price_update` / `last_session` / `day_change_percent` 4 个字段从 transient 改为持久化字段（`backend/src/models/watchlist.py:42-67`），enrich 成功后写回 mongo（新增 `WatchlistRepository.update_quote_snapshot()`，`backend/src/database/repositories/watchlist_repository.py:109-134`）。下次 endpoint 命中 timeout 时，item 已经从 mongo 带着上次成功的快照返回，前端直接渲染那个值，不再空白。
+  - log 增强：fail 路径多输出 `fallback_age_seconds`，让"这个 stale 多老"一眼可见。
+  - 配套前端 v0.22.3：价格 > 5 分钟未更新时旁边加灰色 "Xm ago" 指示。
+
 ## [0.27.2] - 2026-05-07
 
 ### Fixed

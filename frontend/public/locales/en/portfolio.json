@@ -187,7 +187,8 @@
     "lastAnalyzed": "Last analyzed",
     "waitingFirstAnalysis": "Waiting for first analysis",
     "noSymbols": "No symbols in watchlist",
-    "trackPerformance": "Add symbols to track their performance"
+    "trackPerformance": "Add symbols to track their performance",
+    "staleQuoteTooltip": "Live quote fetch failed; showing the last known price"
   },
   "chatSidebar": {
     "title": "Analysis History",

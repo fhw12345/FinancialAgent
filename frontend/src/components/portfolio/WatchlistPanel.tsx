@@ -179,6 +179,17 @@ export function WatchlistPanel() {
                       ${item.current_price.toFixed(2)}
                     </span>
                   )}
+                  {item.current_price != null &&
+                    item.last_price_update &&
+                    Date.now() - new Date(item.last_price_update).getTime() >
+                      5 * 60 * 1000 && (
+                      <span
+                        className="text-xs text-gray-400"
+                        title={t("portfolio:watchlistPanel.staleQuoteTooltip")}
+                      >
+                        {formatTimeAgo(new Date(item.last_price_update))}
+                      </span>
+                    )}
                   <SessionBadge session={item.last_session} />
                   {item.day_change_percent != null && (
                     <span

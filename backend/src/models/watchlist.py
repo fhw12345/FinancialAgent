@@ -34,26 +34,29 @@ class WatchlistItem(BaseModel):
     # Metadata
     notes: str | None = Field(None, description="Optional user notes")
 
-    # ---- Transient quote fields (NOT persisted to mongo) -------------------
+    # ---- Quote snapshot (persisted to mongo since v0.27.3) ----------------
     # Filled in by GET /watchlist endpoint via best-effort live quote so the
     # UI can show current price + session next to each row, the same way
-    # PortfolioSummaryTable does for holdings.
+    # PortfolioSummaryTable does for holdings. Persisted (not transient) so
+    # that an upstream-vendor timeout for one symbol falls back to the last
+    # known value instead of rendering an empty cell. Frontend uses
+    # last_price_update to mark the value as stale when older than ~5 min.
     current_price: float | None = Field(
-        None, description="Live price (response-only, not persisted)"
+        None, description="Last known live price; persisted snapshot"
     )
     last_price_update: datetime | None = Field(
-        None, description="When the live price was fetched (response-only)"
+        None, description="When the live price was last fetched (UTC)"
     )
     last_session: str | None = Field(
         None,
         description=(
-            'Market session of the live price: "pre" | "regular" | "post" | '
-            '"closed". Response-only, not persisted.'
+            "Market session when the last quote was fetched: "
+            '"pre" | "regular" | "post" | "closed"'
         ),
     )
     day_change_percent: float | None = Field(
         None,
-        description="Today's percent change vs previous close (response-only).",
+        description="Today's percent change vs previous close from the last quote",
     )
 
     class Config:

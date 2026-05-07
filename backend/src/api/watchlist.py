@@ -22,23 +22,26 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/api/watchlist", tags=["watchlist"])
 
 # Hard timeout per quote so a slow vendor never blocks the whole list response.
-# 6s leaves enough room for cold-cache yfinance round-trips (Finnhub/AV are
-# faster but we don't always pick them); cache hits return in ~5ms.
-_QUOTE_TIMEOUT_SECONDS = 6.0
+# 10s gives cold-cache yfinance a real shot at responding even during pre/post
+# market congestion (12-vendor fallback chain accumulates: Finnhub then yfinance
+# then AV; each can take 3-4s on a bad day). Cache hits still return in ~5ms.
+_QUOTE_TIMEOUT_SECONDS = 10.0
 
 
 async def _enrich_with_live_quote(
     request: Request, items: list[WatchlistItem]
 ) -> list[WatchlistItem]:
     """Best-effort: parallel-fetch live quotes via DataManager and stamp
-    transient `current_price` / `last_price_update` / `last_session` on each
-    row. Single-symbol failures are swallowed (just leave the row unenriched);
-    if DataManager is missing, returns the items untouched.
+    `current_price` / `last_price_update` / `last_session` /
+    `day_change_percent` on each row. The fields are also persisted to
+    mongo on success so a single-symbol upstream timeout falls back to the
+    last known value (frontend marks it stale via `last_price_update`).
+    Single-symbol failures are swallowed (item keeps its previous mongo
+    snapshot); if DataManager is missing, returns the items untouched.
 
     Also coerces naive UTC datetimes (`added_at`, `last_analyzed_at`,
     `last_price_update`) to tz-aware so Pydantic emits "...+00:00" and the
     frontend's `new Date(iso)` correctly parses them as UTC instead of local.
-    Same fix as HoldingResponse from_holding (v0.23.0).
 
     DataManager has its own redis cache (~30s on quotes), so repeated GETs
     don't actually hit the upstream vendor for every refresh."""
@@ -48,10 +51,20 @@ async def _enrich_with_live_quote(
             it.added_at = it.added_at.replace(tzinfo=UTC)
         if it.last_analyzed_at is not None and it.last_analyzed_at.tzinfo is None:
             it.last_analyzed_at = it.last_analyzed_at.replace(tzinfo=UTC)
+        if it.last_price_update is not None and it.last_price_update.tzinfo is None:
+            it.last_price_update = it.last_price_update.replace(tzinfo=UTC)
 
     dm = getattr(request.app.state, "data_manager", None)
     if dm is None or not items:
         return items
+
+    mongodb = getattr(request.app.state, "mongodb", None)
+    repo: WatchlistRepository | None = None
+    if mongodb is not None:
+        try:
+            repo = WatchlistRepository(mongodb.get_collection("watchlist"))
+        except Exception:
+            repo = None
 
     async def _one(it: WatchlistItem) -> None:
         try:
@@ -61,26 +74,52 @@ async def _enrich_with_live_quote(
             price = float(getattr(quote, "price", 0) or 0)
             if price <= 0:
                 return
-            it.current_price = price
-            it.last_price_update = datetime.now(UTC)
-            sess = getattr(quote, "session", None)
-            if sess:
-                it.last_session = sess
+            now = datetime.now(UTC)
+            sess = getattr(quote, "session", None) or it.last_session
             cp = getattr(quote, "change_percent", None)
-            if cp is not None:
-                if not isinstance(cp, (int, float)):
-                    try:
-                        cp = float(str(cp).rstrip("%"))
-                    except (TypeError, ValueError):
-                        cp = None
-                if cp is not None:
-                    it.day_change_percent = float(cp)
+            if cp is not None and not isinstance(cp, (int, float)):
+                try:
+                    cp = float(str(cp).rstrip("%"))
+                except (TypeError, ValueError):
+                    cp = None
+            cp_value: float | None = (
+                float(cp) if cp is not None else it.day_change_percent
+            )
+
+            it.current_price = price
+            it.last_price_update = now
+            it.last_session = sess
+            it.day_change_percent = cp_value
+
+            if repo is not None:
+                try:
+                    await repo.update_quote_snapshot(
+                        it.watchlist_id,
+                        current_price=price,
+                        last_price_update=now,
+                        last_session=sess,
+                        day_change_percent=cp_value,
+                    )
+                except Exception as persist_err:
+                    logger.warning(
+                        "watchlist_quote_snapshot_persist_failed",
+                        symbol=it.symbol,
+                        error=str(persist_err),
+                    )
         except (TimeoutError, Exception) as e:
+            # Keep whatever snapshot mongo already had — frontend renders
+            # the stale value with a "X分钟前" indicator based on
+            # last_price_update.
             logger.warning(
                 "watchlist_quote_enrichment_failed",
                 symbol=it.symbol,
                 error=str(e),
                 error_type=type(e).__name__,
+                fallback_age_seconds=(
+                    (datetime.now(UTC) - it.last_price_update).total_seconds()
+                    if it.last_price_update is not None
+                    else None
+                ),
             )
 
     # Bound concurrency to avoid hammering vendor APIs on a long watchlist.
@@ -350,7 +389,11 @@ async def trigger_watchlist_analysis(
 
         if symbol:
             sym_upper = symbol.strip().upper()
-            if not sym_upper or len(sym_upper) > 10 or not sym_upper.replace(".", "").isalnum():
+            if (
+                not sym_upper
+                or len(sym_upper) > 10
+                or not sym_upper.replace(".", "").isalnum()
+            ):
                 raise HTTPException(
                     status_code=400, detail=f"Invalid symbol: {symbol!r}"
                 )

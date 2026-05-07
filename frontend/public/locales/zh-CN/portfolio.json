@@ -187,7 +187,8 @@
     "lastAnalyzed": "上次分析",
     "waitingFirstAnalysis": "等待首次分析",
     "noSymbols": "观察列表为空",
-    "trackPerformance": "添加股票以跟踪其表现"
+    "trackPerformance": "添加股票以跟踪其表现",
+    "staleQuoteTooltip": "最新报价获取失败，显示的是上次成功拉取的价格"
   },
   "chatSidebar": {
     "title": "分析历史",

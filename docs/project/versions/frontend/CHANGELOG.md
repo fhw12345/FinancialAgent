@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.3] - 2026-05-07
+
+### Added
+- **feat(watchlist): 价格 stale 指示** — 配套 backend v0.27.3。`WatchlistPanel` 的价格旁边，若 `last_price_update` 距今超过 5 分钟，显示灰色 `formatTimeAgo` 标签（如 "42m ago"），鼠标悬停 tooltip 解释"最新报价获取失败，显示的是上次成功拉取的价格"。新鲜价格仍像之前一样无标签。
+  - `frontend/src/components/portfolio/WatchlistPanel.tsx`：在 `current_price` span 后插条件渲染 stale span
+  - `frontend/public/locales/{zh-CN,en}/portfolio.json`：新增 `watchlistPanel.staleQuoteTooltip` key
+  - e2e（`e2e_watchlist_stale.py`）：mock `/api/watchlist` 注入 FRESH (now) + STALE (42 min ago) 两行 → STALE 行可见 `42m ago` + FRESH 无 → VERDICT PASS
+
 ## [0.22.2] - 2026-05-07
 
 ### Fixed
