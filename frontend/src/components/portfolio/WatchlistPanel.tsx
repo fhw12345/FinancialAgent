@@ -7,6 +7,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SymbolSearch } from "../SymbolSearch";
+import { SessionBadge } from "../common/SessionBadge";
 import {
   useWatchlist,
   useAddToWatchlist,
@@ -39,7 +40,9 @@ function getNextAnalysisTime(): Date {
 
 // Format countdown to next analysis
 function formatCountdown(targetDate: Date): string {
-  const seconds = Math.floor((targetDate.getTime() - new Date().getTime()) / 1000);
+  const seconds = Math.floor(
+    (targetDate.getTime() - new Date().getTime()) / 1000,
+  );
   if (seconds <= 0) return "Analyzing now...";
   const minutes = Math.floor(seconds / 60);
   const secs = seconds % 60;
@@ -47,7 +50,7 @@ function formatCountdown(targetDate: Date): string {
 }
 
 export function WatchlistPanel() {
-  const { t, i18n } = useTranslation(['portfolio', 'common']);
+  const { t, i18n } = useTranslation(["portfolio", "common"]);
   const [newSymbol, setNewSymbol] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -63,7 +66,7 @@ export function WatchlistPanel() {
     const symbol = newSymbol.trim().toUpperCase();
 
     if (!symbol) {
-      setError(t('portfolio:watchlistPanel.enterSymbolError'));
+      setError(t("portfolio:watchlistPanel.enterSymbolError"));
       return;
     }
 
@@ -71,7 +74,9 @@ export function WatchlistPanel() {
       await addMutation.mutateAsync({ symbol });
       setNewSymbol("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('portfolio:errors.loadFailed'));
+      setError(
+        err instanceof Error ? err.message : t("portfolio:errors.loadFailed"),
+      );
     }
   };
 
@@ -79,7 +84,9 @@ export function WatchlistPanel() {
     try {
       await removeMutation.mutateAsync(watchlistId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('portfolio:errors.deleteFailed'));
+      setError(
+        err instanceof Error ? err.message : t("portfolio:errors.deleteFailed"),
+      );
     }
   };
 
@@ -87,7 +94,9 @@ export function WatchlistPanel() {
     try {
       await triggerAnalysisMutation.mutateAsync(symbol);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('portfolio:errors.loadFailed'));
+      setError(
+        err instanceof Error ? err.message : t("portfolio:errors.loadFailed"),
+      );
     }
   };
 
@@ -107,15 +116,21 @@ export function WatchlistPanel() {
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">{t('portfolio:watchlist.title')}</h2>
+        <h2 className="text-lg font-semibold text-gray-900">
+          {t("portfolio:watchlist.title")}
+        </h2>
         <button
           onClick={() => handleTriggerAnalysis()}
-          disabled={triggerAnalysisMutation.isPending || !watchlist || watchlist.length === 0}
+          disabled={
+            triggerAnalysisMutation.isPending ||
+            !watchlist ||
+            watchlist.length === 0
+          }
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {triggerAnalysisMutation.isPending && analyzingSymbol === null
-            ? t('portfolio:watchlist.analyzing')
-            : t('portfolio:watchlistPanel.analyzeNow')}
+            ? t("portfolio:watchlist.analyzing")
+            : t("portfolio:watchlistPanel.analyzeNow")}
         </button>
       </div>
 
@@ -134,17 +149,19 @@ export function WatchlistPanel() {
             disabled={addMutation.isPending}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {addMutation.isPending ? t('portfolio:watchlistPanel.adding') : t('common:buttons.add')}
+            {addMutation.isPending
+              ? t("portfolio:watchlistPanel.adding")
+              : t("common:buttons.add")}
           </button>
         </div>
-        {error && (
-          <p className="mt-2 text-sm text-red-600">{error}</p>
-        )}
+        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       </form>
 
       {/* Watchlist Items */}
       {isLoading ? (
-        <div className="text-center py-4 text-gray-500">{t('common:buttons.loading')}</div>
+        <div className="text-center py-4 text-gray-500">
+          {t("common:buttons.loading")}
+        </div>
       ) : watchlist && watchlist.length > 0 ? (
         <div className="space-y-2">
           {watchlist.map((item) => (
@@ -154,12 +171,15 @@ export function WatchlistPanel() {
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3">
-                  <span className="font-medium text-gray-900">{item.symbol}</span>
+                  <span className="font-medium text-gray-900">
+                    {item.symbol}
+                  </span>
                   {item.current_price != null && (
                     <span className="font-mono text-sm text-gray-700">
                       ${item.current_price.toFixed(2)}
                     </span>
                   )}
+                  <SessionBadge session={item.last_session} />
                   {item.day_change_percent != null && (
                     <span
                       className={`font-mono text-sm ${
@@ -172,25 +192,22 @@ export function WatchlistPanel() {
                       {item.day_change_percent.toFixed(2)}%
                     </span>
                   )}
-                  {item.last_session && item.last_session !== "regular" && (
-                    <span className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
-                      {t(`portfolio:session.${item.last_session}`)}
-                    </span>
-                  )}
                 </div>
                 {item.notes && (
                   <div className="text-sm text-gray-500">{item.notes}</div>
                 )}
                 <div className="text-xs text-gray-400 mt-1">
-                  {t('portfolio:watchlistPanel.added')}: {formatDate(item.added_at, i18n.language)}
+                  {t("portfolio:watchlistPanel.added")}:{" "}
+                  {formatDate(item.added_at, i18n.language)}
                   {item.last_analyzed_at && (
                     <span className="ml-2">
-                      • {t('portfolio:watchlistPanel.lastAnalyzed')}: {formatTimeAgo(new Date(item.last_analyzed_at))}
+                      • {t("portfolio:watchlistPanel.lastAnalyzed")}:{" "}
+                      {formatTimeAgo(new Date(item.last_analyzed_at))}
                     </span>
                   )}
                   {!item.last_analyzed_at && (
                     <span className="ml-2 text-amber-600">
-                      • {t('portfolio:watchlistPanel.waitingFirstAnalysis')}
+                      • {t("portfolio:watchlistPanel.waitingFirstAnalysis")}
                     </span>
                   )}
                 </div>
@@ -200,18 +217,18 @@ export function WatchlistPanel() {
                   onClick={() => handleAnalyzeOne(item.symbol)}
                   disabled={triggerAnalysisMutation.isPending}
                   className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={t('portfolio:watchlistPanel.analyzeNow')}
+                  title={t("portfolio:watchlistPanel.analyzeNow")}
                 >
                   {analyzingSymbol === item.symbol
-                    ? t('portfolio:watchlist.analyzing')
-                    : t('portfolio:watchlistPanel.analyzeNow')}
+                    ? t("portfolio:watchlist.analyzing")
+                    : t("portfolio:watchlistPanel.analyzeNow")}
                 </button>
                 <button
                   onClick={() => handleRemove(item.watchlist_id)}
                   disabled={removeMutation.isPending}
                   className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded disabled:opacity-50"
                 >
-                  {t('portfolio:watchlist.remove')}
+                  {t("portfolio:watchlist.remove")}
                 </button>
               </div>
             </div>
@@ -219,8 +236,10 @@ export function WatchlistPanel() {
         </div>
       ) : (
         <div className="text-center py-8 text-gray-500">
-          <p>{t('portfolio:watchlistPanel.noSymbols')}</p>
-          <p className="text-sm mt-1">{t('portfolio:watchlistPanel.trackPerformance')}</p>
+          <p>{t("portfolio:watchlistPanel.noSymbols")}</p>
+          <p className="text-sm mt-1">
+            {t("portfolio:watchlistPanel.trackPerformance")}
+          </p>
         </div>
       )}
     </div>

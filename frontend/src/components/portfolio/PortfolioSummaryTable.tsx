@@ -10,6 +10,7 @@ import {
 } from "../../hooks/usePortfolio";
 import { useAddUserTransaction } from "../../hooks/useUserTransactions";
 import { formatTime } from "../../utils/timeFormatter";
+import { SessionBadge } from "../common/SessionBadge";
 import { HoldingFormModal, type HoldingFormValues } from "./HoldingFormModal";
 import {
   AddTransactionModal,
@@ -61,7 +62,7 @@ export function PortfolioSummaryTable({
   holdings,
   summary,
 }: PortfolioSummaryTableProps) {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const totalMarketValue = summary.total_market_value || 0;
   const totalPL = summary.total_unrealized_pl || 0;
   const totalPLPct = summary.total_unrealized_pl_pct || 0;
@@ -214,12 +215,7 @@ export function PortfolioSummaryTable({
                   · {formatRelativeAge(latestPriceUpdate, now)}
                 </span>
                 {latestSession && latestSession !== "regular" && (
-                  <span
-                    data-testid="session-chip"
-                    className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800"
-                  >
-                    {t(`portfolio:session.${latestSession}`)}
-                  </span>
+                  <SessionBadge session={latestSession} />
                 )}
               </p>
             )}
@@ -286,9 +282,12 @@ export function PortfolioSummaryTable({
                       {formatCurrency(holding.avg_price)}
                     </td>
                     <td className="text-right py-2 px-2">
-                      {holding.current_price
-                        ? formatCurrency(holding.current_price)
-                        : "-"}
+                      <span className="inline-flex items-center gap-1 justify-end">
+                        {holding.current_price
+                          ? formatCurrency(holding.current_price)
+                          : "-"}
+                        <SessionBadge session={holding.last_session} />
+                      </span>
                     </td>
                     <td
                       className={`text-right py-2 px-2 ${

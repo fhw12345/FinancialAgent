@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-05-07
+
+### Added
+- **feat(holdings/watchlist): 价格旁显示"盘前 / 盘后 / 已收盘"标签** — 配套 backend v0.27.1，让用户一眼看出当前显示的不是 RTH 实时价。
+  - 新增 `frontend/src/components/common/SessionBadge.tsx`：根据 `last_session` 渲染小号 pill —— `pre` → 琥珀色"盘前"，`post` → 靛紫色"盘后"，`closed` → 板岩灰"已收盘"，`regular` / null → 不渲染
+  - PortfolioSummaryTable 表头 latest chip 和 Current 列价格旁、WatchlistPanel 价格旁全部改用 SessionBadge，移除原先散落的 inline 翻译逻辑
+  - zh-CN portfolio.json：closed 文案 `休市` → `已收盘`，与新 badge 文案统一
+  - DTO 复用现有 `last_session: "pre" | "regular" | "post" | "closed" | null`（v0.20.0 已加），SessionBadge 的 prop 仍叫 `session`，调用方传 `item.last_session` 解耦命名
+  - 新增 `e2e_session_badge.py`（Playwright），用 `page.route` 拦截 holdings/watchlist API mock 4 种 session，断言对应 zh 文本与 `[data-testid=session-badge][data-session=X]` 出现/缺席
+
 ## [0.22.0] - 2026-05-07
 
 ### Added

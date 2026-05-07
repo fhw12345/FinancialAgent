@@ -22,10 +22,14 @@ def _yf_quote_sync(symbol: str) -> dict[str, Any]:
 
     Uses prepost=True so the latest bar reflects extended-hours trading when
     the regular session is closed. Derives session from the last bar's
-    timestamp via get_market_session().
+    timestamp via get_market_session(). In pre/post session, ``price`` is the
+    latest non-zero-volume bar close (regularMarketPrice / currentPrice lag
+    extended hours).
     """
     # Function-local import to avoid circular import (this module is imported
     # by services.market_data.__init__ which defines get_market_session).
+    from src.services.data_manager.manager import _extended_hours_price
+
     from . import get_market_session
 
     ticker = yf.Ticker(symbol)
@@ -34,21 +38,22 @@ def _yf_quote_sync(symbol: str) -> dict[str, Any]:
     # last bar can be a pre/post extended-hours bar when RTH is closed.
     hist = ticker.history(period="2d", prepost=True)
     last_close = float(hist["Close"].iloc[-1]) if len(hist) else 0.0
-    prev_close = (
-        float(hist["Close"].iloc[-2])
-        if len(hist) >= 2
-        else float(info.get("previousClose", last_close) or last_close)
-    )
+    # Anchor previous_close to the prior RTH close, not the second-to-last
+    # bar of the prepost-inclusive history (which can itself be an extended-
+    # hours bar with a price far from yesterday's settlement). yfinance .info
+    # exposes both keys; fall back to hist[-2] only when neither is present.
+    info_prev = info.get("regularMarketPreviousClose") or info.get("previousClose")
+    if info_prev:
+        prev_close = float(info_prev)
+    elif len(hist) >= 2:
+        prev_close = float(hist["Close"].iloc[-2])
+    else:
+        prev_close = last_close
     open_p = float(hist["Open"].iloc[-1]) if len(hist) else 0.0
     high_p = float(hist["High"].iloc[-1]) if len(hist) else 0.0
     low_p = float(hist["Low"].iloc[-1]) if len(hist) else 0.0
     vol = int(hist["Volume"].iloc[-1]) if len(hist) else int(info.get("volume", 0) or 0)
-    price = float(info.get("currentPrice") or info.get("regularMarketPrice") or last_close)
-    change = price - prev_close
-    change_pct = (change / prev_close * 100.0) if prev_close else 0.0
-    last_day = (
-        hist.index[-1].strftime("%Y-%m-%d") if len(hist) else ""
-    )
+    last_day = hist.index[-1].strftime("%Y-%m-%d") if len(hist) else ""
     # Derive session from last bar's timestamp. yfinance index entries can
     # be tz-naive; force UTC before handing to get_market_session().
     if len(hist):
@@ -58,6 +63,12 @@ def _yf_quote_sync(symbol: str) -> dict[str, Any]:
         session = get_market_session(last_ts)
     else:
         session = "regular"
+    fallback_price = float(
+        info.get("currentPrice") or info.get("regularMarketPrice") or last_close
+    )
+    price = _extended_hours_price(hist if len(hist) else None, session, fallback_price)
+    change = price - prev_close
+    change_pct = (change / prev_close * 100.0) if prev_close else 0.0
     return {
         "symbol": symbol,
         "price": price,
@@ -92,9 +103,7 @@ def _yf_search_sync(query: str, limit: int) -> list[dict[str, Any]]:
                 "type": r.get("quoteType", ""),
                 "exchange": r.get("exchange", ""),
                 "match_type": (
-                    "exact_symbol"
-                    if sym.upper() == query.upper()
-                    else "fuzzy"
+                    "exact_symbol" if sym.upper() == query.upper() else "fuzzy"
                 ),
                 "confidence": 1.0 if sym.upper() == query.upper() else 0.5,
             }
@@ -333,7 +342,9 @@ class QuotesMixin(AlphaVantageBase):
                     "current_status": status,
                     "local_open": "09:30",
                     "local_close": "16:00",
-                    "primary_exchanges": "NYSE, NASDAQ" if region == "United States" else "",
+                    "primary_exchanges": "NYSE, NASDAQ"
+                    if region == "United States"
+                    else "",
                     "notes": "yfinance fallback — heuristic schedule",
                     "local_time": local_now.strftime("%Y-%m-%d %H:%M %Z"),
                     "utc_time": utc_now.strftime("%Y-%m-%d %H:%M UTC"),

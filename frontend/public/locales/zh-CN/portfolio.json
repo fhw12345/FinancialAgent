@@ -214,6 +214,6 @@
   "session": {
     "pre": "盘前",
     "post": "盘后",
-    "closed": "休市"
+    "closed": "已收盘"
   }
 }

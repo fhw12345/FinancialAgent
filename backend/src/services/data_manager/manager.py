@@ -39,6 +39,28 @@ from .types import (
 logger = structlog.get_logger(__name__)
 
 
+def _extended_hours_price(
+    hist: "pd.DataFrame | None",
+    session: str,
+    fallback: float,
+) -> float:
+    """Pick a price that reflects extended-hours trading when applicable.
+
+    During pre/post sessions ``yfinance.fast_info.last_price`` lags (it only
+    updates during the regular session), so we substitute the close of the
+    latest non-zero-volume 1-minute prepost bar. Returns ``fallback`` for
+    regular/closed sessions or when the history is unusable.
+    """
+    if session not in ("pre", "post"):
+        return fallback
+    if hist is None or len(hist) == 0 or "Close" not in hist or "Volume" not in hist:
+        return fallback
+    filtered = hist[hist["Volume"] > 0]
+    if len(filtered) == 0:
+        return fallback
+    return float(filtered["Close"].iloc[-1])
+
+
 class DataManager:
     """
     Single source of truth for all data access in the application.
@@ -156,9 +178,7 @@ class DataManager:
         try:
             from src.services.market_data import yfinance_bars
 
-            df = await yfinance_bars.get_bars(
-                symbol, granularity.value, outputsize
-            )
+            df = await yfinance_bars.get_bars(symbol, granularity.value, outputsize)
             return self._dataframe_to_ohlcv(df)
         except Exception as e:
             logger.warning(
@@ -366,7 +386,9 @@ class DataManager:
             return result
 
         except Exception as e:
-            logger.error("treasury_all_providers_failed", maturity=maturity, error=str(e))
+            logger.error(
+                "treasury_all_providers_failed", maturity=maturity, error=str(e)
+            )
             raise DataFetchError(str(e), "all_providers") from e
 
     async def get_ipo_calendar(self) -> list[IPOData]:
@@ -641,8 +663,9 @@ class DataManager:
 
         Pulls a 1-minute prepost-inclusive history bar to derive the actual
         trading session ("pre" / "regular" / "post" / "closed") from the last
-        bar's timestamp via get_market_session(). Falls back to "regular" only
-        if no bars are available.
+        bar's timestamp. In pre/post session, overrides ``price`` with the
+        latest non-zero-volume bar close so extended-hours moves are visible
+        (``fast_info.last_price`` only updates during the regular session).
         """
         import asyncio
 
@@ -656,13 +679,11 @@ class DataManager:
         def _sync() -> QuoteData:
             t = yf.Ticker(symbol)
             fi = t.fast_info
-            price = float(fi.last_price)
+            fallback_price = float(fi.last_price)
             prev = float(fi.previous_close)
-            change = price - prev
-            change_pct = (change / prev * 100) if prev else 0.0
 
-            # Derive session from latest minute bar including extended hours.
             session: str = "regular"
+            hist = None
             try:
                 hist = t.history(period="1d", interval="1m", prepost=True)
                 if hist is not None and len(hist):
@@ -672,7 +693,11 @@ class DataManager:
                     session = get_market_session(last_ts)
             except Exception:
                 # Keep default "regular" — session is best-effort metadata.
-                pass
+                hist = None
+
+            price = _extended_hours_price(hist, session, fallback_price)
+            change = price - prev
+            change_pct = (change / prev * 100) if prev else 0.0
 
             return QuoteData(
                 symbol=symbol.upper(),

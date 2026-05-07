@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.1] - 2026-05-07
+
+### Fixed
+- **fix(quote): 盘前/盘后时段返回真实延伸时段价** — `yfinance.fast_info.last_price` 只在 regular session 更新，盘前/盘后期间它一直停在前一日 RTH close 附近，导致 holdings/watchlist 的 `price` 字段在 09:00-09:30 ET 实测显示 287.51（≈昨收 287.40），而真实盘前价已经走到 289.35（+0.65% 被吞掉）。
+  - 抽出 `_extended_hours_price(hist, session, fallback)` helper（`backend/src/services/data_manager/manager.py`），先过滤 `Volume > 0` 行，pre/post session 时返回 1m prepost bar 的最后 Close，否则回退到 `fast_info.last_price`
+  - 重排 `_fetch_quote_yfinance`：先取 1m prepost hist + derive session，再让 helper 决定 price，最后算 change/change_percent（`previous_close` 仍锚定 RTH close，change% 才有意义）
+  - 同样的 helper 接到 `_yf_quote_sync`（`backend/src/services/market_data/quotes.py`），fallback 路径行为保持一致
+  - **修一个连带 bug**：`_yf_quote_sync` 原来取 `prev_close = hist["Close"].iloc[-2]`，但 `period="2d", prepost=True` 下 hist[-2] 本身就是另一根 prepost bar（不是昨日 RTH close）。改成优先 `info["regularMarketPreviousClose"] / previousClose`，`hist[-2]` 仅作两都缺时的兜底，避免盘前期 change% 用错基准
+  - 边界处理：hist 为 None / 空 / 全零 volume / yfinance 异常 → 全部回退 `fast_info.last_price`，不抛
+  - 新增 `tests/test_extended_hours_price.py`（19 cases），覆盖 helper 的 pre/regular/post/closed/None/空/全零、两条报价路径的 4 种 session、yfinance 异常回退、prev_close 不被 prepost bar 污染的回归测试
+
 ## [0.27.0] - 2026-05-07
 
 ### Added
