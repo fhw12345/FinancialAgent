@@ -15,8 +15,8 @@ Status: **IN PROGRESS**
 
 | ID | Task | Status | Commit | Notes |
 |---|---|---|---|---|
-| W1.1 | `OrderIntent` enum + Pydantic validator + unit test | ✅ | (pending) | Reject CRWV-style payload (stop > limit on close_long). 11 tests pass. |
-| W1.2 | Migration script `migrate_order_intent.py` dry-run + apply | ⏳ | - | Infer intent from sign(stop-entry), sign(target-entry) |
+| W1.1 | `OrderIntent` enum + Pydantic validator + unit test | ✅ | 41966dd | Reject CRWV-style payload (stop > limit on close_long). 11 tests pass. |
+| W1.2 | Migration script `migrate_order_intent.py` dry-run + apply | ✅ | (pending) | Backfilled 60/60 docs (37 hold / 8 open_long / 15 close_long), 8 flagged `legacy_short_geometry` |
 | W1.3 | Frontend OrderPreview intent badge + W1-E1 e2e | ⏳ | - | Mock close_long valid + invalid payload |
 | W1.4 | yfinance fallback helper `_yf_fallback.py` | ⏳ | - | Single source of truth for AV→yf fallback |
 | W1.5 | `get_company_overview` connect fallback + unit test | ⏳ | - | Returns `{data, source, asof, degraded}` or `{unavailable: true}` |
