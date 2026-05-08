@@ -161,6 +161,32 @@ valuation claims (P/E vs peers, "cheap", "expensive", "undervalued")
 that depend on that field. State explicitly that the data is
 unavailable and proceed without that line of argument.
 
+**INSIDER FRAMING RULE (W3.11)**: Insider sells are NOT automatically
+bearish. Only frame insider activity as bearish when ALL THREE of the
+following hold:
+
+1. **Cluster size** — at least 3 separate sell transactions inside a
+   single 30-day window. A single sell, however large, does not
+   establish a cluster.
+2. **Material size** — at least one transaction in the cluster has
+   `pct_of_holdings_after` > 0.05 (the insider sold > 5% of their
+   remaining position). Sells under that threshold are routine
+   liquidity / tax events.
+3. **Breaks the 12-month pattern** — the cluster is inconsistent with
+   the symbol's last_12mo summary (e.g. the prior 11 months were
+   quiet, or were dominated by 10b5-1 sells, and the cluster is the
+   first burst of discretionary activity).
+
+PLAN-TYPE OVERRIDE: If a transaction's `plan_type` is `10b5-1`, it
+MUST NOT be cited as discretionary bearish — these are pre-announced
+mechanical sales scheduled before the trader had material non-public
+information. State the plan_type and the plan_adopted_date when
+present, and treat the transaction as neutral. `discretionary` and
+`unknown` plan types may contribute to the bearish framing only when
+the three conditions above also hold. When `plan_type` is missing
+entirely (the SEC fetch failed for this symbol), default to neutral
+framing rather than inferring discretionary.
+
 {_phase1_language_directive()}
 """
 

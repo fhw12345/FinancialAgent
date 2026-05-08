@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.19] - 2026-05-09
+
+### Added — Wave 3 (W3.11 Phase1 prompt discretionary-cluster framing rule)
+
+- **W3.11 INSIDER FRAMING RULE in Phase1 research prompt** — `src/agent/portfolio/phase1_research.py` now teaches the LLM that insider sells are NOT automatically bearish. The new block sits alongside W1.5-W1.8 / W1.9 rules in the f-string prompt and pins three conjunctive conditions: (1) cluster size ≥ 3 separate sell transactions inside a 30-day window — single-sell events, however large, do not establish a cluster; (2) material size — at least one transaction with `pct_of_holdings_after` > 0.05 (insider sold > 5% of remaining position); sub-5% sells are routine liquidity / tax events; (3) breaks the 12-month pattern — the cluster must be inconsistent with the symbol's `last_12mo` summary (e.g. quiet prior 11 months, or 11 months of 10b5-1 sells with this cluster being the first burst of discretionary activity). All three must hold for bearish framing; ANY-of is explicitly disallowed via the "ALL THREE" wording.
+- **PLAN-TYPE OVERRIDE pins PRD AC #4** — transactions with `plan_type=10b5-1` MUST NOT be cited as discretionary bearish, regardless of cluster math. 10b5-1 plans are pre-announced mechanical sales scheduled before the trader had material non-public information; the prompt directs the LLM to state the `plan_type` and `plan_adopted_date` and treat the transaction as neutral. `discretionary` and `unknown` plan types may contribute to bearish framing only when the three cluster conditions also hold. When `plan_type` is missing entirely (SEC fetch failed for this symbol), the rule defaults to neutral framing rather than silently inferring `discretionary` — fail-closed on insufficient data.
+- **13 unit tests** in `tests/test_phase1_insider_framing_rule.py` lock the rule's wording into the prompt source. Tests use `inspect.getsource(Phase1ResearchMixin._analyze_symbol)` and whitespace-collapsing (the rule wraps across multiple source lines). Coverage: rule header presence, all three conditions listed, cluster-3 / 30-day threshold, > 0.05 material threshold, `last_12mo` reference + "first burst of discretionary activity" phrase, "ALL THREE" conjunction enforced, PLAN-TYPE OVERRIDE block + "MUST NOT be cited as discretionary bearish" verbatim (PRD AC #4), neutral framing for 10b5-1, default-to-neutral on missing plan_type, single-sell-not-cluster, routine-liquidity carve-out, discretionary/unknown-may-contribute clause, and source-ordering check (W3.11 block appears after W1.5-W1.8). Wave 3 sweep (W3.4 + W3.5 + W3.6 + W3.8 + W3.9 + W3.10 + W3.11) = 106/106 green.
+- **Programmatic gate intentionally NOT added** — PRD AC #4 ("not allowed to be cited as discretionary bearish") is enforced by the prompt rule itself; no `should_frame_bearish(...)` helper is wired into Phase1 because the LLM's reasoning is the framing surface and a downstream lint helper would over-constrain the natural-language output. The W3.13 integration test will be the empirical check that the prompt rule actually steers Claude away from the forbidden framing on a real 10b5-1 fixture.
+
+Bumps backend 0.27.18 → 0.27.19.
+
 ## [0.27.18] - 2026-05-09
 
 ### Added — Wave 3 (W3.10 Insider tool schema upgrade — Form 4 enrichment helpers)
