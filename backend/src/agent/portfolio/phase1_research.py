@@ -5,6 +5,7 @@ This module handles concurrent research for individual symbols without portfolio
 """
 
 import asyncio
+import os
 from typing import Any
 
 import structlog
@@ -16,6 +17,33 @@ from ...models.message import MessageCreate, MessageMetadata
 from ...models.trading_decision import SymbolAnalysisResult
 
 logger = structlog.get_logger()
+
+
+def _phase1_language_directive() -> str:
+    """W2.3 — language of Phase1 research output.
+
+    Default `zh-CN` keeps current production behavior; setting
+    `PHASE1_PROMPT_LANG=en` switches to English. The W2.4 A/B harness
+    runs both side by side on the same fixture; once parity is
+    confirmed (no quality regression for the downstream Phase2 +
+    consistency_gate + scenarios derivation chain), default flips to
+    en so Phase2 reads English directly without the translation
+    detour the v0.27.2 fix had to plug.
+    """
+    lang = os.getenv("PHASE1_PROMPT_LANG", "zh").lower()
+    if lang.startswith("en"):
+        return (
+            "LANGUAGE REQUIREMENT:\n"
+            "Respond in English. Keep ticker symbols, numbers, currency "
+            "amounts, percentages, and ISO timestamps verbatim. The frontend "
+            "translates display strings via useTranslated; this prompt does "
+            "not need to add translations inline."
+        )
+    return (
+        "LANGUAGE REQUIREMENT:\n"
+        "Respond in Simplified Chinese (简体中文).\n"
+        "Technical terms can include English in parentheses for clarity."
+    )
 
 
 class Phase1ResearchMixin:
@@ -133,9 +161,7 @@ valuation claims (P/E vs peers, "cheap", "expensive", "undervalued")
 that depend on that field. State explicitly that the data is
 unavailable and proceed without that line of argument.
 
-LANGUAGE REQUIREMENT:
-Respond in Simplified Chinese (简体中文).
-Technical terms can include English in parentheses for clarity.
+{_phase1_language_directive()}
 """
 
             # Apply context window management (sliding window + summary)
