@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.4] - 2026-05-08
+
+### Added — Stock Agent Upgrade Wave 1 visual surface
+
+Companion to backend v0.27.4 (PRD `docs/prd/STOCK_AGENT_UPGRADE_PRD.md`).
+
+- **W1.3 IntentBadge** (`components/portfolio/IntentBadge.tsx`) — direction-aware chip next to SideBadge so a SELL is visibly disambiguated: 平多 (slate) / 做空 (rose) / 建多 (emerald) / 平空 (slate). DecisionTracker also renders amber "⚠ 几何" chip for legacy migrated rows where `metadata.legacy_short_geometry === true`.
+- **W1.11 Global disclaimer** — App.tsx footer adds persistent watermark "🤖 AI-generated · Not investment advice. Verify all data and consult a licensed advisor before executing any trade." Visible on every page (Chat / Portfolio / Insights / Health). Tagged `data-testid="ai-disclaimer"`.
+- **W1.12 data_quality chip** — DecisionTracker renders gray 📉 数据降级 chip when `metadata.data_quality.degraded_fields` is non-empty. Hover tooltip lists the actual degraded field bullets so the user knows exactly which signal isn't trustworthy.
+
+E2E coverage (`e2e_intent_disclaimer.py`, `e2e_disclaimer.py`, `e2e_data_quality.py`) all PASS.
+
 ## [0.22.3] - 2026-05-07
 
 ### Added

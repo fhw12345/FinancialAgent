@@ -11,7 +11,7 @@
 
 ## Wave 1 — Hard bugs + data fallback
 
-Status: **IN PROGRESS**
+Status: **DONE** (15/15 sub-tasks; awaiting user signoff to start Wave 2)
 
 | ID | Task | Status | Commit | Notes |
 |---|---|---|---|---|
@@ -27,9 +27,9 @@ Status: **IN PROGRESS**
 | W1.10 | Consistency checker LLM gate + unit test | ✅ | d99ba20 | consistency_gate.py: regex detects degraded fields → cheap LLM (haiku) checks if thesis cites them → returns {passed, violations}. Wired into flows.py Phase1→Phase2 boundary for both holdings + picks. Cost: 1 call/symbol when degraded fields present, 0 when clean. Fail-open. 11 unit tests. |
 | W1.11 | Global disclaimer footer + UI watermark + W1-E2 e2e | ✅ | 1f66ac7 | Phase2 message footer adds AI-generated disclaimer + global App.tsx footer renders persistent watermark. e2e PASS on Portfolio + Chat tabs. |
 | W1.12 | `data_quality=degraded` UI tag + W1-E3 e2e | ✅ | ff420e7 | _build_data_quality_map translates consistency_gate annotations to PortfolioOrder.metadata.data_quality. DecisionTracker renders gray "📉 数据降级" chip with hover tooltip listing degraded fields. e2e PASS: 1 chip on degraded row, 0 on clean row. |
-| W1.13 | Integration test `test_intent_real_phase2.py` | ✅ | (pending) | 4 cases: CRWV invalid raises ValidationError; clean close_long passes; mixed batch rejects all; open_short escape-hatch works. Confirms validator stops bad payload before persistence. |
-| W1.14 | Cleanup test data | ⏳ | - | Remove `*_dump.json` `*_after.json` etc |
-| W1.15 | Bump version + CHANGELOG + final commit | ⏳ | - | backend patch (0.27.4) + frontend patch (0.22.4) |
+| W1.13 | Integration test `test_intent_real_phase2.py` | ✅ | eec7fad | 4 cases: CRWV invalid raises ValidationError; clean close_long passes; mixed batch rejects all; open_short escape-hatch works. Confirms validator stops bad payload before persistence. |
+| W1.14 | Cleanup test data | ✅ | (final) | 0 untracked files; mongo has 0 TST* fixtures (e2e all use page.route mocks, never write mongo). |
+| W1.15 | Bump version + CHANGELOG + final commit | ✅ | (final) | backend 0.27.3 → 0.27.4; frontend 0.22.3 → 0.22.4; both CHANGELOGs updated. |
 
 ### Wave 1 Acceptance Criteria checklist
 

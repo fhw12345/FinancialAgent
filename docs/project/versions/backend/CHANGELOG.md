@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.4] - 2026-05-08
+
+### Added — Stock Agent Upgrade Wave 1 (PRD docs/prd/STOCK_AGENT_UPGRADE_PRD.md)
+
+13 sub-tasks delivered (W1.1 – W1.13) addressing the two highest-severity findings from the 2026-05-07 PM/quant + sell-side analyst review:
+
+- **W1.1 OrderIntent enum + geometry validator** (`models/trading_decision.py`) — TradingDecision now requires direction-aware intent. `close_long` mandates `stop_loss < entry < take_profit`; `open_short` mandates the reverse. The CRWV-style payload that shipped 2026-05-07 (entry=$138 stop=$142 target=$122) now raises ValidationError before reaching mongo. 11 unit tests + 4 integration tests (W1.13).
+- **W1.2 Mongo migration** (`scripts/migrate_order_intent.py`) — backfilled `intent` on 60/60 historical PortfolioOrder docs (37 hold / 8 open_long / 15 close_long), flagged 8 with `legacy_short_geometry`. Idempotent dry-run + `--apply`.
+- **W1.3 IntentBadge UI + W1-E1 e2e** — DecisionTracker shows 平多/做空/⚠几何 chips next to SideBadge.
+- **W1.4 yfinance fallback helper** (`agent/tools/_yf_fallback.py`) — 5 async helpers wrapping `yfinance.Ticker.info / cashflow / balance_sheet / earnings_dates / insider_transactions`. Output carries explicit source banner ("⚠️ Data source: yfinance"). 7 integration tests against live yfinance.
+- **W1.5–W1.8 fundamentals tools wired to fallback** (`agent/tools/alpha_vantage/fundamentals.py`) — 4 `@tool` wrappers (`get_company_overview` / `get_financial_statements` / `get_company_earnings` / `get_insider_activity`) now retry via yfinance when AV returns empty or raises, return `unavailable_message` when both fail. Direct fix for the 4/4 holdings analysis blackout from 2026-05-07. 11 mock unit tests.
+- **W1.9 Fibonacci sanity gate** (`agent/langgraph_react_agent.py`) — fibonacci tool computes `range_position` (above_range / in_range / below_range); when breakout >5% emits `STALE FIB SWING` warning. Phase1 prompt rule forbids citing stale levels as support/resistance. 5 unit tests including the AAPL reviewer scenario.
+- **W1.10 Consistency LLM gate** (`agent/portfolio/consistency_gate.py`) — between Phase1 and Phase2, runs cheap LLM (haiku) only when degraded fields detected by regex. Returns `{passed, violations}`; results annotated on Phase1 attributes. Cost ≤$0.05/run per PRD D1. Fail-open. 11 unit tests.
+- **W1.11 Disclaimer + UI watermark** — Phase2 message footer + global App.tsx footer add "🤖 AI-generated · Not investment advice". W1-E2 e2e PASS on Portfolio + Chat tabs.
+- **W1.12 data_quality UI tag** — `_build_data_quality_map()` translates consistency-gate annotations to PortfolioOrder.metadata.data_quality. DecisionTracker renders 📉 数据降级 chip with hover tooltip listing degraded fields. W1-E3 e2e PASS.
+
+Frontend bumped to 0.22.4 (W1.3 + W1.11 + W1.12 visual changes).
+
+Wave 2 (architectural upgrades) and Wave 3 (provenance + insider depth) remain gated on user signoff per PRD; tracked in `docs/prd/STOCK_AGENT_UPGRADE_PROGRESS.md`.
+
 ## [0.27.3] - 2026-05-07
 
 ### Fixed
