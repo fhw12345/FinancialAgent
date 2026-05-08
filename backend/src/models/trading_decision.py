@@ -41,6 +41,107 @@ class OrderIntent(StrEnum):
     HOLD = "hold"
 
 
+# ---------------------------------------------------------------------------
+# W2.7 sub-models — structured research blocks attached to TradingDecision.
+# All optional at the TradingDecision level; the validators here enforce
+# *internal* shape whenever a block IS provided.
+# ---------------------------------------------------------------------------
+
+
+class ValuationMethod(BaseModel):
+    """One arm of the valuation triangulation (per analyst PRD)."""
+
+    method: Literal[
+        "pe_vs_peer",
+        "ev_revenue",
+        "ev_ebitda",
+        "peg",
+        "dcf_quick",
+        "p_book",
+        "ps_ratio",
+        "other",
+    ] = Field(description="Which valuation framework was applied")
+    value: float | None = Field(
+        default=None,
+        description=(
+            "Numeric output (e.g. 'fair value' from DCF, or the ratio if "
+            "method is pe_vs_peer). None when the method is purely "
+            "qualitative (rare)."
+        ),
+    )
+    note: str = Field(
+        max_length=300,
+        description=(
+            "1-2 sentence justification, MUST cite the input data "
+            "(e.g. 'AAPL trailing P/E 31 vs MAG7 median 28 → 11% premium')."
+        ),
+    )
+
+
+class PriceTarget(BaseModel):
+    value: float = Field(gt=0, description="Target price in USD")
+    horizon_days: int = Field(
+        ge=7,
+        le=730,
+        description="Time horizon (days) the target is for, e.g. 90 / 365.",
+    )
+    method: str | None = Field(
+        default=None,
+        max_length=120,
+        description="Which valuation arm produced this PT (free-text label).",
+    )
+
+
+class ScenarioCase(BaseModel):
+    price_target: float = Field(gt=0)
+    probability: float = Field(
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Subjective probability of this scenario realising in the "
+            "horizon. Per W2.10 the LLM is required to anchor the number "
+            "to a base rate or historical frequency in `rationale`."
+        ),
+    )
+    rationale: str = Field(
+        max_length=300,
+        description=(
+            "Why this probability — should reference base rate / historical "
+            "frequency / explicit conditioning, not just vibes."
+        ),
+    )
+
+
+class ScenarioSet(BaseModel):
+    """Bull / base / bear with probabilities summing to 1.0±0.02."""
+
+    bull: ScenarioCase
+    base: ScenarioCase
+    bear: ScenarioCase
+
+    @model_validator(mode="after")
+    def _probabilities_sum_to_one(self) -> "ScenarioSet":
+        total = self.bull.probability + self.base.probability + self.bear.probability
+        if not (0.98 <= total <= 1.02):
+            raise ValueError(
+                f"scenario probabilities must sum to 1.0 (±0.02), got {total:.4f} "
+                f"(bull={self.bull.probability}, base={self.base.probability}, "
+                f"bear={self.bear.probability})"
+            )
+        return self
+
+
+class Catalyst(BaseModel):
+    event: str = Field(
+        max_length=120,
+        description="What is the catalyst (e.g. 'Q1 earnings', 'FOMC decision').",
+    )
+    eta_window: str = Field(
+        max_length=80,
+        description="When (e.g. '2026-05-15', 'next 2 weeks', 'Q3 2026').",
+    )
+
+
 class TradingDecision(BaseModel):
     """
     Phase 1: Individual symbol trading decision from analysis.
@@ -120,6 +221,51 @@ class TradingDecision(BaseModel):
             "for close_long)."
         ),
     )
+    # W2.7 — optional structured research blocks. All fields default to
+    # None so existing Phase2 payloads still parse; the new Phase2 prompt
+    # (W2.10) asks the LLM to populate them. Validators below enforce
+    # length / probability rules whenever a block IS provided.
+    thesis: list[str] | None = Field(
+        default=None,
+        description=(
+            "Exactly 3 short bullet points summarising the investment thesis. "
+            "If provided the validator requires len == 3 and each bullet "
+            "non-empty; absent is allowed for backward compatibility."
+        ),
+    )
+    valuation: list[ValuationMethod] | None = Field(
+        default=None,
+        description=(
+            "At least 2 valuation methods (e.g. pe_vs_peer, ev_revenue, peg, "
+            "dcf_quick). Required to triangulate; one method alone is "
+            "rejected when the field is provided. Absent is allowed."
+        ),
+    )
+    price_target: PriceTarget | None = Field(
+        default=None,
+        description="Optional 12-month-ish price target with horizon_days.",
+    )
+    scenarios: ScenarioSet | None = Field(
+        default=None,
+        description=(
+            "bull / base / bear cases each with target + probability. "
+            "Probabilities must sum to 1.0 (±0.02). Absent is allowed."
+        ),
+    )
+    catalysts: list[Catalyst] | None = Field(
+        default=None,
+        description=(
+            "Upcoming events that could move the stock in the next ~4 weeks. "
+            "Absent is allowed."
+        ),
+    )
+    risks: list[str] | None = Field(
+        default=None,
+        description=(
+            "Top 3 risks ranked by importance. If provided the validator "
+            "requires len == 3."
+        ),
+    )
     reasoning_summary: str = Field(
         max_length=500,
         description=(
@@ -178,6 +324,31 @@ class TradingDecision(BaseModel):
                     f"intent={self.intent.value} requires stop_loss > entry_price > "
                     f"take_profit, got stop={s} entry={e} target={t}"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_research_blocks(self) -> "TradingDecision":
+        """W2.7/W2.8 — enforce length rules whenever the optional research
+        blocks are populated. Absent blocks are fine (back-compat)."""
+        if self.thesis is not None:
+            if len(self.thesis) != 3:
+                raise ValueError(
+                    f"thesis must contain exactly 3 bullet points, "
+                    f"got {len(self.thesis)}"
+                )
+            if any(not (b and b.strip()) for b in self.thesis):
+                raise ValueError("thesis bullets must be non-empty strings")
+
+        if self.valuation is not None and len(self.valuation) < 2:
+            raise ValueError(
+                "valuation must contain at least 2 distinct methods for "
+                f"triangulation, got {len(self.valuation)}"
+            )
+
+        if self.risks is not None and len(self.risks) != 3:
+            raise ValueError(
+                f"risks must contain exactly 3 ranked risks, got {len(self.risks)}"
+            )
         return self
 
     model_config = {
