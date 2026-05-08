@@ -313,6 +313,20 @@ Validators will reject malformed blocks (length / probability sum /
 derivation drift). Satisfy the rules:
 
 - `thesis`: exactly 3 short bullet points (the elevator-pitch view).
+  **Each bullet that names a number, ratio, growth rate, transaction,
+  headline, or insider event MUST end with the matching source-ID
+  token in square brackets** — the same token that appears in the
+  `Source: <provider> [<ID>] asof <iso>` line at the bottom of the
+  tool output that produced the fact. Examples of valid tokens:
+  `[FH-Q-AAPL-2026-05-09]` (Finnhub quote), `[AV-OV-NVDA-2025-09-30]`
+  (AV company overview), `[YF-CF-MSFT-2025-12-31]` (yfinance
+  fallback cash flow), `[FH-N-AMZN-2026-05-08]` (Finnhub news),
+  `[FH-INS-TSLA-2026-05-07]` (Finnhub insider). If the bullet is a
+  pure qualitative judgement ("the cohort is rate-sensitive") with
+  no specific datapoint, the citation is optional. Bullets that
+  cite a number without a source-ID token are research malpractice
+  — the consistency_gate will flag them and the dashboard will
+  render them with a "uncited" warning chip.
 - `valuation`: at least 2 ValuationMethod objects (each with method
   one of pe_vs_peer / ev_revenue / ev_ebitda / peg / dcf_quick /
   p_book / ps_ratio / other, plus value and note). Triangulating
@@ -341,9 +355,9 @@ derivation drift). Satisfy the rules:
   "confidence": 7,
   "reasoning_summary": "Buy limit $142.50 at 0.5 fib retracement support. Stop $134 below swing low (atr_stop with atr=4.2, n=2). Target $168 at 1.272 fib extension. Thesis cites datacenter capex acceleration; 2 valuation methods triangulate fair value $155-170.",
   "thesis": [
-    "Q4 datacenter capex guide raised 18% YoY, locking 2026 revenue floor",
-    "Operating margin expansion from 28% to 33% as new fab depreciation rolls off",
-    "$8B buyback authorization shrinks float ~5% over next 12 months"
+    "Q4 datacenter capex guide raised 18% YoY, locking 2026 revenue floor [FH-N-EXMP-2026-02-08]",
+    "Operating margin expansion from 28% to 33% as new fab depreciation rolls off [AV-OV-EXMP-2025-12-31]",
+    "$8B buyback authorization shrinks float ~5% over next 12 months [FH-N-EXMP-2026-01-22]"
   ],
   "valuation": [
     {{"method": "pe_vs_peer", "value": 24.5, "note": "vs MAG7 median 28.1, 13% discount"}},

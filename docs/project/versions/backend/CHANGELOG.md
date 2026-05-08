@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.15] - 2026-05-09
+
+### Added — Wave 3 (W3.6 Phase2 prompt cites source IDs)
+
+- **W3.6 thesis bullets must end with the matching source-ID token** — every Phase2 BUY/SELL decision passing through `Phase2DecisionsMixin._make_portfolio_decisions` is now told that each `thesis` bullet which names "a number, ratio, growth rate, transaction, headline, or insider event MUST end with the matching source-ID token in square brackets" — the same `[FH-Q-AAPL-2026-05-09]` / `[AV-OV-NVDA-2025-09-30]` / `[YF-CF-MSFT-2025-12-31]` / `[FH-N-AMZN-2026-05-08]` / `[FH-INS-TSLA-2026-05-07]` tokens that the W3.2 / W3.3 / W3.4 / W3.5 tool wrappers append in their `Source: <provider> [<ID>] asof <iso>` footnotes. Pure qualitative-judgement bullets ("the cohort is rate-sensitive") may skip the citation — we don't want to push the LLM toward fabricating fake IDs to satisfy a blanket rule.
+- **Worked-example demonstration** — the BUY worked example in the same prompt now shows three thesis bullets each carrying a different family of source-ID token (`[FH-N-…]` for a news-derived guide, `[AV-OV-…]` for an overview-derived margin, `[FH-N-…]` for a buyback announcement). LLMs follow concrete demonstrations more reliably than imperative rules — we learned this on the W2.10 base-rate citation rollout.
+- **Strong language** — uncited thesis bullets are framed as "research malpractice" with a forward reference to a future consistency_gate check + dashboard "uncited" warning chip. The same phrasing the W2.10 scenario-probability rule used; the LLM took it seriously there.
+- **5 source-inspection unit tests** in `tests/test_phase2_thesis_source_ids.py`: rule presence (whitespace-collapsed match because the rule wraps across multiple source lines), each Wave-3 wrapper family represented in the example list, "research malpractice" strong-language guard, qualitative-bullet escape hatch present, worked-example thesis carries ≥3 bracketed source-ID tokens. Existing 6 tests in `test_phase2_required_research_blocks.py` continue to pass — the W3.6 wording does not regress any of W2.7's required-block framing.
+
+Bumps backend 0.27.14 → 0.27.15.
+
 ## [0.27.14] - 2026-05-09
 
 ### Added — Wave 3 (W3.5 insider-tool Source-wrap)
