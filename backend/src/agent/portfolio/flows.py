@@ -670,7 +670,7 @@ async def _persist_decisions(
         research_symbols_to_translate: list[tuple[str, str]] = []
         for d in decisions:
             sym = d["symbol"].upper()
-            reasoning_text = (d.get("reasoning_summary") or "")[:500]
+            reasoning_text = (d.get("reasoning_summary") or "")[:1000]
             if reasoning_text.strip():
                 reasoning_to_translate[sym] = reasoning_text
             research_text = research_by_symbol.get(sym, "")
@@ -724,8 +724,10 @@ async def _persist_decisions(
         try:
             q = await data_manager.get_quote(sym)
             decision_price = float(getattr(q, "price", 0) or 0)
+            decision_session = getattr(q, "session", None)
         except Exception:
             decision_price = 0.0
+            decision_session = None
         if decision_price <= 0:
             logger.warning("decision_skipped_no_price", symbol=sym)
             continue
@@ -769,7 +771,8 @@ async def _persist_decisions(
                 "entry_price": entry_price,
                 "stop_loss": stop_loss,
                 "take_profit": take_profit,
-                "reasoning": d.get("reasoning_summary", "")[:500],
+                "decision_session": decision_session,
+                "reasoning": d.get("reasoning_summary", "")[:1000],
                 "reasoning_zh": reasoning_zh_by_symbol.get(sym),
                 "full_research": research_by_symbol.get(sym, ""),
                 "full_research_zh": research_zh_by_symbol.get(sym),

@@ -85,7 +85,7 @@ def main() -> None:
     with sync_playwright() as p:
         b = p.chromium.launch(headless=True)
         try:
-            ctx = b.new_context(locale="zh-CN", viewport={"width": 1600, "height": 1100})
+            ctx = b.new_context(locale="zh-CN", viewport={"width": 1920, "height": 1200}, device_scale_factor=2)
             page = ctx.new_page()
 
             def handle(route: Route) -> None:
@@ -106,6 +106,32 @@ def main() -> None:
                     page.wait_for_timeout(400)
                 except Exception:
                     pass
+
+            # Scroll the first ResearchPanel into view so the screenshot
+            # actually captures the rendered structured-research output
+            # (the dashboard is long; default screenshot starts at top).
+            try:
+                page.locator("[data-testid=research-panel]").first.scroll_into_view_if_needed(timeout=2000)
+                page.wait_for_timeout(300)
+            except Exception:
+                pass
+
+            # Hide sticky/fixed chrome (header, sidebar, footer watermark) so
+            # the panel screenshot isn't obscured. Then bounding-box crop
+            # both panels at full resolution.
+            page.add_style_tag(content="""
+                [data-testid=research-panel] {
+                  background: white !important;
+                  position: fixed !important;
+                  left: 20px !important;
+                  top: 20px !important;
+                  width: 1100px !important;
+                  max-width: 1100px !important;
+                  z-index: 99999 !important;
+                  box-shadow: 0 0 0 2px #2563eb !important;
+                }
+            """)
+            page.wait_for_timeout(200)
 
             ok = True
             counts = {
@@ -166,6 +192,34 @@ def main() -> None:
                 print("PASS W2-E4 derivation chips")
 
             page.screenshot(path=str(SCREEN_DIR / "research_panel.png"), full_page=True)
+
+            # Also dump a tight crop of just the Decision Tracker / panels
+            # area for high-DPI proof shots.
+            try:
+                panels = page.locator("[data-testid=research-panel]")
+                n = panels.count()
+                names = ["research_panel_full.png", "research_panel_badprob.png"]
+                for idx in range(min(n, 2)):
+                    page.evaluate(
+                        """(target) => {
+                            document.querySelectorAll('[data-testid=research-panel]').forEach((el, i) => {
+                                el.style.display = (i === target) ? '' : 'none';
+                            });
+                        }""",
+                        idx,
+                    )
+                    page.wait_for_timeout(200)
+                    panel = panels.nth(idx)
+                    box = panel.bounding_box()
+                    print(f"  {names[idx]} bbox: {box}")
+                    if box:
+                        page.screenshot(
+                            path=str(SCREEN_DIR / names[idx]),
+                            clip={"x": box["x"], "y": box["y"], "width": box["width"], "height": box["height"]},
+                        )
+                        print(f"  shot {names[idx]}")
+            except Exception as e:
+                print(f"crop screenshot skipped: {e}")
             print(f"\nVERDICT: {'PASS' if ok else 'FAIL'}")
             sys.exit(0 if ok else 1)
         finally:

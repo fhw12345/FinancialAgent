@@ -53,10 +53,7 @@ async def get_holdings(
     # last_price_update timestamps that the "Last updated" UI watches.
     if holdings:
         await asyncio.gather(
-            *(
-                _enrich_with_quote(request, h, persist=False)
-                for h in holdings
-            )
+            *(_enrich_with_quote(request, h, persist=False) for h in holdings)
         )
 
     logger.info("Holdings retrieved from MongoDB", count=len(holdings))
@@ -314,13 +311,15 @@ async def refresh_holding_prices(
     async def _refresh_one(h: Holding) -> bool:
         async with sem:
             try:
+                await dm.invalidate_quote(h.symbol)
                 quote = await asyncio.wait_for(
                     dm.get_quote(h.symbol), timeout=QUOTE_TIMEOUT_SECONDS
                 )
                 price = float(getattr(quote, "price", 0) or 0)
                 if price <= 0:
                     return False
-                await holding_repo.update_price(h.holding_id, price)
+                session = getattr(quote, "session", None)
+                await holding_repo.update_price(h.holding_id, price, session=session)
                 return True
             except Exception as e:
                 logger.warning(

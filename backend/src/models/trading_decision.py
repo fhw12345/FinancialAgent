@@ -11,7 +11,7 @@ Architecture:
 """
 
 from enum import StrEnum
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -293,7 +293,7 @@ class TradingDecision(BaseModel):
         ),
     )
     reasoning_summary: str = Field(
-        max_length=500,
+        max_length=1000,
         description=(
             "Brief reasoning. MUST cite the specific tool-derived levels you "
             "used to set entry_price/stop_loss/take_profit (e.g. 'Entry at "
@@ -614,6 +614,10 @@ class SymbolAnalysisResult(BaseModel):
     analysis_id: str  # Unique ID for tracking
     chat_id: str  # Chat where analysis message was stored
     message_id: str | None = None  # Message ID if stored
+
+    consistency_passed: bool | None = None
+    consistency_violations: list[dict[str, Any]] = Field(default_factory=list)
+    degraded_fields: list[str] = Field(default_factory=list)
 
 
 class PortfolioDecisionList(BaseModel):

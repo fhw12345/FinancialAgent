@@ -43,22 +43,29 @@ def _extended_hours_price(
     hist: "pd.DataFrame | None",
     session: str,
     fallback: float,
+    previous_close: float | None = None,
 ) -> float:
     """Pick a price that reflects extended-hours trading when applicable.
 
     During pre/post sessions ``yfinance.fast_info.last_price`` lags (it only
     updates during the regular session), so we substitute the close of the
-    latest non-zero-volume 1-minute prepost bar. Returns ``fallback`` for
+    latest prepost 1-minute bar. Yahoo often reports pre-market volume late,
+    so we accept the last bar whose Close differs from previous_close when
+    no non-zero-volume bar is available. Returns ``fallback`` for
     regular/closed sessions or when the history is unusable.
     """
     if session not in ("pre", "post"):
         return fallback
     if hist is None or len(hist) == 0 or "Close" not in hist or "Volume" not in hist:
         return fallback
-    filtered = hist[hist["Volume"] > 0]
-    if len(filtered) == 0:
-        return fallback
-    return float(filtered["Close"].iloc[-1])
+    nz = hist[hist["Volume"] > 0]
+    if len(nz) > 0:
+        return float(nz["Close"].iloc[-1])
+    if previous_close and previous_close > 0:
+        moved = hist[(hist["Close"] - previous_close).abs() > 1e-6]
+        if len(moved) > 0:
+            return float(moved["Close"].iloc[-1])
+    return fallback
 
 
 class DataManager:
@@ -610,7 +617,29 @@ class DataManager:
         has no key, no daily cap, and returns the same fields. AV is kept as
         a last-resort fallback for the rare case Yahoo's public endpoint is
         down.
+
+        Pre/post sessions: Finnhub /quote returns RTH-only (last regular
+        trade), so during extended hours we try yfinance first — its 1-min
+        prepost bars carry the actual extended-hours price. Finnhub remains
+        the fallback if yfinance fails.
         """
+        from src.services.market_data import get_market_session
+
+        current_session = get_market_session(pd.Timestamp.now(tz="UTC"))
+        prefer_yfinance = current_session in ("pre", "post")
+
+        if prefer_yfinance:
+            try:
+                return await self._fetch_quote_yfinance(symbol)
+            except Exception as e:
+                logger.warning(
+                    "quote_provider_failed",
+                    provider="yfinance",
+                    symbol=symbol,
+                    session=current_session,
+                    error=str(e),
+                )
+
         # Provider 1: Finnhub (primary if configured — fastest + most accurate)
         if self._finnhub_service is not None:
             try:
@@ -624,15 +653,16 @@ class DataManager:
                 )
 
         # Provider 2: yfinance (free, no daily cap)
-        try:
-            return await self._fetch_quote_yfinance(symbol)
-        except Exception as e:
-            logger.warning(
-                "quote_provider_failed",
-                provider="yfinance",
-                symbol=symbol,
-                error=str(e),
-            )
+        if not prefer_yfinance:
+            try:
+                return await self._fetch_quote_yfinance(symbol)
+            except Exception as e:
+                logger.warning(
+                    "quote_provider_failed",
+                    provider="yfinance",
+                    symbol=symbol,
+                    error=str(e),
+                )
 
         # Provider 3: Alpha Vantage (last resort — burns the 25/day quota)
         try:
@@ -695,7 +725,7 @@ class DataManager:
                 # Keep default "regular" — session is best-effort metadata.
                 hist = None
 
-            price = _extended_hours_price(hist, session, fallback_price)
+            price = _extended_hours_price(hist, session, fallback_price, prev)
             change = price - prev
             change_pct = (change / prev * 100) if prev else 0.0
 
@@ -1407,6 +1437,11 @@ class DataManager:
             pattern = CacheKeys.pattern(CacheKeys.MARKET)
 
         return await self._cache.invalidate_pattern(pattern)
+
+    async def invalidate_quote(self, symbol: str) -> bool:
+        """Invalidate the cached quote for ``symbol`` so the next get_quote
+        forces a fresh fetch from the provider chain."""
+        return await self._cache.delete(CacheKeys.quote(symbol.upper()))
 
     async def invalidate_insights(self, category_id: str | None = None) -> int:
         """

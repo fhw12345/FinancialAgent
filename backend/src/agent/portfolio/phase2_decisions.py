@@ -114,13 +114,19 @@ class Phase2DecisionsMixin:
         positions = portfolio_context.get("positions", [])
 
         # Format positions table
-        positions_table = "| Symbol | Shares | Market Value | P/L % |\n"
-        positions_table += "|--------|--------|--------------|-------|\n"
+        positions_table = "| Symbol | Shares | Market Value | P/L % | Session |\n"
+        positions_table += "|--------|--------|--------------|-------|---------|\n"
         if positions:
             for pos in positions:
-                positions_table += f"| {pos['symbol']} | {pos['quantity']} | ${pos['market_value']:,.2f} | {pos['unrealized_pl_percent']:.2f}% |\n"
+                sess = pos.get("session") or "—"
+                sess_label = f"**{sess}** ⚠️" if sess in ("pre", "post") else sess
+                positions_table += (
+                    f"| {pos['symbol']} | {pos['quantity']} | "
+                    f"${pos['market_value']:,.2f} | "
+                    f"{pos['unrealized_pl_percent']:.2f}% | {sess_label} |\n"
+                )
         else:
-            positions_table += "| (No positions) | - | - | - |\n"
+            positions_table += "| (No positions) | - | - | - | - |\n"
 
         # Format all symbol analyses
         analyses_section = ""
@@ -151,11 +157,18 @@ class Phase2DecisionsMixin:
             }[current_session]
             session_stanza = (
                 "\n## 市场时段提示 (Market Session Notice)\n\n"
-                f"当前为 **{_label}** 时段。下列研究中的最新价可能来自延长交易时段的成交，"
-                "流动性较薄，价差较大，开盘后可能出现明显跳空。请在做决策时考虑：\n"
-                "- 是否将下单时间延后至开盘后再确认价格行为；\n"
-                "- 若仍要使用延长时段价格作为锚点，是否需要将 entry 略微调整以预留跳空空间；\n"
-                "- stop_loss / take_profit 的风险距离是否仍然合理。\n"
+                f"当前为 **{_label}** 时段。下列研究中的最新价、上方持仓表中"
+                "标注 `pre` / `post` 的 Market Value、以及 quote 工具返回的 "
+                "`Session: pre/post` 价格，都来自延长交易时段的成交。延长时段 "
+                "**流动性 < 5% RTH**，价差较大，单笔大单即可显著推动价格，"
+                "开盘后可能出现明显跳空。请在做决策时考虑：\n"
+                "- entry_price 应预留跳空缓冲，不要紧贴当前盘前/盘后价；\n"
+                "- stop_loss 不要锚定在盘前/盘后形成的低点上 —— 那些低点流动性"
+                "极差，开盘后大概率被穿；优先用 RTH 收盘 / RTH 形成的支撑位；\n"
+                "- take_profit 同理：盘前/盘后高点不是真实阻力，请用 RTH 价格"
+                "结构上的阻力 / fib 1.272 / 1.618;\n"
+                "- 若行情极端 (盘前 ±5% 以上)，倾向 HOLD 等开盘后再确认，"
+                "而不是在延长时段下决策。\n"
                 "本提示不强制阻断决策，仅作为风险提醒。\n"
             )
 

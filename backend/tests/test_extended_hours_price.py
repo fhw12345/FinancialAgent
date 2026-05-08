@@ -83,6 +83,8 @@ class TestExtendedHoursPriceHelper:
         assert _extended_hours_price(_make_hist([]), "pre", fallback=287.51) == 287.51
 
     def test_all_zero_volume_hist_returns_fallback(self) -> None:
+        # No previous_close hint provided → cannot tell if zero-vol bars are
+        # real prepost prints or stale; safest to fall back.
         hist = _make_hist(
             [
                 ("2026-05-07 08:00", 287.10, 0),
@@ -90,6 +92,34 @@ class TestExtendedHoursPriceHelper:
             ]
         )
         assert _extended_hours_price(hist, "pre", fallback=287.51) == 287.51
+
+    def test_zero_volume_priced_bars_used_when_prev_close_differs(self) -> None:
+        # yfinance frequently reports pre-market with Volume=0 but real Close
+        # prices. When previous_close is provided and the bars deviate from
+        # it, treat them as legitimate prepost prints.
+        hist = _make_hist(
+            [
+                ("2026-05-07 08:00", 287.10, 0),
+                ("2026-05-07 09:28", 289.35, 0),
+            ]
+        )
+        assert _extended_hours_price(
+            hist, "pre", fallback=287.51, previous_close=287.94
+        ) == pytest.approx(289.35)
+
+    def test_zero_volume_bars_at_prev_close_return_fallback(self) -> None:
+        # Stale zero-volume bars whose Close equals previous_close carry no
+        # signal; fall back to the regular-session price.
+        hist = _make_hist(
+            [
+                ("2026-05-07 08:00", 287.94, 0),
+                ("2026-05-07 09:28", 287.94, 0),
+            ]
+        )
+        assert (
+            _extended_hours_price(hist, "pre", fallback=287.51, previous_close=287.94)
+            == 287.51
+        )
 
     def test_filters_zero_volume_trailing_bar(self) -> None:
         hist = _make_hist(

@@ -43,10 +43,12 @@ async def build_context_from_mongo(
     for h in holdings:
         # Ensure we have a current price (cron may not have run yet)
         price = h.current_price or 0.0
+        session = h.last_session
         if price <= 0 and data_manager is not None:
             try:
                 q = await data_manager.get_quote(h.symbol)
                 price = float(getattr(q, "price", 0) or 0)
+                session = getattr(q, "session", None) or session
             except Exception as e:
                 logger.debug("context_quote_failed", symbol=h.symbol, error=str(e))
 
@@ -64,6 +66,7 @@ async def build_context_from_mongo(
                 "quantity": int(h.quantity),
                 "market_value": float(market_value),
                 "unrealized_pl_percent": float(upl_pct),
+                "session": session,
             }
         )
         total_market_value += market_value

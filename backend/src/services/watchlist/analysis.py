@@ -117,6 +117,18 @@ class AnalysisEngine:
                 return await self._fallback_fibonacci_analysis(symbol, analysis_id)
 
             # Use LLM agent for comprehensive analysis
+            # Invalidate cached quote so the agent's quote tools see a fresh
+            # price (otherwise a 5-min stale RTH quote can leak into the
+            # research during pre/post-market).
+            if self.data_manager is not None:
+                try:
+                    await self.data_manager.invalidate_quote(symbol)
+                except Exception as e:
+                    logger.debug(
+                        "watchlist_invalidate_quote_failed",
+                        symbol=symbol,
+                        error=str(e),
+                    )
             prompt = self._build_analysis_prompt(symbol)
 
             # Get symbol-specific chat ID (one chat per symbol) - BEFORE invoking agent

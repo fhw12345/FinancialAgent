@@ -82,6 +82,7 @@ def create_quote_tools(
                     "change_percent": str(qd.change_percent),
                     "latest_trading_day": qd.latest_trading_day,
                     "previous_close": qd.previous_close,
+                    "session": getattr(qd, "session", None),
                 }
             else:
                 quote_data = await service.get_quote(symbol)
@@ -122,12 +123,20 @@ def create_quote_tools(
                 change_pct = f"{change_pct}%"
 
             # Build compact output for LLM
+            session = quote_data.get("session")
             output_lines = [
                 f"{symbol}: ${price:.2f} ({change_pct}) | "
                 f"O:${open_price:.2f} H:${high:.2f} L:${low:.2f} | Vol:{volume:,}",
                 f"Prev Close: ${prev_close:.2f} | Date: {latest_day}",
                 f"Market: {current_status} | Local: {local_time} | {utc_time}",
             ]
+            if session in ("pre", "post"):
+                output_lines.append(
+                    f"Session: {session} (extended-hours; volume thin, "
+                    "price is indicative)"
+                )
+            elif session and session != "regular":
+                output_lines.append(f"Session: {session}")
 
             # Add notes if present (e.g., lunch breaks for Asian markets)
             if notes:
