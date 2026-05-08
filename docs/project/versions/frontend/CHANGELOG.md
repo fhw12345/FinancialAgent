@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.7] - 2026-05-08
+
+### Fixed
+
+- **Watchlist Analyze Now no longer flips to "failed" purely on timeout (bug #2)** — the per-row `Analyze Now` button hits the legacy synchronous `/api/watchlist/analyze?symbol=X` route, which can take 40-60s for a real LLM run. The shared `apiClient` defaults to a 30s timeout, so axios was aborting and the UI was rendering the row as failed even though the backend was still running and would return a 202 success ~20s later. Bumped this single call's timeout to 120s via a per-request `{ timeout: 120000 }` override in `services/watchlistApi.ts::triggerWatchlistAnalysis` (both the per-symbol and batch no-symbol path). Default client config left untouched — only this call is wide. The button keeps its existing "Analyzing…" spinner for the full window. This is a stop-gap until W2.2 rewires the route to a background task; the override should go away then.
+
 ## [0.22.6] - 2026-05-08
 
 ### Fixed

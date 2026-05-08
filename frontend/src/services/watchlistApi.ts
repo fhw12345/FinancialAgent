@@ -35,6 +35,13 @@ export async function removeFromWatchlist(watchlistId: string): Promise<void> {
  * Manually trigger analysis for the watchlist symbols.
  * - No symbol → batch analyze all watchlist (skips already-held).
  * - With symbol → run analysis for just that one (used by per-row buttons).
+ *
+ * Bug #2: the legacy synchronous backend route can take 40-60s for a real
+ * LLM run, which exceeds the default apiClient 30s timeout and makes the
+ * UI mark the row as failed even though the backend is still succeeding.
+ * Override to 120s on this single call only — the default client config
+ * stays untouched. Once W2.2 rewires this to a background task this
+ * override should go away.
  */
 export async function triggerWatchlistAnalysis(symbol?: string): Promise<{
   status: string;
@@ -48,6 +55,6 @@ export async function triggerWatchlistAnalysis(symbol?: string): Promise<{
     status: string;
     message?: string;
     symbol?: string;
-  }>(url);
+  }>(url, undefined, { timeout: 120000 });
   return response.data;
 }

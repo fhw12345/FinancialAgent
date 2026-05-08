@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.7] - 2026-05-08
+
+### Fixed
+
+- **Watchlist analyze catch-all now logs full traceback (bug #2)** — `services/watchlist/analysis.py::AnalysisEngine.analyze_symbol`'s outer `except Exception` previously logged only `error=str(e)` and `error_type=type(e).__name__`, so production failures were undebuggable: no file:line, no exception chain. Switched to structlog with `exc_info=True` while keeping the existing structured fields (symbol, error, error_type) and `return False` behaviour, so the failure signal callers see is unchanged but the log line now carries the full Python traceback. No other behaviour change in this PR — the catch-all body and `return False` are preserved; the legacy synchronous route still answers in-line and the 5-min cron path is untouched. The async rewire is W2.2's job.
+
 ## [0.27.6] - 2026-05-08
 
 ### Fixed

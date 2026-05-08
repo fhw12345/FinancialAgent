@@ -194,11 +194,17 @@ class AnalysisEngine:
             return True
 
         except Exception as e:
+            # Bug #2: previously logged only str(e) + type name, which made
+            # production failures undebuggable (no file:line, no chain).
+            # structlog renders exc_info=True as a full traceback while
+            # keeping our structured fields intact. Behaviour unchanged —
+            # still returns False so callers see the same failure signal.
             logger.error(
                 "Agent analysis failed",
                 symbol=symbol,
                 error=str(e),
                 error_type=type(e).__name__,
+                exc_info=True,
             )
             return False
 
