@@ -35,6 +35,10 @@ from ...database.repositories.portfolio_order_repository import (
 from ...models.portfolio import PortfolioOrder
 from ...models.portfolio_analysis import PortfolioSettings
 from ...services.persistence_translator import translate_for_persistence
+from .consistency_gate import (
+    run_consistency_gate,
+    violations_as_corrective_hint,
+)
 from .context_builder import build_context_from_mongo
 from .universe_filter import filter_by_risk
 
@@ -50,6 +54,51 @@ class _SymbolStub:
     """Duck-typed object satisfying Phase 1's `.symbol` access on positions/watchlist."""
 
     symbol: str
+
+
+async def _apply_consistency_gate(phase1_results: list[Any]) -> None:
+    """Run W1.10 gate per symbol; tag results with degraded fields and
+    consistency violations. Mutates phase1_results in place via attribute
+    set (read by Phase2 prompt assembly downstream).
+
+    Fail-open: any per-symbol exception is logged and swallowed; the
+    gate is meant to nudge quality, not block the pipeline.
+    """
+    if not phase1_results:
+        return
+
+    async def _one(r: Any) -> None:
+        try:
+            verdict, degraded = await run_consistency_gate(
+                r.symbol, r.analysis_text or ""
+            )
+            # Annotate the result so flows / Phase2 can surface it.
+            r.consistency_passed = bool(verdict.passed)
+            r.consistency_violations = [
+                {"field": v.field, "quote": v.quote} for v in verdict.violations
+            ]
+            r.degraded_fields = degraded
+            if not verdict.passed:
+                hint = violations_as_corrective_hint(verdict.violations)
+                logger.warning(
+                    "consistency_gate_violations",
+                    symbol=r.symbol,
+                    violation_count=len(verdict.violations),
+                    degraded_count=len(degraded),
+                    corrective_hint_preview=hint[:200],
+                )
+            elif degraded:
+                logger.info(
+                    "consistency_gate_clean_with_degraded",
+                    symbol=r.symbol,
+                    degraded_count=len(degraded),
+                )
+        except Exception as e:  # pragma: no cover — defensive
+            logger.warning(
+                "consistency_gate_apply_failed", symbol=r.symbol, error=str(e)
+            )
+
+    await asyncio.gather(*(_one(r) for r in phase1_results))
 
 
 def _resolve_data_manager(app: Any) -> Any:
@@ -135,6 +184,10 @@ async def run_analyze_holdings(app: Any, settings: PortfolioSettings) -> dict[st
             "message": "Phase 1 produced no research (all symbols failed).",
             "result_count": 0,
         }
+    # W1.10 consistency gate: catch thesis bullets that cite degraded
+    # data (e.g. "cheapest of seven" while P/E was unavailable). Tags
+    # phase1_results in-place; Phase2 still runs but sees the warning.
+    await _apply_consistency_gate(phase1_results)
     _, trading_decisions = await pa._run_phase2_decisions(
         all_analysis_results=phase1_results,
         portfolio_context=context,
@@ -253,6 +306,7 @@ async def run_today_picks(
             "message": "Phase 1 produced no research (all candidates failed).",
             "result_count": 0,
         }
+    await _apply_consistency_gate(phase1_results)
     _, trading_decisions = await pa._run_phase2_decisions(
         all_analysis_results=phase1_results,
         portfolio_context=context,
