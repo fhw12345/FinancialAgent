@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.13] - 2026-05-09
+
+### Added — Wave 3 (W3.4 news-tool Source-wrap)
+
+- **W3.4 both news tools emit Source-style footnotes** — `finnhub_news` (DataManager-backed; primary provider in the Finnhub→AV→yfinance chain is finnhub) and `get_news_sentiment` (AlphaVantage-only) each now end their successful return with one line in the W3.2/W3.3 shape: `Source: finnhub [FH-N-AAPL-2026-05-09] asof 2026-05-09T14:30Z` / `Source: alphavantage [AV-N-AAPL-2026-05-09] asof 2026-05-09T14:30Z`. The bracketed token is the citation handle the W3.6 Phase2 prompt will require thesis bullets to reference; field code is `N` for news.
+- **`asof` = newest headline timestamp, NOT `now()`** — news is unique among the W3.x source-wrapped tools because the freshness of a news bucket is meaningfully different from when the tool ran. A 5-day-old news bucket cited tomorrow should still be visibly 5 days stale in its footnote, so each tool computes `asof` from the latest item it actually returned: `finnhub_news` does `max(n.date for n in items)` over the `NewsData` list; `get_news_sentiment` parses AV's `time_published` (`YYYYMMDDTHHMMSS`) across `data["feed"]` and picks the maximum, skipping malformed / empty entries rather than throwing.
+- **No footnote on empty / failed paths** — `finnhub_news` returns "No recent news found" without a footnote when the provider chain returned an empty list, and "Failed to fetch news" without a footnote when `DataManager.get_company_news` raised. `get_news_sentiment` returns "No news sentiment data available" without a footnote when `feed` is empty. This prevents the W1.10 consistency_gate from accepting a thesis citation that points to a "source" we never actually fetched from.
+- **Provider attribution after fallback** — `NewsData.source` is the per-headline publisher ("Reuters", "Bloomberg") not the API provider; the footnote attribution defaults to the tool's primary provider (`finnhub_news → finnhub`, `get_news_sentiment → alphavantage`). Finer post-fallback attribution (e.g., yfinance label when the Finnhub primary in `DataManager._fetch_company_news` falls through to yfinance) is a follow-up — not blocking thesis citation since the footnote ID alone is what the prompt requires.
+- **`_news_source_id(provider, symbol, asof)` helper** lives in `tools/finnhub/news.py` next to its primary user, with the same `{PREFIX}-N-{SYMBOL}-{YYYY-MM-DD}` shape as the W3.3 fundamentals helper. Provider prefixes match W3.3: `finnhub→FH`, `alphavantage→AV`, `yfinance→YF`; unknown providers fall back to upper-cased source name. `_av_news_latest_asof(data)` lives in `tools/alpha_vantage/news.py` and is exported for direct unit testing.
+- **11 unit tests** in `tests/test_news_tool_source_wrap.py` cover the helpers (3 prefix variants, latest-headline pick, malformed-entry skip, empty-feed → None) plus each tool through `tool.ainvoke()` with stubbed `DataManager` / AV service: footnote emission with truthful asof, no footnote when items / feed empty, no footnote on provider failure for `finnhub_news`. Wave-3 source-wrap suite (`test_news_tool_source_wrap` + `test_quote_tool_source_wrap` + `test_fundamentals_source_wrap` + `test_fundamentals_fallback` + `test_source`) is 57/57 green.
+
+Bumps backend 0.27.12 → 0.27.13.
+
 ## [0.27.12] - 2026-05-09
 
 ### Added — Wave 3 (W3.3 fundamentals-tool Source-wrap)

@@ -5,6 +5,7 @@ Provides tools for fetching news articles with sentiment analysis.
 """
 
 from datetime import UTC, datetime
+from typing import Any
 
 import structlog
 from langchain_core.tools import tool
@@ -13,6 +14,28 @@ from src.services.alphavantage_market_data import AlphaVantageMarketDataService
 from src.services.alphavantage_response_formatter import AlphaVantageResponseFormatter
 
 logger = structlog.get_logger()
+
+
+def _av_news_latest_asof(data: dict[str, Any]) -> datetime | None:
+    """Pick the most recent ``time_published`` across the AV news feed.
+
+    AV NEWS_SENTIMENT items carry ``time_published`` in the ugly
+    ``YYYYMMDDTHHMMSS`` format; we tolerate missing / malformed entries
+    by skipping them rather than throwing.
+    """
+    feed = data.get("feed") or []
+    latest: datetime | None = None
+    for item in feed:
+        raw = item.get("time_published")
+        if not isinstance(raw, str) or len(raw) < 8:
+            continue
+        try:
+            dt = datetime.strptime(raw, "%Y%m%dT%H%M%S").replace(tzinfo=UTC)
+        except ValueError:
+            continue
+        if latest is None or dt > latest:
+            latest = dt
+    return latest
 
 
 def create_news_tools(
@@ -68,11 +91,20 @@ def create_news_tools(
             if not data.get("feed"):
                 return f"No news sentiment data available for {symbol}"
 
-            # Use formatter for consistent rich markdown output
-            return formatter.format_news_sentiment(
+            body = formatter.format_news_sentiment(
                 raw_data=data,
                 symbol=symbol,
                 invoked_at=datetime.now(UTC).isoformat(),
+            )
+
+            # W3.4 provenance footnote — asof = newest headline so the
+            # LLM can tell at citation time whether the bucket is fresh.
+            asof = _av_news_latest_asof(data) or datetime.now(UTC)
+            asof_day = asof.strftime("%Y-%m-%d")
+            asof_repr = asof.strftime("%Y-%m-%dT%H:%MZ")
+            sid = f"AV-N-{symbol.upper()}-{asof_day}"
+            return (
+                f"{body}\n\nSource: alphavantage [{sid}] asof {asof_repr}"
             )
 
         except Exception as e:
