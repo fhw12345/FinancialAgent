@@ -9,7 +9,7 @@
  * deps were installed but unused).
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -45,6 +45,7 @@ export function HoldingFormModal({
   submitting,
 }: Props) {
   const isEdit = !!initial;
+  const backdropMouseDownRef = useRef(false);
   const {
     register,
     handleSubmit,
@@ -93,13 +94,24 @@ export function HoldingFormModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
+      onMouseDown={(e) => {
+        backdropMouseDownRef.current = e.target === e.currentTarget;
+      }}
+      onMouseUp={(e) => {
+        if (
+          backdropMouseDownRef.current &&
+          e.target === e.currentTarget
+        ) {
+          onClose();
+        }
+        backdropMouseDownRef.current = false;
+      }}
       role="dialog"
       aria-modal="true"
     >
       <div
         className="w-full max-w-md rounded-lg bg-white shadow-xl"
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
           <h3 className="text-base font-semibold text-gray-900">

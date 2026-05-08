@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.6] - 2026-05-08
+
+### Fixed
+
+- **HoldingFormModal closes when text-selection drag exits the card** — clicking "添加持股" / "Add Holding" opened the modal, but selecting text inside an input by holding mousedown and dragging the cursor outside the white card caused the whole modal to disappear (and any half-typed values were lost). Root cause: backdrop had `onClick={onClose}` and the inner card had `onClick={(e) => e.stopPropagation()}`, but `onClick` fires on `mouseup` against `e.target` — for a drag that ends on the backdrop, `e.target` is the backdrop and `stopPropagation` on the card never sees the event. Switched to a `mousedown` + `mouseup` pair on the backdrop that records whether the press *started* on the backdrop (`backdropMouseDownRef`) and only closes when both events landed there. Verified in headless Chromium (`e2e_holding_modal_drag.py`): drag-out preserves both the open modal and the typed `12345`, while a true backdrop click still closes. Removed two pre-existing `jsx-a11y/click-events-have-key-events` ESLint errors as a side effect.
+
 ## [0.22.5] - 2026-05-08
 
 ### Added — Stock Agent Upgrade Wave 2 visual surface
