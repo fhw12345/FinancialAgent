@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.8] - 2026-05-09
+
+### Added — Wave 3 (W3.7 ResearchPanel footnote rendering)
+
+- **W3.7 thesis bullets render bracketed source-IDs as superscript chips + bottom Sources list** — `ResearchPanel` now parses each thesis bullet for the `[FH-Q-AAPL-2026-05-09]` / `[AV-OV-NVDA-2025-09-30]` / `[YF-CF-MSFT-2025-12-31]` / `[FH-N-AMZN-2026-05-08]` / `[FH-INS-TSLA-2026-05-07]` style tokens that the W3.6 prompt teaches the LLM to emit, replaces each inline token with a numeric `[1]` / `[2]` / `[3]` superscript chip, and renders the unique-id list as a "Sources" block at the bottom of the panel (one numbered line per id with `Provider · field · symbol · asof YYYY-MM-DD` resolved from a small in-component label table for `FH→Finnhub`, `AV→Alpha Vantage`, `YF→yfinance`, `Q→quote`, `OV→company overview`, `CF→cash flow`, `BS→balance sheet`, `EAR→earnings`, `INS→insider`, `N→news`).
+- **`extractFootnotes()` + `parseSourceId()` exported as pure functions** — the regex (`SOURCE_ID_PATTERN`), bullet-segmentation (`extractFootnotes`), and id-parsing (`parseSourceId`) all live next to the component and ship under named exports so the W3.12 e2e doesn't have to rebuild them. Indexing semantics: 1-based, citation-order, deduped (a repeated id across bullets always gets the same superscript number, never a fresh one).
+- **No backend changes; data already lives on `metadata.thesis: string[]`** — the W2.11 persistence path already round-trips thesis bullets through `PortfolioOrder.metadata`, so this commit is purely a render-layer change. Pre-W3.6 thesis bullets without bracketed tokens render as plain text (no chips, no Sources block) — full back-compat with old decisions.
+- **12 vitest unit tests** in `__tests__/ResearchPanel.footnotes.test.ts`: regex matches each W3.x prefix family + ignores look-alike text (`[1]`, `[hello]`, lowercase-symbol, slash-date); `extractFootnotes` covers single-token, multi-token-per-bullet, sequential indexing across bullets, dedup of repeated ids, leading-token bullet (text after the ref), empty thesis array; `parseSourceId` covers each prefix family + dotted symbols (`BRK.B`) + null on malformed shapes. Tests are pure-function — full DOM rendering is covered by the upcoming W3.12 e2e (`e2e_source_footnote.py`).
+
+Bumps frontend 0.22.7 → 0.22.8.
+
 ## [0.22.7] - 2026-05-08
 
 ### Fixed
