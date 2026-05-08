@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.14] - 2026-05-09
+
+### Added — Wave 3 (W3.5 insider-tool Source-wrap)
+
+- **W3.5 `finnhub_insider_trades` emits a Source-style footnote** — the Finnhub-backed insider tool used by the Phase1 ReAct agent now ends its successful return with `Source: finnhub [FH-INS-AAPL-2026-05-09] asof 2026-05-09T00:00Z`, matching the W3.2 / W3.3 / W3.4 shape. Field code is `INS`, same as the AV-side `get_insider_activity` footnote shipped in W3.3 (commit 815f233) — both insider tools now carry citation handles, so the Phase2 prompt's W3.6 source-ID rule will cover insider claims regardless of which tool the agent picked.
+- **Provider attribution defaults to "finnhub"** — the actual chain in `DataManager._fetch_insider_trades` is Finnhub primary → Alpha Vantage premium (often 403s) → yfinance fallback. The footnote labels the *primary* provider; finer post-fallback attribution is a follow-up (same trade-off as W3.4).
+- **`asof` = newest transaction date, NOT `now()`** — same rationale as W3.4 news: the freshness of an insider bucket is meaningfully different from when the tool ran. A 6-week-old "last insider sale" cited tomorrow should still read as 6 weeks stale in its footnote, so the wrapper computes `asof` from the latest row across the returned list. The helper `_insider_latest_asof()` walks each row, looks up the date under any of `transactionDate` / `filingDate` / `Date` / `Start Date` (the same fallback chain the existing line renderer used), parses the string with `_parse_row_date()` (Finnhub `YYYY-MM-DD`, AV ISO with seconds, yfinance `DataFrame.to_dict()` shape), and skips malformed entries — a single bad row never kills the footnote.
+- **No footnote on empty / failed paths** — same back-pressure behaviour as W3.4: if `data_manager.get_insider_trades` returns an empty list, the tool returns "No recent insider transactions" without a footnote; if it raises, the tool returns "Failed to fetch insider trades" without a footnote. The W1.10 consistency_gate would otherwise accept a thesis citation that points to a "source" we never actually fetched from.
+- **`_insider_source_id(provider, symbol, asof)` helper** lives in `tools/finnhub/insider.py` next to its primary user, with the same `{PREFIX}-INS-{SYMBOL}-{YYYY-MM-DD}` shape as the W3.3 `get_insider_activity` footnote. Provider prefixes match across all Wave-3 wraps (`finnhub→FH`, `alphavantage→AV`, `yfinance→YF`).
+- **13 unit tests** in `tests/test_insider_tool_source_wrap.py` — 4 for `_insider_source_id` (each prefix variant + unknown-provider fallback), 2 for `_row_date_str` / `_parse_row_date` (multi-shape date keys + multi-format parsing including the trailing-Z ISO yfinance produces), 3 for `_insider_latest_asof` (newest pick / malformed-row skip / empty-or-all-bad → None), 4 for the tool itself via `tool.ainvoke()` with stubbed `DataManager` (footnote with truthful asof, no footnote when empty, no footnote on provider failure, yfinance-shape rows still parsed correctly). Wave-3 source-wrap suite (`test_insider_tool_source_wrap` + `test_news_tool_source_wrap` + `test_quote_tool_source_wrap` + `test_fundamentals_source_wrap` + `test_fundamentals_fallback` + `test_source`) is 70/70 green.
+
+Bumps backend 0.27.13 → 0.27.14.
+
 ## [0.27.13] - 2026-05-09
 
 ### Added — Wave 3 (W3.4 news-tool Source-wrap)
