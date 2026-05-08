@@ -101,6 +101,28 @@ async def _apply_consistency_gate(phase1_results: list[Any]) -> None:
     await asyncio.gather(*(_one(r) for r in phase1_results))
 
 
+def _build_data_quality_map(
+    phase1_results: list[Any],
+) -> dict[str, dict[str, Any]]:
+    """Translate consistency-gate annotations on phase1 results into a
+    per-symbol metadata payload that gets persisted on PortfolioOrder
+    and surfaced in the UI as a "数据降级" tag (W1.12)."""
+    out: dict[str, dict[str, Any]] = {}
+    for r in phase1_results:
+        degraded = getattr(r, "degraded_fields", None) or []
+        violations = getattr(r, "consistency_violations", None) or []
+        passed = getattr(r, "consistency_passed", None)
+        if not degraded and not violations:
+            continue
+        payload: dict[str, Any] = {"degraded_fields": list(degraded)}
+        if violations:
+            payload["consistency_violations"] = list(violations)
+        if passed is not None:
+            payload["consistency_passed"] = bool(passed)
+        out[r.symbol] = payload
+    return out
+
+
 def _resolve_data_manager(app: Any) -> Any:
     return getattr(getattr(app, "state", None), "data_manager", None)
 
@@ -196,6 +218,7 @@ async def run_analyze_holdings(app: Any, settings: PortfolioSettings) -> dict[st
         flow="holdings",
     )
     decisions = _trading_decisions_to_dicts(trading_decisions)
+    data_quality_by_symbol = _build_data_quality_map(phase1_results)
     written = await _persist_decisions(
         decisions,
         dm,
@@ -203,6 +226,7 @@ async def run_analyze_holdings(app: Any, settings: PortfolioSettings) -> dict[st
         source="holdings",
         run_id=run_id,
         research_by_symbol=research_by_symbol,
+        data_quality_by_symbol=data_quality_by_symbol,
         redis_cache=redis_cache,
     )
     return {
@@ -322,6 +346,7 @@ async def run_today_picks(
     ]
     buys.sort(key=lambda d: d.get("confidence") or 0, reverse=True)
     top5 = buys[:5]
+    data_quality_by_symbol = _build_data_quality_map(phase1_results)
     written = await _persist_decisions(
         top5,
         dm,
@@ -329,6 +354,7 @@ async def run_today_picks(
         source="picks",
         run_id=run_id,
         research_by_symbol=research_by_symbol,
+        data_quality_by_symbol=data_quality_by_symbol,
         redis_cache=app.state.redis,
     )
     msg = (
@@ -471,6 +497,7 @@ async def _persist_decisions(
     source: str,
     run_id: str,
     research_by_symbol: dict[str, str] | None = None,
+    data_quality_by_symbol: dict[str, dict[str, Any]] | None = None,
     redis_cache: Any = None,
 ) -> int:
     """Write each decision as a PortfolioOrder row tagged with source + run_id.
@@ -603,6 +630,11 @@ async def _persist_decisions(
                 "reasoning_zh": reasoning_zh_by_symbol.get(sym),
                 "full_research": research_by_symbol.get(sym, ""),
                 "full_research_zh": research_zh_by_symbol.get(sym),
+                **(
+                    {"data_quality": data_quality_by_symbol.get(sym, {})}
+                    if data_quality_by_symbol and data_quality_by_symbol.get(sym)
+                    else {}
+                ),
             },
         )
         try:

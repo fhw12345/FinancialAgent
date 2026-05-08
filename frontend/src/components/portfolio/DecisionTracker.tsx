@@ -536,6 +536,26 @@ function DecisionRows({
                 ⚠ 几何
               </span>
             )}
+            {Array.isArray(
+              (d.metadata?.data_quality as { degraded_fields?: unknown[] } | undefined)
+                ?.degraded_fields,
+            ) &&
+              ((d.metadata?.data_quality as { degraded_fields: unknown[] }).degraded_fields
+                .length ?? 0) > 0 && (
+                <span
+                  data-testid="data-quality-degraded"
+                  title={
+                    "数据降级：相关字段已无法从主源拿到或已过期\n• " +
+                    (
+                      (d.metadata?.data_quality as { degraded_fields: string[] })
+                        .degraded_fields ?? []
+                    ).join("\n• ")
+                  }
+                  className="inline-flex items-center rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+                >
+                  📉 数据降级
+                </span>
+              )}
           </div>
         </td>
         <td className="py-2 pr-3 text-gray-700">
