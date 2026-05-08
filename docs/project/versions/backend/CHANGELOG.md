@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.16] - 2026-05-09
+
+### Added — Wave 3 (W3.8 SEC EDGAR Form 4 atom feed fetcher)
+
+- **W3.8 `Form4Client` async EDGAR client** — new module `src/agent/tools/sec_edgar/form4.py` adds a self-contained httpx-based fetcher for the Form 4 atom feed (insider transaction filings). Public surface: `Form4Client(user_agent=..., rate_per_sec=..., transport=..., timeout_sec=10.0)` async context manager exposing `lookup_cik(symbol) → str | None` and `fetch_form4_atom(symbol, count=40) → str | None`. Scope is deliberately limited to "fetch the bytes EDGAR served us" — parsing the per-filing 10b5-1 plan markers / transaction codes / post-transaction holdings is W3.9; the schema upgrade is W3.10. Decoupling those layers makes each separately testable and keeps W3.8 small enough to ship in one commit.
+- **D4 default User-Agent `ffffhhhww@qq.com`** — `get_user_agent()` reads `SEC_EDGAR_USER_AGENT` env var, treats empty / whitespace-only values as missing, and falls back to the PRD-D4 default. Per D4 the fetcher MUST NOT fail-fast when the env var is unset — SEC gives a soft "please identify yourself" warning rather than refusing service. Every request sends `User-Agent: ffffhhhww@qq.com` plus `Accept: application/atom+xml,application/xml,text/xml,*/*` so SEC's nginx layer accepts the response.
+- **PRD AC #5 rate limit (under 10 req/s)** — `_TokenBucket` is a tiny in-process token bucket guarded by a single asyncio.Lock so concurrent `await client.fetch(...)` calls cannot consume tokens out of order. Default `rate_per_sec=8.0` (not 10) — the bucket starts full so the first burst can fire `capacity` requests with no delay; using 8 leaves comfortable headroom for the initial burst plus the next-second refill to stay under SEC's documented 10/s ceiling. Tests can override with `rate_per_sec=1000.0` to keep wall-clock fast.
+- **CIK lookup via `https://www.sec.gov/files/company_tickers.json`** — once-per-process cached map of `ticker → 10-digit zero-padded CIK`. Second `lookup_cik()` call does NOT re-hit the endpoint (covered by a dedicated test); SEC's tickers JSON is ~30k rows so re-fetching for every Form 4 query would burn the rate-limit budget on metadata alone. Symbol matching is case-insensitive (`aapl` → `0000320193`). Unknown symbols (private, delisted, foreign) return `None` with a single structured warning log per miss.
+- **`fetch_form4_atom(symbol, count)` returns raw XML text** — URL template is the `cgi-bin/browse-edgar` atom variant (`type=4&output=atom`) with the 10-digit CIK and a count clamped into `[1, 100]` to match SEC's documented limits. The response body is returned verbatim so W3.9's parser can choose its XML library without coupling to httpx response objects. HTTP errors propagate (`raise_for_status()`) — the caller decides retry vs. fall-through to the existing AV/Finnhub insider tools.
+- **17 unit tests** in `tests/test_form4_fetcher.py` cover: env-fallback (default + override + whitespace), CIK lookup (zero-padded 10-digit, case-insensitive, unknown→None, single ticker-map fetch via call counting), User-Agent header (default value, explicit override), atom fetch (raw body, URL templating with padded CIK + count, count clamping at both ends, unknown-symbol short-circuit, no atom call when CIK lookup fails), the URL-template constant (pin path / `type=4` / `output=atom` / placeholders), rate limit (50 sequential calls measured under 10 req/s with the production rate, 20 calls in <1s with rate=1000 to confirm the override works), HTTP error propagation (`HTTPStatusError` on 503). All tests use `httpx.MockTransport` — zero real-SEC traffic; the live integration test is W3.13 (`@pytest.mark.integration`).
+
+Bumps backend 0.27.15 → 0.27.16.
+
 ## [0.27.15] - 2026-05-09
 
 ### Added — Wave 3 (W3.6 Phase2 prompt cites source IDs)
