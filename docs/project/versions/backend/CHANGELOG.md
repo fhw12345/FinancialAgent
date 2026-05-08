@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.21] - 2026-05-09
+
+### Added — Wave 3 (W3.13 SEC EDGAR Form 4 live integration test) + URL-resolver bugfix
+
+- **W3.13 `tests/test_form4_real.py` — 9 live SEC integration tests** marked `@pytest.mark.integration` (skipped by default per pyproject `addopts = ["-m", "not integration"]`). Run explicitly with `pytest -m integration tests/test_form4_real.py`. Coverage: `lookup_cik` resolves NVDA to its pinned CIK `0001045810` + case-insensitive + unknown→None; `fetch_form4_atom` returns valid atom XML; `fetch_recent_transactions` returns ≥3 transactions for NVDA with `plan_type` populated as `10b5-1`/`discretionary` (PRD AC #3 directly asserted against live data); unknown-symbol short-circuits; PRD AC #5 50-sequential ticker-map fetches measured under 10 req/s wall-clock (real run: 50 calls in 72.9 s = 0.69 req/s, well under ceiling); `DEFAULT_RATE_LIMIT_PER_SEC < 10.0` defensive constant pin so no future PR can raise the default past the SEC ceiling without this test failing; concurrent atom fetches don't corrupt each other's response.
+- **Form 4 primary-doc URL resolver bugfix** — `_index_to_form4_xml_url`'s suffix-swap heuristic (`<accession>-index.htm` → `<accession>.xml`) was completely wrong for real SEC: NVDA's 5 most recent Form 4s all 404'd because primary docs are filed under varied filenames (`wk-form4_<id>.xml`, `xslF345X05/<id>.xml`, `primary_doc.xml`, `edgar.xml`, `<reporter>-form4-<id>.xml`) — SEC doesn't enforce the `<accession>.xml` convention used by other form types. The W3.9 mock tests passed because the `MockTransport` handler matched on the SUT-generated URL (self-reinforcing test). New `_resolve_form4_doc_url(client, index_url)` async helper fetches `{folder}/index.json` (SEC's structured directory manifest), picks the first item with `.xml` extension, and returns the full primary-doc URL. Falls back to the deterministic suffix-swap heuristic when the manifest fetch fails OR contains no XML entries — preserves W3.9's 35 fixture-pinned tests with zero changes (their mock handlers 404 on `/index.json` so control flow falls through to the old path). `_filing_folder_from_index_url` is the new helper that strips the trailing `<accession>-index.htm[l]` to recover the folder URL for the manifest lookup.
+- **3 new resolver unit tests** in `tests/test_form4_parser.py` (`_resolve_form4_doc_url`): manifest-found path picks `wk-form4_1774386816.xml` from a 4-item directory listing including non-XML siblings (PRIMARY happy path), manifest-404 falls back to suffix-swap (preserves W3.9 fixture compatibility), no-XML-in-manifest also falls back (pathological-but-possible directory listing). Plus 9 new integration tests above. W3.9 still 18/18 + new resolver 3/3 = 21/21 unit; W3.13 9/9 integration when run with `-m integration`. Wave 3 offline sweep (W3.4 + W3.5 + W3.6 + W3.8 + W3.9 + W3.10 + W3.11 + W3.12) = 124/124 green.
+- **Interview case study** at `docs/interview/2026-05-09-sec-edgar-form4-url-resolution.md` documents the mock-self-reinforcement antipattern (mock handlers matching on SUT-generated URLs are tautological), the importance of integration tests as the lowest-cost contract verification, and the rule against writing "convention" in comments when the protocol has no formal documentation.
+
+Bumps backend 0.27.20 → 0.27.21.
+
 ## [0.27.20] - 2026-05-09
 
 ### Added — Wave 3 (W3.12 e2e source-footnote pipeline — W3-E1..W3-E4)

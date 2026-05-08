@@ -401,11 +401,74 @@ def _index_to_form4_xml_url(index_url: str) -> str | None:
 
     Returns ``None`` if the URL doesn't end in the expected suffix
     so the caller can skip rather than spam EDGAR with malformed URLs.
+
+    NOTE: This is the deterministic fallback. The accurate resolver is
+    ``_resolve_form4_doc_url`` (async, fetches ``{folder}/index.json``
+    to read the actual primary doc filename) — Form 4s are filed under
+    a wide range of XML filenames (``wk-form4_<id>.xml``,
+    ``xslF345X05/<id>.xml``, ``primary_doc.xml``, …) so the suffix-
+    swap heuristic 404s for most real filings. Live code should call
+    the async resolver and only fall back here on JSON-lookup failure.
     """
     for suffix in ("-index.htm", "-index.html"):
         if index_url.endswith(suffix):
             return index_url[: -len(suffix)] + ".xml"
     return None
+
+
+def _filing_folder_from_index_url(index_url: str) -> str | None:
+    """Strip the trailing ``<accession>-index.htm[l]`` from an EDGAR
+    filing-index URL to get the parent folder URL.
+
+    ``https://www.sec.gov/Archives/edgar/data/1045810/000119903926000003/0001199039-26-000003-index.htm``
+    →
+    ``https://www.sec.gov/Archives/edgar/data/1045810/000119903926000003/``
+    """
+    for suffix in ("-index.htm", "-index.html"):
+        cut = index_url.rfind("/")
+        if cut == -1:
+            return None
+        if index_url.endswith(suffix):
+            return index_url[: cut + 1]
+    return None
+
+
+async def _resolve_form4_doc_url(client: Form4Client, index_url: str) -> str | None:
+    """Fetch ``{folder}/index.json`` to discover the actual primary
+    Form 4 XML doc URL.
+
+    Form 4 filings ship under a wide variety of primary-doc filenames
+    (``wk-form4_<id>.xml``, ``primary_doc.xml``, ``xslF345X05/<id>.xml``,
+    ``edgar.xml``, …); SEC does NOT enforce the
+    ``<accession>.xml`` convention used by other form types. The
+    structured directory manifest at ``{folder}/index.json`` lists every
+    document in the filing, so we fetch it and pick the first item with
+    a ``.xml`` extension.
+
+    Falls through to the deterministic suffix-swap fallback when the
+    JSON fetch fails or contains no XML entries — preserves the
+    behavior that fixture tests pin.
+    """
+    folder = _filing_folder_from_index_url(index_url)
+    if folder is None:
+        return _index_to_form4_xml_url(index_url)
+    manifest_url = folder + "index.json"
+    try:
+        resp = await client._request(manifest_url)
+        data = resp.json()
+    except (httpx.HTTPError, ValueError) as e:
+        logger.warning(
+            "sec_edgar_filing_manifest_fetch_failed",
+            url=manifest_url,
+            error=str(e),
+        )
+        return _index_to_form4_xml_url(index_url)
+    items = (data.get("directory") or {}).get("item") or []
+    for entry in items:
+        name = entry.get("name") if isinstance(entry, dict) else None
+        if isinstance(name, str) and name.lower().endswith(".xml"):
+            return folder + name
+    return _index_to_form4_xml_url(index_url)
 
 
 def _xml_text(elem: ET.Element | None) -> str | None:
@@ -573,7 +636,7 @@ async def _fetch_recent_transactions(
     index_urls = parse_atom_filing_index_urls(atom_xml)
     transactions: list[Form4Transaction] = []
     for index_url in index_urls[:count]:
-        detail_url = _index_to_form4_xml_url(index_url)
+        detail_url = await _resolve_form4_doc_url(self, index_url)
         if detail_url is None:
             continue
         try:

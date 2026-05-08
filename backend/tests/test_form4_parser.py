@@ -375,3 +375,87 @@ async def test_fetch_recent_transactions_returns_empty_for_unknown_symbol() -> N
     async with Form4Client(transport=transport, rate_per_sec=1000.0) as client:
         txs = await client.fetch_recent_transactions("UNKNOWN_TICKER_XYZ")
     assert txs == []
+
+
+# ---------------------------------------------------------------------------
+# _resolve_form4_doc_url — primary doc URL discovery via index.json
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_resolve_form4_doc_url_picks_xml_from_manifest() -> None:
+    """Real SEC ships Form 4 primary docs under varied filenames
+    (``wk-form4_<id>.xml``, ``primary_doc.xml``, …); the resolver
+    must pick the first ``.xml`` entry from ``{folder}/index.json``
+    rather than rely on the suffix-swap fallback."""
+    from src.agent.tools.sec_edgar.form4 import _resolve_form4_doc_url
+
+    folder = (
+        "https://www.sec.gov/Archives/edgar/data/1045810/000119903926000003/"
+    )
+    index_url = folder + "0001199039-26-000003-index.htm"
+    manifest = {
+        "directory": {
+            "item": [
+                {"name": "0001199039-26-000003-index-headers.html"},
+                {"name": "0001199039-26-000003-index.html"},
+                {"name": "0001199039-26-000003.txt"},
+                {"name": "wk-form4_1774386816.xml"},
+            ]
+        }
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        if url.endswith("/index.json"):
+            return httpx.Response(200, json=manifest)
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    async with Form4Client(transport=transport, rate_per_sec=1000.0) as client:
+        url = await _resolve_form4_doc_url(client, index_url)
+
+    assert url == folder + "wk-form4_1774386816.xml"
+
+
+@pytest.mark.asyncio
+async def test_resolve_form4_doc_url_falls_back_when_manifest_missing() -> None:
+    """If ``index.json`` 404s the resolver must fall back to the
+    deterministic suffix-swap heuristic so the existing fixture-based
+    fetch tests still work."""
+    from src.agent.tools.sec_edgar.form4 import _resolve_form4_doc_url
+
+    folder = "https://www.sec.gov/Archives/edgar/data/320193/000032019326000123/"
+    index_url = folder + "0000320193-26-000123-index.htm"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    async with Form4Client(transport=transport, rate_per_sec=1000.0) as client:
+        url = await _resolve_form4_doc_url(client, index_url)
+
+    assert url == folder + "0000320193-26-000123.xml"
+
+
+@pytest.mark.asyncio
+async def test_resolve_form4_doc_url_falls_back_when_no_xml_in_manifest() -> None:
+    """A manifest without any ``.xml`` entry should also fall back —
+    pathological but possible when SEC's directory listing returns an
+    empty / partial document list."""
+    from src.agent.tools.sec_edgar.form4 import _resolve_form4_doc_url
+
+    folder = "https://www.sec.gov/Archives/edgar/data/320193/000032019326000123/"
+    index_url = folder + "0000320193-26-000123-index.htm"
+    manifest = {"directory": {"item": [{"name": "readme.txt"}]}}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if str(request.url).endswith("/index.json"):
+            return httpx.Response(200, json=manifest)
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    async with Form4Client(transport=transport, rate_per_sec=1000.0) as client:
+        url = await _resolve_form4_doc_url(client, index_url)
+
+    assert url == folder + "0000320193-26-000123.xml"
