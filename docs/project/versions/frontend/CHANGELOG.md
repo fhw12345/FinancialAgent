@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.5] - 2026-05-08
+
+### Added — Stock Agent Upgrade Wave 2 visual surface
+
+Companion to backend v0.27.5 (PRD `docs/prd/STOCK_AGENT_UPGRADE_PRD.md`).
+
+- **W2.11 ResearchPanel** (`components/portfolio/ResearchPanel.tsx`) — new component rendered inside the DecisionTracker expanded row. Renders five optional structured-research sections when present:
+  - **Thesis** — 3 numbered bullets
+  - **Valuation triangulation** — table of method × value × note
+  - **Price target** — value + horizon_days + method
+  - **Scenarios** — bull/base/bear table; warns visibly when probability sum drifts > 0.02 from 1.0 (`data-testid=scenarios-prob-warning`)
+  - **Catalysts** — list of event + eta_window
+  - **Risks** — 3 ranked numbered list
+  Plus a row of derivation chips (ƒ entry / ƒ stop / ƒ target / ƒ size) with hover tooltip showing `formula(inputs) = value`. Returns null when none of the optional blocks are present (back-compat with pre-W2.7 decisions).
+
+E2E `e2e_research_panel.py`: 3-row mock (FULL / BAD_PROB / BARE) — VERDICT PASS.
+
 ## [0.22.4] - 2026-05-08
 
 ### Added — Stock Agent Upgrade Wave 1 visual surface

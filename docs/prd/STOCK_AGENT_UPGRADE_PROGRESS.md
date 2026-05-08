@@ -54,7 +54,7 @@ Status: **DONE** (15/15 sub-tasks; awaiting user signoff to start Wave 2)
 
 ## Wave 2 — Architectural upgrades
 
-Status: **NOT STARTED** (gated on Wave 1 user signoff)
+Status: **DONE** (11/14 sub-tasks shipped; W2.2 + W2.4 deferred with rationale; awaiting user signoff to start Wave 3)
 
 | ID | Task | Status | Commit |
 |---|---|---|---|
@@ -68,10 +68,10 @@ Status: **NOT STARTED** (gated on Wave 1 user signoff)
 | W2.8 | Pydantic validators (lengths + prob sum) + test | ✅ | 547d3a0 | _validate_research_blocks enforces thesis len==3 / valuation len>=2 / risks len==3. ScenarioSet._probabilities_sum_to_one enforces 1.0±0.02. 21 unit tests in test_decision_research_blocks.py. |
 | W2.9 | Numeric derivation `{value, formula, inputs}` + helpers | ✅ | 6ae0093 | derivations.py: Derivation Pydantic model + atr_stop / vol_adjusted_size helpers. TradingDecision gains optional entry/stop/target/size_derivation fields. Cross-validator: derivation.value must match corresponding price within 0.5%. 16 unit tests. |
 | W2.10 | D3: scenario prob derivation prompt rule | ✅ | 7a8cc24 | Phase2 prompt teaches the new schema fields (thesis/valuation/scenarios/catalysts/risks/derivations). Each scenario probability rationale MUST cite base rate or historical frequency, not vibes. Also moved derivations.py from agent/portfolio/ to models/ to break a circular import; 93/93 regression tests green. |
-| W2.11 | W2-E1 ~ W2-E5 e2e | ✅ | (pending) | 1) backend _trading_decisions_to_dicts pulls all W2.7+ optional fields; _persist_decisions writes them to PortfolioOrder.metadata + intent. 2) frontend ResearchPanel.tsx renders thesis/valuation/scenarios/catalysts/risks + derivation chips when present, returns null when absent (back-compat). 3) e2e PASS on 3-row mock: FULL has all 5 sections + 2 deriv chips, BAD_PROB has scenarios + warning, BARE has no panel. |
-| W2.12 | Integration `test_risk_calculator_real.py` | ⏳ | - |
-| W2.13 | Cleanup test data | ⏳ | - |
-| W2.14 | Bump + CHANGELOG + commit | ⏳ | - |
+| W2.11 | W2-E1 ~ W2-E5 e2e | ✅ | 599a878 | 1) backend _trading_decisions_to_dicts pulls all W2.7+ optional fields; _persist_decisions writes them to PortfolioOrder.metadata + intent. 2) frontend ResearchPanel.tsx renders thesis/valuation/scenarios/catalysts/risks + derivation chips when present, returns null when absent (back-compat). 3) e2e PASS on 3-row mock: FULL has all 5 sections + 2 deriv chips, BAD_PROB has scenarios + warning, BARE has no panel. |
+| W2.12 | Integration `test_risk_calculator_real.py` | ✅ | (final) | 4-position fixture (AAPL/NVDA/AVGO/CRWV mirrors 2026-05-07 portfolio) with mocked yfinance fetchers. Covers full async path including correlation matrix + portfolio σ + render_risk_block_for_prompt. 2 tests pass. |
+| W2.13 | Cleanup test data | ✅ | (final) | 0 untracked files; mongo has 0 TST* fixtures (e2e mocks via page.route). |
+| W2.14 | Bump + CHANGELOG + commit | ✅ | (final) | backend 0.27.4 → 0.27.5; frontend 0.22.4 → 0.22.5; both CHANGELOGs updated with full Wave-2 detail. |
 
 ---
 

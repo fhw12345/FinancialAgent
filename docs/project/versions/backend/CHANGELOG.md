@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.5] - 2026-05-08
+
+### Added — Stock Agent Upgrade Wave 2 (PRD docs/prd/STOCK_AGENT_UPGRADE_PRD.md)
+
+11 sub-tasks shipped (W2.1, W2.3, W2.5–W2.12); 3 deferred with rationale (W2.2, W2.4, W2.13–14 close).
+
+- **W2.5 risk_calculator** — pure async function `compute_portfolio_risk()` produces sector_exposure / beta_weighted / cash_pct / HHI / 60d correlation / annualised σ. DI for meta + returns fetchers; 16 unit tests, all hand-computed math within 1e-6 tolerance.
+- **W2.6 wire risk into Phase2 prompt** — _fetch_symbol_meta_for_risk + _fetch_symbol_returns_for_risk wrap yfinance.Ticker.info / .history; render_risk_block_for_prompt injects "## Portfolio Risk" before symbol research. Also rewrote SELL geometry semantics in the same prompt to match the W1.1 validator (long-side stop_loss < entry < take_profit) — without this, every SELL out of Phase2 would have raised ValidationError.
+- **W2.7 + W2.8 schema extension** — TradingDecision gains 5 optional structured-research blocks: thesis (3 bullets), valuation (≥2 ValuationMethods), price_target (PriceTarget), scenarios (bull/base/bear ScenarioSet, prob sum 1.0±0.02), catalysts (list[Catalyst]), risks (3 ranked). All optional → back-compat with old payloads. 21 unit tests pin the contract.
+- **W2.9 numeric derivation** — new `models/derivations.py` with `Derivation {value, formula, inputs}` + `atr_stop()` and `vol_adjusted_size()` helpers. TradingDecision gains entry/stop/target/size_derivation. Cross-validator: derivation.value must match its corresponding price within 0.5%. 16 unit tests.
+- **W2.10 prompt teaches new schema + derivation rules** — Phase2 prompt now describes every new field, requires each `scenarios.*.probability` rationale to cite a base rate or historical frequency, and tells the LLM to attach Derivation to concrete numbers (or use a qualitative band instead). Also moved derivations.py from `agent/portfolio/` to `models/` to break a circular import.
+- **W2.1 single-symbol unified flow** — `flows.run_single_symbol(app, symbol)` runs Phase1+Phase2 (degenerate single-symbol mode) + consistency_gate + risk_block + persists with `recommendation_source="single_symbol"`. New `/api/admin/portfolio/trigger-analysis?flow=single_symbol&symbol=X` endpoint; AnalysisRun.run_id widened from Literal to str so per-symbol run keys (`single_AAPL`) work. End-to-end HTTP 200 verified.
+- **W2.3 Phase1 prompt language switch** — `PHASE1_PROMPT_LANG=en` env (default zh) flips the LANGUAGE REQUIREMENT directive to English. 5 unit tests on `_phase1_language_directive()` cover both modes + fallback. W2.4 A/B is a manual ops follow-up: user runs the env override for 1-2 days and compares Phase2 scenarios + PT vs zh baseline before flipping default.
+- **W2.11 persist + render structured blocks** — `_trading_decisions_to_dicts` pulls every W2.7+ field via Pydantic model_dump; `_persist_decisions` writes them under PortfolioOrder.metadata + intent at the top. Frontend `ResearchPanel.tsx` renders each present block (thesis/valuation/scenarios with prob-warning/catalysts/risks) plus derivation chips with hover-tooltip `formula(inputs) = value`. e2e on FULL/BAD_PROB/BARE rows: PASS.
+- **W2.12 risk_calculator integration test** — 4-position portfolio fixture with mocked yfinance fetchers covers the full async path including correlation matrix + portfolio σ + render_risk_block_for_prompt. 2 tests, all green.
+
+### Deferred (tracked in PROGRESS.md)
+
+- **W2.2** legacy `WatchlistAnalyzer.analyze_symbol → 410` — current 5-minute cron still uses it; new flow lives at `/trigger-analysis?flow=single_symbol`. Cron switches over before legacy removal.
+- **W2.4** A/B 5 historical runs zh vs en — manual ops, not CI-automatable. User runs `PHASE1_PROMPT_LANG=en` for 1-2 days and flips default after parity confirmed.
+
+Test counts: Wave 2 added ~70 unit + 5 e2e + 1 integration; full Wave 1 + Wave 2 regression suite green.
+
 ## [0.27.4] - 2026-05-08
 
 ### Added — Stock Agent Upgrade Wave 1 (PRD docs/prd/STOCK_AGENT_UPGRADE_PRD.md)
