@@ -29,11 +29,9 @@ from src.agent.tools.sec_edgar.form4 import (
     DEFAULT_RATE_LIMIT_PER_SEC,
     PLAN_TYPE_10B5_1,
     PLAN_TYPE_DISCRETIONARY,
-    PLAN_TYPE_UNKNOWN,
     Form4Client,
     Form4Transaction,
 )
-
 
 pytestmark = pytest.mark.integration
 

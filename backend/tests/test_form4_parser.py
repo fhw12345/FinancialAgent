@@ -30,14 +30,13 @@ from src.agent.tools.sec_edgar.form4 import (
     PLAN_TYPE_10B5_1,
     PLAN_TYPE_DISCRETIONARY,
     PLAN_TYPE_UNKNOWN,
-    Form4Client,
     TICKER_MAP_URL,
+    Form4Client,
     classify_plan_type,
     extract_plan_adopted_date,
     parse_atom_filing_index_urls,
     parse_form4_detail,
 )
-
 
 # ---------------------------------------------------------------------------
 # classify_plan_type

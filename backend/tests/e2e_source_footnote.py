@@ -24,12 +24,11 @@ canned fixtures so the four PRD e2e ACs can be asserted in CI:
 
 from __future__ import annotations
 
+import inspect
 import re
 from datetime import UTC, date, datetime, timedelta
 
 from src.agent.portfolio.phase1_research import Phase1ResearchMixin
-import inspect
-
 from src.agent.tools.finnhub.insider import (
     _insider_latest_asof,
     _insider_source_id,
@@ -45,7 +44,6 @@ from src.agent.tools.sec_edgar.form4 import (
     PLAN_TYPE_UNKNOWN,
     Form4Transaction,
 )
-
 
 # ---------------------------------------------------------------------------
 # Mirror of the W3.7 frontend regex so we can assert footnote-extract

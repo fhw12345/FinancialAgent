@@ -21,9 +21,10 @@ malformed inputs — a single bad row never kills the enrichment pass.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
-from typing import Any, Iterable
+from typing import Any
 
 from src.agent.tools.sec_edgar.form4 import (
     PLAN_TYPE_10B5_1,
@@ -31,7 +32,6 @@ from src.agent.tools.sec_edgar.form4 import (
     PLAN_TYPE_UNKNOWN,
     Form4Transaction,
 )
-
 
 _DATE_KEYS = ("transactionDate", "filingDate", "Date", "Start Date")
 

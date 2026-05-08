@@ -39,9 +39,10 @@ import os
 import re
 import time
 import xml.etree.ElementTree as ET
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Any, Iterable
+from typing import Any
 
 import httpx
 import structlog

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.22] - 2026-05-09
+
+### Changed — Wave 3 (W3.14 cleanup test data + lint fixes)
+
+- **Lint sweep across all Wave 3 files** — `ruff check --fix` applied to `src/agent/tools/sec_edgar/form4.py`, `src/agent/tools/finnhub/insider_enrich.py`, `tests/test_form4_real.py`, `tests/test_form4_parser.py`, `tests/e2e_source_footnote.py`. Fixes: import-order normalization (alphabetical within groups), `from typing import Iterable` → `from collections.abc import Iterable` (UP035, py3.12+ idiom), removal of unused `PLAN_TYPE_UNKNOWN` import in `test_form4_real.py`. No behavior changes — pure cosmetic + import-source migration. Wave 3 sweep (124 unit tests + 9 integration when run with `-m integration`) stays green after the rewrite. The 148 ruff warnings outside Wave 3 paths are pre-existing project debt (legacy modules with mixed import order); intentionally not addressed in this commit so the diff stays focused on Wave 3 hygiene.
+- **Test artifact audit** — `print()`, `TODO`, `FIXME`, `XXX` scan across all Wave 3 source + test files: zero hits. Hardcoded-secrets scan (`API_KEY`, `TOKEN`, `Bearer`, `sk-`) across Wave 3 source: zero hits. The only "secret-looking" string is `DEFAULT_USER_AGENT = "ffffhhhww@qq.com"` which is the PRD-D4 mandated identifier (SEC requires every fetcher to identify itself; this is intentionally checked-in per project policy as a single-user local tool, not a production multi-tenant service).
+- **No deletions / no fixture drops** — the existing W3.9 mock fixtures intentionally test the `_resolve_form4_doc_url` fallback path (manifest-404 → suffix-swap), so they retain real value rather than being relics of the old direct-swap world. Keeping them documents the fallback's testability.
+
+Bumps backend 0.27.21 → 0.27.22.
+
 ## [0.27.21] - 2026-05-09
 
 ### Added — Wave 3 (W3.13 SEC EDGAR Form 4 live integration test) + URL-resolver bugfix
