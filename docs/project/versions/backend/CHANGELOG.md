@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.9] - 2026-05-08
+
+### Changed
+
+- **W2.2 reroute (closes deferred Wave-2 follow-up + bug #5)** — `POST /api/watchlist/analyze?symbol=X` now invokes the W2.1 unified `flows.run_single_symbol` flow (Phase1 ReAct + Phase2 structured-decision + consistency_gate + risk_calc) and persists a row to `portfolio_orders` with `recommendation_source="single_symbol"`, instead of the legacy `WatchlistAnalyzer.analyze_symbol` path. After persistence the endpoint stamps `watchlist_items.last_analyzed_at` so the WatchlistPanel still advances. The all-symbols batch path (no `symbol` param) keeps the legacy code for now because the dormant 5-minute cron — `WatchlistAnalyzer.start()` exists but is never called from `main.py` — could in theory be reawakened, and the bulk sweep hasn't been ported. The per-row "Analyze Now" button no longer hits the legacy code at all. Side effect: this also kills bug #5 (legacy `analysis.py:259` parsed free-text `DECISION:` lines with `[0]` indexing — IndexError → return False; the new path uses Pydantic-structured output and can't fail that way). Verified via real-LLM e2e on 2026-05-08T16:49Z: clicking "Analyze Now" on the CRWV watchlist row writes a `single_symbol` row tagged with thesis=Y, valuation_n=2, scenarios populated.
+- **e2e harness `e2e_w2_full_flow.py`** updated: step 3 expects a fresh `single_symbol` row in `portfolio_orders`, and the research-block fill counter now reads `r["metadata"][k]` instead of `r[k]` (W2.7+ blocks live under `metadata`, not the top level — earlier fill-rate readouts of all-zeros were a counting bug, not a data-population bug).
+
 ## [0.27.8] - 2026-05-08
 
 ### Fixed

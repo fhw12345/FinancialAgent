@@ -378,15 +378,18 @@ async def trigger_watchlist_analysis(
     """Trigger analysis. Without `symbol`, analyzes the whole watchlist
     (force=True, skips already-held symbols). With `?symbol=BE`, runs the
     analysis for that single symbol regardless of whether it's in the
-    watchlist or held — used by per-row "Analyze" buttons in the UI."""
+    watchlist or held — used by per-row "Analyze" buttons in the UI.
+
+    W2.2 reroute: single-symbol path goes through the W2.1
+    `run_single_symbol` flow (Phase1 ReAct + Phase2 structured decision +
+    consistency_gate + risk_calc), persisting to `portfolio_orders` with
+    `recommendation_source="single_symbol"`. The DecisionTracker UI sees
+    the result alongside holdings/picks decisions. The legacy
+    `WatchlistAnalyzer.analyze_symbol` (free-text DECISION:/POSITION_SIZE:
+    parsing) is no longer reachable from the UI; the all-symbols batch
+    path still uses it for back-compat with the dormant 5-min cron.
+    """
     try:
-        if not hasattr(request.app.state, "watchlist_analyzer"):
-            raise HTTPException(
-                status_code=500, detail="Watchlist analyzer not initialized"
-            )
-
-        analyzer = request.app.state.watchlist_analyzer
-
         if symbol:
             sym_upper = symbol.strip().upper()
             if (
@@ -397,13 +400,72 @@ async def trigger_watchlist_analysis(
                 raise HTTPException(
                     status_code=400, detail=f"Invalid symbol: {symbol!r}"
                 )
-            logger.info("Single-symbol watchlist analysis triggered", symbol=sym_upper)
-            success = await analyzer.analyze_symbol(sym_upper)
+            logger.info(
+                "Single-symbol watchlist analysis triggered (W2.1 flow)",
+                symbol=sym_upper,
+            )
+
+            # Late import to avoid pulling LangGraph at module import time.
+            from ..agent.portfolio.flows import run_single_symbol
+
+            try:
+                result = await run_single_symbol(request.app, sym_upper)
+            except Exception as e:
+                logger.error(
+                    "single_symbol_flow_failed",
+                    symbol=sym_upper,
+                    error=str(e),
+                    error_type=type(e).__name__,
+                    exc_info=True,
+                )
+                return {
+                    "status": "analysis_failed",
+                    "symbol": sym_upper,
+                    "message": f"{type(e).__name__}: {e}",
+                }
+
+            # Stamp watchlist.last_analyzed_at so the WatchlistPanel row
+            # advances. Symbols not in the watchlist (e.g. ad-hoc analyze
+            # of a held but un-watched ticker) silently skip — there's
+            # no row to update and no error worth surfacing.
+            mongo = getattr(request.app.state, "mongodb", None)
+            if mongo is not None:
+                try:
+                    repo = WatchlistRepository(
+                        mongo.get_collection("watchlist_items")
+                    )
+                    items = await repo.get_by_user(limit=200)
+                    match = next(
+                        (it for it in items if it.symbol.upper() == sym_upper),
+                        None,
+                    )
+                    if match is not None:
+                        await repo.update_last_analyzed(match.watchlist_id)
+                except Exception as e:
+                    # Decision is already persisted to portfolio_orders;
+                    # a failed timestamp update is cosmetic only.
+                    logger.warning(
+                        "watchlist_stamp_failed",
+                        symbol=sym_upper,
+                        error=str(e),
+                    )
+
+            persisted = int(result.get("result_count") or 0)
             return {
-                "status": "analysis_completed" if success else "analysis_failed",
+                "status": "analysis_completed" if persisted > 0 else "analysis_failed",
                 "symbol": sym_upper,
+                "result_count": persisted,
+                "run_id": result.get("run_id"),
             }
 
+        # Batch path (no symbol) keeps using the legacy WatchlistAnalyzer
+        # because the 5-min cron + the all-watchlist sweep haven't been
+        # ported yet. UI never hits this branch with the per-row button.
+        if not hasattr(request.app.state, "watchlist_analyzer"):
+            raise HTTPException(
+                status_code=500, detail="Watchlist analyzer not initialized"
+            )
+        analyzer = request.app.state.watchlist_analyzer
         logger.info("Manual watchlist analysis triggered (all symbols)")
         await analyzer.run_analysis_cycle(force=True)
 
@@ -412,11 +474,14 @@ async def trigger_watchlist_analysis(
             "message": "Watchlist analysis has been triggered",
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(
             "Failed to trigger watchlist analysis",
             error=str(e),
             error_type=type(e).__name__,
+            exc_info=True,
         )
         raise HTTPException(
             status_code=500,
