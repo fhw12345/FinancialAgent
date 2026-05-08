@@ -62,7 +62,7 @@ Status: **NOT STARTED** (gated on Wave 1 user signoff)
 | W2.2 | Delete legacy single ReAct entry; 410 | ⏳ | - |
 | W2.3 | Translate Phase1 prompts to English | ⏳ | - |
 | W2.4 | A/B 5 historical runs old vs new prompt | ⏳ | - |
-| W2.5 | `risk_calculator.py` + unit test | ⏳ | - |
+| W2.5 | `risk_calculator.py` + unit test | ✅ | (pending) | Pure async function. Computes sector_exposure / beta_weighted / cash_pct / HHI / 60d corr matrix / portfolio σ. DI for meta + returns fetchers. 16 unit tests cover hand-computed math + missing data fallbacks + renderer. |
 | W2.6 | Wire risk_calculator into Phase2 prompt | ⏳ | - |
 | W2.7 | `PortfolioDecision` schema extension | ⏳ | - |
 | W2.8 | Pydantic validators (lengths + prob sum) + test | ⏳ | - |
