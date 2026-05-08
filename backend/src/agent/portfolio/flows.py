@@ -486,6 +486,19 @@ def _trading_decisions_to_dicts(trading_decisions: list[Any]) -> list[dict[str, 
     """Normalize Phase 2 TradingDecision objects to the dict shape _persist_decisions wants."""
     out = []
     for d in trading_decisions or []:
+        # W2.11: pass through optional structured research blocks +
+        # numeric derivations + intent so _persist_decisions can write
+        # them under metadata.research / metadata.derivations and the
+        # DecisionTracker UI can render them.
+        def _dump(obj: Any) -> Any:
+            if obj is None:
+                return None
+            if hasattr(obj, "model_dump"):
+                return obj.model_dump(mode="json")
+            if isinstance(obj, list):
+                return [_dump(x) for x in obj]
+            return obj
+
         out.append(
             {
                 "symbol": d.symbol,
@@ -500,6 +513,23 @@ def _trading_decisions_to_dicts(trading_decisions: list[Any]) -> list[dict[str, 
                 "stop_loss": getattr(d, "stop_loss", None),
                 "take_profit": getattr(d, "take_profit", None),
                 "reasoning_summary": d.reasoning_summary,
+                "intent": (
+                    d.intent.value
+                    if getattr(d, "intent", None) and hasattr(d.intent, "value")
+                    else None
+                ),
+                # W2.7+ research blocks
+                "thesis": getattr(d, "thesis", None),
+                "valuation": _dump(getattr(d, "valuation", None)),
+                "price_target": _dump(getattr(d, "price_target", None)),
+                "scenarios": _dump(getattr(d, "scenarios", None)),
+                "catalysts": _dump(getattr(d, "catalysts", None)),
+                "risks": getattr(d, "risks", None),
+                # W2.9 derivations
+                "entry_derivation": _dump(getattr(d, "entry_derivation", None)),
+                "stop_derivation": _dump(getattr(d, "stop_derivation", None)),
+                "target_derivation": _dump(getattr(d, "target_derivation", None)),
+                "size_derivation": _dump(getattr(d, "size_derivation", None)),
             }
         )
     return out
@@ -732,6 +762,7 @@ async def _persist_decisions(
             decision_price=decision_price,
             decision_type=decision_type,
             recommendation_source=source,
+            intent=d.get("intent"),
             metadata={
                 "confidence": d.get("confidence"),
                 "position_size_percent": d.get("position_size_percent"),
@@ -742,6 +773,20 @@ async def _persist_decisions(
                 "reasoning_zh": reasoning_zh_by_symbol.get(sym),
                 "full_research": research_by_symbol.get(sym, ""),
                 "full_research_zh": research_zh_by_symbol.get(sym),
+                # W2.11: surface the optional structured research blocks
+                # + numeric derivations into mongo metadata so the
+                # DecisionTracker UI (and W2-E e2e) can render them.
+                # Each is None if the LLM didn't populate the field.
+                "thesis": d.get("thesis"),
+                "valuation": d.get("valuation"),
+                "price_target": d.get("price_target"),
+                "scenarios": d.get("scenarios"),
+                "catalysts": d.get("catalysts"),
+                "risks": d.get("risks"),
+                "entry_derivation": d.get("entry_derivation"),
+                "stop_derivation": d.get("stop_derivation"),
+                "target_derivation": d.get("target_derivation"),
+                "size_derivation": d.get("size_derivation"),
                 **(
                     {"data_quality": data_quality_by_symbol.get(sym, {})}
                     if data_quality_by_symbol and data_quality_by_symbol.get(sym)

@@ -37,6 +37,7 @@ import {
 import { useDecisions, useMarkOrderExecuted, type DecisionRow } from "../../hooks/useDecisions";
 import { usePortfolioSettings } from "./SettingsPanel";
 import { IntentBadge } from "./IntentBadge";
+import { ResearchPanel } from "./ResearchPanel";
 import { useHoldings } from "../../hooks/usePortfolio";
 import { formatDate } from "../../utils/timeFormatter";
 
@@ -662,6 +663,7 @@ function DecisionRows({
                   </button>
                 </div>
               )}
+              <ResearchPanel metadata={d.metadata} />
             </div>
           </td>
         </tr>
