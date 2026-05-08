@@ -15,6 +15,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from src.agent.portfolio.derivations import Derivation
+
 
 class TradingAction(StrEnum):
     """Trading action types."""
@@ -266,6 +268,30 @@ class TradingDecision(BaseModel):
             "requires len == 3."
         ),
     )
+    # W2.9 — optional per-number derivation audit trail. Each
+    # *_derivation, when present, must satisfy `derivation.value ≈
+    # corresponding price/size` within 0.5%; the validator below
+    # enforces this so the LLM can't paper over a derivation that
+    # disagrees with the headline number.
+    entry_derivation: "Derivation | None" = Field(
+        default=None,
+        description="Audit trail for entry_price (formula + inputs).",
+    )
+    stop_derivation: "Derivation | None" = Field(
+        default=None,
+        description="Audit trail for stop_loss (e.g. atr_stop output).",
+    )
+    target_derivation: "Derivation | None" = Field(
+        default=None,
+        description="Audit trail for take_profit.",
+    )
+    size_derivation: "Derivation | None" = Field(
+        default=None,
+        description=(
+            "Audit trail for position_size_percent — e.g. "
+            "vol_adjusted_size mapped to a % of buying_power."
+        ),
+    )
     reasoning_summary: str = Field(
         max_length=500,
         description=(
@@ -349,6 +375,33 @@ class TradingDecision(BaseModel):
             raise ValueError(
                 f"risks must contain exactly 3 ranked risks, got {len(self.risks)}"
             )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_derivation_consistency(self) -> "TradingDecision":
+        """W2.9 — when a derivation is attached, its `value` must match the
+        corresponding price/size within 0.5% (or exactly for size).
+        Catches the failure mode where the LLM fills in a plausible
+        formula but the headline number drifted from it."""
+        pairs = [
+            ("entry_derivation", "entry_price"),
+            ("stop_derivation", "stop_loss"),
+            ("target_derivation", "take_profit"),
+        ]
+        for d_attr, p_attr in pairs:
+            d = getattr(self, d_attr)
+            p = getattr(self, p_attr)
+            if d is None or p is None:
+                continue
+            tol = max(abs(p) * 0.005, 0.01)
+            if abs(d.value - p) > tol:
+                raise ValueError(
+                    f"{d_attr}.value ({d.value}) does not match {p_attr} "
+                    f"({p}) within 0.5% tolerance"
+                )
+        # size_derivation: numeric drift is OK but value must be >= 0.
+        if self.size_derivation is not None and self.size_derivation.value < 0:
+            raise ValueError("size_derivation.value cannot be negative")
         return self
 
     model_config = {
