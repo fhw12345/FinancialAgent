@@ -54,12 +54,12 @@ Status: **DONE** (15/15 sub-tasks; awaiting user signoff to start Wave 2)
 
 ## Wave 2 — Architectural upgrades
 
-Status: **DONE** (11/14 sub-tasks shipped; W2.2 + W2.4 deferred with rationale; awaiting user signoff to start Wave 3)
+Status: **DONE** (12/14 sub-tasks shipped + W2.2 closed in 0.27.9; W2.4 deferred with rationale; Wave 3 in progress)
 
 | ID | Task | Status | Commit |
 |---|---|---|---|
 | W2.1 | Single-symbol flow `run_single_symbol` | ✅ | bb2bab5 | flows.py adds run_single_symbol that runs Phase1 (one ReAct) + Phase2 (degenerate single-symbol) + consistency_gate + risk_calc + persists to portfolio_orders source=single_symbol. portfolio_admin.py /trigger-analysis accepts flow=single_symbol&symbol=X. AnalysisRun.run_id widened to plain str (was Literal). E2E HTTP 200 with run_id=single_AAPL. |
-| W2.2 | Delete legacy single ReAct entry; 410 | ⚠️ deferred | - | Old WatchlistAnalyzer.analyze_symbol path still drives 5-minute cron. Removing it now breaks background analysis. New flow lives at /api/admin/portfolio/trigger-analysis?flow=single_symbol; users / cron switch over before W2.2 deletion. **Tracked as Wave-2 follow-up.** |
+| W2.2 | Reroute /api/watchlist/analyze to W2.1 `run_single_symbol` | ✅ | c8a6553 | UI per-row "Analyze Now" now persists structured PortfolioOrder via run_single_symbol with recommendation_source=single_symbol; DecisionTracker picks it up. Stamps watchlist_items.last_analyzed_at on success. Legacy `WatchlistAnalyzer.analyze_symbol` (free-text DECISION:/POSITION_SIZE: parse — bug #5) is no longer reachable from UI; all-symbols batch path retained for cron compat. 6 unit tests + e2e on CRWV PASS. |
 | W2.3 | Translate Phase1 prompts to English | ✅ | ab64c2e | _phase1_language_directive() reads PHASE1_PROMPT_LANG env (defaults zh for back-compat). Setting `=en` switches output to English. 5 unit tests verify both modes + fallback. |
 | W2.4 | A/B 5 historical runs old vs new prompt | ⚠️ deferred | - | Defaults to zh in production; user runs `PHASE1_PROMPT_LANG=en docker compose up -d` for 1-2 days, compares Phase2 scenarios + PT vs the zh baseline, then flips default. **Tracked as Wave-2 follow-up; not blocking.** |
 | W2.5 | `risk_calculator.py` + unit test | ✅ | 66b6601 | Pure async function. Computes sector_exposure / beta_weighted / cash_pct / HHI / 60d corr matrix / portfolio σ. DI for meta + returns fetchers. 16 unit tests cover hand-computed math + missing data fallbacks + renderer. |
@@ -77,7 +77,7 @@ Status: **DONE** (11/14 sub-tasks shipped; W2.2 + W2.4 deferred with rationale; 
 
 ## Wave 3 — Provenance + insider depth
 
-Status: **NOT STARTED** (gated on Wave 2 user signoff)
+Status: **IN PROGRESS** (W2.2 closure shipped in 0.27.9; starting W3.1)
 
 | ID | Task | Status | Commit |
 |---|---|---|---|
