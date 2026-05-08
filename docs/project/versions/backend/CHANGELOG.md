@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.17] - 2026-05-09
+
+### Added — Wave 3 (W3.9 Form 4 detail parser)
+
+- **W3.9 `parse_form4_detail(xml)` extracts per-transaction records** — new in `src/agent/tools/sec_edgar/form4.py`, alongside the W3.8 fetcher. Walks SEC's ownership-document XML (`nonDerivativeTable/nonDerivativeTransaction`), pulls transaction date / code / shares / price-per-share / post-transaction holdings, resolves each transaction's `footnoteId` references against the document-level `footnotes/footnote` text, and feeds the joined footnote string to `classify_plan_type` + `extract_plan_adopted_date`. Returns a flat `list[Form4Transaction]`.
+- **`Form4Transaction` dataclass** — frozen-shape minimal record per insider transaction: `transaction_date`, `transaction_code` (`P`/`S`/`A`/`F`/etc.), `shares`, `share_price`, `shares_owned_after`, `plan_type`, `plan_adopted_date`, `reporter_name`, `issuer_symbol` (uppercased), `footnote_ids` tuple. The W3.10 schema upgrade builds on this exact shape — `pct_of_holdings_after` is `shares / shares_owned_after`, `last_12mo` is a per-symbol aggregate over a list of these.
+- **`classify_plan_type(footnote_text)` returns `10b5-1` / `discretionary` / `unknown`** — order matters: explicit "not pursuant to a Rule 10b5-1" wins over the generic 10b5-1 match because real filings spell out BOTH phrases. Tolerates the unhyphenated "Rule 10b5 1" variant. Bare "discretionary" keyword alone is enough since some issuers include it without naming 10b5-1. Empty / None → `unknown`.
+- **`extract_plan_adopted_date(footnote_text)` parses three real-world date shapes** — ISO `2024-03-01`, prose `March 1, 2024` (with or without comma), US numeric `3/1/2024`. Returns `None` for anything else. The W3.11 prompt rule needs the adoption date so the LLM can compare it to the transaction date to confirm 10b5-1 elapsed time before the sale.
+- **`parse_atom_filing_index_urls(xml)` extracts the per-entry filing index hrefs** — namespace-tolerant: walks the atom feed's `entry` nodes, picks the first `link/@href` per entry, ignores entries without a link. Returns the index-page URLs verbatim (`...-index.htm`); converting those to the primary `*.xml` document URL is `_index_to_form4_xml_url` (suffix swap, used internally).
+- **`Form4Client.fetch_recent_transactions(symbol, count)` end-to-end pipeline** — composes `lookup_cik` → `fetch_form4_atom` → `parse_atom_filing_index_urls` → per-filing detail XML → `parse_form4_detail` into a single async call returning `list[Form4Transaction]`. Each network hop respects the same rate-limit bucket so the W3.8 PRD-AC-#5 ceiling holds across the chained calls. Individual filing 404s / HTTP errors are logged and skipped — one malformed Form 4 cannot poison the whole batch.
+- **18 new unit tests** in `tests/test_form4_parser.py`: `classify_plan_type` (canonical 10b5-1 / unhyphenated / explicit discretionary override / bare discretionary keyword / empty-string→unknown), `extract_plan_adopted_date` (ISO / prose with-and-without comma / US numeric / no-date→None), `parse_atom_filing_index_urls` (3-entry feed where one entry lacks a link, garbage→[]), `parse_form4_detail` against three realistic ownership-document fixtures (10b5-1 with two transactions sharing a footnote — issuer symbol uppercased, reporter name, plan_adopted_date 2024-03-01 / explicit-discretionary single-tx with no plan date / no-footnotes single-tx → plan_type=unknown / garbage→[] / wrong-shape XML→[]), `fetch_recent_transactions` (chains atom → 2 detail URLs → 3 total transactions across both files, one detail 404 doesn't blow up the batch, unknown symbol short-circuits to []). PRD AC #3 ("plan_type populated for ≥3 of N") is asserted directly. Backend-tests sweep including W3.8 + W3.9 = 35/35.
+
+Bumps backend 0.27.16 → 0.27.17.
+
 ## [0.27.16] - 2026-05-09
 
 ### Added — Wave 3 (W3.8 SEC EDGAR Form 4 atom feed fetcher)
