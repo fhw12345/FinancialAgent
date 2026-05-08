@@ -15,7 +15,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from src.agent.portfolio.derivations import Derivation
+from src.models.derivations import Derivation
 
 
 class TradingAction(StrEnum):

@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from src.agent.portfolio.derivations import (
+from src.models.derivations import (
     Derivation,
     atr_stop,
     vol_adjusted_size,

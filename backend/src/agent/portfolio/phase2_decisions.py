@@ -282,6 +282,49 @@ unspecified is not acceptable.
 4. **Position Sizing**: Use confidence level to scale position sizes
 5. **Holdings vs Watchlist**: Holdings can be SELL/HOLD; Watchlist can be BUY/HOLD
 
+## Optional Structured Research Blocks (W2.7+)
+
+For higher-quality output, populate the following optional fields on
+each decision when you have the evidence to support them. They are
+**optional** for back-compat with older runs, but the dashboard now
+renders them and the consistency gate prefers decisions that provide
+them. Validators will reject malformed blocks (length / probability
+sum / derivation drift), so only populate a block when you can
+satisfy its rules.
+
+- `thesis`: exactly 3 short bullet points (the elevator-pitch view).
+- `valuation`: at least 2 ValuationMethod objects (each with method
+  one of pe_vs_peer / ev_revenue / ev_ebitda / peg / dcf_quick /
+  p_book / ps_ratio / other, plus value and note). Triangulating
+  with a single method is rejected.
+- `price_target`: value + horizon_days (7 to 730) + optional method.
+- `scenarios`: bull / base / bear. Each ScenarioCase carries
+  price_target, probability, rationale. The three probabilities
+  MUST sum to 1.0 (within ±0.02). **Each `rationale` MUST cite a
+  base rate or historical frequency** — e.g. "post-Q earnings drift
+  +5% in 60% of last 8 quarters" or "SPY -20% drawdowns happen
+  ~once every 4 years" — not just vibes. A scenario set with
+  vibes-only rationales is research malpractice.
+- `catalysts`: list of event + eta_window for the next ~4 weeks.
+- `risks`: exactly 3, ranked by importance.
+
+## Numeric Derivation (W2.9)
+
+When you set a concrete entry_price / stop_loss / take_profit,
+attach a Derivation (value + formula + inputs) to the matching
+`*_derivation` field. The validator requires derivation.value to
+match the headline number within 0.5%, so the formula and the price
+cannot drift apart silently. Two reusable helpers exist (call them
+in your reasoning rather than re-deriving from scratch):
+
+  - `atr_stop(price, atr, n=1.5, side='long')` for protective stops
+  - `vol_adjusted_size(account_risk_dollar, stop_distance_dollar,
+     price?)` for position sizing
+
+If you cannot give a derivation, prefer a qualitative band ("trim
+~30-50% on a rebound to $278-$282") in `reasoning_summary` over a
+spuriously precise number.
+
 Provide a decision for EVERY symbol in the research above.
 Include short reasoning (1-2 sentences) for each decision.
 """
