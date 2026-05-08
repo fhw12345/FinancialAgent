@@ -613,6 +613,16 @@ async def _phase2_for_symbols(
         return []
 
     out: list[dict[str, Any]] = []
+
+    def _dump(obj: Any) -> Any:
+        if obj is None:
+            return None
+        if hasattr(obj, "model_dump"):
+            return obj.model_dump(mode="json")
+        if isinstance(obj, list):
+            return [_dump(x) for x in obj]
+        return obj
+
     for d in getattr(result, "decisions", []) or []:
         out.append(
             {
@@ -625,6 +635,24 @@ async def _phase2_for_symbols(
                 "position_size_percent": d.position_size_percent,
                 "confidence": d.confidence,
                 "reasoning_summary": d.reasoning_summary,
+                "entry_price": getattr(d, "entry_price", None),
+                "stop_loss": getattr(d, "stop_loss", None),
+                "take_profit": getattr(d, "take_profit", None),
+                "intent": (
+                    d.intent.value
+                    if getattr(d, "intent", None) and hasattr(d.intent, "value")
+                    else None
+                ),
+                "thesis": getattr(d, "thesis", None),
+                "valuation": _dump(getattr(d, "valuation", None)),
+                "price_target": _dump(getattr(d, "price_target", None)),
+                "scenarios": _dump(getattr(d, "scenarios", None)),
+                "catalysts": _dump(getattr(d, "catalysts", None)),
+                "risks": getattr(d, "risks", None),
+                "entry_derivation": _dump(getattr(d, "entry_derivation", None)),
+                "stop_derivation": _dump(getattr(d, "stop_derivation", None)),
+                "target_derivation": _dump(getattr(d, "target_derivation", None)),
+                "size_derivation": _dump(getattr(d, "size_derivation", None)),
             }
         )
     if top_n:

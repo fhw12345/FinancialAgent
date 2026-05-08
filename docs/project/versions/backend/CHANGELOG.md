@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.8] - 2026-05-08
+
+### Fixed
+
+- **W2 structured research blocks now actually populate (bug #1)** — Wave-2 schema (thesis / valuation / scenarios / catalysts / risks / derivations) had been defined, validated, surfaced into mongo, rendered by `ResearchPanel.tsx`, and locked down by 21 unit tests in `test_decision_research_blocks.py`, but **76/76 production decisions had every field = null**. Two layered bugs:
+  1. `phase2_decisions.py` framed the blocks as **"optional for back-compat with older runs"** and warned that validators would reject malformed payloads. The combination strongly disincentivized the LLM from populating them — emitting `null` was always safe, populating risked rejection. Rewrote that section: blocks are now REQUIRED for BUY/SELL, RECOMMENDED for HOLD, with a worked example showing all six blocks populated for a BUY decision so the LLM has a concrete schema target. Added explicit escape hatch ("downgrade to HOLD if Phase 1 lacks the inputs") so the LLM can't claim "optional fields" as a get-out-of-jail card.
+  2. `flows.py:_phase2_for_symbols` (the dashboard-button two-flow path used by holdings + picks) built its persistence dict from only 5 fields (symbol/decision/position_size_percent/confidence/reasoning_summary). Even if the LLM populated thesis/valuation/scenarios/catalysts/risks/derivations/intent/entry/stop/take, this fallback dropped them all on the floor before `_persist_decisions` could write them. Closed the leak by mirroring the full set of fields that the Phase 1→2 path's `_trading_decisions_to_dicts` already passes through.
+
+  Verified end-to-end with a real LLM holdings run on 2026-05-08T16:22Z: 6 holdings analyzed → 2 SELL decisions (MU, CRWV) both ship `thesis_n=3`, `valuation_n=2`, `scenarios={bull,base,bear}` with `prob_sum=1.0`, `catalysts_n=2`, `risks_n=3`, `entry_derivation` + `stop_derivation` populated. The 4 HOLDs leave the blocks empty, which is the prompt's allowed behavior for HOLD.
+- **Phase2 prompt f-string regression guard** — embedding a JSON worked-example inside the `f"""..."""` decision_prompt template surfaced an obvious-in-hindsight class of bug: every `{` and `}` in the example needed to be doubled to `{{` `}}` or Python's f-string formatter raised `ValueError: Invalid format specifier ...` at request time, killing the whole flow. First holdings run after the prompt rewrite caught it. Doubled all braces in the worked example and added `test_prompt_actually_builds_without_format_error` to `test_phase2_required_research_blocks.py` — it builds the real prompt against an `AsyncMock`-wrapped LLM stub and only succeeds if the f-string evaluation doesn't raise. Two regressions impossible to ship together going forward: (1) prompt source must say `REQUIRED for BUY/SELL` and not `optional for back-compat`, (2) prompt must f-string-build without raising.
+
 ## [0.27.7] - 2026-05-08
 
 ### Fixed

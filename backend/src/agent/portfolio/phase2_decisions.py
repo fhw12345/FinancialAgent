@@ -295,15 +295,22 @@ unspecified is not acceptable.
 4. **Position Sizing**: Use confidence level to scale position sizes
 5. **Holdings vs Watchlist**: Holdings can be SELL/HOLD; Watchlist can be BUY/HOLD
 
-## Optional Structured Research Blocks (W2.7+)
+## Structured Research Blocks (W2.7+) — REQUIRED for BUY/SELL
 
-For higher-quality output, populate the following optional fields on
-each decision when you have the evidence to support them. They are
-**optional** for back-compat with older runs, but the dashboard now
-renders them and the consistency gate prefers decisions that provide
-them. Validators will reject malformed blocks (length / probability
-sum / derivation drift), so only populate a block when you can
-satisfy its rules.
+Every BUY or SELL decision MUST populate ALL of the blocks below.
+HOLD decisions SHOULD populate them when the evidence exists, but
+may omit any block where the Phase 1 research did not produce the
+underlying data. Emitting null on a BUY/SELL block because "it's
+safer" is NOT acceptable — the dashboard renders these blocks, the
+consistency gate scores decisions on them, and a BUY/SELL with
+null research blocks is treated as a degraded decision.
+
+If your Phase 1 research genuinely lacks the inputs for a block,
+downgrade the decision to HOLD and explain in `reasoning_summary`
+what data is missing — do NOT issue a BUY/SELL with empty research.
+
+Validators will reject malformed blocks (length / probability sum /
+derivation drift). Satisfy the rules:
 
 - `thesis`: exactly 3 short bullet points (the elevator-pitch view).
 - `valuation`: at least 2 ValuationMethod objects (each with method
@@ -320,6 +327,47 @@ satisfy its rules.
   vibes-only rationales is research malpractice.
 - `catalysts`: list of event + eta_window for the next ~4 weeks.
 - `risks`: exactly 3, ranked by importance.
+
+### Worked example (BUY decision)
+
+```
+{{
+  "symbol": "EXMP",
+  "decision": "BUY",
+  "position_size_percent": 8,
+  "entry_price": 142.50,
+  "stop_loss": 134.00,
+  "take_profit": 168.00,
+  "confidence": 7,
+  "reasoning_summary": "Buy limit $142.50 at 0.5 fib retracement support. Stop $134 below swing low (atr_stop with atr=4.2, n=2). Target $168 at 1.272 fib extension. Thesis cites datacenter capex acceleration; 2 valuation methods triangulate fair value $155-170.",
+  "thesis": [
+    "Q4 datacenter capex guide raised 18% YoY, locking 2026 revenue floor",
+    "Operating margin expansion from 28% to 33% as new fab depreciation rolls off",
+    "$8B buyback authorization shrinks float ~5% over next 12 months"
+  ],
+  "valuation": [
+    {{"method": "pe_vs_peer", "value": 24.5, "note": "vs MAG7 median 28.1, 13% discount"}},
+    {{"method": "ev_ebitda", "value": 18.2, "note": "vs sector 21.4, 15% discount"}}
+  ],
+  "price_target": {{"value": 168.0, "horizon_days": 365, "method": "blended"}},
+  "scenarios": {{
+    "bull": {{"price_target": 195, "probability": 0.25, "rationale": "datacenter capex beats by 10%+ — happened in 4 of last 10 cycles"}},
+    "base": {{"price_target": 168, "probability": 0.55, "rationale": "guide-in-line outcomes occurred in ~55% of last 20 quarters across megacap semis"}},
+    "bear": {{"price_target": 128, "probability": 0.20, "rationale": "macro risk-off drawdown — SPY -15%+ pullbacks happen roughly once every 18 months historically"}}
+  }},
+  "catalysts": [
+    {{"event": "Q1 earnings", "eta_window": "2026-05-22"}},
+    {{"event": "GTC keynote", "eta_window": "2026-06-10"}}
+  ],
+  "risks": [
+    "China export-control escalation could remove ~12% of revenue",
+    "Hyperscaler capex digestion if AI ROI questioned by Q2 earnings",
+    "Multiple compression if 10Y yield breaks above 5%"
+  ],
+  "entry_derivation": {{"value": 142.50, "formula": "0.5 fib retracement of swing $120→$165", "inputs": {{"swing_low": 120, "swing_high": 165}}}},
+  "stop_derivation": {{"value": 134.00, "formula": "price - n*atr", "inputs": {{"price": 142.5, "atr": 4.25, "n": 2.0}}}}
+}}
+```
 
 ## Numeric Derivation (W2.9)
 
