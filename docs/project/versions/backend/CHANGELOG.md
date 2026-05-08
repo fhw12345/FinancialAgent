@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.20] - 2026-05-09
+
+### Added — Wave 3 (W3.12 e2e source-footnote pipeline — W3-E1..W3-E4)
+
+- **W3.12 `tests/e2e_source_footnote.py` ties together the full Wave 3 pipeline** — purely offline (no LLM, no SEC traffic, no live data manager) so the four PRD e2e ACs can be asserted in CI alongside the unit tests. Wires together W3.4 / W3.5 / W3.7 / W3.10 / W3.11 surfaces against canned fixtures (single-10b5-1 sale and 3-tx-discretionary-cluster scenarios) so any regression in source-ID emission, footnote extraction, plan-type enrichment, or prompt-rule wording fails before reaching the LLM call boundary.
+- **W3-E1 — every report number has an extractable Source token** — mirrors the W3.7 frontend regex `/\[([A-Z][A-Z0-9_]*-[A-Z]+-[A-Z0-9.]+-\d{4}-\d{2}-\d{2})\]/g` in Python so the backend test suite can run the same extraction logic that the React `ResearchPanel` runs in the browser. Asserts that the insider tool's emitted `Source: finnhub [FH-INS-AAPL-2026-04-15] asof ...` line round-trips to a single recognized ID, and that a synthetic Phase2 thesis citing 3 different IDs (with one repeat) extracts in citation order with first-appearance dedup.
+- **W3-E2 — footnote IDs decode to provider/field/symbol/asof** — `_parse_source_id` (Python mirror of the JS `parseSourceId`) tested across `Finnhub` / `Alpha Vantage` / `yfinance` provider prefixes, `INS` / `EAR` / `Q` field codes, dotted symbols (`BRK.B`), forward-compat unknown-field fallthrough (`XYZ` returned as-is rather than dropped), and malformed-ID return-`None` guard.
+- **W3-E3 — insider rows enriched with plan_type + pct_of_holdings_after** — pipes fixture rows + Form 4 transactions through `enrich_insider_rows` → `render_enriched_row` and asserts the markdown line carries `plan=10b5-1` for the 10b5-1 case, `plan=discretionary` + `6.0% of holdings after` for the 6%-of-holdings discretionary case, and suppresses the `plan=` segment for `unknown` plan_type. `build_last_12mo_summary` aggregate of the 3-tx cluster renders `3 tx · 3 discretionary · ...`.
+- **W3-E4 — prompt rule blocks bearish framing for single 10b5-1, permits it for 3-tx discretionary cluster > 5%** — single-10b5-1 fixture explicitly fails the cluster≥3 condition AND triggers the PLAN-TYPE OVERRIDE (10b5-1 MUST NOT be cited as discretionary bearish — PRD AC #4). Discretionary cluster fixture is constructed to satisfy ALL THREE conditions: 3 sells inside an 18-day span (≤30d window), at least one tx with `pct_of_holdings_after = 0.06` (> 0.05 threshold), prior 12-month aggregate carrying only 10b5-1 activity (so the cluster IS the first burst of discretionary sells, breaking the pattern). Prompt-source assertions verify the rule wording the LLM reads matches the wording the test exercises.
+- **15 new e2e tests** in `tests/e2e_source_footnote.py` covering the four ACs above. Wave 3 sweep (W3.4 + W3.5 + W3.6 + W3.8 + W3.9 + W3.10 + W3.11 + W3.12) = 121/121 green. The empirical "Claude actually obeys the prompt rule" check is reserved for the W3.13 SEC-live integration test — this offline e2e locks the upstream pipeline so any LLM-side framing miss can be isolated cleanly to the prompt → output translation.
+
+Bumps backend 0.27.19 → 0.27.20.
+
 ## [0.27.19] - 2026-05-09
 
 ### Added — Wave 3 (W3.11 Phase1 prompt discretionary-cluster framing rule)
