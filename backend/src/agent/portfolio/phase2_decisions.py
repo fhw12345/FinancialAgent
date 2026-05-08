@@ -8,6 +8,12 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 
+from src.agent.portfolio.risk_calculator import (
+    compute_portfolio_risk,
+    render_risk_block_for_prompt,
+)
+from src.core.utils.date_utils import utcnow
+
 from ...models.chat import ChatCreate
 from ...models.message import MessageCreate, MessageMetadata
 from ...models.trading_decision import SymbolAnalysisResult
@@ -15,13 +21,61 @@ from ...models.trading_decision import SymbolAnalysisResult
 if TYPE_CHECKING:
     from ...models.trading_decision import PortfolioDecisionList
 
-from src.core.utils.date_utils import utcnow
 
 logger = structlog.get_logger()
 
 
 class Phase2DecisionsMixin:
     """Mixin providing Phase 2 decision-making capabilities."""
+
+    async def _fetch_symbol_meta_for_risk(self, symbol: str) -> dict[str, Any]:
+        """W2.6 yfinance-backed sector + beta lookup. Best-effort: any
+        exception or sparse `info` dict yields {} so risk_calculator can
+        flag the symbol for assumed-beta / Unknown sector. Runs sync
+        yfinance in a thread to keep the async loop free."""
+        import asyncio
+
+        def _sync() -> dict[str, Any]:
+            try:
+                import yfinance as yf
+
+                info = yf.Ticker(symbol).info or {}
+            except Exception as e:
+                logger.warning("risk_meta_yf_fetch_failed", symbol=symbol, error=str(e))
+                return {}
+            if not info or len(info) <= 3:
+                return {}
+            return {
+                "sector": info.get("sector"),
+                "beta": info.get("beta"),
+            }
+
+        return await asyncio.to_thread(_sync)
+
+    async def _fetch_symbol_returns_for_risk(self, symbol: str) -> list[float]:
+        """W2.6 60d daily-return series via yfinance.Ticker.history. Used
+        by risk_calculator for the correlation matrix and portfolio σ."""
+        import asyncio
+
+        def _sync() -> list[float]:
+            try:
+                import yfinance as yf
+
+                hist = yf.Ticker(symbol).history(period="3mo", interval="1d")
+            except Exception as e:
+                logger.warning(
+                    "risk_returns_yf_fetch_failed", symbol=symbol, error=str(e)
+                )
+                return []
+            if hist is None or hist.empty or "Close" not in hist:
+                return []
+            closes = hist["Close"].dropna()
+            if len(closes) < 2:
+                return []
+            returns = closes.pct_change().dropna().tolist()
+            return [float(r) for r in returns][-60:]
+
+        return await asyncio.to_thread(_sync)
 
     async def _make_portfolio_decisions(
         self,
@@ -78,7 +132,8 @@ class Phase2DecisionsMixin:
             analyses_section += "---\n"
 
         # 当前美股交易时段 — 非 regular 时给 LLM 加风险提示，不阻断决策
-        from datetime import UTC, datetime as _dt
+        from datetime import UTC
+        from datetime import datetime as _dt
 
         import pandas as _pd
 
@@ -104,6 +159,37 @@ class Phase2DecisionsMixin:
                 "本提示不强制阻断决策，仅作为风险提醒。\n"
             )
 
+        # W2.6: deterministic portfolio risk block (sector / beta /
+        # cash% / HHI / 60d corr / σ). Render as a hard-numbers
+        # constraint block injected before the symbol research, so the
+        # LLM reasons against the math instead of estimating it.
+        # Best-effort: any total failure produces an empty block; the
+        # rest of the prompt still works.
+        try:
+            # Adapt context['positions'] (dict) to the duck-typed
+            # interface risk_calculator wants. Use a lightweight wrapper
+            # rather than a full Holding rehydrate to keep this cheap.
+            class _PosAdapter:
+                def __init__(self, p: dict[str, Any]):
+                    self.symbol = p["symbol"]
+                    self.quantity = int(p.get("quantity") or 0)
+                    self.market_value = float(p.get("market_value") or 0.0)
+                    self.current_price = (
+                        self.market_value / self.quantity if self.quantity > 0 else 0.0
+                    )
+
+            adapted = [_PosAdapter(p) for p in positions] if positions else []
+            risk = await compute_portfolio_risk(
+                holdings=adapted,
+                cash=float(cash or 0.0),
+                fetch_meta=self._fetch_symbol_meta_for_risk,
+                fetch_returns=self._fetch_symbol_returns_for_risk,
+            )
+            risk_block = render_risk_block_for_prompt(risk)
+        except Exception as e:
+            logger.warning("phase2_risk_block_failed", error=str(e))
+            risk_block = ""
+
         # Build the holistic decision prompt
         decision_prompt = f"""# Portfolio Trading Decisions
 
@@ -119,6 +205,7 @@ considering the overall portfolio optimization, diversification, and risk manage
 
 **Current Holdings:**
 {positions_table}
+{risk_block}
 {session_stanza}
 ## Symbol Research Results
 {analyses_section}
@@ -154,29 +241,33 @@ a tool output.
   - SELL: a price near current market at a resistance / fib level / prior
     swing high
 - **stop_loss**: where you'd cut the trade if it goes against you
-  - BUY: BELOW entry_price, just under the next major support / swing low
-  - SELL: ABOVE entry_price, just above the nearest resistance / swing high
+  - LONG-SIDE intents (BUY = open_long, SELL = close_long the
+    common case): stop_loss MUST be BELOW entry_price. For BUY, this
+    is the protective stop under the next major support / swing low.
+    For SELL closing a long, this is the "if it dumps further, get
+    out at any price" floor — NOT a cancel-above price.
+  - SHORT-SIDE intents (open_short, close_short — rare; only when
+    you actually intend a short trade): stop_loss MUST be ABOVE
+    entry_price.
 - **take_profit**: where you'd close the trade in profit
-  - BUY: ABOVE entry_price, at a fib extension (1.272, 1.618) or prior high
-  - SELL: BELOW entry_price, at a fib retracement (0.382, 0.236) or
-    next-down support
+  - LONG-SIDE: ABOVE entry_price (fib extension 1.272/1.618 or prior
+    high). For SELL closing a long, this is the runner target if
+    the sell order doesn't fill and the trend keeps extending.
+  - SHORT-SIDE: BELOW entry_price.
 
-**Important — SELL semantics when closing an existing long position:**
-When the SELL is to exit a holding the user already owns (the common case
-in this portfolio flow, NOT opening a short), the three prices mean:
-  - `entry_price` = the limit price to PLACE THE SELL ORDER AT (e.g. $645)
-  - `stop_loss` = if price moves AGAINST your sell thesis (i.e. UP past
-    this level), the trend hasn't reversed yet → CANCEL the sell order,
-    don't dump at a worse price. NOT a literal "buy back at a loss" stop.
-  - `take_profit` = if your sell order doesn't fill and price falls all
-    the way down to this level, this is the LAST-RESORT exit price; you
-    should have already sold by now, but at minimum sell here.
-In your `reasoning_summary` for a SELL, you MUST explicitly state which
-of these two interpretations applies (closing a long vs. opening a
-short). Example for closing a long: "Sell limit $645 at resistance
-$651.74. Cancel-above $655 if breakout confirms uptrend continuation.
-Last-resort exit at $576 fib 0.382 support if the sell limit doesn't
-fill."
+**SELL geometry hard rule (W1.1 validator will reject violations):**
+A SELL with `intent` defaulting to `close_long` REQUIRES
+`stop_loss < entry_price < take_profit`. If you mean a *real short
+trade* (rare in this portfolio flow), set `intent: "open_short"`
+explicitly and use `stop_loss > entry_price > take_profit`. The
+reverse layout for a close_long will fail Pydantic validation and
+the entire batch will be rejected.
+
+In your `reasoning_summary` for a SELL, you MUST explicitly state
+which intent applies (closing a long vs. opening a short). Example
+for closing a long: "Sell limit $645 at resistance $651.74 (entry).
+Stop $605 if support breaks (last-resort floor). Target $710 fib
+1.618 if rally extends and limit doesn't fill."
 
 The `reasoning_summary` MUST cite the specific tool-derived levels you
 used for ALL THREE prices (entry/stop/take), not just two. A reasoning

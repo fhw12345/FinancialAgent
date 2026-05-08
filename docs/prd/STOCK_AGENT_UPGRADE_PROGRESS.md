@@ -62,8 +62,8 @@ Status: **NOT STARTED** (gated on Wave 1 user signoff)
 | W2.2 | Delete legacy single ReAct entry; 410 | ⏳ | - |
 | W2.3 | Translate Phase1 prompts to English | ⏳ | - |
 | W2.4 | A/B 5 historical runs old vs new prompt | ⏳ | - |
-| W2.5 | `risk_calculator.py` + unit test | ✅ | (pending) | Pure async function. Computes sector_exposure / beta_weighted / cash_pct / HHI / 60d corr matrix / portfolio σ. DI for meta + returns fetchers. 16 unit tests cover hand-computed math + missing data fallbacks + renderer. |
-| W2.6 | Wire risk_calculator into Phase2 prompt | ⏳ | - |
+| W2.5 | `risk_calculator.py` + unit test | ✅ | 66b6601 | Pure async function. Computes sector_exposure / beta_weighted / cash_pct / HHI / 60d corr matrix / portfolio σ. DI for meta + returns fetchers. 16 unit tests cover hand-computed math + missing data fallbacks + renderer. |
+| W2.6 | Wire risk_calculator into Phase2 prompt | ✅ | (pending) | _fetch_symbol_meta_for_risk + _fetch_symbol_returns_for_risk wrap yfinance.info / .history. compute_portfolio_risk runs before LLM call; render_risk_block_for_prompt injected as ## Portfolio Risk section in decision_prompt. Fail-soft: empty block on any error. **Also fixed**: rewrote SELL geometry semantics in prompt to match W1.1 validator (long-side stop_loss < entry < take_profit), eliminating the every-SELL-now-rejects breakage. |
 | W2.7 | `PortfolioDecision` schema extension | ⏳ | - |
 | W2.8 | Pydantic validators (lengths + prob sum) + test | ⏳ | - |
 | W2.9 | Numeric derivation `{value, formula, inputs}` + helpers | ⏳ | - |
