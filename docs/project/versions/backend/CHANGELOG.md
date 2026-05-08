@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.10] - 2026-05-09
+
+### Added — Stock Agent Upgrade Wave 3 starts (PRD docs/prd/STOCK_AGENT_UPGRADE_PRD.md)
+
+- **W3.1 `Source` provenance model** — new `models/source.py` adds the envelope every Wave-3 tool wrapper will use to attribute the numbers and strings it returns. `Source = {value: Any, source: str, asof: datetime, url: str | None, id: str | None}`; `value` is intentionally polymorphic so quote prices stay floats, fundamentals tables stay strings, and news / Form-4 records can pack the whole record in. `source` is normalized to lower-snake-case at construction time so the consistency_gate can match it as an exact string ("alphavantage" / "yfinance" / "sec_edgar_form4"). `url` is validated as `http(s)://` only — empty strings normalize to `None` so the frontend can't render a broken footnote. `asof` is the timestamp of the underlying datum (not when the tool ran) so the Wave-1 staleness gate has a useful comparison anchor. `short_label()` is the helper the W3.7 ReportRenderer will pull for footnote chips, falling back to `source` when `id` is unset. 12 unit tests cover float/string/dict values, source-name normalization (whitespace, capitalisation, empty rejection), URL scheme validation, blank-URL → None coercion, optional `id` + label fallback, and `model_dump(mode="json")` round-trip (Phase2's persistence path uses json mode, so `asof` must serialize cleanly without losing tz info — covered by `test_model_dump_json_mode_roundtrips`).
+
 ## [0.27.9] - 2026-05-08
 
 ### Changed
