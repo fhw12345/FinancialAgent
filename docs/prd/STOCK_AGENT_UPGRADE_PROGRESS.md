@@ -26,8 +26,8 @@ Status: **IN PROGRESS**
 | W1.9 | Fibonacci tool `current_price_position` + Phase1 prompt rule + unit test | ✅ | 1b10f4d | range_position field {above_range/in_range/below_range} + STALE FIB SWING warning when breakout >5%. Phase1 prompt: "DO NOT cite stale levels" + parallel rule for unsubstantiated fundamental data. 5 unit tests pass. |
 | W1.10 | Consistency checker LLM gate + unit test | ✅ | d99ba20 | consistency_gate.py: regex detects degraded fields → cheap LLM (haiku) checks if thesis cites them → returns {passed, violations}. Wired into flows.py Phase1→Phase2 boundary for both holdings + picks. Cost: 1 call/symbol when degraded fields present, 0 when clean. Fail-open. 11 unit tests. |
 | W1.11 | Global disclaimer footer + UI watermark + W1-E2 e2e | ✅ | 1f66ac7 | Phase2 message footer adds AI-generated disclaimer + global App.tsx footer renders persistent watermark. e2e PASS on Portfolio + Chat tabs. |
-| W1.12 | `data_quality=degraded` UI tag + W1-E3 e2e | ✅ | (pending) | _build_data_quality_map translates consistency_gate annotations to PortfolioOrder.metadata.data_quality. DecisionTracker renders gray "📉 数据降级" chip with hover tooltip listing degraded fields. e2e PASS: 1 chip on degraded row, 0 on clean row. |
-| W1.13 | Integration test `test_intent_real_phase2.py` | ⏳ | - | FakeListChatModel injects invalid output, real `_persist_decisions` raises |
+| W1.12 | `data_quality=degraded` UI tag + W1-E3 e2e | ✅ | ff420e7 | _build_data_quality_map translates consistency_gate annotations to PortfolioOrder.metadata.data_quality. DecisionTracker renders gray "📉 数据降级" chip with hover tooltip listing degraded fields. e2e PASS: 1 chip on degraded row, 0 on clean row. |
+| W1.13 | Integration test `test_intent_real_phase2.py` | ✅ | (pending) | 4 cases: CRWV invalid raises ValidationError; clean close_long passes; mixed batch rejects all; open_short escape-hatch works. Confirms validator stops bad payload before persistence. |
 | W1.14 | Cleanup test data | ⏳ | - | Remove `*_dump.json` `*_after.json` etc |
 | W1.15 | Bump version + CHANGELOG + final commit | ⏳ | - | backend patch (0.27.4) + frontend patch (0.22.4) |
 
