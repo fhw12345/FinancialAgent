@@ -7,9 +7,24 @@ Each tool tries Alpha Vantage first, then falls back to yfinance via
 `_yf_fallback` (W1.4) when AV returns empty or raises. When both fail,
 returns a deterministic "unavailable" string the W1.10 consistency
 gate can pattern-match to reject downstream valuation claims.
+
+W3.3 adds a one-line provenance footnote at the bottom of every
+successful return:
+
+    Source: alphavantage [AV-OV-AAPL-2025-09-30] asof 2025-09-30T00:00Z
+
+The bracketed token is the citation handle the W3.6 Phase2 prompt
+will require thesis bullets to reference, and the W3.7 frontend
+ReportRenderer will resolve into a footnote chip. Format:
+
+    {PREFIX}-{FIELD}-{SYMBOL}-{YYYY-MM-DD}
+
+Per-field codes: ``OV`` = company_overview, ``CF`` = cash_flow,
+``BS`` = balance_sheet, ``EAR`` = earnings, ``INS`` = insider.
 """
 
 from datetime import UTC, datetime
+from typing import Any
 
 import structlog
 from langchain_core.tools import tool
@@ -27,6 +42,84 @@ from src.services.alphavantage_market_data import AlphaVantageMarketDataService
 from src.services.alphavantage_response_formatter import AlphaVantageResponseFormatter
 
 logger = structlog.get_logger()
+
+
+# Same prefix table as quotes.py — kept duplicated rather than centralized
+# while only two callsites use it; collapse if a third Source-wrap tool
+# lands.
+_SOURCE_PREFIX = {
+    "finnhub": "FH",
+    "yfinance": "YF",
+    "alphavantage": "AV",
+}
+
+
+def _parse_av_date(value: Any) -> datetime | None:
+    """Parse an AV response date string ("2025-09-30") into UTC datetime.
+
+    Returns None for missing / malformed values; callers fall back to
+    ``datetime.now(UTC)`` so a single rotten field doesn't kill the
+    whole footnote line.
+    """
+    if not value or not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value).replace(tzinfo=UTC)
+    except ValueError:
+        return None
+
+
+def _statement_asof(
+    data: dict[str, Any] | None, *, period: str
+) -> datetime | None:
+    """Pull the most recent ``fiscalDateEnding`` from an AV statement payload.
+
+    AV cash-flow / balance-sheet responses have the shape:
+        {"symbol": "...",
+         "annualReports":   [{"fiscalDateEnding": "2024-12-31", ...}, ...],
+         "quarterlyReports":[{"fiscalDateEnding": "2025-06-30", ...}, ...]}
+
+    We pick the latest entry from whichever bucket the caller is rendering
+    so the footnote ``asof`` matches the reader's view, not the other one.
+    """
+    if not data:
+        return None
+    bucket_key = "quarterlyReports" if period == "quarter" else "annualReports"
+    bucket = data.get(bucket_key) or []
+    if not bucket:
+        return None
+    return _parse_av_date(bucket[0].get("fiscalDateEnding"))
+
+
+def _fundamentals_source_id(
+    *,
+    source: str,
+    symbol: str,
+    field_code: str,
+    asof: datetime | None,
+) -> str:
+    """Stable footnote ID — ``{PREFIX}-{FIELD}-{SYMBOL}-{YYYY-MM-DD}``."""
+    prefix = _SOURCE_PREFIX.get(source.lower(), source.upper())
+    asof_day = (asof or datetime.now(UTC)).strftime("%Y-%m-%d")
+    return f"{prefix}-{field_code}-{symbol.upper()}-{asof_day}"
+
+
+def _append_source_footnote(
+    body: str,
+    *,
+    source: str,
+    symbol: str,
+    field_code: str,
+    asof: datetime | None,
+) -> str:
+    """Append the provenance line. Mirrors quote-tool format exactly."""
+    sid = _fundamentals_source_id(
+        source=source, symbol=symbol, field_code=field_code, asof=asof
+    )
+    asof_repr = (
+        asof.strftime("%Y-%m-%dT%H:%MZ") if asof else "asof unknown"
+    )
+    return f"{body}\n\nSource: {source} [{sid}] asof {asof_repr}"
 
 
 def create_fundamental_tools(
@@ -69,10 +162,21 @@ def create_fundamental_tools(
         try:
             data = await service.get_company_overview(symbol)
             if data and "Symbol" in data:
-                return formatter.format_company_overview(
+                body = formatter.format_company_overview(
                     raw_data=data,
                     symbol=symbol,
                     invoked_at=datetime.now(UTC).isoformat(),
+                )
+                # AV OVERVIEW carries `LatestQuarter` (e.g. "2025-09-30"),
+                # which is the truthful asof for the snapshot. Fall back
+                # to "now" if the field is missing or malformed.
+                asof = _parse_av_date(data.get("LatestQuarter")) or datetime.now(UTC)
+                return _append_source_footnote(
+                    body,
+                    source="alphavantage",
+                    symbol=symbol,
+                    field_code="OV",
+                    asof=asof,
                 )
             av_error = "Alpha Vantage returned empty response"
         except Exception as e:
@@ -86,7 +190,13 @@ def create_fundamental_tools(
         # Fallback: yfinance
         yf_md = await fetch_overview_yf(symbol)
         if yf_md is not None:
-            return yf_md
+            return _append_source_footnote(
+                yf_md,
+                source="yfinance",
+                symbol=symbol,
+                field_code="OV",
+                asof=datetime.now(UTC),
+            )
         return unavailable_message(symbol, "Company overview", av_error=av_error)
 
     @tool
@@ -152,23 +262,39 @@ def create_fundamental_tools(
             if statement_type == "cash_flow":
                 data = await service.get_cash_flow(symbol)
                 if data:
-                    return formatter.format_cash_flow(
+                    body = formatter.format_cash_flow(
                         raw_data=data,
                         symbol=symbol,
                         invoked_at=datetime.now(UTC).isoformat(),
                         count=count,
                         period=period,
                     )
+                    asof = _statement_asof(data, period=period) or datetime.now(UTC)
+                    return _append_source_footnote(
+                        body,
+                        source="alphavantage",
+                        symbol=symbol,
+                        field_code="CF",
+                        asof=asof,
+                    )
                 av_error = "Alpha Vantage returned empty cash flow"
             else:
                 data = await service.get_balance_sheet(symbol)
                 if data:
-                    return formatter.format_balance_sheet(
+                    body = formatter.format_balance_sheet(
                         raw_data=data,
                         symbol=symbol,
                         invoked_at=datetime.now(UTC).isoformat(),
                         count=count,
                         period=period,
+                    )
+                    asof = _statement_asof(data, period=period) or datetime.now(UTC)
+                    return _append_source_footnote(
+                        body,
+                        source="alphavantage",
+                        symbol=symbol,
+                        field_code="BS",
+                        asof=asof,
                     )
                 av_error = "Alpha Vantage returned empty balance sheet"
         except Exception as e:
@@ -184,11 +310,19 @@ def create_fundamental_tools(
         if statement_type == "cash_flow":
             yf_md = await fetch_cash_flow_yf(symbol, count=count, period=period)
             label = "Cash flow"
+            field_code = "CF"
         else:
             yf_md = await fetch_balance_sheet_yf(symbol, count=count, period=period)
             label = "Balance sheet"
+            field_code = "BS"
         if yf_md is not None:
-            return yf_md
+            return _append_source_footnote(
+                yf_md,
+                source="yfinance",
+                symbol=symbol,
+                field_code=field_code,
+                asof=datetime.now(UTC),
+            )
         return unavailable_message(symbol, label, av_error=av_error)
 
     @tool
@@ -214,10 +348,24 @@ def create_fundamental_tools(
         try:
             data = await service.get_insider_transactions(symbol, limit)
             if data and data.get("data"):
-                return formatter.format_insider_transactions(
+                body = formatter.format_insider_transactions(
                     raw_data=data,
                     symbol=symbol,
                     invoked_at=datetime.now(UTC).isoformat(),
+                )
+                # AV insider rows carry `transaction_date`; pick the most
+                # recent (rows are returned newest-first per AV contract).
+                rows = data.get("data") or []
+                asof = (
+                    _parse_av_date(rows[0].get("transaction_date") if rows else None)
+                    or datetime.now(UTC)
+                )
+                return _append_source_footnote(
+                    body,
+                    source="alphavantage",
+                    symbol=symbol,
+                    field_code="INS",
+                    asof=asof,
                 )
             av_error = "Alpha Vantage returned empty insider data"
         except Exception as e:
@@ -230,7 +378,13 @@ def create_fundamental_tools(
 
         yf_md = await fetch_insider_yf(symbol, limit=limit)
         if yf_md is not None:
-            return yf_md
+            return _append_source_footnote(
+                yf_md,
+                source="yfinance",
+                symbol=symbol,
+                field_code="INS",
+                asof=datetime.now(UTC),
+            )
         return unavailable_message(symbol, "Insider activity", av_error=av_error)
 
     @tool
@@ -256,10 +410,27 @@ def create_fundamental_tools(
         try:
             data = await service.get_earnings(symbol)
             if data:
-                return formatter.format_earnings(
+                body = formatter.format_earnings(
                     raw_data=data,
                     symbol=symbol,
                     invoked_at=datetime.now(UTC).isoformat(),
+                )
+                # Latest reported date from `quarterlyEarnings[0]`. The AV
+                # contract puts most recent first; field is `reportedDate`
+                # with `fiscalDateEnding` as fallback.
+                quarters = data.get("quarterlyEarnings") or []
+                latest = quarters[0] if quarters else {}
+                asof = (
+                    _parse_av_date(latest.get("reportedDate"))
+                    or _parse_av_date(latest.get("fiscalDateEnding"))
+                    or datetime.now(UTC)
+                )
+                return _append_source_footnote(
+                    body,
+                    source="alphavantage",
+                    symbol=symbol,
+                    field_code="EAR",
+                    asof=asof,
                 )
             av_error = "Alpha Vantage returned empty earnings"
         except Exception as e:
@@ -270,7 +441,13 @@ def create_fundamental_tools(
 
         yf_md = await fetch_earnings_yf(symbol)
         if yf_md is not None:
-            return yf_md
+            return _append_source_footnote(
+                yf_md,
+                source="yfinance",
+                symbol=symbol,
+                field_code="EAR",
+                asof=datetime.now(UTC),
+            )
         return unavailable_message(symbol, "Earnings", av_error=av_error)
 
     @tool

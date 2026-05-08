@@ -83,7 +83,7 @@ Status: **IN PROGRESS** (W2.2 closure shipped in 0.27.9; starting W3.1)
 |---|---|---|---|
 | W3.1 | `Source` Pydantic model + test | ✅ | 34b713d | models/source.py: Source{value: Any, source, asof, url, id} + short_label(). 12 unit tests. Bumps 0.27.9 → 0.27.10. |
 | W3.2 | Quote tool Source-wrap | ✅ | 20f5c54 | QuoteData gains optional source + asof fields; each provider (Finnhub/yfinance/AV) stamps its own. AV `get_stock_quote` tool appends `Source: yfinance [YF-Q-AAPL-2026-05-09] asof 2026-05-09T18:35Z`. 9 unit tests + 114 regression tests green. |
-| W3.3 | Fundamentals tool Source-wrap | ⏳ | - |
+| W3.3 | Fundamentals tool Source-wrap | ✅ | (commit) | All 4 fundamentals @tool wrappers (overview/cash_flow/balance_sheet/earnings/insider) append `Source: alphavantage [AV-{FIELD}-{SYMBOL}-{YYYY-MM-DD}] asof ...` (or yfinance variant after W1.4 fallback). Per-tool asof comes from AV's truthful field (LatestQuarter / fiscalDateEnding / reportedDate / transaction_date). 14 new unit tests + 7 W1.5–W1.8 regression tests adapted. |
 | W3.4 | News tool Source-wrap | ⏳ | - |
 | W3.5 | Insider tool Source-wrap | ⏳ | - |
 | W3.6 | Phase2 prompt: thesis cites source IDs | ⏳ | - |

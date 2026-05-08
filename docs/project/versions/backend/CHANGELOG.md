@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.12] - 2026-05-09
+
+### Added — Wave 3 (W3.3 fundamentals-tool Source-wrap)
+
+- **W3.3 fundamentals tools each emit a Source-style footnote** — every successful return from `get_company_overview`, `get_financial_statements` (cash_flow + balance_sheet branches), `get_company_earnings`, and `get_insider_activity` now ends with a single line in the same shape the W3.2 quote tool uses: `Source: alphavantage [AV-OV-AAPL-2025-09-30] asof 2025-09-30T00:00Z`. The bracketed token is the citation handle the W3.6 Phase2 prompt will require thesis bullets to reference. Field codes: `OV` = company_overview, `CF` = cash_flow, `BS` = balance_sheet, `EAR` = earnings, `INS` = insider. The wrapper knows which provider it actually used (AV happy path vs. yfinance fallback) without re-parsing the markdown body, so the source label is truthful even when the AV branch threw and W1.4 `_yf_fallback.py` rescued.
+- **Truthful asof per data type** — instead of stamping `now()` for every fundamentals fact, each tool extracts the per-source timestamp the upstream actually returned: `OVERVIEW.LatestQuarter` (overview), `quarterlyReports[0].fiscalDateEnding` / `annualReports[0].fiscalDateEnding` (statements, picked according to the caller's `period` arg), `quarterlyEarnings[0].reportedDate` with `fiscalDateEnding` fallback (earnings), `data[0].transaction_date` (insider). When that field is missing or malformed, the helpers fall back to `now(UTC)` so a single rotten cell doesn't kill the footnote line. yfinance fallback path uses `now(UTC)` because the helpers don't surface a structured asof — the existing `_yf_fallback.SOURCE_BANNER` already prints a date in the markdown body for the reader's benefit.
+- **No formatter or `_yf_fallback.py` changes** — the source line is appended at the tool-wrapper layer, not inside `services/formatters/fundamentals.py`. This keeps the Wave-1 W1.10 consistency_gate's pattern matching on the existing markdown body untouched, and the formatter remains a single-purpose markdown renderer with no provenance concerns.
+- **14 new unit tests** in `tests/test_fundamentals_source_wrap.py` cover the helpers (`_parse_av_date`, `_statement_asof`, `_fundamentals_source_id`) directly and exercise each tool through `tool.ainvoke()` with stubbed AV service + formatter and `patch()`-ed yfinance fallback. Each tool gets both an AV-happy-path test (truthful asof from upstream field) and a yfinance-fallback-path test (yfinance label even though AV was attempted first).
+- **W1.5–W1.8 regression tests adapted** — 7 tests in `tests/test_fundamentals_fallback.py` that asserted exact-string equality on the tool return (e.g., `assert result == "YF banner overview"`) now use `result.startswith(...)` plus an explicit assertion that the new `Source: ... [...]` footnote also appears. The semantic check (which provider was called, which mock was invoked) is unchanged. The `unavailable_message` paths intentionally do NOT get the source footnote appended — Wave-1's consistency_gate pattern-matches that string exactly to refuse downstream valuation claims, so we leave it alone.
+
+Bumps backend 0.27.11 → 0.27.12.
+
 ## [0.27.11] - 2026-05-09
 
 ### Added — Wave 3 (W3.2 quote-tool Source-wrap)

@@ -1,9 +1,11 @@
 """W1.5-W1.8 unit tests — fundamentals tools fallback paths.
 
 Three paths per tool:
-  1. AV returns valid data       -> formatter output (no banner)
-  2. AV empty / raises -> yf ok  -> markdown with yfinance banner
-  3. Both empty                  -> unavailable_message string
+  1. AV returns valid data       -> formatter output (+ W3.3 source footnote)
+  2. AV empty / raises -> yf ok  -> markdown w/ banner (+ W3.3 yfinance footnote)
+  3. Both empty                  -> unavailable_message string (no footnote;
+                                    Wave-1's consistency_gate pattern-matches
+                                    that text exactly)
 
 Mock-based: patches the AV service + the _yf_fallback helpers.
 """
@@ -68,7 +70,8 @@ async def test_overview_av_ok_no_fallback() -> None:
         "src.agent.tools.alpha_vantage.fundamentals.fetch_overview_yf"
     ) as yf_mock:
         result = await tools["get_company_overview"].ainvoke({"symbol": "AAPL"})
-    assert result == "AV-OK overview"
+    assert result.startswith("AV-OK overview")
+    assert "Source: alphavantage [AV-OV-AAPL-" in result
     yf_mock.assert_not_called()
 
 
@@ -80,7 +83,8 @@ async def test_overview_av_empty_uses_yf() -> None:
         new=AsyncMock(return_value="YF banner overview"),
     ):
         result = await tools["get_company_overview"].ainvoke({"symbol": "AAPL"})
-    assert result == "YF banner overview"
+    assert result.startswith("YF banner overview")
+    assert "Source: yfinance [YF-OV-AAPL-" in result
 
 
 @pytest.mark.asyncio
@@ -91,7 +95,8 @@ async def test_overview_av_raises_uses_yf() -> None:
         new=AsyncMock(return_value="YF banner overview"),
     ):
         result = await tools["get_company_overview"].ainvoke({"symbol": "AAPL"})
-    assert result == "YF banner overview"
+    assert result.startswith("YF banner overview")
+    assert "Source: yfinance [YF-OV-AAPL-" in result
 
 
 @pytest.mark.asyncio
@@ -122,7 +127,8 @@ async def test_cash_flow_av_empty_uses_yf() -> None:
         result = await tools["get_financial_statements"].ainvoke(
             {"symbol": "AAPL", "statement_type": "cash_flow"}
         )
-    assert result == "YF cashflow"
+    assert result.startswith("YF cashflow")
+    assert "Source: yfinance [YF-CF-AAPL-" in result
 
 
 @pytest.mark.asyncio
@@ -150,7 +156,8 @@ async def test_balance_sheet_av_empty_uses_yf() -> None:
         result = await tools["get_financial_statements"].ainvoke(
             {"symbol": "AAPL", "statement_type": "balance_sheet"}
         )
-    assert result == "YF balance"
+    assert result.startswith("YF balance")
+    assert "Source: yfinance [YF-BS-AAPL-" in result
 
 
 # ---------------------------------------------------------------------------
@@ -166,7 +173,8 @@ async def test_insider_av_empty_uses_yf() -> None:
         new=AsyncMock(return_value="YF insider"),
     ):
         result = await tools["get_insider_activity"].ainvoke({"symbol": "AAPL"})
-    assert result == "YF insider"
+    assert result.startswith("YF insider")
+    assert "Source: yfinance [YF-INS-AAPL-" in result
 
 
 @pytest.mark.asyncio
@@ -195,7 +203,8 @@ async def test_earnings_av_empty_uses_yf() -> None:
         new=AsyncMock(return_value="YF earnings"),
     ):
         result = await tools["get_company_earnings"].ainvoke({"symbol": "AAPL"})
-    assert result == "YF earnings"
+    assert result.startswith("YF earnings")
+    assert "Source: yfinance [YF-EAR-AAPL-" in result
 
 
 @pytest.mark.asyncio
