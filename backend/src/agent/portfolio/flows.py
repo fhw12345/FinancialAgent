@@ -236,6 +236,118 @@ async def run_analyze_holdings(app: Any, settings: PortfolioSettings) -> dict[st
 
 
 # ---------------------------------------------------------------------------
+# Flow C: Single-symbol unified pipeline (W2.1+W2.2)
+# ---------------------------------------------------------------------------
+
+
+async def run_single_symbol(
+    app: Any, symbol: str, settings: PortfolioSettings | None = None
+) -> dict[str, Any]:
+    """W2.1+W2.2: route a single-symbol analysis through the same
+    Phase1 + Phase2 pipeline as holdings, with Phase2 in degenerate
+    single-symbol mode (no cross-position constraints).
+
+    Why a separate flow vs. extending run_analyze_holdings:
+      - Caller already knows the symbol; we don't need a holdings table.
+      - Phase2 still runs so the symbol gets the same schema (intent,
+        valuation, scenarios, derivations) — eliminates the
+        "individual ReAct emits unstructured markdown / portfolio
+        ReAct emits structured PortfolioOrder" path divergence the
+        sell-side reviewer flagged.
+      - Watchlist's legacy AnalysisEngine.analyze_symbol stays put for
+        now; consumers that want the structured output point at this
+        flow explicitly. W2.4 A/B will guide the cutover.
+    """
+    mongo = _resolve_mongo(app)
+    dm = _resolve_data_manager(app)
+    pa = _resolve_portfolio_agent(app)
+    if mongo is None or dm is None or pa is None:
+        raise RuntimeError("app.state.mongodb / data_manager / portfolio_agent missing")
+
+    sym = symbol.strip().upper()
+    if not sym or not sym.replace(".", "").isalnum() or len(sym) > 10:
+        raise ValueError(f"invalid symbol: {symbol!r}")
+
+    redis_cache = app.state.redis
+    holding_repo = HoldingRepository(mongo.get_collection("holdings"))
+    order_repo = PortfolioOrderRepository(mongo.get_collection("portfolio_orders"))
+
+    # Pull current portfolio context if settings present (so risk_calc
+    # knows existing positions); otherwise build a degenerate one.
+    if settings is not None:
+        context = await build_context_from_mongo(settings, holding_repo, dm)
+    else:
+        context = {
+            "total_equity": 0.0,
+            "buying_power": 0.0,
+            "cash": 0.0,
+            "positions": [],
+            "risk_tolerance": "moderate",
+            "max_position_pct": 10,
+        }
+
+    run_id = f"single_{uuid.uuid4().hex[:8]}"
+    summary: dict[str, Any] = {
+        "holdings_analyzed": 0,
+        "watchlist_analyzed": 0,
+        "errors": [],
+    }
+    logger.info("single_symbol_pipeline_start", run_id=run_id, symbol=sym)
+
+    # Phase1 — single-symbol research via the watchlist branch (Phase1
+    # treats symbols generically; positions vs. watchlist tags it as
+    # "holding" vs "watchlist" but the research output is the same shape).
+    phase1_results = await pa._run_phase1_research(
+        positions=[],
+        watchlist_items=[_SymbolStub(symbol=sym)],
+        user_id="local",
+        dry_run=False,
+        result_summary=summary,
+        suppress_chat=True,
+    )
+    if not phase1_results:
+        return {
+            "message": f"Phase 1 produced no research for {sym}.",
+            "result_count": 0,
+            "symbol": sym,
+        }
+
+    await _apply_consistency_gate(phase1_results)
+
+    # Phase2 in degenerate single-symbol mode — same prompt path,
+    # just one symbol in the list. risk_calculator block will still
+    # render against the user's existing portfolio context, so the LLM
+    # sees how the candidate fits.
+    _, trading_decisions = await pa._run_phase2_decisions(
+        all_analysis_results=phase1_results,
+        portfolio_context=context,
+        user_id="local",
+        dry_run=False,
+        flow="single_symbol",
+    )
+
+    decisions = _trading_decisions_to_dicts(trading_decisions)
+    data_quality_by_symbol = _build_data_quality_map(phase1_results)
+    research_by_symbol = {r.symbol: r.analysis_text for r in phase1_results}
+    written = await _persist_decisions(
+        decisions,
+        dm,
+        order_repo,
+        source="single_symbol",
+        run_id=run_id,
+        research_by_symbol=research_by_symbol,
+        data_quality_by_symbol=data_quality_by_symbol,
+        redis_cache=redis_cache,
+    )
+    return {
+        "message": f"Single-symbol Phase1+Phase2 for {sym}; persisted {written} decision(s).",
+        "result_count": written,
+        "symbol": sym,
+        "run_id": run_id,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Flow B: Today's Picks
 # ---------------------------------------------------------------------------
 

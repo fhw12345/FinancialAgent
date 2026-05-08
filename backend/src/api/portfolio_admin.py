@@ -206,23 +206,74 @@ async def _run_picks_flow(
         )
 
 
+async def _run_single_symbol_flow(
+    mongodb: MongoDB,
+    app: Any,
+    settings: PortfolioSettings,
+    symbol: str,
+    run_key: str,
+) -> None:
+    """W2.1+W2.2 background runner for the unified single-symbol flow."""
+    from ..agent.portfolio.flows import run_single_symbol
+
+    started = datetime.now(UTC)
+    await _set_run(
+        mongodb,
+        AnalysisRun(run_id=run_key, status="running", started_at=started),
+    )
+    try:
+        result = await run_single_symbol(app, symbol, settings)
+        await _set_run(
+            mongodb,
+            AnalysisRun(
+                run_id=run_key,
+                status="done",
+                started_at=started,
+                finished_at=datetime.now(UTC),
+                message=result.get("message"),
+                result_count=result.get("result_count"),
+            ),
+        )
+    except Exception as e:
+        logger.error("single_symbol_flow_failed", symbol=symbol, error=str(e))
+        await _set_run(
+            mongodb,
+            AnalysisRun(
+                run_id=run_key,
+                status="error",
+                started_at=started,
+                finished_at=datetime.now(UTC),
+                message=f"{type(e).__name__}: {str(e)[:200]}",
+            ),
+        )
+
+
 @router.post("/trigger-analysis", response_model=AnalysisRun)
 @limiter.limit("30/minute")
 async def trigger_analysis(
     request: Request,
     background_tasks: BackgroundTasks,
-    flow: str,  # query param: 'holdings' | 'picks'
+    flow: str,  # query param: 'holdings' | 'picks' | 'single_symbol'
+    symbol: str | None = None,  # required when flow='single_symbol'
     payload: TriggerRequest | None = None,
     mongodb: MongoDB = Depends(get_mongodb),
 ) -> AnalysisRun:
-    if flow not in ("holdings", "picks"):
+    if flow not in ("holdings", "picks", "single_symbol"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="flow must be 'holdings' or 'picks'",
+            detail="flow must be 'holdings', 'picks', or 'single_symbol'",
         )
+    if flow == "single_symbol":
+        if not symbol or not symbol.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="single_symbol flow requires ?symbol=TICKER",
+            )
 
-    # Idempotency: same-button re-click during a running task returns existing doc
-    existing = await _get_run(mongodb, flow)
+    # Idempotency: per-flow run id (single_symbol gets a per-symbol id so two
+    # different symbols can run concurrently)
+    run_key = f"single_{symbol.strip().upper()}" if flow == "single_symbol" else flow
+    existing = await _get_run(mongodb, run_key)
     if existing and existing.status == "running":
         return existing
 
@@ -247,12 +298,21 @@ async def trigger_analysis(
         background_tasks.add_task(
             _run_picks_flow, mongodb, request.app, settings, sectors
         )
+    elif flow == "single_symbol":
+        background_tasks.add_task(
+            _run_single_symbol_flow,
+            mongodb,
+            request.app,
+            settings,
+            symbol.strip().upper(),
+            run_key,
+        )
     else:
         background_tasks.add_task(_run_holdings_flow, mongodb, request.app, settings)
 
     started = datetime.now(UTC)
     run = AnalysisRun(
-        run_id=flow,  # type: ignore[arg-type]
+        run_id=run_key,  # type: ignore[arg-type]
         status="pending",
         started_at=started,
         sectors=(payload.sectors if (flow == "picks" and payload) else None),
@@ -266,10 +326,10 @@ async def trigger_analysis(
 async def get_status(
     request: Request, run_id: str, mongodb: MongoDB = Depends(get_mongodb)
 ) -> AnalysisRun:
-    if run_id not in ("holdings", "picks"):
+    if run_id not in ("holdings", "picks") and not run_id.startswith("single_"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="run_id must be 'holdings' or 'picks'",
+            detail="run_id must be 'holdings', 'picks', or 'single_<TICKER>'",
         )
     run = await _get_run(mongodb, run_id)
     if not run:

@@ -58,8 +58,8 @@ Status: **NOT STARTED** (gated on Wave 1 user signoff)
 
 | ID | Task | Status | Commit |
 |---|---|---|---|
-| W2.1 | Single-symbol flow `run_single_symbol` | ⏳ | - |
-| W2.2 | Delete legacy single ReAct entry; 410 | ⏳ | - |
+| W2.1 | Single-symbol flow `run_single_symbol` | ✅ | (pending) | flows.py adds run_single_symbol that runs Phase1 (one ReAct) + Phase2 (degenerate single-symbol) + consistency_gate + risk_calc + persists to portfolio_orders source=single_symbol. portfolio_admin.py /trigger-analysis accepts flow=single_symbol&symbol=X. AnalysisRun.run_id widened to plain str (was Literal). E2E HTTP 200 with run_id=single_AAPL. |
+| W2.2 | Delete legacy single ReAct entry; 410 | ⚠️ deferred | - | Old WatchlistAnalyzer.analyze_symbol path still drives 5-minute cron. Removing it now breaks background analysis. New flow lives at /api/admin/portfolio/trigger-analysis?flow=single_symbol; users / cron switch over before W2.2 deletion. **Tracked as Wave-2 follow-up.** |
 | W2.3 | Translate Phase1 prompts to English | ⏳ | - |
 | W2.4 | A/B 5 historical runs old vs new prompt | ⏳ | - |
 | W2.5 | `risk_calculator.py` + unit test | ✅ | 66b6601 | Pure async function. Computes sector_exposure / beta_weighted / cash_pct / HHI / 60d corr matrix / portfolio σ. DI for meta + returns fetchers. 16 unit tests cover hand-computed math + missing data fallbacks + renderer. |
@@ -67,7 +67,7 @@ Status: **NOT STARTED** (gated on Wave 1 user signoff)
 | W2.7 | `PortfolioDecision` schema extension | ✅ | 547d3a0 | 5 optional sub-models on TradingDecision: thesis (3 bullets), valuation (≥2 ValuationMethods), price_target (PriceTarget), scenarios (bull/base/bear ScenarioSet), catalysts (list[Catalyst]), risks (3 ranked). All optional → back-compat with old payloads. |
 | W2.8 | Pydantic validators (lengths + prob sum) + test | ✅ | 547d3a0 | _validate_research_blocks enforces thesis len==3 / valuation len>=2 / risks len==3. ScenarioSet._probabilities_sum_to_one enforces 1.0±0.02. 21 unit tests in test_decision_research_blocks.py. |
 | W2.9 | Numeric derivation `{value, formula, inputs}` + helpers | ✅ | 6ae0093 | derivations.py: Derivation Pydantic model + atr_stop / vol_adjusted_size helpers. TradingDecision gains optional entry/stop/target/size_derivation fields. Cross-validator: derivation.value must match corresponding price within 0.5%. 16 unit tests. |
-| W2.10 | D3: scenario prob derivation prompt rule | ✅ | (pending) | Phase2 prompt teaches the new schema fields (thesis/valuation/scenarios/catalysts/risks/derivations). Each scenario probability rationale MUST cite base rate or historical frequency, not vibes. Also moved derivations.py from agent/portfolio/ to models/ to break a circular import; 93/93 regression tests green. |
+| W2.10 | D3: scenario prob derivation prompt rule | ✅ | 7a8cc24 | Phase2 prompt teaches the new schema fields (thesis/valuation/scenarios/catalysts/risks/derivations). Each scenario probability rationale MUST cite base rate or historical frequency, not vibes. Also moved derivations.py from agent/portfolio/ to models/ to break a circular import; 93/93 regression tests green. |
 | W2.11 | W2-E1 ~ W2-E5 e2e | ⏳ | - |
 | W2.12 | Integration `test_risk_calculator_real.py` | ⏳ | - |
 | W2.13 | Cleanup test data | ⏳ | - |

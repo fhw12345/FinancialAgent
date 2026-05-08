@@ -27,9 +27,15 @@ class PortfolioSettingsUpdate(BaseModel):
 
 
 class AnalysisRun(BaseModel):
-    """Background task status doc — one per run_id."""
+    """Background task status doc — one per run_id.
 
-    run_id: Literal["holdings", "picks"]
+    run_id values:
+      - "holdings"        portfolio-wide hold/sell pass
+      - "picks"           today's BUY candidates
+      - "single_<TICKER>" W2.1+W2.2 single-symbol Phase1+Phase2 run
+    """
+
+    run_id: str
     status: Literal["pending", "running", "done", "error"]
     started_at: datetime
     finished_at: datetime | None = None
