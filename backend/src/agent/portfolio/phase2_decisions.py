@@ -371,6 +371,15 @@ Include short reasoning (1-2 sentences) for each decision.
                 raw_data=raw_data,
             )
 
+            # W1.11: append AI-generated disclaimer footer to every persisted
+            # decision message so the human reader sees it at the bottom of
+            # the chat modal even if the rest of the report is short.
+            message_content += (
+                "\n\n---\n_🤖 AI-generated · Not investment advice. "
+                "Verify all data and consult a licensed advisor before "
+                "executing any trade._\n"
+            )
+
             # Create and store the message
             message_create = MessageCreate(
                 chat_id=chat_id,

@@ -24,8 +24,8 @@ Status: **IN PROGRESS**
 | W1.7 | `get_earnings` connect fallback + unit test | ✅ | 24c229d | Unit test 2/2. |
 | W1.8 | `get_insider_activity` connect fallback + unit test | ✅ | 24c229d | Unit test 2/2. (Form 4 plan_type detection deferred to W3.8/W3.9.) |
 | W1.9 | Fibonacci tool `current_price_position` + Phase1 prompt rule + unit test | ✅ | 1b10f4d | range_position field {above_range/in_range/below_range} + STALE FIB SWING warning when breakout >5%. Phase1 prompt: "DO NOT cite stale levels" + parallel rule for unsubstantiated fundamental data. 5 unit tests pass. |
-| W1.10 | Consistency checker LLM gate + unit test | ✅ | (pending) | consistency_gate.py: regex detects degraded fields → cheap LLM (haiku) checks if thesis cites them → returns {passed, violations}. Wired into flows.py Phase1→Phase2 boundary for both holdings + picks. Cost: 1 call/symbol when degraded fields present, 0 when clean. Fail-open. 11 unit tests. |
-| W1.11 | Global disclaimer footer + UI watermark + W1-E2 e2e | ⏳ | - | "AI-generated · not investment advice" on 4 routes |
+| W1.10 | Consistency checker LLM gate + unit test | ✅ | d99ba20 | consistency_gate.py: regex detects degraded fields → cheap LLM (haiku) checks if thesis cites them → returns {passed, violations}. Wired into flows.py Phase1→Phase2 boundary for both holdings + picks. Cost: 1 call/symbol when degraded fields present, 0 when clean. Fail-open. 11 unit tests. |
+| W1.11 | Global disclaimer footer + UI watermark + W1-E2 e2e | ✅ | (pending) | Phase2 message footer adds AI-generated disclaimer + global App.tsx footer renders persistent watermark. e2e PASS on Portfolio + Chat tabs. |
 | W1.12 | `data_quality=degraded` UI tag + W1-E3 e2e | ⏳ | - | Grey 数据降级 tag + tooltip |
 | W1.13 | Integration test `test_intent_real_phase2.py` | ⏳ | - | FakeListChatModel injects invalid output, real `_persist_decisions` raises |
 | W1.14 | Cleanup test data | ⏳ | - | Remove `*_dump.json` `*_after.json` etc |

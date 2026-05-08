@@ -110,10 +110,17 @@ function App() {
         {activeTab === "insights" && <InsightsPage />}
       </main>
 
-      <footer className="bg-white border-t">
+      <footer className="bg-white border-t" data-testid="app-footer">
         <div className="mx-auto py-3 px-6 lg:px-8">
           <p className="text-center text-sm text-gray-500">
             Financial Agent - {t("common:app.subtitle")}
+          </p>
+          <p
+            className="text-center text-xs text-gray-400 mt-1"
+            data-testid="ai-disclaimer"
+          >
+            🤖 AI-generated · Not investment advice. Verify all data and
+            consult a licensed advisor before executing any trade.
           </p>
         </div>
       </footer>
