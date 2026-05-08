@@ -680,6 +680,8 @@ class DataManager:
                 low=data["low"],
                 # AV GLOBAL_QUOTE is RTH-only; session metadata is regular.
                 session="regular",
+                source="alphavantage",
+                asof=datetime.now(UTC),
             )
         except Exception as e:
             logger.error("quote_all_providers_failed", symbol=symbol, error=str(e))
@@ -741,6 +743,8 @@ class DataManager:
                 high=float(getattr(fi, "day_high", 0.0) or 0.0),
                 low=float(getattr(fi, "day_low", 0.0) or 0.0),
                 session=session,  # type: ignore[arg-type]
+                source="yfinance",
+                asof=datetime.now(UTC),
             )
 
         return await asyncio.to_thread(_sync)

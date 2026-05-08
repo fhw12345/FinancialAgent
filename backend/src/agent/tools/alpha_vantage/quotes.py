@@ -4,6 +4,7 @@ Stock Quote and Symbol Search Tools.
 Provides tools for getting current stock prices and searching ticker symbols.
 """
 
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -12,6 +13,26 @@ from langchain_core.tools import tool
 from src.services.alphavantage_market_data import AlphaVantageMarketDataService
 
 logger = structlog.get_logger()
+
+
+_SOURCE_PREFIX = {
+    "finnhub": "FH",
+    "yfinance": "YF",
+    "alphavantage": "AV",
+}
+
+
+def _quote_source_id(source: str | None, symbol: str, asof: datetime | None) -> str:
+    """Stable footnote ID for a quote (W3.2).
+
+    Format: ``{PREFIX}-Q-{SYMBOL}-{YYYY-MM-DD}`` — short enough to read
+    in markdown and stable across the trading day so the LLM can cite it
+    once and reuse it. Falls back to the raw source name when we don't
+    have a registered prefix yet (e.g., a newly-added provider).
+    """
+    prefix = _SOURCE_PREFIX.get((source or "").lower(), (source or "src").upper())
+    asof_day = (asof or datetime.now(UTC)).strftime("%Y-%m-%d")
+    return f"{prefix}-Q-{symbol.upper()}-{asof_day}"
 
 
 def create_quote_tools(
@@ -70,6 +91,8 @@ def create_quote_tools(
             # Quote: prefer DataManager (Finnhub → yfinance → AV fallback chain)
             # so we don't burn the AV daily quota on every quote. Fall back to
             # the AV service if no DataManager was wired in.
+            source_name: str | None = None
+            asof_dt: datetime | None = None
             if data_manager is not None:
                 qd = await data_manager.get_quote(symbol)
                 quote_data = {
@@ -84,8 +107,12 @@ def create_quote_tools(
                     "previous_close": qd.previous_close,
                     "session": getattr(qd, "session", None),
                 }
+                source_name = getattr(qd, "source", None)
+                asof_dt = getattr(qd, "asof", None)
             else:
                 quote_data = await service.get_quote(symbol)
+                # AV-direct path: no fallback chain ran, source is AV.
+                source_name = "alphavantage"
 
             if not quote_data or quote_data.get("price", 0) == 0:
                 return f"No quote data available for {symbol}"
@@ -141,6 +168,21 @@ def create_quote_tools(
             # Add notes if present (e.g., lunch breaks for Asian markets)
             if notes:
                 output_lines.append(f"Note: {notes}")
+
+            # W3.2 provenance footnote — gives the Phase2 prompt a stable
+            # token to cite ("[YF-Q-AAPL-2026-05-09]") so thesis bullets
+            # can be traced back to a source. Frontend (W3.7) parses these
+            # tokens to render the footnote list.
+            if source_name:
+                source_id = _quote_source_id(source_name, symbol, asof_dt)
+                asof_repr = (
+                    asof_dt.strftime("%Y-%m-%dT%H:%MZ")
+                    if asof_dt
+                    else "asof unknown"
+                )
+                output_lines.append(
+                    f"Source: {source_name} [{source_id}] asof {asof_repr}"
+                )
 
             output_lines.append("⚠️ Data delayed 15 minutes")
 

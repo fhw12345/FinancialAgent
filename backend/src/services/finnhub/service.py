@@ -88,6 +88,8 @@ class FinnhubService:
             high=float(body.get("h", 0.0)),
             low=float(body.get("l", 0.0)),
             session="regular",
+            source="finnhub",
+            asof=datetime.fromtimestamp(ts, UTC) if ts else datetime.now(UTC),
         )
 
     async def fetch_company_news(

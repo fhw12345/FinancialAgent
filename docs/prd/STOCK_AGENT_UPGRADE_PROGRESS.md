@@ -81,8 +81,8 @@ Status: **IN PROGRESS** (W2.2 closure shipped in 0.27.9; starting W3.1)
 
 | ID | Task | Status | Commit |
 |---|---|---|---|
-| W3.1 | `Source` Pydantic model + test | ⏳ | - |
-| W3.2 | Quote tool Source-wrap | ⏳ | - |
+| W3.1 | `Source` Pydantic model + test | ✅ | 34b713d | models/source.py: Source{value: Any, source, asof, url, id} + short_label(). 12 unit tests. Bumps 0.27.9 → 0.27.10. |
+| W3.2 | Quote tool Source-wrap | ✅ | (commit) | QuoteData gains optional source + asof fields; each provider (Finnhub/yfinance/AV) stamps its own. AV `get_stock_quote` tool appends `Source: yfinance [YF-Q-AAPL-2026-05-09] asof 2026-05-09T18:35Z`. 9 unit tests + 114 regression tests green. |
 | W3.3 | Fundamentals tool Source-wrap | ⏳ | - |
 | W3.4 | News tool Source-wrap | ⏳ | - |
 | W3.5 | Insider tool Source-wrap | ⏳ | - |

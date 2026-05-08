@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.11] - 2026-05-09
+
+### Added — Wave 3 (W3.2 quote-tool Source-wrap)
+
+- **W3.2 quote tool emits a stable provenance footnote** — the AlphaVantage `get_stock_quote` tool used by the Phase1 ReAct agent now appends a single line at the bottom of the markdown it returns: `Source: yfinance [YF-Q-AAPL-2026-05-09] asof 2026-05-09T18:35Z`. The bracketed token is what the W3.6 Phase2 prompt will require thesis bullets to cite, and what the W3.7 frontend ReportRenderer will resolve into a footnote chip. Footnote ID format is `{PREFIX}-Q-{SYMBOL}-{YYYY-MM-DD}` with the prefix taken from a small registered table (`finnhub→FH`, `yfinance→YF`, `alphavantage→AV`); a yet-to-be-registered provider falls back to upper-cased source name so we never crash. The `asof` is rendered minute-precision UTC so the consistency_gate can parse staleness back out of the markdown if it ever needs to. Legacy cached `QuoteData` rows (written before this change) carry `source=None` / `asof=None` and the tool silently omits the footnote line for them rather than rendering `Source: None [...]`.
+- **`QuoteData.source` + `QuoteData.asof` fields** — `services/data_manager/types.py` extends the dataclass with two optional fields. `to_dict()`/`from_dict()` round-trip the new fields through redis cache and from-cache reconstruction. The Wave-1 staleness gate already lives at the `flows.py:Phase1→Phase2` boundary, so providing `asof` here makes a future "reject if quote >24h" check cheap. Each provider stamps its own value: Finnhub uses `body.t` (epoch seconds from the upstream API), yfinance + AlphaVantage use `datetime.now(UTC)` since neither endpoint returns a server-side timestamp finer than a trading-day string.
+- **9 unit tests** in `tests/test_quote_tool_source_wrap.py`: 5 cover `_quote_source_id` (yfinance / finnhub / alphavantage prefixes, unknown-provider fallback, missing-source-and-asof legacy path), 4 cover the tool itself end-to-end via `tool.ainvoke()` with a stubbed `DataManager` (yfinance / finnhub / alphavantage emit footnote, legacy-row path emits *no* footnote and no malformed `Source: None` line). Full regression sweep across `test_market_data_quotes.py` + `test_data_manager.py` + `test_data_manager_types.py` (114 existing tests) green — adding the new fields is back-compatible.
+
+Bumps backend 0.27.10 → 0.27.11.
+
 ## [0.27.10] - 2026-05-09
 
 ### Added — Stock Agent Upgrade Wave 3 starts (PRD docs/prd/STOCK_AGENT_UPGRADE_PRD.md)

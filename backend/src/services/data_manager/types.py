@@ -196,6 +196,11 @@ class QuoteData:
     high: float
     low: float
     session: Literal["pre", "regular", "post", "closed"] = "regular"
+    # W3.2 provenance — which provider produced the row, and when it was
+    # snapshotted. Optional so docs round-tripped through the redis cache
+    # before this field existed (or pickled fixtures in tests) still parse.
+    source: str | None = None
+    asof: datetime | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -211,11 +216,22 @@ class QuoteData:
             "high": self.high,
             "low": self.low,
             "session": self.session,
+            "source": self.source,
+            "asof": self.asof.isoformat() if self.asof else None,
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "QuoteData":
         """Create from dictionary."""
+        asof_raw = data.get("asof")
+        asof_parsed: datetime | None = None
+        if isinstance(asof_raw, datetime):
+            asof_parsed = asof_raw
+        elif isinstance(asof_raw, str) and asof_raw:
+            try:
+                asof_parsed = datetime.fromisoformat(asof_raw)
+            except ValueError:
+                asof_parsed = None
         return cls(
             symbol=data["symbol"],
             price=float(data["price"]),
@@ -228,6 +244,8 @@ class QuoteData:
             high=float(data["high"]),
             low=float(data["low"]),
             session=data.get("session", "regular"),
+            source=data.get("source"),
+            asof=asof_parsed,
         )
 
 
