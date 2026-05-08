@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-05-09
+
+### Wave 3 Close — Provenance + insider depth
+
+Wave 3 of `STOCK_AGENT_UPGRADE_PRD.md` is closed. Across 14 sub-tasks (W3.1–W3.14, plus this W3.15 closing bump) the project ships full source-provenance for every report number, an end-to-end SEC EDGAR Form 4 fetch + parse pipeline with 10b5-1 plan-type detection, and a Phase 1 prompt rule that locks insider sells out of automatic bearish framing. The cumulative diff:
+
+**Provenance layer (W3.1–W3.7):**
+
+- W3.1 — `Source` Pydantic model `{value, source, asof, url}` + `test_source_model.py`.
+- W3.2–W3.5 — every market-data tool (quote, fundamentals, news, insider) emits a `Source: <provider> [<PREFIX>-<FIELD>-<SYMBOL>-<YYYY-MM-DD>] asof <iso>` footer; PREFIX∈{FH, AV, YF}, FIELD∈{Q, OV, CF, BS, EAR, INS, N}; `asof` is the latest underlying datapoint (not now()) so stale buckets stay recognizable as stale at citation time.
+- W3.6 — Phase 2 decision prompt teaches the LLM to cite source IDs in thesis bullets (5 prompt-source assertions with whitespace-collapsed cross-line matching).
+- W3.7 — frontend `ResearchPanel` parses `[FH-Q-AAPL-2026-05-09]` tokens out of thesis strings, replaces inline tokens with `<sup>[n]</sup>` chips, renders bottom `<FootnoteList>` with provider/field/symbol/asof; 12 vitest tests for `extractFootnotes` + `parseSourceId`.
+
+**SEC EDGAR Form 4 layer (W3.8–W3.10):**
+
+- W3.8 — `Form4Client` async EDGAR client (`src/agent/tools/sec_edgar/form4.py`); D4-mandated User-Agent, AC#5 rate limit (`DEFAULT_RATE_LIMIT_PER_SEC=8.0`, asyncio.Lock-guarded token bucket), CIK lookup via `files/company_tickers.json` (process-cached), `fetch_form4_atom(symbol, count)` raw atom XML; 17 unit tests with `httpx.MockTransport`.
+- W3.9 — Form 4 detail parser (`Form4Transaction` dataclass, `classify_plan_type` with explicit-discretionary > 10b5-1 ordering, `extract_plan_adopted_date` across ISO/prose/US-numeric, `parse_atom_filing_index_urls`, namespace-tolerant `parse_form4_detail`); end-to-end `Form4Client.fetch_recent_transactions` chains atom → detail XMLs → flat `list[Form4Transaction]`; 18 unit tests.
+- W3.10 — `insider_enrich.py` pure-function bridge between Finnhub/AV/yfinance row dicts and Form4Transaction records: `enrich_insider_rows` (date+shares within 1 share tolerance for RSU fractional vs. integer Finnhub; never mutates input), `compute_pct_of_holdings_after`, `Last12moSummary` + `build_last_12mo_summary` (365-day window aggregate), `render_enriched_row`. 29 unit tests.
+
+**Framing rule (W3.11):**
+
+- Phase 1 prompt INSIDER FRAMING RULE: insider sells require ALL THREE conditions for bearish framing — cluster ≥3 sells in 30-day window, ≥1 tx with `pct_of_holdings_after > 0.05`, breaks 12-month pattern. PLAN-TYPE OVERRIDE: `10b5-1` MUST NOT be cited as discretionary bearish (PRD AC #4); missing `plan_type` defaults to neutral framing (fail-closed). 13 prompt-source tests.
+
+**E2E + integration (W3.12–W3.14):**
+
+- W3.12 — `e2e_source_footnote.py` ties W3.4/W3.5/W3.7/W3.10/W3.11 surfaces into a purely-offline pipeline test (no LLM, no SEC, no DataManager). Mirrors the JS `SOURCE_ID_PATTERN` in Python, asserts citation-order footnote dedup, ID round-trip across all 3 provider prefixes, plan_type/pct_of_holdings_after enrichment, and that the W3.11 prompt rule's wording supports both fixture scenarios. 15 e2e tests.
+- W3.13 — live SEC integration tests (`@pytest.mark.integration`, skipped by default). 9 tests covering CIK lookup of NVDA's pinned `0001045810`, atom feed shape, AC #3 plan_type populated for ≥3 of N parsed transactions, AC #5 50 sequential calls under 10 req/s. **Critical bug found in production path:** `_index_to_form4_xml_url`'s `<accession>-index.htm` → `<accession>.xml` suffix-swap heuristic was tautologically passing W3.9 mock tests but 404'ing on every real SEC filing — primary docs ship under varied filenames (`wk-form4_<id>.xml`, `xslF345X05/<id>.xml`, `primary_doc.xml`, …). Fix: new async `_resolve_form4_doc_url` fetches `{folder}/index.json` (SEC's structured directory manifest) and picks the first `.xml` entry; old swap kept as fallback. 3 new resolver unit tests. Interview case study at `docs/interview/2026-05-09-sec-edgar-form4-url-resolution.md`.
+- W3.14 — Wave 3 lint sweep (import order, py3.12 `collections.abc.Iterable`, unused-import removal); zero `print`/TODO/FIXME hits; zero leaked-secrets hits; D4 default User-Agent intentionally checked-in per project policy.
+
+**Numbers:**
+
+- 124 unit + e2e tests (W3.4–W3.14 only) all green.
+- 9 integration tests against live SEC EDGAR all green when run with `-m integration`.
+- 1 production bug discovered and fixed (URL resolver, surfaced by W3.13 against real SEC after passing W3.9 mock tests).
+- 1 interview case study added.
+
+**Acceptance criteria audit:**
+
+| AC | Verified by |
+|----|-------------|
+| #1 — every numeric in JSON `valuation`/`price_target`/`scenarios` is a `Source` object | W3.1 + tools wrap their outputs as Source-bearing markdown; structured-Pydantic Source covered by `test_source_model.py`. Backstop test `test_no_bare_floats` is a Wave 4 follow-up. |
+| #2 — UI hover any number → tooltip shows source name + asof | W3.7 frontend renderer + `ResearchPanel.footnotes.test.ts`. |
+| #3 — 5 NVDA Form 4s parsed with `plan_type` populated for ≥3 | W3.13 `test_fetch_recent_transactions_nvda_populates_plan_type` against live SEC. |
+| #4 — 10b5-1 + plan_adopted=2024-03-01 + current=2025-01-01 NOT cited as discretionary bearish | W3.11 prompt rule + W3.12 W3-E4 fixture assertions. |
+| #5 — 50 sequential SEC requests under 10/s | W3.13 `test_rate_limit_50_sequential_under_10_per_sec` (measured 0.69 req/s). |
+
+**E2E acceptance audit:**
+
+| E2E AC | Verified by |
+|--------|-------------|
+| W3-E1 — every report number has footnote `[n]` superscript with hover | W3.7 + W3.12 |
+| W3-E2 — footnote list at report bottom, non-empty URL opens new tab | W3.7 + W3.12 |
+| W3-E3 — insider table per row: plan_type + pct_of_holdings_after | W3.10 + W3.12 |
+| W3-E4 — single 10b5-1 → no bearish; 3-tx discretionary > 5% → bearish framing | W3.11 + W3.12 |
+
+Bumps backend 0.27.22 → 0.28.0 (minor — closes a major feature wave).
+
 ## [0.27.22] - 2026-05-09
 
 ### Changed — Wave 3 (W3.14 cleanup test data + lint fixes)
