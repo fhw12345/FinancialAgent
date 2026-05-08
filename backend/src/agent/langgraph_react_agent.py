@@ -359,6 +359,35 @@ class FinancialAnalysisReActAgent:
                 zone_upper = pz["upper_bound"]
                 zone_lower = pz["lower_bound"]
 
+                # SANITY GATE (W1.9): swing-range freshness.
+                # A Fibonacci retracement only makes sense while the price
+                # is still inside the structure that defines it. When the
+                # price has broken out of the [low, high] swing by more
+                # than 5%, the levels are stale and MUST NOT be cited as
+                # support/resistance — the prior reviewer caught AAPL
+                # (price 9% above swing high) and CRWV (price 36% above
+                # swing high) being quoted as "support at $264 / $95".
+                breakout_pct = 0.0
+                if current > high:
+                    breakout_pct = (current - high) / high * 100
+                    range_position = "above_range"
+                elif current < low:
+                    breakout_pct = (low - current) / low * 100
+                    range_position = "below_range"
+                else:
+                    range_position = "in_range"
+
+                stale_warning = ""
+                if range_position != "in_range" and breakout_pct > 5.0:
+                    stale_warning = (
+                        f"\n⚠️ STALE FIB SWING: current ${current:.2f} is "
+                        f"{breakout_pct:.1f}% {range_position.split('_')[0]} the "
+                        f"${low:.2f}-${high:.2f} range. The levels below are "
+                        f"reference only — DO NOT cite them as support/"
+                        f"resistance in the analysis. Re-run with a wider "
+                        f"date window or switch to fib extension targets."
+                    )
+
                 # Determine price position relative to golden zone
                 # For uptrend: golden zone is SUPPORT (price retraces down to it)
                 # For downtrend: golden zone is RESISTANCE (price bounces up to it)
@@ -386,7 +415,8 @@ class FinancialAnalysisReActAgent:
                 return f"""Fibonacci: {symbol} | {timeframe} | {period}
 Trend: {trend_type} ${low:.2f}→${high:.2f}
 Golden Zone (61.5%-61.8%): ${zone_lower:.2f}-${zone_upper:.2f}
-Current ${current:.2f} → {zone_status}"""
+Current ${current:.2f} → {zone_status}
+range_position: {range_position}{stale_warning}"""
 
             except Exception as e:
                 logger.error("Fibonacci tool failed", symbol=symbol, error=str(e))

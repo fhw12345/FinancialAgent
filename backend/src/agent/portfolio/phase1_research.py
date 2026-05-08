@@ -117,6 +117,22 @@ to satisfy the research below.
 Do NOT make buy/sell/hold recommendations - decisions will be made separately
 by the Portfolio Agent after reviewing all symbol analyses together.
 
+**FIBONACCI SANITY RULE (W1.9)**: When the fibonacci_analysis_tool output
+contains `range_position: above_range` or `range_position: below_range`
+(price has broken out of the swing structure), the levels are STALE.
+DO NOT cite the golden zone or any fib retracement number as
+support/resistance. Instead, either re-call the tool with a wider
+date window, or note in the report that no valid fib structure
+applies and switch to other technical references (moving averages,
+prior swing highs/lows, volume profile).
+
+**FUNDAMENTAL DATA RULE (W1.5-W1.8)**: When a tool returns the literal
+phrase "unsubstantiated" (the unavailable_message format), the
+underlying data could not be fetched from any source. DO NOT make
+valuation claims (P/E vs peers, "cheap", "expensive", "undervalued")
+that depend on that field. State explicitly that the data is
+unavailable and proceed without that line of argument.
+
 LANGUAGE REQUIREMENT:
 Respond in Simplified Chinese (简体中文).
 Technical terms can include English in parentheses for clarity.
