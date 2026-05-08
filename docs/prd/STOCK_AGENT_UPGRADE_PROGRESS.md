@@ -18,11 +18,11 @@ Status: **IN PROGRESS**
 | W1.1 | `OrderIntent` enum + Pydantic validator + unit test | ✅ | 41966dd | Reject CRWV-style payload (stop > limit on close_long). 11 tests pass. |
 | W1.2 | Migration script `migrate_order_intent.py` dry-run + apply | ✅ | f161bf3 | Backfilled 60/60 docs (37 hold / 8 open_long / 15 close_long), 8 flagged `legacy_short_geometry` |
 | W1.3 | Frontend OrderPreview intent badge + W1-E1 e2e | ✅ | 80e7134 | IntentBadge component + DecisionTracker integration + legacy_short_geometry warning chip. Backend PortfolioOrder model + decisions endpoint passthrough intent. e2e PASS: 3 badges + 1 legacy chip rendered correctly. |
-| W1.4 | yfinance fallback helper `_yf_fallback.py` | ✅ | (pending) | 5 helpers (overview/cash_flow/balance_sheet/earnings/insider) + unavailable_message. All return formatted markdown with visible source banner. 7 integration tests pass against live yfinance. |
-| W1.5 | `get_company_overview` connect fallback + unit test | ⏳ | - | Returns `{data, source, asof, degraded}` or `{unavailable: true}` |
-| W1.6 | `get_financial_statements` connect fallback + unit test | ⏳ | - | yfinance.income_stmt/balance_sheet/cashflow |
-| W1.7 | `get_earnings` connect fallback + unit test | ⏳ | - | yfinance.earnings_dates + .calendar |
-| W1.8 | `get_insider_activity` connect fallback + unit test | ⏳ | - | yfinance.insider_transactions |
+| W1.4 | yfinance fallback helper `_yf_fallback.py` | ✅ | 1654f1e | 5 helpers (overview/cash_flow/balance_sheet/earnings/insider) + unavailable_message. All return formatted markdown with visible source banner. 7 integration tests pass against live yfinance. |
+| W1.5 | `get_company_overview` connect fallback + unit test | ✅ | (pending) | 4 paths: AV ok / AV empty → yf / AV raise → yf / both fail → unavailable_message. Unit test 4/4. |
+| W1.6 | `get_financial_statements` connect fallback + unit test | ✅ | (pending) | cash_flow + balance_sheet branches both wired. Unit test 3/3. |
+| W1.7 | `get_earnings` connect fallback + unit test | ✅ | (pending) | Unit test 2/2. |
+| W1.8 | `get_insider_activity` connect fallback + unit test | ✅ | (pending) | Unit test 2/2. (Form 4 plan_type detection deferred to W3.8/W3.9.) |
 | W1.9 | Fibonacci tool `current_price_position` + Phase1 prompt rule + unit test | ⏳ | - | above_range/in_range/below_range; price 9% above swing → above_range |
 | W1.10 | Consistency checker LLM gate + unit test | ⏳ | - | Cheap model, ≤2k tokens, ≤$0.05/run |
 | W1.11 | Global disclaimer footer + UI watermark + W1-E2 e2e | ⏳ | - | "AI-generated · not investment advice" on 4 routes |

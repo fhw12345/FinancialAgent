@@ -2,6 +2,11 @@
 Fundamental Analysis Tools.
 
 Provides tools for company fundamentals, financial statements, insider activity, and ETF holdings.
+
+Each tool tries Alpha Vantage first, then falls back to yfinance via
+`_yf_fallback` (W1.4) when AV returns empty or raises. When both fail,
+returns a deterministic "unavailable" string the W1.10 consistency
+gate can pattern-match to reject downstream valuation claims.
 """
 
 from datetime import UTC, datetime
@@ -9,6 +14,14 @@ from datetime import UTC, datetime
 import structlog
 from langchain_core.tools import tool
 
+from src.agent.tools._yf_fallback import (
+    fetch_balance_sheet_yf,
+    fetch_cash_flow_yf,
+    fetch_earnings_yf,
+    fetch_insider_yf,
+    fetch_overview_yf,
+    unavailable_message,
+)
 from src.core.config import get_settings
 from src.services.alphavantage_market_data import AlphaVantageMarketDataService
 from src.services.alphavantage_response_formatter import AlphaVantageResponseFormatter
@@ -52,22 +65,29 @@ def create_fundamental_tools(
             - symbol="AAPL" → Apple Inc. fundamentals
             - symbol="MSFT" → Microsoft Corporation overview
         """
+        av_error: str | None = None
         try:
             data = await service.get_company_overview(symbol)
-
-            if not data or "Symbol" not in data:
-                return f"No company overview data available for {symbol}"
-
-            # Use formatter for consistent rich markdown output
-            return formatter.format_company_overview(
-                raw_data=data,
+            if data and "Symbol" in data:
+                return formatter.format_company_overview(
+                    raw_data=data,
+                    symbol=symbol,
+                    invoked_at=datetime.now(UTC).isoformat(),
+                )
+            av_error = "Alpha Vantage returned empty response"
+        except Exception as e:
+            av_error = str(e)
+            logger.warning(
+                "company_overview_av_failed_trying_yf",
                 symbol=symbol,
-                invoked_at=datetime.now(UTC).isoformat(),
+                error=av_error,
             )
 
-        except Exception as e:
-            logger.error("Company overview tool failed", symbol=symbol, error=str(e))
-            return f"Company overview error for {symbol}: {str(e)}"
+        # Fallback: yfinance
+        yf_md = await fetch_overview_yf(symbol)
+        if yf_md is not None:
+            return yf_md
+        return unavailable_message(symbol, "Company overview", av_error=av_error)
 
     @tool
     async def get_financial_statements(
@@ -110,6 +130,7 @@ def create_fundamental_tools(
             - get_financial_statements("GOOGL", "cash_flow", 2, "year") → Last 2 years
             - get_financial_statements("MSFT", "balance_sheet", 3, "quarter") → Last 3 quarters balance sheet
         """
+        av_error: str | None = None
         try:
             statement_type = statement_type.lower().strip()
             period = period.lower().strip()
@@ -130,33 +151,45 @@ def create_fundamental_tools(
             # Fetch data based on type
             if statement_type == "cash_flow":
                 data = await service.get_cash_flow(symbol)
-                # Use formatter for consistent rich markdown output with trends
-                return formatter.format_cash_flow(
-                    raw_data=data,
-                    symbol=symbol,
-                    invoked_at=datetime.now(UTC).isoformat(),
-                    count=count,
-                    period=period,
-                )
+                if data:
+                    return formatter.format_cash_flow(
+                        raw_data=data,
+                        symbol=symbol,
+                        invoked_at=datetime.now(UTC).isoformat(),
+                        count=count,
+                        period=period,
+                    )
+                av_error = "Alpha Vantage returned empty cash flow"
             else:
                 data = await service.get_balance_sheet(symbol)
-                # Use formatter for consistent rich markdown output with trends
-                return formatter.format_balance_sheet(
-                    raw_data=data,
-                    symbol=symbol,
-                    invoked_at=datetime.now(UTC).isoformat(),
-                    count=count,
-                    period=period,
-                )
-
+                if data:
+                    return formatter.format_balance_sheet(
+                        raw_data=data,
+                        symbol=symbol,
+                        invoked_at=datetime.now(UTC).isoformat(),
+                        count=count,
+                        period=period,
+                    )
+                av_error = "Alpha Vantage returned empty balance sheet"
         except Exception as e:
-            logger.error(
-                "Financial statements tool failed",
+            av_error = str(e)
+            logger.warning(
+                "financial_statements_av_failed_trying_yf",
                 symbol=symbol,
                 statement_type=statement_type,
-                error=str(e),
+                error=av_error,
             )
-            return f"Financial statements error for {symbol}: {str(e)}"
+
+        # Fallback: yfinance
+        if statement_type == "cash_flow":
+            yf_md = await fetch_cash_flow_yf(symbol, count=count, period=period)
+            label = "Cash flow"
+        else:
+            yf_md = await fetch_balance_sheet_yf(symbol, count=count, period=period)
+            label = "Balance sheet"
+        if yf_md is not None:
+            return yf_md
+        return unavailable_message(symbol, label, av_error=av_error)
 
     @tool
     async def get_insider_activity(symbol: str, limit: int = 50) -> str:
@@ -177,20 +210,28 @@ def create_fundamental_tools(
             - symbol="AAPL" → Recent insider transactions with buy/sell ratio
             - symbol="NVDA", limit=100 → Extended insider activity analysis
         """
+        av_error: str | None = None
         try:
             data = await service.get_insider_transactions(symbol, limit)
-
-            if not data or not data.get("data"):
-                return f"No insider transaction data available for {symbol}"
-
-            return formatter.format_insider_transactions(
-                raw_data=data,
-                symbol=symbol,
-                invoked_at=datetime.now(UTC).isoformat(),
-            )
+            if data and data.get("data"):
+                return formatter.format_insider_transactions(
+                    raw_data=data,
+                    symbol=symbol,
+                    invoked_at=datetime.now(UTC).isoformat(),
+                )
+            av_error = "Alpha Vantage returned empty insider data"
         except Exception as e:
-            logger.error("Insider activity tool failed", symbol=symbol, error=str(e))
-            return f"Insider activity error for {symbol}: {str(e)}"
+            av_error = str(e)
+            logger.warning(
+                "insider_activity_av_failed_trying_yf",
+                symbol=symbol,
+                error=av_error,
+            )
+
+        yf_md = await fetch_insider_yf(symbol, limit=limit)
+        if yf_md is not None:
+            return yf_md
+        return unavailable_message(symbol, "Insider activity", av_error=av_error)
 
     @tool
     async def get_company_earnings(symbol: str) -> str:
@@ -211,21 +252,26 @@ def create_fundamental_tools(
             - symbol="AAPL" → Apple quarterly EPS with beat/miss analysis
             - symbol="NVDA" → NVIDIA earnings trend and surprise history
         """
+        av_error: str | None = None
         try:
             data = await service.get_earnings(symbol)
-
-            if not data:
-                return f"No earnings data available for {symbol}"
-
-            return formatter.format_earnings(
-                raw_data=data,
-                symbol=symbol,
-                invoked_at=datetime.now(UTC).isoformat(),
+            if data:
+                return formatter.format_earnings(
+                    raw_data=data,
+                    symbol=symbol,
+                    invoked_at=datetime.now(UTC).isoformat(),
+                )
+            av_error = "Alpha Vantage returned empty earnings"
+        except Exception as e:
+            av_error = str(e)
+            logger.warning(
+                "earnings_av_failed_trying_yf", symbol=symbol, error=av_error
             )
 
-        except Exception as e:
-            logger.error("Earnings tool failed", symbol=symbol, error=str(e))
-            return f"Earnings data error for {symbol}: {str(e)}"
+        yf_md = await fetch_earnings_yf(symbol)
+        if yf_md is not None:
+            return yf_md
+        return unavailable_message(symbol, "Earnings", av_error=av_error)
 
     @tool
     async def get_etf_holdings(symbol: str) -> str:
