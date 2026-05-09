@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.1] - 2026-05-09
+
+### W3.16 — Phase 1 provenance fix bundle (post-Wave 3 hotfix)
+
+A real frontend→backend e2e single_symbol run on 2026-05-09 against NVDA exposed three independent regressions that every Wave 3 unit/e2e test missed (the recurring "mock-self-reinforcement" antipattern). All three are fixed in this patch; a fourth gap is documented and tracked as W3.17.
+
+- **W3.16-A — `finnhub_quote` source-wrap parity.** W3.2 wrapped the Alpha Vantage `get_stock_quote` tool with the `Source: <provider> [<PREFIX>-Q-SYMBOL-YYYY-MM-DD] asof <iso>` footnote, but the Finnhub-backed `finnhub_quote` tool — which the Phase 1 ReAct agent has equally registered and is free to pick — was not wrapped. A live NVDA run produced a 1749-char report with zero `Source:` lines because the LLM picked the un-wrapped path. Port the W3.2 wrap into `src/agent/tools/finnhub/quotes.py` (`_quote_source_id` helper + body-append), preserving the DataManager fallback chain (yfinance/AV) so `QuoteData.source` flips drive the right token prefix. Legacy QuoteData rows without `source`/`asof` silently skip the footnote. 13 unit tests in `test_finnhub_quote_source_wrap.py`.
+- **W3.16-B — Phase 1 TOKEN PRESERVATION RULE.** Even when tools emitted `Source:` lines, the Phase 1 LLM stripped them while summarising tool outputs into the final markdown report — it treated them as logging noise. Add a fourth prompt rule (after FIBONACCI / FUNDAMENTAL / INSIDER FRAMING) with five clauses: (1) preserve every `[ID]` token verbatim, (2) append the `[ID]` to each citing sentence, (3) multi-source: append both tokens space-separated, (4) never invent token strings, (5) never delete `Source:` lines. Cross-references W3.6 and Phase 2 so the LLM understands why preservation matters. Live verification: NVDA report went from 0 → 8 tokens (1× FH-Q, 1× FH-N, 6× YF-OV). 11 prompt-source tests in `test_phase1_token_preservation_rule.py`.
+- **W3.16-C — Phase 1 token-counter dict-shape fix.** `react_agent.ainvoke` returns `{"trace_id", "messages", "final_answer", "tool_executions", "input_tokens", "output_tokens", ...}` at the top level; Phase 1 was reading `response.get("usage", {}).get("input_tokens", 0)` against a non-existent wrapper, so per-symbol `input_tokens=0 output_tokens=0` was logged on every run. Read top-level keys with `or 0` guard for `None` values from the LLM gateway. Live verification: input went 0 → 38862, output went 0 → 1870, tool_executions logged as 7. 4 unit tests in `test_phase1_token_counter.py`, including a deliberate failure-mode test that catches a future regression to the wrapped form.
+- **W3.16-D — real-data integration test.** New `test_single_symbol_flow_real.py` with `pytest.mark.integration` reads the most-recent `portfolio_orders.metadata.full_research` row written by a live trigger-analysis run (fixture skips when no row in last 24h). Three assertions: Phase 1 report carries ≥1 source-id token, Phase 1 report length > 200 chars, Phase 2 cites ≥1 token across thesis/reasoning/scenarios. The Phase 2 assertion is currently `xfail strict=True` and tracked as W3.17 — see below. Uses sync `pymongo` because `motor` async clients don't survive across pytest-asyncio's per-test event loops at module scope.
+
+**Numbers:** 27 new unit/prompt tests + 3 new integration tests; all 27 unit tests green; integration suite reports 2 pass + 1 xfail against the 2026-05-09 NVDA run. No regressions in the 1830-test backend suite (28 pre-existing failures verified unchanged on HEAD before applying W3.16 changes).
+
+**Tracked follow-up — W3.17:** Phase 2 prompt currently only requires `[ID]` tokens in the `thesis` array, but HOLD decisions leave `thesis` null per the schema and route their narrative into `reasoning` / `reasoning_zh` instead. The 2026-05-09 NVDA HOLD run names $217.80, RSI 65.86, Fwd P/E 19 in `reasoning` yet carries zero tokens. Fix scope: extend the Phase 2 prompt to require `reasoning` to also cite when it lifts numbers from `full_research`.
+
 ## [0.28.0] - 2026-05-09
 
 ### Wave 3 Close — Provenance + insider depth

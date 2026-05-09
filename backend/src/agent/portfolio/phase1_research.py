@@ -187,6 +187,30 @@ the three conditions above also hold. When `plan_type` is missing
 entirely (the SEC fetch failed for this symbol), default to neutral
 framing rather than inferring discretionary.
 
+**TOKEN PRESERVATION RULE (W3.16)**: Tool outputs end with a
+provenance line shaped exactly like:
+
+    Source: finnhub [FH-Q-NVDA-2026-05-09] asof 2026-05-09T14:30Z
+
+The bracketed token (e.g. `[FH-Q-NVDA-2026-05-09]`, `[AV-OV-NVDA-...]`,
+`[FH-N-NVDA-...]`, `[FH-INS-NVDA-...]`) is contract metadata, not
+prose. You MUST:
+
+1. Preserve every such token verbatim — do not rewrite, translate,
+   abbreviate, or strip the brackets / hyphens / dates.
+2. When a sentence in your final research report cites a specific
+   number, headline, or insider transaction that came from a tool,
+   append the matching `[ID]` token at the end of that sentence (or
+   bullet). One token per sentence is enough; do not duplicate the
+   same token across consecutive bullets that already share an ID.
+3. If a fact came from multiple tools (e.g. price from quote +
+   market-cap from overview), append both tokens space-separated.
+4. Do NOT invent token strings. If a claim has no backing tool call,
+   state it without a token rather than fabricating one.
+5. Never delete a `Source:` line you observed in a tool result while
+   summarizing — Phase 2 (the Portfolio Agent that reads your report)
+   relies on these tokens to build the thesis citations W3.6 requires.
+
 {_phase1_language_directive()}
 """
 
@@ -257,13 +281,17 @@ framing rather than inferring discretionary.
             else:
                 response_text = str(response)
 
-            # Extract token usage
+            # Extract token usage. The ReAct agent (langgraph_react_agent.py
+            # ~L1042) returns ``input_tokens`` / ``output_tokens`` at the top
+            # level of the response dict, NOT nested under a ``usage`` key.
+            # The earlier ``response.get("usage", {})`` shape always yielded
+            # 0/0 (W3.16-C fix); langfuse + audit logs were silently blind
+            # to per-symbol token cost.
             input_tokens = 0
             output_tokens = 0
             if isinstance(response, dict):
-                usage = response.get("usage", {})
-                input_tokens = usage.get("input_tokens", 0)
-                output_tokens = usage.get("output_tokens", 0)
+                input_tokens = response.get("input_tokens", 0) or 0
+                output_tokens = response.get("output_tokens", 0) or 0
 
             # Create analysis message (pure research, no decision)
             # Note: analysis_type param is source ("holding"/"watchlist"), but we store

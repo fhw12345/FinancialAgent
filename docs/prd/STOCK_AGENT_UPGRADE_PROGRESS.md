@@ -99,6 +99,27 @@ Status: **IN PROGRESS** (W2.2 closure shipped in 0.27.9; starting W3.1)
 
 ---
 
+## Wave 3 hotfix — Phase 1 provenance fix bundle (post-Wave 3)
+
+Status: **DONE** (4/4 sub-tasks shipped in 0.28.1; W3.17 carved out as follow-up)
+
+A real frontend→backend e2e single_symbol run on 2026-05-09 against NVDA exposed three independent regressions every Wave 3 unit/e2e test missed (recurring "mock-self-reinforcement" antipattern). All three fixed; one Phase 2 gap documented + tracked as W3.17.
+
+| ID | Task | Status | Commit |
+|---|---|---|---|
+| W3.16-A | `finnhub_quote` source-wrap parity (port W3.2 wrap to Finnhub-backed quote tool) | ✅ | (final) | `_quote_source_id` helper + body-append in `src/agent/tools/finnhub/quotes.py`. Preserves DataManager fallback chain (yfinance/AV) so `QuoteData.source` flips drive the right token prefix. Legacy QuoteData rows without `source`/`asof` silently skip the footnote. 13 unit tests in `test_finnhub_quote_source_wrap.py`. |
+| W3.16-B | Phase 1 prompt: TOKEN PRESERVATION RULE | ✅ | (final) | New 4th rule (after FIBONACCI / FUNDAMENTAL / INSIDER FRAMING) with 5 clauses: preserve verbatim / append `[ID]` to citing sentence / multi-source space-separated / never invent / never delete `Source:` lines. Cross-references W3.6 + Phase 2. Live verification: NVDA report 0 → 8 tokens (1× FH-Q, 1× FH-N, 6× YF-OV). 11 prompt-source tests. |
+| W3.16-C | Phase 1 token-counter dict-shape fix | ✅ | (final) | `react_agent.ainvoke` returns top-level `input_tokens`/`output_tokens`, not a `usage` wrapper. Fix: read top-level keys with `or 0` guard. Live verification: input 0 → 38862, output 0 → 1870, tool_executions 7. 4 unit tests including a deliberate failure-mode test catching future regression to wrapped form. |
+| W3.16-D | Real-data integration test (single_symbol flow) | ✅ | (final) | New `test_single_symbol_flow_real.py` (`pytest.mark.integration`) reads latest `portfolio_orders.metadata.full_research` row (24h cutoff, skip otherwise). 3 assertions: Phase 1 carries ≥1 source-id token / Phase 1 length > 200 / Phase 2 cites ≥1 token across thesis/reasoning/scenarios. **Phase 2 assertion currently `xfail strict=True` and tracked as W3.17.** Uses sync `pymongo` (motor async fixture incompatible with pytest-asyncio per-test event loops at module scope). |
+
+### Tracked follow-up
+
+| ID | Task | Status | Notes |
+|---|---|---|---|
+| W3.17 | Phase 2 prompt: require `reasoning` to cite tokens | ⏳ | Phase 2 currently only requires `[ID]` in `thesis` array, but HOLD decisions leave thesis null per schema and route narrative into `reasoning`/`reasoning_zh`. The 2026-05-09 NVDA HOLD run names $217.80, RSI 65.86, Fwd P/E 19 in reasoning yet carries zero tokens. Fix scope: extend Phase 2 prompt so `reasoning` must cite when it lifts numbers from `full_research`. |
+
+---
+
 ## Decisions log (per-task small choices that don't deserve PRD update)
 
 | Date | Task | Decision | Reason |

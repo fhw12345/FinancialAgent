@@ -2,10 +2,31 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import structlog
 from langchain_core.tools import tool
 
 logger = structlog.get_logger()
+
+
+_SOURCE_PREFIX = {
+    "finnhub": "FH",
+    "yfinance": "YF",
+    "alphavantage": "AV",
+}
+
+
+def _quote_source_id(source: str | None, symbol: str, asof: datetime | None) -> str:
+    """Stable footnote ID for a quote (W3.2 / W3.16).
+
+    Mirrors ``alpha_vantage.quotes._quote_source_id`` so both quote tools
+    emit the same footnote-token shape regardless of which one the ReAct
+    agent picks. Format: ``{PREFIX}-Q-{SYMBOL}-{YYYY-MM-DD}``.
+    """
+    prefix = _SOURCE_PREFIX.get((source or "").lower(), (source or "src").upper())
+    asof_day = (asof or datetime.now(UTC)).strftime("%Y-%m-%d")
+    return f"{prefix}-Q-{symbol.upper()}-{asof_day}"
 
 
 def create_finnhub_quote_tool(data_manager: object) -> list:
@@ -32,12 +53,30 @@ def create_finnhub_quote_tool(data_manager: object) -> list:
             if session in ("pre", "post")
             else (f"Session: {session}\n" if session and session != "regular" else "")
         )
-        return (
+        body = (
             f"{q.symbol}: ${q.price:.2f} ({q.change:+.2f}, {q.change_percent:+.2f}%)\n"
             f"Open ${q.open:.2f} · High ${q.high:.2f} · Low ${q.low:.2f} · "
             f"Prev Close ${q.previous_close:.2f}\n"
             f"{session_line}"
             f"As of {q.latest_trading_day or 'latest'}"
         )
+
+        # W3.16-A provenance footnote — same shape as the AV `get_stock_quote`
+        # tool (see alpha_vantage/quotes.py W3.2). The ReAct agent has both
+        # tools registered; whichever one it picks, downstream Phase2 + the
+        # frontend footnote chip resolver get an identical token.
+        # Skip the footnote when the QuoteData object pre-dates W3.2 (no
+        # source/asof attributes) so legacy cached rows don't render
+        # "Source: None [...]".
+        source_name = getattr(q, "source", None)
+        if source_name:
+            asof_dt = getattr(q, "asof", None)
+            sid = _quote_source_id(source_name, q.symbol, asof_dt)
+            asof_repr = (
+                asof_dt.strftime("%Y-%m-%dT%H:%MZ") if asof_dt else "asof unknown"
+            )
+            body = f"{body}\n\nSource: {source_name} [{sid}] asof {asof_repr}"
+
+        return body
 
     return [finnhub_quote]
