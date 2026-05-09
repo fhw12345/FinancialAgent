@@ -327,6 +327,21 @@ derivation drift). Satisfy the rules:
   cite a number without a source-ID token are research malpractice
   — the consistency_gate will flag them and the dashboard will
   render them with a "uncited" warning chip.
+- `reasoning_summary` (W3.17): the same source-ID token rule
+  applies to this string field. Whenever `reasoning_summary` names
+  a number, ratio, growth rate, transaction, headline, or insider
+  event that you lifted from the Phase 1 research above, append
+  the matching source-ID token in square brackets right after that
+  number — same `[FH-Q-...]` / `[AV-OV-...]` / `[YF-CF-...]` /
+  `[FH-N-...]` / `[FH-INS-...]` shapes as the thesis rule. This
+  matters most for HOLD decisions: the schema lets HOLD leave
+  `thesis` null and route the entire narrative into
+  `reasoning_summary`, so without this rule HOLD decisions silently
+  drop every citation Phase 1 worked to preserve. Pure qualitative
+  phrasing ("the breakout looks tired", "wait for digestion") may
+  skip the citation. A `reasoning_summary` that names concrete
+  Phase 1 numbers without source-ID tokens is research malpractice
+  for the same reason as an uncited thesis bullet.
 - `valuation`: at least 2 ValuationMethod objects (each with method
   one of pe_vs_peer / ev_revenue / ev_ebitda / peg / dcf_quick /
   p_book / ps_ratio / other, plus value and note). Triangulating
@@ -353,7 +368,7 @@ derivation drift). Satisfy the rules:
   "stop_loss": 134.00,
   "take_profit": 168.00,
   "confidence": 7,
-  "reasoning_summary": "Buy limit $142.50 at 0.5 fib retracement support. Stop $134 below swing low (atr_stop with atr=4.2, n=2). Target $168 at 1.272 fib extension. Thesis cites datacenter capex acceleration; 2 valuation methods triangulate fair value $155-170.",
+  "reasoning_summary": "Buy limit $142.50 at 0.5 fib retracement support. Stop $134 below swing low (atr_stop with atr=4.2, n=2). Target $168 at 1.272 fib extension. Thesis cites datacenter capex acceleration [FH-N-EXMP-2026-02-08]; 2 valuation methods triangulate fair value $155-170 [AV-OV-EXMP-2025-12-31].",
   "thesis": [
     "Q4 datacenter capex guide raised 18% YoY, locking 2026 revenue floor [FH-N-EXMP-2026-02-08]",
     "Operating margin expansion from 28% to 33% as new fab depreciation rolls off [AV-OV-EXMP-2025-12-31]",

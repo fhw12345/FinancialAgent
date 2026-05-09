@@ -114,9 +114,9 @@ A real frontend→backend e2e single_symbol run on 2026-05-09 against NVDA expos
 
 ### Tracked follow-up
 
-| ID | Task | Status | Notes |
-|---|---|---|---|
-| W3.17 | Phase 2 prompt: require `reasoning` to cite tokens | ⏳ | Phase 2 currently only requires `[ID]` in `thesis` array, but HOLD decisions leave thesis null per schema and route narrative into `reasoning`/`reasoning_zh`. The 2026-05-09 NVDA HOLD run names $217.80, RSI 65.86, Fwd P/E 19 in reasoning yet carries zero tokens. Fix scope: extend Phase 2 prompt so `reasoning` must cite when it lifts numbers from `full_research`. |
+| ID | Task | Status | Commit | Notes |
+|---|---|---|---|---|
+| W3.17 | Phase 2 prompt: require `reasoning_summary` to cite `[ID]` tokens | ✅ | (final) | New rule co-located with W3.6 thesis rule in Structured Research Blocks (`phase2_decisions.py:330-345`). Same 5 token-family examples, "research malpractice" language, qualitative-phrase carve-out. Worked example reasoning_summary extended with `[FH-N-EXMP-2026-02-08]` + `[AV-OV-EXMP-2025-12-31]` demonstrations. `reasoning_zh` is post-translated so prompt change is enough — tokens preserved through translation step. W3.16-D integration test unxfailed. Live NVDA HOLD verification: phase1 8→12 tokens, phase2 reasoning 0→3 tokens, reasoning_zh 0→3 tokens, thesis 3 bullets all cited. 5 prompt-lock unit tests in `test_phase2_reasoning_source_ids.py`. **Operational note:** backend uvicorn runs without `--reload`, so prompt-only edits require `docker compose restart backend` to take effect. |
 
 ---
 

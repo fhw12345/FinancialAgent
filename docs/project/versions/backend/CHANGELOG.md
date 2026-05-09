@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.2] - 2026-05-09
+
+### W3.17 — Phase 2 reasoning_summary citation parity (closes the W3.16-D xfail)
+
+The 2026-05-09 NVDA HOLD run exposed a citation hole: Phase 2 prompt's W3.6 rule only required `[ID]` tokens in the `thesis` array, but the schema makes `thesis: list[str] | None = None` — HOLD decisions are allowed to leave thesis null and route their narrative entirely into the required `reasoning_summary` field. The first post-W3.16 NVDA run did exactly that: reasoning named $217.80 (price), RSI 65.86 (technical), Fwd P/E 19 (fundamental), $269 (target), 9.24% (P&L), 83% (concentration), 1.56 (beta) — every number lifted from Phase 1 full_research — yet the text carried zero tokens. The W3.16-D integration test caught it but had to ship as `xfail strict=True` so the W3.16 A/B/C bundle could land.
+
+- **Phase 2 prompt** (`src/agent/portfolio/phase2_decisions.py:330-345`): new W3.17 rule co-located with the W3.6 thesis rule inside the Structured Research Blocks section. Same five token-family examples, same "research malpractice" language, same qualitative-phrase carve-out ("the breakout looks tired", "wait for digestion"). Cross-references HOLD decisions explicitly so the LLM understands why the parallel obligation exists. Worked example's `reasoning_summary` extended with two literal `[FH-N-EXMP-2026-02-08]` / `[AV-OV-EXMP-2025-12-31]` token demonstrations.
+- **`reasoning_zh` is post-translated**, not LLM-emitted, so it's not addressed by prompt changes — but tokens flow through naturally because the translation step preserves square-bracket spans. Live verification: 3/3 tokens in English reasoning, 3/3 tokens in `reasoning_zh`.
+- **W3.16-D integration test** unxfailed: `test_phase2_decision_cites_at_least_one_token` is now a regular assertion. Live verification on a fresh post-restart NVDA HOLD run: order `single_symbol_1e19fd5d4e5c` carries 12 tokens in Phase 1 full_research (up from 8), 3 tokens in Phase 2 reasoning (up from 0), 3 tokens in `reasoning_zh`, 3 thesis bullets each carrying their token. All three integration assertions green.
+- **5 prompt-source unit tests** in `test_phase2_reasoning_source_ids.py` lock the wording: rule mentions `reasoning_summary` explicitly, names HOLD as the motivating case, preserves the qualitative carve-out, demonstrates the rule in the worked example with ≥1 token, and sits within ±1200 chars of the W3.6 thesis rule's malpractice marker so a future edit can't drift them apart.
+
+**Operational note:** the backend uvicorn process does not run with `--reload`, so prompt changes require a `docker compose restart backend` before they reach the LLM. The first post-W3.17 NVDA run still produced 0 tokens in reasoning until the restart cleared the cached module-level f-string. Documented here as a footnote for future contributors making prompt-only edits.
+
+**Numbers:** 5 new unit tests + 1 unxfailed integration test; full Phase 2 + decision + thesis + reasoning regression suite 79/79 green.
+
 ## [0.28.1] - 2026-05-09
 
 ### W3.16 — Phase 1 provenance fix bundle (post-Wave 3 hotfix)

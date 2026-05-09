@@ -129,32 +129,24 @@ def test_phase1_full_research_contains_source_id_token(mongo_db) -> None:  # typ
     )
 
 
-@pytest.mark.xfail(
-    reason=(
-        "W3.17: Phase2 prompt currently only requires `[ID]` tokens in the "
-        "thesis array, but HOLD decisions leave thesis null per the schema "
-        "and route their narrative into `reasoning` / `reasoning_zh` "
-        "instead. Real 2026-05-09 NVDA HOLD run names $217.80, RSI 65.86, "
-        "Fwd P/E 19 in reasoning yet carries zero tokens — fix is to teach "
-        "Phase2 prompt that reasoning must also cite when it lifts numbers "
-        "from full_research. Tracked separately so W3.16 A/B/C can ship."
-    ),
-    strict=True,
-)
 def test_phase2_decision_cites_at_least_one_token(mongo_db) -> None:  # type: ignore[no-untyped-def]
     """Phase 2 must cite at least one ``[ID]`` token somewhere in the
     decision. The W3.6 prompt prefers ``thesis`` bullets but the schema
     leaves ``thesis`` optional for HOLD decisions, so we accept any of:
 
       * ``metadata.thesis`` (preferred — what W3.6 specifies)
-      * ``metadata.reasoning`` (HOLD fallback)
-      * ``metadata.reasoning_zh`` (translated path)
+      * ``metadata.reasoning`` (HOLD fallback, post-W3.17)
+      * ``metadata.reasoning_zh`` (translated path; tokens flow
+        through if the English source carries them)
       * ``metadata.scenarios.*.rationale`` (BUY/SELL deep-citation)
 
     Zero tokens across all four spots means Phase 1 successfully
     preserved tokens (test 1 above) but Phase 2 dropped them while
-    composing the structured decision — that's the W3.6 regression.
-    """
+    composing the structured decision — that's the W3.6 / W3.17
+    regression. After W3.17 the Phase 2 prompt requires
+    ``reasoning_summary`` to cite ``[ID]`` tokens whenever it lifts
+    numbers from Phase 1 research, so HOLD decisions can no longer
+    route around the citation contract via the optional thesis."""
     order = _latest_single_symbol_order(mongo_db)
     meta = order.get("metadata") or {}
 
