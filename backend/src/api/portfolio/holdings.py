@@ -139,6 +139,16 @@ async def _enrich_with_quote(
             holding.last_session = session
         if change_pct is not None:
             holding.day_change_percent = float(change_pct)
+        # W3.18 — copy ext-hours companion fields when present.
+        ext_price = getattr(quote, "ext_hours_price", None)
+        if ext_price is not None:
+            holding.ext_hours_price = float(ext_price)
+            holding.ext_hours_session = getattr(quote, "ext_hours_session", None)
+            ext_pct = getattr(quote, "ext_hours_change_percent", None)
+            holding.ext_hours_change_percent = (
+                float(ext_pct) if ext_pct is not None else None
+            )
+            holding.ext_hours_asof = getattr(quote, "ext_hours_asof", None)
         if persist and holding_repo is not None:
             try:
                 await holding_repo.update_price(

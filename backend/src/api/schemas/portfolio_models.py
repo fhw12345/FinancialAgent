@@ -90,6 +90,27 @@ class HoldingResponse(BaseModel):
             "None when live quote was unavailable."
         ),
     )
+    # W3.18 — extended-hours companion (response-only).
+    ext_hours_price: float | None = Field(
+        None,
+        description=(
+            "Companion pre/post-market price shown alongside the primary "
+            "price during regular/closed sessions. None during active "
+            "pre/post sessions or when no fresh ext-hours print is available."
+        ),
+    )
+    ext_hours_session: str | None = Field(
+        None,
+        description='"pre" | "post" — origin of the ext_hours_price companion.',
+    )
+    ext_hours_change_percent: float | None = Field(
+        None,
+        description="Companion's percent move vs the primary current_price.",
+    )
+    ext_hours_asof: datetime | None = Field(
+        None,
+        description="Timestamp of the companion print (UTC).",
+    )
 
     @classmethod
     def from_holding(cls, holding: Holding) -> "HoldingResponse":
@@ -112,6 +133,10 @@ class HoldingResponse(BaseModel):
             last_price_update=_as_utc(holding.last_price_update),
             last_session=holding.last_session,
             day_change_percent=holding.day_change_percent,
+            ext_hours_price=holding.ext_hours_price,
+            ext_hours_session=holding.ext_hours_session,
+            ext_hours_change_percent=holding.ext_hours_change_percent,
+            ext_hours_asof=_as_utc(holding.ext_hours_asof),
         )
 
     class Config:

@@ -68,6 +68,93 @@ def _extended_hours_price(
     return fallback
 
 
+def _extended_hours_companion(
+    info: dict[str, Any] | None,
+    primary_session: str,
+    primary_price: float,
+    previous_close: float | None,
+    now: datetime | None = None,
+) -> tuple[float, str, float, datetime] | None:
+    """Pick the extended-hours companion print to display alongside a
+    regular/closed-session primary price.
+
+    Used by the W3.18 weekend/Sunday-evening UX where the Holdings table
+    primary cell shows Friday's close (`session=closed`) and we want a
+    second line "AH $215.05 (-0.07%)" sourced from yfinance's
+    ``Ticker.info`` after-hours fields. During an active pre/post
+    session the primary price IS the ext-hours print, so we return None
+    and let the existing SessionBadge surface the move.
+
+    Returns ``(price, session, change_percent_vs_primary, asof)`` when a
+    fresh companion is available, else None. Freshness gates:
+      * post-market companion: must be within 18 hours of `now` —
+        Friday 16:00 close + Sat/Sun shows AH; Monday morning 09:00
+        open does not show last Friday's stale AH.
+      * pre-market companion: must be within 6 hours — covers
+        04:00-09:30 ET pre-market window plus a small grace.
+
+    The companion's change_percent is computed against the *primary*
+    price, NOT against previous_close, because the UX question is "how
+    far is the after-hours print from what the user just saw on the
+    table?" Using previous_close would conflate two different deltas.
+    """
+    if primary_session in ("pre", "post"):
+        return None
+    if info is None:
+        return None
+
+    now = now or datetime.now(UTC)
+
+    post_price = info.get("postMarketPrice")
+    post_ts = info.get("postMarketTime")
+    pre_price = info.get("preMarketPrice")
+    pre_ts = info.get("preMarketTime")
+
+    def _to_dt(raw: Any) -> datetime | None:
+        if raw is None:
+            return None
+        if isinstance(raw, datetime):
+            return raw if raw.tzinfo else raw.replace(tzinfo=UTC)
+        try:
+            # yfinance returns Unix epoch seconds for these fields.
+            return datetime.fromtimestamp(int(raw), tz=UTC)
+        except (TypeError, ValueError):
+            return None
+
+    post_dt = _to_dt(post_ts)
+    pre_dt = _to_dt(pre_ts)
+
+    candidates: list[tuple[datetime, float, str, int]] = []
+    if (
+        isinstance(post_price, int | float)
+        and post_price > 0
+        and post_dt is not None
+        and (now - post_dt).total_seconds() <= 18 * 3600
+    ):
+        candidates.append((post_dt, float(post_price), "post", 18 * 3600))
+    if (
+        isinstance(pre_price, int | float)
+        and pre_price > 0
+        and pre_dt is not None
+        and (now - pre_dt).total_seconds() <= 6 * 3600
+    ):
+        candidates.append((pre_dt, float(pre_price), "pre", 6 * 3600))
+
+    if not candidates:
+        return None
+
+    # Multiple fresh candidates is rare but possible (Monday pre-open
+    # while last Friday's AH still within 18h). Prefer the most recent
+    # by timestamp — that's the print the user most wants to see.
+    candidates.sort(key=lambda c: c[0], reverse=True)
+    asof, price, session, _ttl = candidates[0]
+
+    if primary_price <= 0:
+        return None
+    pct = (price - primary_price) / primary_price * 100.0
+    return price, session, pct, asof
+
+
 class DataManager:
     """
     Single source of truth for all data access in the application.
@@ -607,7 +694,81 @@ class DataManager:
         if not isinstance(cached, dict):
             raise DataFetchError(f"Invalid cache data for {symbol}", "cache")
 
-        return QuoteData.from_dict(cached)
+        quote = QuoteData.from_dict(cached)
+        # W3.18: enrich with extended-hours companion when primary is
+        # regular/closed. Failure is non-fatal — the companion is
+        # decoration, not load-bearing.
+        try:
+            await self._enrich_extended_hours_companion(quote)
+        except Exception as e:
+            logger.debug(
+                "quote_ext_companion_skip",
+                symbol=symbol,
+                error=str(e),
+            )
+        return quote
+
+    async def _enrich_extended_hours_companion(self, quote: QuoteData) -> None:
+        """W3.18: populate ``quote.ext_hours_*`` fields in place using
+        yfinance ``Ticker.info``. Cached separately under
+        ``market:quote_ext:{SYMBOL}`` so the slow ``info`` HTTP roundtrip
+        doesn't gate the primary quote refresh."""
+        if quote.session in ("pre", "post"):
+            # Primary IS the ext-hours print — companion redundant.
+            return
+        symbol = quote.symbol.upper()
+        cache_key = CacheKeys.quote_ext(symbol)
+
+        async def fetch_func() -> dict[str, Any]:
+            info = await self._fetch_yfinance_info(symbol)
+            return info or {}
+
+        cached = await self._cache.get_with_fetch(
+            cache_key, fetch_func, self.TTL_QUOTE
+        )
+        if not isinstance(cached, dict) or not cached:
+            return
+        companion = _extended_hours_companion(
+            cached,
+            primary_session=quote.session,
+            primary_price=quote.price,
+            previous_close=quote.previous_close,
+        )
+        if companion is None:
+            return
+        price, session, pct, asof = companion
+        quote.ext_hours_price = price
+        quote.ext_hours_session = session  # type: ignore[assignment]
+        quote.ext_hours_change_percent = pct
+        quote.ext_hours_asof = asof
+
+    @staticmethod
+    async def _fetch_yfinance_info(symbol: str) -> dict[str, Any] | None:
+        """Pull ``yfinance.Ticker.info`` in a thread. Returns the subset
+        of fields we need for the W3.18 companion + None on any failure
+        (the calling cache layer treats None as 'don't cache')."""
+        import asyncio
+
+        import yfinance as yf
+
+        def _sync() -> dict[str, Any] | None:
+            try:
+                t = yf.Ticker(symbol)
+                info = t.info or {}
+            except Exception:
+                return None
+            keys = (
+                "preMarketPrice",
+                "preMarketTime",
+                "postMarketPrice",
+                "postMarketTime",
+                "marketState",
+                "regularMarketPrice",
+                "hasPrePostMarketData",
+            )
+            return {k: info.get(k) for k in keys}
+
+        return await asyncio.to_thread(_sync)
 
     async def _fetch_quote(self, symbol: str) -> QuoteData:
         """Internal: Fetch quote with Finnhub → yfinance → AV fallback chain.

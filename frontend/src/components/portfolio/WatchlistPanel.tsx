@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SymbolSearch } from "../SymbolSearch";
 import { SessionBadge } from "../common/SessionBadge";
+import { ExtHoursLine } from "../common/ExtHoursLine";
 import {
   useWatchlist,
   useAddToWatchlist,
@@ -204,6 +205,11 @@ export function WatchlistPanel() {
                     </span>
                   )}
                 </div>
+                <ExtHoursLine
+                  price={item.ext_hours_price}
+                  session={item.ext_hours_session}
+                  changePercent={item.ext_hours_change_percent}
+                />
                 {item.notes && (
                   <div className="text-sm text-gray-500">{item.notes}</div>
                 )}

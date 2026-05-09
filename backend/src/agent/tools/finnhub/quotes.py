@@ -53,11 +53,26 @@ def create_finnhub_quote_tool(data_manager: object) -> list:
             if session in ("pre", "post")
             else (f"Session: {session}\n" if session and session != "regular" else "")
         )
+        # W3.18 — extended-hours companion line. Surfaces the freshest
+        # pre/post print alongside a regular/closed primary so the agent
+        # can reason about overnight gaps. Same source-id token as the
+        # primary quote (one quote = one citation).
+        ext_price = getattr(q, "ext_hours_price", None)
+        ext_session = getattr(q, "ext_hours_session", None)
+        ext_pct = getattr(q, "ext_hours_change_percent", None)
+        ext_line = ""
+        if ext_price is not None and ext_session in ("pre", "post"):
+            label = "After-hours" if ext_session == "post" else "Pre-market"
+            pct_str = (
+                f" ({ext_pct:+.2f}%)" if isinstance(ext_pct, int | float) else ""
+            )
+            ext_line = f"{label}: ${ext_price:.2f}{pct_str} vs primary print\n"
         body = (
             f"{q.symbol}: ${q.price:.2f} ({q.change:+.2f}, {q.change_percent:+.2f}%)\n"
             f"Open ${q.open:.2f} · High ${q.high:.2f} · Low ${q.low:.2f} · "
             f"Prev Close ${q.previous_close:.2f}\n"
             f"{session_line}"
+            f"{ext_line}"
             f"As of {q.latest_trading_day or 'latest'}"
         )
 

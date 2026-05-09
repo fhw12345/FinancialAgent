@@ -11,6 +11,7 @@ import {
 import { useAddUserTransaction } from "../../hooks/useUserTransactions";
 import { formatTime } from "../../utils/timeFormatter";
 import { SessionBadge } from "../common/SessionBadge";
+import { ExtHoursLine } from "../common/ExtHoursLine";
 import { HoldingFormModal, type HoldingFormValues } from "./HoldingFormModal";
 import {
   AddTransactionModal,
@@ -288,6 +289,11 @@ export function PortfolioSummaryTable({
                           : "-"}
                         <SessionBadge session={holding.last_session} />
                       </span>
+                      <ExtHoursLine
+                        price={holding.ext_hours_price}
+                        session={holding.ext_hours_session}
+                        changePercent={holding.ext_hours_change_percent}
+                      />
                     </td>
                     <td
                       className={`text-right py-2 px-2 ${

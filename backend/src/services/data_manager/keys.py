@@ -109,6 +109,22 @@ class CacheKeys:
         return f"{CacheKeys.MARKET}:quote:{symbol.upper()}"
 
     @staticmethod
+    def quote_ext(symbol: str) -> str:
+        """
+        Generate cache key for the extended-hours companion blob (W3.18).
+
+        The yfinance ``Ticker.info`` payload behind ext-hours pricing is
+        an expensive HTTP roundtrip — unlike ``fast_info`` it scrapes
+        the full quote JSON. We cache it under its own key so the
+        primary quote refresh path stays cheap when only the companion
+        is stale.
+
+        Returns:
+            Cache key like 'market:quote_ext:NVDA'
+        """
+        return f"{CacheKeys.MARKET}:quote_ext:{symbol.upper()}"
+
+    @staticmethod
     def options(symbol: str) -> str:
         """
         Generate cache key for options chain data.

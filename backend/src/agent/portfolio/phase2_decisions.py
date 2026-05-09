@@ -294,6 +294,15 @@ unspecified is not acceptable.
 3. **Risk Management**: Consider correlation between positions
 4. **Position Sizing**: Use confidence level to scale position sizes
 5. **Holdings vs Watchlist**: Holdings can be SELL/HOLD; Watchlist can be BUY/HOLD
+6. **Extended-Hours Companion (W3.18)**: When a Phase 1 quote tool
+   reports an "After-hours: $X (±Y%)" or "Pre-market: $X (±Y%)" line
+   below the primary print, that companion is the freshest signal
+   available. Treat any companion move ≥ ±1% versus the primary as
+   material — your `reasoning_summary` MUST name the companion price
+   and direction (with its source-ID token) before recommending an
+   action; ignoring an overnight ±1%+ move while citing only the stale
+   regular-session close is the same provenance failure as ignoring a
+   fresh news catalyst.
 
 ## Structured Research Blocks (W2.7+) — REQUIRED for BUY/SELL
 

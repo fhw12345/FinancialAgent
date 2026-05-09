@@ -201,6 +201,17 @@ class QuoteData:
     # before this field existed (or pickled fixtures in tests) still parse.
     source: str | None = None
     asof: datetime | None = None
+    # W3.18 extended-hours companion — when the primary `price` reflects
+    # a regular/closed session, these fields carry the most recent pre or
+    # post-market print so the UI can show "Friday close $215.20 +
+    # after-hours $215.05" side-by-side over weekends, and Phase 2 can
+    # cite the move. Stays None during active pre/post sessions (where
+    # `price` already IS the ext-hours print) and when no companion is
+    # available (older cache rows, providers that don't expose it).
+    ext_hours_price: float | None = None
+    ext_hours_session: Literal["pre", "post"] | None = None
+    ext_hours_change_percent: float | None = None
+    ext_hours_asof: datetime | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -218,6 +229,12 @@ class QuoteData:
             "session": self.session,
             "source": self.source,
             "asof": self.asof.isoformat() if self.asof else None,
+            "ext_hours_price": self.ext_hours_price,
+            "ext_hours_session": self.ext_hours_session,
+            "ext_hours_change_percent": self.ext_hours_change_percent,
+            "ext_hours_asof": (
+                self.ext_hours_asof.isoformat() if self.ext_hours_asof else None
+            ),
         }
 
     @classmethod
@@ -232,6 +249,17 @@ class QuoteData:
                 asof_parsed = datetime.fromisoformat(asof_raw)
             except ValueError:
                 asof_parsed = None
+        ext_asof_raw = data.get("ext_hours_asof")
+        ext_asof_parsed: datetime | None = None
+        if isinstance(ext_asof_raw, datetime):
+            ext_asof_parsed = ext_asof_raw
+        elif isinstance(ext_asof_raw, str) and ext_asof_raw:
+            try:
+                ext_asof_parsed = datetime.fromisoformat(ext_asof_raw)
+            except ValueError:
+                ext_asof_parsed = None
+        ext_price_raw = data.get("ext_hours_price")
+        ext_pct_raw = data.get("ext_hours_change_percent")
         return cls(
             symbol=data["symbol"],
             price=float(data["price"]),
@@ -246,6 +274,14 @@ class QuoteData:
             session=data.get("session", "regular"),
             source=data.get("source"),
             asof=asof_parsed,
+            ext_hours_price=(
+                float(ext_price_raw) if ext_price_raw is not None else None
+            ),
+            ext_hours_session=data.get("ext_hours_session"),
+            ext_hours_change_percent=(
+                float(ext_pct_raw) if ext_pct_raw is not None else None
+            ),
+            ext_hours_asof=ext_asof_parsed,
         )
 
 

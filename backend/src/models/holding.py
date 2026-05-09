@@ -52,6 +52,30 @@ class Holding(BaseModel):
             "persisted). Filled in from the live quote when available."
         ),
     )
+    # W3.18 — extended-hours companion. All four are response-only,
+    # populated from QuoteData.ext_hours_* and never written to mongo.
+    # When the primary `last_session` is regular/closed AND yfinance has
+    # a fresh pre/post print, these fields drive the inline secondary
+    # row "AH $215.05 (-0.07%)" / "PM $214.80 (-0.19%)" in the UI.
+    ext_hours_price: float | None = Field(
+        None,
+        description=(
+            "Companion pre/post-market price shown alongside the primary "
+            "regular/closed-session price. Response-only."
+        ),
+    )
+    ext_hours_session: str | None = Field(
+        None,
+        description='"pre" or "post" — which extended session the companion came from.',
+    )
+    ext_hours_change_percent: float | None = Field(
+        None,
+        description="Companion's % change vs the primary current_price (NOT prev close).",
+    )
+    ext_hours_asof: datetime | None = Field(
+        None,
+        description="Timestamp of the companion print (UTC).",
+    )
 
     class Config:
         """Pydantic config."""

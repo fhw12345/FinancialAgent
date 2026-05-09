@@ -106,6 +106,12 @@ def create_quote_tools(
                     "latest_trading_day": qd.latest_trading_day,
                     "previous_close": qd.previous_close,
                     "session": getattr(qd, "session", None),
+                    # W3.18 — pass-through for the ext-hours companion line below.
+                    "ext_hours_price": getattr(qd, "ext_hours_price", None),
+                    "ext_hours_session": getattr(qd, "ext_hours_session", None),
+                    "ext_hours_change_percent": getattr(
+                        qd, "ext_hours_change_percent", None
+                    ),
                 }
                 source_name = getattr(qd, "source", None)
                 asof_dt = getattr(qd, "asof", None)
@@ -164,6 +170,26 @@ def create_quote_tools(
                 )
             elif session and session != "regular":
                 output_lines.append(f"Session: {session}")
+
+            # W3.18 — extended-hours companion print, if any. Surfaces the
+            # most recent pre/post move *alongside* the regular/closed
+            # primary so the agent can reason about overnight gaps. The
+            # source-id token reused below pins the citation to the same
+            # quote — one quote = one citation, regardless of whether the
+            # number cited is the primary or the companion.
+            ext_price = quote_data.get("ext_hours_price")
+            ext_session = quote_data.get("ext_hours_session")
+            ext_pct = quote_data.get("ext_hours_change_percent")
+            if ext_price is not None and ext_session in ("pre", "post"):
+                label = (
+                    "After-hours" if ext_session == "post" else "Pre-market"
+                )
+                pct_str = (
+                    f" ({ext_pct:+.2f}%)" if isinstance(ext_pct, int | float) else ""
+                )
+                output_lines.append(
+                    f"{label}: ${ext_price:.2f}{pct_str} vs primary print"
+                )
 
             # Add notes if present (e.g., lunch breaks for Asian markets)
             if notes:

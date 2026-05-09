@@ -145,6 +145,13 @@ to satisfy the research below.
 Do NOT make buy/sell/hold recommendations - decisions will be made separately
 by the Portfolio Agent after reviewing all symbol analyses together.
 
+**EXTENDED-HOURS RULE (W3.18)**: When a quote tool emits an
+"After-hours: $X" or "Pre-market: $X" companion line below the primary
+print, treat that companion as the most recent market signal — note it
+verbatim in your report (with its source-ID token) whenever the move is
+≥ ±1% versus the primary, since that magnitude routinely changes the
+short-term thesis (overnight gap, earnings reaction, news leak).
+
 **FIBONACCI SANITY RULE (W1.9)**: When the fibonacci_analysis_tool output
 contains `range_position: above_range` or `range_position: below_range`
 (price has broken out of the swing structure), the levels are STALE.

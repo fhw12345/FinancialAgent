@@ -90,6 +90,22 @@ async def _enrich_with_live_quote(
             it.last_price_update = now
             it.last_session = sess
             it.day_change_percent = cp_value
+            # W3.18 — surface ext-hours companion (response-only, NOT
+            # persisted; weekend price is recomputed each GET).
+            ext_price = getattr(quote, "ext_hours_price", None)
+            if ext_price is not None:
+                it.ext_hours_price = float(ext_price)
+                it.ext_hours_session = getattr(quote, "ext_hours_session", None)
+                ext_pct = getattr(quote, "ext_hours_change_percent", None)
+                it.ext_hours_change_percent = (
+                    float(ext_pct) if ext_pct is not None else None
+                )
+                it.ext_hours_asof = getattr(quote, "ext_hours_asof", None)
+            else:
+                it.ext_hours_price = None
+                it.ext_hours_session = None
+                it.ext_hours_change_percent = None
+                it.ext_hours_asof = None
 
             if repo is not None:
                 try:
