@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.10] - 2026-05-11
+
+### Defensive guard: ignore non-CJK content in `_zh` precomputed fields (no English flash)
+
+A backend regression in DashScope reverse-translation can land English text into fields like `full_research_zh` and `reasoning_zh`. `useTranslated` previously short-circuited on any non-empty `precomputed` value and rendered that string as-is, so users on the zh-CN UI briefly saw the English original. Per `feedback_translation_no_english_flash.md` we never want English to flash under a zh-CN locale.
+
+- **New `frontend/src/utils/i18n/looksTranslated.ts` helper** — pure function `looksTranslated(text, targetLang)` that, when `targetLang` starts with `"zh"`, requires either ≥3 CJK characters (BMP U+4E00–U+9FFF and Extension A U+3400–U+4DBF) or ≥1% CJK ratio of non-space characters. Empty/whitespace returns false. Non-`zh` targets pass through (no guard yet — future work).
+- **`<Translated />` component** — calls `looksTranslated(precomputed, i18n.language)`; when the check fails the precomputed value is replaced with `null` and `useTranslated` runs the lazy translation path on the base English instead. The `data-translating="true"` attribute + opacity dip continue to render during the lazy round-trip, preserving the no-flash e2e contract.
+- **`ResearchBody` in `DecisionTracker.tsx`** — same guard wrapping `useTranslated`, with `data-translating="true"` now exposed on the markdown wrapper for the e2e regression spec.
+- **12 vitest unit tests** in `src/utils/i18n/__tests__/looksTranslated.test.ts` cover all-Chinese, all-English, mixed-but-above-1%, single CJK char buried in 1000-char English doc, 3+ CJK in short text, empty/whitespace, null/undefined, Extension A, and zh-Hant target. All pass alongside the existing `useTranslated` suite.
+
+Bumps frontend 0.22.9 → 0.22.10.
+
 ## [0.22.9] - 2026-05-11
 
 ### Chart panel UX: hide K8s mock, fix Enter race, friendly error messages
