@@ -119,6 +119,23 @@ describe("useTranslated", () => {
     expect(result.current.text).toBe("hi");
     expect(translateApi.translateBatch).not.toHaveBeenCalled();
   });
+
+  it("short-circuits when source text already looks like target language", () => {
+    // Legacy / repaired rows can land Chinese in the base field. Without
+    // this guard the hook fires /api/translate, leaves isLoading=true, and
+    // <Translated /> renders the Chinese at opacity 0.7 (faded text bug).
+    mockLanguage = "zh-CN";
+    const { result } = renderHook(
+      () => useTranslated("买入苹果，因为第四季度服务业务增长加速。"),
+      { wrapper: wrapper() }
+    );
+    expect(result.current.text).toBe(
+      "买入苹果，因为第四季度服务业务增长加速。"
+    );
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.isTranslated).toBe(true);
+    expect(translateApi.translateBatch).not.toHaveBeenCalled();
+  });
 });
 
 describe("useTranslated precomputed", () => {

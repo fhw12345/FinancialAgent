@@ -8,6 +8,11 @@
  * - If a non-empty `precomputed` value is supplied (write-time translation
  *   already persisted to MongoDB), returns it immediately and skips the
  *   /api/translate call entirely.
+ * - If the source `text` already plausibly looks like the active target
+ *   language (CJK content under zh-CN), short-circuits as already-translated.
+ *   Guards legacy rows from the pre-English-only era and repaired rows where
+ *   the CJK base was copied across, so the UI doesn't fade real Chinese text
+ *   through a pointless /api/translate round-trip.
  * - Otherwise, calls /api/translate and caches the result via TanStack Query.
  *   The backend has its own Redis cache, but the React-Query cache prevents
  *   even one network round-trip per render after the first.
@@ -21,6 +26,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { translateBatch, type TargetLang } from "../services/translateApi";
+import { looksTranslated } from "../utils/i18n/looksTranslated";
 
 const SUPPORTED_TARGETS: ReadonlySet<string> = new Set(["zh-CN"]);
 
@@ -51,7 +57,17 @@ export function useTranslated(
   const hasPrecomputed =
     isZh && typeof opts.precomputed === "string" && opts.precomputed.length > 0;
 
-  const shouldTranslate = !!text && isZh && !hasPrecomputed;
+  // If the source text itself already plausibly matches the target language
+  // (e.g. legacy rows where Phase 1 emitted Chinese before the English-only
+  // pipeline flip, or repaired rows where the CJK base was copied across),
+  // skip /api/translate and treat it as already-translated. Without this the
+  // hook fires a useless round-trip and renders the text in the opacity-0.7
+  // "translating" state — visible to the user as faded Chinese text.
+  const alreadyTargetLang =
+    isZh && typeof text === "string" && looksTranslated(text, lang);
+
+  const shouldTranslate =
+    !!text && isZh && !hasPrecomputed && !alreadyTargetLang;
 
   const query = useQuery({
     queryKey: ["translate", lang, text],
@@ -74,6 +90,8 @@ export function useTranslated(
       isLoading: false,
       isTranslated: true,
     };
+  if (alreadyTargetLang)
+    return { text, isLoading: false, isTranslated: true };
   if (query.isLoading) return { text, isLoading: true, isTranslated: false };
   if (query.isError || !query.data)
     return { text, isLoading: false, isTranslated: false };

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.11] - 2026-05-12
+
+### Skip /api/translate when the source text is already the target language (no faded Chinese)
+
+`useTranslated` previously fired `/api/translate` whenever the active locale was `zh-CN`, the `text` argument was non-empty, and no `precomputed` value was supplied — regardless of whether `text` itself was already Chinese. This produced a visible bug on the Portfolio analysis history: legacy decisions (Phase 1 era when output was still zh) and freshly-repaired rows (where `repair_inverted_zh.py` copied the CJK base into the `_zh` slot but left the base intact) rendered their Chinese text at opacity 0.7 — the "translating" placeholder style — while the hook waited on a useless round-trip to translate Chinese into Chinese.
+
+- **`useTranslated`** — added `alreadyTargetLang = isZh && looksTranslated(text, lang)` short-circuit between the precomputed branch and the network branch. Returns `{ text, isLoading: false, isTranslated: true }` so `<Translated />` skips the opacity dip and the `data-translating` attribute.
+- **`__tests__/useTranslated.test.ts`** — regression test asserting that a pure-Chinese `text` under `zh-CN` returns immediately, `isLoading=false`, and never calls `translateBatch`.
+
+Bumps frontend 0.22.10 → 0.22.11.
+
 ## [0.22.10] - 2026-05-11
 
 ### Defensive guard: ignore non-CJK content in `_zh` precomputed fields (no English flash)
