@@ -23,6 +23,26 @@ import {
   FileText,
   ArrowUpDown,
 } from "lucide-react";
+
+// Translate raw backend error strings into user-facing Chinese messages.
+// Backend errors like "No daily data for symbol: NVDA. Keys: ['Information']"
+// are unfriendly noise — match known patterns and surface intent instead.
+function friendlyChartError(raw: string | undefined): string {
+  if (!raw) return "无法加载行情数据，请稍后重试。";
+  if (/Keys: \['Information'\]/i.test(raw) || /premium/i.test(raw)) {
+    return "数据源限流或该端点已变为付费接口，请稍后重试或联系管理员升级数据源。";
+  }
+  if (/No (daily|weekly|monthly|intraday|quote) data/i.test(raw)) {
+    return "暂无该标的的行情数据，请确认代码是否正确，或换个时间周期重试。";
+  }
+  if (/timeout|timed out|ECONN/i.test(raw)) {
+    return "请求超时，请检查网络后重试。";
+  }
+  if (/rate.?limit|429/i.test(raw)) {
+    return "请求过于频繁，请稍后再试。";
+  }
+  return raw;
+}
 import { TimeInterval, PriceDataResponse } from "../../services/market";
 import type { FibonacciMetadata } from "../../utils/analysisMetadataExtractor";
 
@@ -278,7 +298,7 @@ const ChartPanelComponent: React.FC<ChartPanelProps> = ({
         {currentSymbol && priceDataQuery.isError && (
             <div className="p-4 border rounded-lg bg-red-50 text-sm text-red-700">
               <div className="flex items-center justify-between mb-3">
-                <span>{priceDataQuery.error?.message || "Price data unavailable."}</span>
+                <span>{friendlyChartError(priceDataQuery.error?.message)}</span>
                 {/* Interval selector for error recovery */}
                 <div className="flex gap-1 bg-white rounded-md p-1 border">
                   {INTERVAL_BUTTONS.map(({ key, label }) => (

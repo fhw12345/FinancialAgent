@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.9] - 2026-05-11
+
+### Chart panel UX: hide K8s mock, fix Enter race, friendly error messages
+
+Three independent fixes around the platform tab's right-side trading chart and the system-health page surfaced while testing the chart panel end-to-end (the underlying data-source issue is in backend 0.29.0).
+
+- **`SymbolSearch.tsx` — Enter once, not twice**: typing a symbol and pressing Enter used to do nothing on the first press (it kicked off `performSearch`; results arrived async; isOpen was still false in the keydown handler) and only selected on the second Enter. `performSearch` now takes an `autoSelectOnReady` flag — when set, the response callback auto-selects the top high-confidence match — and the Enter handler + the inline "Enter" button both pass `true`, so one Enter goes from typing → search → chart load. The Enter handler also no longer requires `isOpen` to be true; if `results.length > 0` it selects regardless.
+- **`ChartPanel.tsx` — friendly error mapping**: error toasts on the chart panel previously surfaced raw backend strings like `No daily data for symbol: NVDA. Keys: ['Information']` (the Alpha Vantage rate-limit upsell payload bleeding through). New `friendlyChartError()` helper translates known backend patterns (the AV "Information" payload, "No X data" messages, timeouts, 429s) into Chinese user-facing copy. The literal backend string is still shown as fallback for unrecognized errors so we don't mask real problems.
+- **`HealthPage.tsx` — drop K8s mock data block**: the system-health page was serving a hard-coded "Pod Resource Usage / Node Resource Usage" mock with `kube-system` style names like `aks-nodepool1-12345678-vmss000000` whenever `metrics.kubernetes_available === false` (which is always, in this local-only fork). Removed the mock data constants, the injection at fetch time, and the two JSX blocks. The `(Mock Data - Local Dev)` orange header tag is gone too. The "Kubernetes metrics unavailable — showing mock data" warning is replaced with a neutral "Local mode — Kubernetes pod/node metrics not applicable" line, and the page now surfaces only the data that actually exists locally (Database Overview + Collections table).
+
 ## [0.22.8] - 2026-05-09
 
 ### Added — Wave 3 (W3.7 ResearchPanel footnote rendering)

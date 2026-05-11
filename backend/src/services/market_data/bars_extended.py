@@ -10,6 +10,7 @@ from typing import Any
 import pandas as pd
 import structlog
 
+from . import yfinance_bars
 from .base import AlphaVantageBase
 
 logger = structlog.get_logger()
@@ -224,6 +225,50 @@ class BarsExtendedMixin(AlphaVantageBase):
         Returns:
             DataFrame with Open, High, Low, Close, Volume columns
         """
+        # yfinance is the primary source — AV's free tier no longer serves
+        # most chart endpoints (returns "Information" upsell payload). AV is
+        # used only as a fallback when yfinance fails AND a key is configured.
+        frontend_to_granularity = {
+            "1m": "1min", "1min": "1min",
+            "5m": "5min", "5min": "5min",
+            "15m": "15min", "15min": "15min",
+            "30m": "30min", "30min": "30min",
+            "60m": "60min", "60min": "60min", "1h": "60min",
+            "1d": "daily", "day": "daily",
+            "1w": "weekly", "1wk": "weekly", "week": "weekly",
+            "1mo": "monthly", "1M": "monthly", "month": "monthly",
+        }
+        granularity = frontend_to_granularity.get(interval)
+        if granularity:
+            outputsize = "full" if (start_date and end_date) or interval in ("1d", "1w", "1wk", "1mo", "1M") else "compact"
+            try:
+                df_yf = await yfinance_bars.get_bars(symbol, granularity, outputsize)
+                logger.info(
+                    "Price bars via yfinance",
+                    symbol=symbol,
+                    interval=interval,
+                    granularity=granularity,
+                    bars_count=len(df_yf),
+                )
+                return self._postprocess_price_bars(
+                    df_yf, symbol, interval, start_date, end_date
+                )
+            except Exception as yf_err:
+                if not self.api_key:
+                    logger.error(
+                        "yfinance bars failed (no AV fallback)",
+                        symbol=symbol,
+                        interval=interval,
+                        error=str(yf_err),
+                    )
+                    raise
+                logger.warning(
+                    "yfinance bars failed, falling back to Alpha Vantage",
+                    symbol=symbol,
+                    interval=interval,
+                    error=str(yf_err),
+                )
+
         try:
             # Map intervals to Alpha Vantage format
             if interval in ["1m", "5m", "15m", "30m", "60m", "60min", "1h"]:
@@ -283,108 +328,9 @@ class BarsExtendedMixin(AlphaVantageBase):
                     actual_range=f"{df.index.min()} to {df.index.max()}",
                 )
 
-            # Apply interval-specific time caps
-            if not df.empty:
-                time_cap_years = {
-                    "1d": 2,
-                    "day": 2,
-                    "1w": 6,
-                    "1wk": 6,
-                    "week": 6,
-                }
-
-                years_cap = time_cap_years.get(interval)
-
-                if years_cap:
-                    cutoff_date = datetime.now() - timedelta(days=years_cap * 365)
-
-                    if df.index.tz is not None:
-                        cutoff_dt = pd.to_datetime(cutoff_date).tz_localize(
-                            "America/New_York"
-                        )
-                    else:
-                        cutoff_dt = pd.to_datetime(cutoff_date)
-
-                    original_count = len(df)
-                    df = df[df.index >= cutoff_dt]
-
-                    logger.info(
-                        "Applied time cap",
-                        symbol=symbol,
-                        interval=interval,
-                        years_cap=years_cap,
-                        cutoff_date=cutoff_dt,
-                        original_count=original_count,
-                        filtered_count=len(df),
-                    )
-
-            # Filter data by custom date range OR apply default limits
-            if not df.empty:
-                if start_date and end_date:
-                    if df.index.tz is not None:
-                        start_dt = pd.to_datetime(start_date).tz_localize(
-                            "America/New_York"
-                        )
-                        end_dt = (
-                            pd.to_datetime(end_date)
-                            + pd.Timedelta(days=1)
-                            - pd.Timedelta(seconds=1)
-                        ).tz_localize("America/New_York")
-                    else:
-                        start_dt = pd.to_datetime(start_date)
-                        end_dt = (
-                            pd.to_datetime(end_date)
-                            + pd.Timedelta(days=1)
-                            - pd.Timedelta(seconds=1)
-                        )
-
-                    original_count = len(df)
-                    original_df_copy = df.copy()
-                    df = df[(df.index >= start_dt) & (df.index <= end_dt)]
-
-                    logger.info(
-                        "Filtered to custom date range",
-                        symbol=symbol,
-                        interval=interval,
-                        start_date=start_date,
-                        end_date=end_date,
-                        original_count=original_count,
-                        filtered_count=len(df),
-                    )
-
-                    # For intraday: if no data, fall back to most recent available
-                    if df.empty and interval in ["1m", "60m", "1h", "60min"]:
-                        logger.info(
-                            "No data for requested date range, returning most recent intraday data",
-                            symbol=symbol,
-                            interval=interval,
-                            requested_range=f"{start_date} to {end_date}",
-                        )
-                        df = original_df_copy
-                        max_bars = 420 if interval == "1m" else 85
-                        if len(df) > max_bars:
-                            df = df.tail(max_bars)
-                else:
-                    # Apply default bar limits
-                    max_bars_map: dict[str, int] = {
-                        "1m": 100,
-                        "1h": 100,
-                        "60min": 100,
-                    }
-                    max_bars_optional: int | None = max_bars_map.get(interval)
-                    if max_bars_optional is not None and len(df) > max_bars_optional:
-                        original_count = len(df)
-                        df = df.tail(max_bars_optional)
-                        logger.info(
-                            "Limited data to max bars",
-                            symbol=symbol,
-                            interval=interval,
-                            original_count=original_count,
-                            limited_count=len(df),
-                            max_bars=max_bars_optional,
-                        )
-
-            return df
+            return self._postprocess_price_bars(
+                df, symbol, interval, start_date, end_date
+            )
 
         except Exception as e:
             logger.error(
@@ -394,3 +340,119 @@ class BarsExtendedMixin(AlphaVantageBase):
                 error=str(e),
             )
             raise
+
+    def _postprocess_price_bars(
+        self,
+        df: pd.DataFrame,
+        symbol: str,
+        interval: str,
+        start_date: str | None,
+        end_date: str | None,
+    ) -> pd.DataFrame:
+        """Apply time caps, custom date filtering, and default bar limits.
+
+        Shared between the yfinance and Alpha Vantage code paths so both
+        sources produce identically-shaped output.
+        """
+        # Apply interval-specific time caps
+        if not df.empty:
+            time_cap_years = {
+                "1d": 2,
+                "day": 2,
+                "1w": 6,
+                "1wk": 6,
+                "week": 6,
+            }
+
+            years_cap = time_cap_years.get(interval)
+
+            if years_cap:
+                cutoff_date = datetime.now() - timedelta(days=years_cap * 365)
+
+                if df.index.tz is not None:
+                    cutoff_dt = pd.to_datetime(cutoff_date).tz_localize(
+                        "America/New_York"
+                    )
+                else:
+                    cutoff_dt = pd.to_datetime(cutoff_date)
+
+                original_count = len(df)
+                df = df[df.index >= cutoff_dt]
+
+                logger.info(
+                    "Applied time cap",
+                    symbol=symbol,
+                    interval=interval,
+                    years_cap=years_cap,
+                    cutoff_date=cutoff_dt,
+                    original_count=original_count,
+                    filtered_count=len(df),
+                )
+
+        # Filter data by custom date range OR apply default limits
+        if not df.empty:
+            if start_date and end_date:
+                if df.index.tz is not None:
+                    start_dt = pd.to_datetime(start_date).tz_localize(
+                        "America/New_York"
+                    )
+                    end_dt = (
+                        pd.to_datetime(end_date)
+                        + pd.Timedelta(days=1)
+                        - pd.Timedelta(seconds=1)
+                    ).tz_localize("America/New_York")
+                else:
+                    start_dt = pd.to_datetime(start_date)
+                    end_dt = (
+                        pd.to_datetime(end_date)
+                        + pd.Timedelta(days=1)
+                        - pd.Timedelta(seconds=1)
+                    )
+
+                original_count = len(df)
+                original_df_copy = df.copy()
+                df = df[(df.index >= start_dt) & (df.index <= end_dt)]
+
+                logger.info(
+                    "Filtered to custom date range",
+                    symbol=symbol,
+                    interval=interval,
+                    start_date=start_date,
+                    end_date=end_date,
+                    original_count=original_count,
+                    filtered_count=len(df),
+                )
+
+                # For intraday: if no data, fall back to most recent available
+                if df.empty and interval in ["1m", "60m", "1h", "60min"]:
+                    logger.info(
+                        "No data for requested date range, returning most recent intraday data",
+                        symbol=symbol,
+                        interval=interval,
+                        requested_range=f"{start_date} to {end_date}",
+                    )
+                    df = original_df_copy
+                    max_bars = 420 if interval == "1m" else 85
+                    if len(df) > max_bars:
+                        df = df.tail(max_bars)
+            else:
+                # Apply default bar limits
+                max_bars_map: dict[str, int] = {
+                    "1m": 100,
+                    "1h": 100,
+                    "60min": 100,
+                }
+                max_bars_optional: int | None = max_bars_map.get(interval)
+                if max_bars_optional is not None and len(df) > max_bars_optional:
+                    original_count = len(df)
+                    df = df.tail(max_bars_optional)
+                    logger.info(
+                        "Limited data to max bars",
+                        symbol=symbol,
+                        interval=interval,
+                        original_count=original_count,
+                        limited_count=len(df),
+                        max_bars=max_bars_optional,
+                    )
+
+        return df

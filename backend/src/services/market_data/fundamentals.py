@@ -1,5 +1,15 @@
 """
-Company fundamentals and financial statements for Alpha Vantage service.
+Company fundamentals and financial statements.
+
+yfinance is the primary source (free, no quota). Alpha Vantage's free tier is
+both rate-limited (25 req/day) and most fundamentals endpoints have been moved
+behind the premium paywall — they return a single-key payload of the form
+`{"Information": "premium endpoint..."}` for free keys, which fails the same
+"Symbol not in data" check as a real 404. So yfinance must run first; AV is
+attempted only as a fallback when a key is configured.
+
+The Alpha Vantage fallback bodies live in `fundamentals_av.py` to keep this
+file under the 500-line cap; this module owns the dispatch + logging.
 """
 
 import json
@@ -9,6 +19,7 @@ from typing import Any
 import pandas as pd
 import structlog
 
+from . import fundamentals_av, yfinance_fundamentals, yfinance_movers
 from .base import AlphaVantageBase
 
 logger = structlog.get_logger()
@@ -18,152 +29,66 @@ class FundamentalsMixin(AlphaVantageBase):
     """Methods for company fundamentals, financial statements, and earnings data."""
 
     async def get_company_overview(self, symbol: str) -> dict[str, Any]:
-        """
-        Get company fundamentals and overview using OVERVIEW endpoint.
-
-        Returns raw Alpha Vantage response with comprehensive company data including:
-        - Symbol, Name, Description, Exchange, Currency
-        - MarketCapitalization, EBITDA, PERatio, EPS
-        - ProfitMargin, RevenuePerShareTTM, DividendYield
-        - 52WeekHigh, 52WeekLow, Beta, etc.
-
-        Args:
-            symbol: Stock symbol
-
-        Returns:
-            Dict with raw Alpha Vantage company overview data
-        """
+        """Company overview. yfinance primary, AV fallback."""
         try:
-            response = await self.client.get(
-                self.base_url,
-                params={
-                    "function": "OVERVIEW",
-                    "symbol": symbol,
-                    "apikey": self.api_key,
-                },
-            )
-
-            if response.status_code != 200:
-                sanitized_text = self._sanitize_text(response.text)
-                raise ValueError(
-                    f"Alpha Vantage API error: {response.status_code} - {sanitized_text}"
-                )
-
-            data = response.json()
-
-            if not data or "Symbol" not in data:
-                raise ValueError(f"No company overview data for symbol: {symbol}")
-
+            data = await yfinance_fundamentals.get_company_overview(symbol)
             logger.info(
-                "Company overview fetched",
+                "Company overview via yfinance",
                 symbol=symbol,
                 company_name=data.get("Name", "N/A"),
             )
-
-            return data  # type: ignore[no-any-return]
-
+            return data
+        except Exception as yf_err:
+            if not self.api_key:
+                logger.error("yfinance overview failed (no AV fallback)", symbol=symbol, error=str(yf_err))
+                raise
+            logger.warning("yfinance overview failed, trying Alpha Vantage", symbol=symbol, error=str(yf_err))
+        try:
+            return await fundamentals_av.fetch_company_overview(self, symbol)
         except Exception as e:
             logger.error("Company overview fetch failed", symbol=symbol, error=str(e))
             raise
 
     async def get_cash_flow(self, symbol: str) -> dict[str, Any]:
-        """
-        Get cash flow statements using CASH_FLOW endpoint.
-
-        Returns both annual and quarterly cash flow reports with fields like:
-        - operatingCashflow
-        - capitalExpenditures
-        - cashflowFromInvestment
-        - cashflowFromFinancing
-        - dividendPayout
-
-        Args:
-            symbol: Stock symbol
-
-        Returns:
-            Dict with annualReports and quarterlyReports lists
-        """
+        """Cash flow. yfinance primary, AV fallback."""
         try:
-            response = await self.client.get(
-                self.base_url,
-                params={
-                    "function": "CASH_FLOW",
-                    "symbol": symbol,
-                    "apikey": self.api_key,
-                },
-            )
-
-            if response.status_code != 200:
-                sanitized_text = self._sanitize_text(response.text)
-                raise ValueError(
-                    f"Alpha Vantage API error: {response.status_code} - {sanitized_text}"
-                )
-
-            data = response.json()
-
-            if "annualReports" not in data and "quarterlyReports" not in data:
-                raise ValueError(f"No cash flow data for symbol: {symbol}")
-
+            data = await yfinance_fundamentals.get_cash_flow(symbol)
             logger.info(
-                "Cash flow fetched",
+                "Cash flow via yfinance",
                 symbol=symbol,
                 annual_reports=len(data.get("annualReports", [])),
                 quarterly_reports=len(data.get("quarterlyReports", [])),
             )
-
-            return data  # type: ignore[no-any-return]
-
+            return data
+        except Exception as yf_err:
+            if not self.api_key:
+                logger.error("yfinance cash flow failed (no AV fallback)", symbol=symbol, error=str(yf_err))
+                raise
+            logger.warning("yfinance cash flow failed, trying Alpha Vantage", symbol=symbol, error=str(yf_err))
+        try:
+            return await fundamentals_av.fetch_cash_flow(self, symbol)
         except Exception as e:
             logger.error("Cash flow fetch failed", symbol=symbol, error=str(e))
             raise
 
     async def get_balance_sheet(self, symbol: str) -> dict[str, Any]:
-        """
-        Get balance sheet using BALANCE_SHEET endpoint.
-
-        Returns both annual and quarterly balance sheets with fields like:
-        - totalAssets
-        - totalLiabilities
-        - totalShareholderEquity
-        - cash
-        - currentDebt, longTermDebt
-
-        Args:
-            symbol: Stock symbol
-
-        Returns:
-            Dict with annualReports and quarterlyReports lists
-        """
+        """Balance sheet. yfinance primary, AV fallback."""
         try:
-            response = await self.client.get(
-                self.base_url,
-                params={
-                    "function": "BALANCE_SHEET",
-                    "symbol": symbol,
-                    "apikey": self.api_key,
-                },
-            )
-
-            if response.status_code != 200:
-                sanitized_text = self._sanitize_text(response.text)
-                raise ValueError(
-                    f"Alpha Vantage API error: {response.status_code} - {sanitized_text}"
-                )
-
-            data = response.json()
-
-            if "annualReports" not in data and "quarterlyReports" not in data:
-                raise ValueError(f"No balance sheet data for symbol: {symbol}")
-
+            data = await yfinance_fundamentals.get_balance_sheet(symbol)
             logger.info(
-                "Balance sheet fetched",
+                "Balance sheet via yfinance",
                 symbol=symbol,
                 annual_reports=len(data.get("annualReports", [])),
                 quarterly_reports=len(data.get("quarterlyReports", [])),
             )
-
-            return data  # type: ignore[no-any-return]
-
+            return data
+        except Exception as yf_err:
+            if not self.api_key:
+                logger.error("yfinance balance sheet failed (no AV fallback)", symbol=symbol, error=str(yf_err))
+                raise
+            logger.warning("yfinance balance sheet failed, trying Alpha Vantage", symbol=symbol, error=str(yf_err))
+        try:
+            return await fundamentals_av.fetch_balance_sheet(self, symbol)
         except Exception as e:
             logger.error("Balance sheet fetch failed", symbol=symbol, error=str(e))
             raise
@@ -175,124 +100,43 @@ class FundamentalsMixin(AlphaVantageBase):
         limit: int = 50,
         sort: str = "LATEST",
     ) -> dict[str, Any]:
-        """
-        Get news with sentiment analysis using NEWS_SENTIMENT endpoint.
-
-        Args:
-            tickers: Comma-separated stock symbols (e.g., "AAPL,MSFT")
-            topics: Comma-separated topics (e.g., "technology,ipo")
-                   Options: blockchain, earnings, ipo, mergers_and_acquisitions,
-                   financial_markets, economy_fiscal, economy_monetary, economy_macro,
-                   energy_transportation, finance, life_sciences, manufacturing,
-                   real_estate, retail_wholesale, technology
-            limit: Maximum number of news items (default 50, max 1000)
-            sort: Sort order - LATEST | EARLIEST | RELEVANCE
-
-        Returns:
-            Dict with feed (news items) and sentiment_score_definition
-        """
+        """News + sentiment. yfinance primary (uses local VADER for sentiment),
+        AV fallback when a single ticker is requested. Topic-based queries
+        require AV — no equivalent in yfinance."""
+        if tickers and not topics:
+            try:
+                data = await yfinance_fundamentals.get_news_sentiment(tickers, limit=limit)
+                logger.info("News sentiment via yfinance", tickers=tickers, news_count=len(data.get("feed", [])))
+                return data
+            except Exception as yf_err:
+                if not self.api_key:
+                    logger.error("yfinance news failed (no AV fallback)", tickers=tickers, error=str(yf_err))
+                    raise
+                logger.warning("yfinance news failed, trying Alpha Vantage", tickers=tickers, error=str(yf_err))
         try:
-            params: dict[str, str | int] = {
-                "function": "NEWS_SENTIMENT",
-                "limit": limit,
-                "sort": sort,
-                "apikey": self.api_key,
-            }
-
-            # Add tickers or topics (at least one should be provided)
-            filter_desc = ""
-            if tickers:
-                params["tickers"] = tickers
-                filter_desc = f"tickers={tickers}"
-            if topics:
-                params["topics"] = topics
-                filter_desc = (
-                    f"topics={topics}"
-                    if not filter_desc
-                    else f"{filter_desc}, topics={topics}"
-                )
-
-            response = await self.client.get(self.base_url, params=params)
-
-            if response.status_code != 200:
-                sanitized_text = self._sanitize_text(response.text)
-                raise ValueError(
-                    f"Alpha Vantage API error: {response.status_code} - {sanitized_text}"
-                )
-
-            data = response.json()
-
-            if "feed" not in data:
-                sanitized = self._sanitize_response(data)
-                logger.warning(
-                    "No news sentiment data", filter=filter_desc, response=sanitized
-                )
-                return {
-                    "feed": [],
-                    "sentiment_score_definition": data.get(
-                        "sentiment_score_definition"
-                    ),
-                }
-
-            logger.info(
-                "News sentiment fetched",
-                filter=filter_desc,
-                news_count=len(data["feed"]),
-            )
-
-            return data  # type: ignore[no-any-return]
-
+            return await fundamentals_av.fetch_news_sentiment(self, tickers, topics, limit, sort)
         except Exception as e:
-            logger.error(
-                "News sentiment fetch failed", filter=filter_desc, error=str(e)
-            )
+            logger.error("News sentiment fetch failed", tickers=tickers, topics=topics, error=str(e))
             raise
 
     async def get_top_gainers_losers(self) -> dict[str, Any]:
-        """
-        Get market movers using TOP_GAINERS_LOSERS endpoint.
-
-        Returns today's top performing stocks across three categories:
-        - top_gainers: Top 20 stocks with highest price increase
-        - top_losers: Top 20 stocks with largest price decrease
-        - most_actively_traded: Top 20 stocks by trading volume
-
-        Returns:
-            Dict with top_gainers, top_losers, most_actively_traded lists
-        """
+        """Top gainers/losers/most active. yfinance primary, AV fallback."""
         try:
-            response = await self.client.get(
-                self.base_url,
-                params={
-                    "function": "TOP_GAINERS_LOSERS",
-                    "apikey": self.api_key,
-                },
-            )
-
-            if response.status_code != 200:
-                sanitized_text = self._sanitize_text(response.text)
-                raise ValueError(
-                    f"Alpha Vantage API error: {response.status_code} - {sanitized_text}"
-                )
-
-            data = response.json()
-
-            if not any(
-                key in data
-                for key in ["top_gainers", "top_losers", "most_actively_traded"]
-            ):
-                sanitized = self._sanitize_response(data)
-                raise ValueError(f"No market movers data available: {sanitized}")
-
+            data = await yfinance_movers.get_market_movers(count=20)
             logger.info(
-                "Market movers fetched",
+                "Market movers via yfinance",
                 gainers_count=len(data.get("top_gainers", [])),
                 losers_count=len(data.get("top_losers", [])),
                 active_count=len(data.get("most_actively_traded", [])),
             )
-
-            return data  # type: ignore[no-any-return]
-
+            return data
+        except Exception as yf_err:
+            if not self.api_key:
+                logger.error("yfinance movers failed (no AV fallback)", error=str(yf_err))
+                raise
+            logger.warning("yfinance movers failed, trying Alpha Vantage", error=str(yf_err))
+        try:
+            return await fundamentals_av.fetch_top_gainers_losers(self)
         except Exception as e:
             logger.error("Market movers fetch failed", error=str(e))
             raise

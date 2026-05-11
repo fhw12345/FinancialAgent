@@ -51,52 +51,6 @@ interface SystemMetrics {
 }
 
 
-// Mock data for local development when K8s is not available
-const mockPods: PodMetric[] = [
-  {
-    name: "backend-7d4f8b9c5-abc12",
-    cpu_usage: "150m",
-    memory_usage: "256Mi",
-    cpu_percentage: 15,
-    memory_percentage: 25,
-  },
-  {
-    name: "frontend-6c8a7d5b4-def34",
-    cpu_usage: "80m",
-    memory_usage: "128Mi",
-    cpu_percentage: 8,
-    memory_percentage: 12,
-  },
-  {
-    name: "redis-5b9c8d7a6-ghi56",
-    cpu_usage: "50m",
-    memory_usage: "96Mi",
-    cpu_percentage: 5,
-    memory_percentage: 9,
-  },
-];
-
-const mockNodes: NodeMetric[] = [
-  {
-    name: "aks-nodepool1-12345678-vmss000000",
-    cpu_usage: "1200m",
-    memory_usage: "3.2Gi",
-    cpu_capacity: "4000m",
-    memory_capacity: "8Gi",
-    cpu_percentage: 30,
-    memory_percentage: 40,
-  },
-  {
-    name: "aks-nodepool1-12345678-vmss000001",
-    cpu_usage: "800m",
-    memory_usage: "2.1Gi",
-    cpu_capacity: "4000m",
-    memory_capacity: "8Gi",
-    cpu_percentage: 20,
-    memory_percentage: 26,
-  },
-];
-
 export default function HealthPage() {
   const { i18n } = useTranslation();
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
@@ -126,12 +80,6 @@ export default function HealthPage() {
       }
 
       const data = await response.json();
-
-      // Use mock data for local dev when K8s is not available
-      if (!data.kubernetes_available) {
-        data.pods = mockPods;
-        data.nodes = mockNodes;
-      }
 
       setMetrics(data);
       setError(null);
@@ -209,9 +157,8 @@ export default function HealthPage() {
                 Status: {metrics.health_status.toUpperCase()}
               </h2>
               {!metrics.kubernetes_available && (
-                <p className="text-sm text-orange-600 mt-1">
-                  ⚠️ Kubernetes metrics unavailable - showing mock data for
-                  local development
+                <p className="text-sm text-gray-500 mt-1">
+                  Local mode — Kubernetes pod/node metrics not applicable
                 </p>
               )}
             </div>
@@ -223,11 +170,6 @@ export default function HealthPage() {
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
               Pod Resource Usage
-              {!metrics.kubernetes_available && (
-                <span className="ml-2 text-sm font-normal text-orange-600">
-                  (Mock Data - Local Dev)
-                </span>
-              )}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {metrics.pods.map((pod) => (
@@ -342,11 +284,6 @@ export default function HealthPage() {
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
               Node Resource Usage
-              {!metrics.kubernetes_available && (
-                <span className="ml-2 text-sm font-normal text-orange-600">
-                  (Mock Data - Local Dev)
-                </span>
-              )}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {metrics.nodes.map((node) => (

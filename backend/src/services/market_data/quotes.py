@@ -191,27 +191,25 @@ class QuotesMixin(AlphaVantageBase):
 
     async def get_quote(self, symbol: str) -> dict[str, Any]:
         """
-        Get real-time quote using Alpha Vantage GLOBAL_QUOTE.
-
-        Args:
-            symbol: Stock symbol
-
-        Returns:
-            Dict with price, volume, change, etc.
+        Get real-time quote. yfinance is the primary source (free, unlimited);
+        Alpha Vantage is used only as a fallback when yfinance fails AND a key
+        is configured. This ordering is important because AV's free tier no
+        longer returns useful data for many endpoints (responses contain only
+        an "Information" key advertising premium).
         """
-        # W7: yfinance fallback when no AV key configured
-        if not self.api_key:
-            try:
-                result = await asyncio.to_thread(_yf_quote_sync, symbol)
-                logger.info(
-                    "Quote via yfinance",
-                    symbol=symbol,
-                    price=result["price"],
-                )
-                return result
-            except Exception as e:
-                logger.error("yfinance quote failed", symbol=symbol, error=str(e))
+        try:
+            result = await asyncio.to_thread(_yf_quote_sync, symbol)
+            logger.info("Quote via yfinance", symbol=symbol, price=result["price"])
+            return result
+        except Exception as yf_err:
+            if not self.api_key:
+                logger.error("yfinance quote failed (no AV fallback)", symbol=symbol, error=str(yf_err))
                 raise
+            logger.warning(
+                "yfinance quote failed, trying Alpha Vantage",
+                symbol=symbol,
+                error=str(yf_err),
+            )
         try:
             # GLOBAL_QUOTE with entitlement=delayed returns previous day's close during market hours
             # It will show today's close only after market closes

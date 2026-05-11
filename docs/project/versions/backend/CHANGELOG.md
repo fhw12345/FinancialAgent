@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-05-11
+
+### Migrate quote / price / fundamentals / news / movers from Alpha Vantage to yfinance
+
+The Alpha Vantage free tier (25 req/day) and the move of `OVERVIEW`, `CASH_FLOW`, `BALANCE_SHEET`, `NEWS_SENTIMENT`, `TIME_SERIES_DAILY_ADJUSTED`, and `TIME_SERIES_*` to premium-only made the chart panel and analysis buttons return either 400 ("No daily data for symbol: X. Keys: ['Information']") or 500 with the AV upsell payload leaking through. yfinance has no key, no quota, and equivalent data — switch the primary path on every Alpha Vantage entry point in this surface, with AV kept as a fallback only when an `api_key` is configured.
+
+- **`get_quote()`** (`src/services/market_data/quotes.py`): yfinance via the existing `_yf_quote_sync()` is now the primary; AV is the fallback. Previously yfinance only ran when `api_key` was empty, so a configured-but-rate-limited key would still hit AV and 400.
+- **`get_price_bars()`** (`src/services/market_data/bars_extended.py`): yfinance via `yfinance_bars.get_bars()` is now the primary across all intervals. Front-end interval strings (`1m`/`1d`/`1w`/`1mo`/etc.) are mapped to the granularity strings yfinance_bars expects. Post-processing (interval-specific time caps, custom date filtering, default bar limits) extracted into `_postprocess_price_bars()` so yfinance and AV outputs go through the same shaping pipeline.
+- **`get_company_overview()` / `get_cash_flow()` / `get_balance_sheet()` / `get_news_sentiment()` / `get_top_gainers_losers()`** (`src/services/market_data/fundamentals.py`): all five now try yfinance first via the new `yfinance_fundamentals` module (or the existing `yfinance_movers`), falling back to AV only when a key is configured.
+- **New `yfinance_fundamentals.py` module**: dict-shape adapters that mirror Alpha Vantage's response schema so route handlers and downstream consumers don't need to know which source produced the data. Fields yfinance can't supply (e.g. `PercentInsiders`, AV's per-article ML sentiment) are populated with the AV `"None"` sentinel string or VADER-derived scores. News sentiment uses VADER lexicon (no API key, runs offline) — less accurate than AV's ML model but sufficient for the front-end's positive/negative bucketing.
+- **`vaderSentiment>=3.3.2`** added to `pyproject.toml` for the news sentiment fallback.
+- **Cache-shape compatibility fix** (`src/api/analysis/fundamentals/company.py`): `cache_warming_service` writes the raw service overview dict (PascalCase `Symbol`/`Name`) to redis, but the route stores the `CompanyOverviewResponse.model_dump()` shape (snake_case `symbol`/`company_name`). Previously this mismatch was hidden because AV was always rate-limited and the warm path never succeeded; with yfinance now succeeding on warm, every cache hit on the route would 500-validate. Route now ignores PascalCase cache entries and falls through to re-fetch + re-cache in the right shape.
+- **Test sync**: `test_alphavantage_market_data_service.py` and `test_market_data_quotes.py` add an `autouse` fixture to each `Test*` class that patches `_yf_quote_sync`, `yfinance_fundamentals.get_*`, and `yfinance_movers.get_market_movers` to raise — so the existing AV-contract tests deterministically exercise the AV fallback path instead of flaking on whichever source the network returns first. `test_get_quote_no_key` rewritten to assert that yfinance failure with no AV key propagates (the new contract) instead of asserting AV's "No quote data" message.
+
+**End-to-end verification (curl):**
+- `/api/market/quote/NVDA` → `$215.20` (was 400)
+- `/api/market/price/NVDA?interval=1d&period=6mo` → 6mo of OHLC bars (was 400)
+- `/api/analysis/company-overview` → NVIDIA Corporation, market cap $5.23T, P/E 43.83 (was 400)
+- `/api/analysis/cash-flow` → FY 2026-01-31, OCF $102.7B, capex −$6.04B (was 400)
+- `/api/analysis/balance-sheet` → total assets $206.8B, equity $157.3B (was 400)
+- `/api/analysis/news-sentiment` → 3 positive + 3 negative articles, VADER-scored (was 400)
+- `/api/analysis/market-movers` → 5 gainers + 5 losers + 5 most-active from yfinance screeners (was 500)
+
+**Numbers:** 82 tests pass (`test_market_data_quotes.py` + `test_market_data_bars_basic.py` + `test_alphavantage_market_data_service.py` + `test_fundamentals_fallback.py`). One new module (`yfinance_fundamentals.py`, ~250 lines).
+
 ## [0.28.3] - 2026-05-09
 
 ### W3.18 — Extended-hours companion price (Holdings + Watchlist + Phase 1/2 visibility)

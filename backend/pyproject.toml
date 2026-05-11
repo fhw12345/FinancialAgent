@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "financial-agent-backend"
-version = "0.28.3"
+version = "0.29.0"
 description = "AI-Enhanced Financial Analysis Platform Backend"
 authors = []
 # readme = "README.md"
@@ -43,6 +43,7 @@ dependencies = [
     "yfinance>=0.2.0",                    # Yahoo Finance — primary free market data source
     "pandas-ta-classic>=0.5.44",          # Local technical indicator computation (numpy 2.x compatible fork of pandas-ta)
     "feedparser>=6.0.0",                  # RSS parsing for free web search fallback
+    "vaderSentiment>=3.3.2",              # Local lexicon-based sentiment for yfinance news fallback
 ]
 
 [project.optional-dependencies]

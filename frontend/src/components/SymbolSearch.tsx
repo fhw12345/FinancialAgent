@@ -59,9 +59,12 @@ export const SymbolSearch: React.FC<SymbolSearchProps> = ({
     [],
   );
 
-  // Search function
+  // Search function. When `autoSelectOnReady` is true, the top high-confidence
+  // result is selected automatically as soon as the response arrives — so a
+  // single Enter press goes from typing to chart load without requiring the
+  // user to press Enter twice.
   const performSearch = useCallback(
-    (searchQuery: string) => {
+    (searchQuery: string, autoSelectOnReady: boolean = false) => {
       if (searchQuery.trim().length < 1) {
         setResults([]);
         setIsOpen(false);
@@ -76,6 +79,13 @@ export const SymbolSearch: React.FC<SymbolSearchProps> = ({
           setIsOpen(searchResults.results.length > 0);
           setSelectedIndex(-1);
           setIsLoading(false);
+
+          if (autoSelectOnReady && searchResults.results.length > 0) {
+            const top = searchResults.results[0];
+            if (top.confidence && top.confidence >= 0.85) {
+              handleResultSelect(top);
+            }
+          }
         });
       } catch (error) {
         console.error("Search error:", error);
@@ -118,7 +128,7 @@ export const SymbolSearch: React.FC<SymbolSearchProps> = ({
       case "Enter":
         e.preventDefault();
         // If dropdown is open with results, select the highlighted item
-        if (isOpen && results.length > 0) {
+        if (results.length > 0) {
           if (selectedIndex >= 0 && selectedIndex < results.length) {
             handleResultSelect(results[selectedIndex]);
           } else {
@@ -129,9 +139,9 @@ export const SymbolSearch: React.FC<SymbolSearchProps> = ({
             }
           }
         } else {
-          // No results yet - trigger search
+          // No results yet - trigger search and auto-select on response
           if (query.trim().length >= 1) {
-            performSearch(query);
+            performSearch(query, true);
           }
         }
         break;
@@ -204,7 +214,7 @@ export const SymbolSearch: React.FC<SymbolSearchProps> = ({
           <button
             onClick={() => {
               if (query.trim().length >= 1) {
-                performSearch(query);
+                performSearch(query, true);
               }
             }}
             disabled={query.trim().length < 1}

@@ -3,6 +3,10 @@
 .env.*
 !.env.base
 !.env.*.template
+
+# Local debugging artifacts
+tmp_shots/
+tmp_shots_*.png
 !.env.example
 !**/.env.example
 

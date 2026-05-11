@@ -347,7 +347,13 @@ async def company_overview(
         cache_key = f"company_overview:{request.symbol}:{current_date}"
         cached_result = await redis_cache.get(cache_key)
         if cached_result:
-            return CompanyOverviewResponse.model_validate(cached_result)
+            # Cache may hold either a CompanyOverviewResponse dump (snake_case)
+            # or the raw service overview dict (PascalCase, written by the
+            # cache_warming_service). Only the former is directly model_validatable;
+            # for the latter, fall through to the normal handler so it gets
+            # transformed and re-cached in the right shape.
+            if isinstance(cached_result, dict) and "symbol" in cached_result:
+                return CompanyOverviewResponse.model_validate(cached_result)
 
         logger.info(
             "Fetching company overview from Alpha Vantage", symbol=request.symbol

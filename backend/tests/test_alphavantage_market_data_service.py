@@ -170,6 +170,38 @@ class TestValidateDateRange:
 class TestAlphaVantageMarketDataService:
     """Test AlphaVantageMarketDataService methods"""
 
+    @pytest.fixture(autouse=True)
+    def _force_av_quote_path(self):
+        """yfinance is the primary quote/fundamentals source; force it to fail
+        so AV tests exercise the AV fallback contract."""
+        with (
+            patch(
+                "src.services.market_data.quotes._yf_quote_sync",
+                side_effect=RuntimeError("forced miss for AV fallback test"),
+            ),
+            patch(
+                "src.services.market_data.yfinance_fundamentals.get_company_overview",
+                AsyncMock(side_effect=RuntimeError("forced miss")),
+            ),
+            patch(
+                "src.services.market_data.yfinance_fundamentals.get_cash_flow",
+                AsyncMock(side_effect=RuntimeError("forced miss")),
+            ),
+            patch(
+                "src.services.market_data.yfinance_fundamentals.get_balance_sheet",
+                AsyncMock(side_effect=RuntimeError("forced miss")),
+            ),
+            patch(
+                "src.services.market_data.yfinance_fundamentals.get_news_sentiment",
+                AsyncMock(side_effect=RuntimeError("forced miss")),
+            ),
+            patch(
+                "src.services.market_data.yfinance_movers.get_market_movers",
+                AsyncMock(side_effect=RuntimeError("forced miss")),
+            ),
+        ):
+            yield
+
     def test_initialization(self, service, settings):
         """Test service initialization"""
         assert service.api_key == "TEST_API_KEY_1234567890"

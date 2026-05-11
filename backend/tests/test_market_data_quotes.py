@@ -215,6 +215,16 @@ class TestSearchSymbols:
 class TestGetQuote:
     """Test get_quote method"""
 
+    @pytest.fixture(autouse=True)
+    def _force_av_path(self):
+        """yfinance is the primary quote source; these tests target the AV
+        fallback contract, so make yfinance always raise to fall through."""
+        with patch(
+            "src.services.market_data.quotes._yf_quote_sync",
+            side_effect=RuntimeError("forced miss for AV fallback test"),
+        ):
+            yield
+
     @pytest.mark.asyncio
     async def test_get_quote_success(self, quotes_service, mock_quote_response):
         """Test successful quote fetch"""
@@ -277,18 +287,10 @@ class TestGetQuote:
 
     @pytest.mark.asyncio
     async def test_get_quote_no_key(self, quotes_service):
-        """Test quote when key is missing"""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "Error Message": "Invalid symbol"
-        }
-        quotes_service.client.get = AsyncMock(return_value=mock_response)
-
-        with pytest.raises(ValueError) as exc_info:
+        """When api_key is empty, yfinance failure must propagate (no AV fallback)."""
+        quotes_service.api_key = ""
+        with pytest.raises(RuntimeError, match="forced miss"):
             await quotes_service.get_quote("INVALID")
-
-        assert "No quote data for symbol" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_get_quote_api_error(self, quotes_service):
@@ -466,6 +468,14 @@ class TestGetMarketStatus:
 
 class TestQuotesEdgeCases:
     """Test edge cases for quotes methods"""
+
+    @pytest.fixture(autouse=True)
+    def _force_av_path(self):
+        with patch(
+            "src.services.market_data.quotes._yf_quote_sync",
+            side_effect=RuntimeError("forced miss for AV fallback test"),
+        ):
+            yield
 
     @pytest.mark.asyncio
     async def test_quote_change_percent_without_percent_sign(self, quotes_service):
