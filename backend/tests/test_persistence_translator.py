@@ -6,6 +6,7 @@ Covers:
 - empty / whitespace-only fields short-circuit without calling the LLM
 - empty input dict returns empty result, no LLM round-trip
 - input dict iteration order is preserved in the output
+- CJK guard: already-Chinese fields are skipped (no _zh sibling, no LLM call)
 """
 
 from __future__ import annotations
@@ -13,7 +14,11 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from src.services.persistence_translator import translate_for_persistence
+
+from src.services.persistence_translator import (
+    _is_already_cjk,
+    translate_for_persistence,
+)
 
 
 class FakeRedis:
@@ -100,3 +105,78 @@ async def test_dict_iteration_order_preserved() -> None:
             redis_cache=fake_redis,
         )
     assert out == {"f1_zh": "A", "f2_zh": "B", "f3_zh": "C"}
+
+
+def test_is_already_cjk_detects_chinese_title() -> None:
+    """Mixed-script Chinese title with English ticker still trips the guard."""
+    assert _is_already_cjk("# AAPL 苹果公司研究报告\n业绩稳健") is True
+
+
+def test_is_already_cjk_lets_english_through() -> None:
+    """Pure English fundamentals report is not flagged as CJK."""
+    assert _is_already_cjk("AAPL Inc fundamentals report") is False
+
+
+def test_is_already_cjk_handles_empty() -> None:
+    assert _is_already_cjk("") is False
+
+
+@pytest.mark.asyncio
+async def test_cjk_text_skipped_no_translate_batch_call() -> None:
+    """Already-Chinese text must not be re-translated; no _zh sibling written."""
+    fake_redis = FakeRedis()
+    mock_translate = AsyncMock(return_value=["unused"])
+    with patch(
+        "src.services.persistence_translator.translate_batch",
+        new=mock_translate,
+    ):
+        out = await translate_for_persistence(
+            {"content": "# AAPL 苹果公司研究报告\n业绩稳健"},
+            redis_cache=fake_redis,
+        )
+    assert out == {"content_zh": None}
+    mock_translate.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_english_text_translates_normally() -> None:
+    """Pure English text passes the guard and gets a _zh sibling."""
+    fake_redis = FakeRedis()
+    mock_translate = AsyncMock(return_value=["AAPL公司基本面报告"])
+    with patch(
+        "src.services.persistence_translator.translate_batch",
+        new=mock_translate,
+    ):
+        out = await translate_for_persistence(
+            {"content": "AAPL Inc fundamentals report"},
+            redis_cache=fake_redis,
+        )
+    assert out == {"content_zh": "AAPL公司基本面报告"}
+    mock_translate.assert_called_once_with(
+        ["AAPL Inc fundamentals report"], "zh-CN", fake_redis
+    )
+
+
+@pytest.mark.asyncio
+async def test_mixed_payload_only_translates_english_fields() -> None:
+    """A batch with both English and Chinese fields only sends English to LLM."""
+    fake_redis = FakeRedis()
+    mock_translate = AsyncMock(return_value=["英文标题翻译"])
+    with patch(
+        "src.services.persistence_translator.translate_batch",
+        new=mock_translate,
+    ):
+        out = await translate_for_persistence(
+            {
+                "english_title": "Apple Q3 earnings beat",
+                "chinese_title": "苹果第三季度财报超预期",
+            },
+            redis_cache=fake_redis,
+        )
+    assert out == {
+        "english_title_zh": "英文标题翻译",
+        "chinese_title_zh": None,
+    }
+    mock_translate.assert_called_once_with(
+        ["Apple Q3 earnings beat"], "zh-CN", fake_redis
+    )

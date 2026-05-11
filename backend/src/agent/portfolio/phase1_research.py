@@ -10,6 +10,7 @@ from typing import Any
 
 import structlog
 
+from src.core.localization import ANALYSIS_OUTPUT_LANG
 from src.core.utils.date_utils import utcnow
 
 from ...models.chat import ChatCreate
@@ -22,27 +23,24 @@ logger = structlog.get_logger()
 def _phase1_language_directive() -> str:
     """W2.3 — language of Phase1 research output.
 
-    Default `zh-CN` keeps current production behavior; setting
-    `PHASE1_PROMPT_LANG=en` switches to English. The W2.4 A/B harness
-    runs both side by side on the same fixture; once parity is
-    confirmed (no quality regression for the downstream Phase2 +
-    consistency_gate + scenarios derivation chain), default flips to
-    en so Phase2 reads English directly without the translation
-    detour the v0.27.2 fix had to plug.
+    Default is English (sourced from `ANALYSIS_OUTPUT_LANG`) so that the
+    persistence translator has an unambiguous English -> zh-CN direction
+    to feed DashScope. `PHASE1_PROMPT_LANG=zh` remains as an emergency
+    override; any other value falls back to the English default.
     """
-    lang = os.getenv("PHASE1_PROMPT_LANG", "zh").lower()
-    if lang.startswith("en"):
+    lang = os.getenv("PHASE1_PROMPT_LANG", ANALYSIS_OUTPUT_LANG).lower()
+    if lang.startswith("zh"):
         return (
             "LANGUAGE REQUIREMENT:\n"
-            "Respond in English. Keep ticker symbols, numbers, currency "
-            "amounts, percentages, and ISO timestamps verbatim. The frontend "
-            "translates display strings via useTranslated; this prompt does "
-            "not need to add translations inline."
+            "Respond in Simplified Chinese (简体中文).\n"
+            "Technical terms can include English in parentheses for clarity."
         )
     return (
         "LANGUAGE REQUIREMENT:\n"
-        "Respond in Simplified Chinese (简体中文).\n"
-        "Technical terms can include English in parentheses for clarity."
+        "Respond in English. Keep ticker symbols, numbers, currency "
+        "amounts, percentages, and ISO timestamps verbatim. The frontend "
+        "translates display strings via useTranslated; this prompt does "
+        "not need to add translations inline."
     )
 
 
