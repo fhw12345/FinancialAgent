@@ -17,6 +17,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Translated } from "../Translated";
 import { useTranslated } from "../../hooks/useTranslated";
+import { looksTranslated } from "../../utils/i18n/looksTranslated";
 import {
   ArrowUpCircle,
   ArrowDownCircle,
@@ -383,10 +384,22 @@ function ResearchBody({
   text: string;
   precomputed: string | null;
 }) {
-  const { text: shown, isLoading } = useTranslated(text, { precomputed });
+  const { i18n } = useTranslation();
+  // Defensive guard: a backend bug previously stored English in `_zh` fields.
+  // If the precomputed translation doesn't look like the active target, drop
+  // it so `useTranslated` runs lazy translation on the base English instead
+  // of surfacing the inverted string. The loading placeholder (opacity dip
+  // + data-translating contract) continues to render normally.
+  const safePrecomputed = looksTranslated(precomputed, i18n.language || "en")
+    ? precomputed
+    : null;
+  const { text: shown, isLoading } = useTranslated(text, {
+    precomputed: safePrecomputed,
+  });
   return (
     <div
       className="markdown-content text-sm max-w-none"
+      data-translating={isLoading ? "true" : undefined}
       style={isLoading ? { opacity: 0.7 } : undefined}
     >
       <ReactMarkdown
