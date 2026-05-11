@@ -12,6 +12,7 @@ from src.agent.portfolio.risk_calculator import (
     compute_portfolio_risk,
     render_risk_block_for_prompt,
 )
+from src.core.localization import ANALYSIS_OUTPUT_LANG
 from src.core.utils.date_utils import utcnow
 
 from ...models.chat import ChatCreate
@@ -23,6 +24,29 @@ if TYPE_CHECKING:
 
 
 logger = structlog.get_logger()
+
+
+# Phase 2 decision output language is locked to English by the analysis
+# pipeline invariant (`ANALYSIS_OUTPUT_LANG`). Built once at import time so
+# the directive text and the persistence-translator source language stay in
+# lock-step — if the invariant ever flips, this string flips with it.
+def _phase2_language_directive() -> str:
+    if ANALYSIS_OUTPUT_LANG != "en":
+        raise RuntimeError(
+            f"Phase 2 prompt only supports English output; "
+            f"ANALYSIS_OUTPUT_LANG={ANALYSIS_OUTPUT_LANG!r}"
+        )
+    return (
+        "LANGUAGE REQUIREMENT: Respond in English.\n"
+        "Keep ticker symbols, numbers, currency amounts, percentages, "
+        "source-ID tokens (e.g. [FH-Q-AAPL-2026-05-09]), and ISO "
+        "timestamps verbatim. The frontend translates display strings on "
+        "the persistence boundary; this prompt does not need to add "
+        "translations inline."
+    )
+
+
+_PHASE2_LANGUAGE_DIRECTIVE = _phase2_language_directive()
 
 
 class Phase2DecisionsMixin:
@@ -426,6 +450,10 @@ spuriously precise number.
 
 Provide a decision for EVERY symbol in the research above.
 Include short reasoning (1-2 sentences) for each decision.
+
+## Language Requirement
+
+{_PHASE2_LANGUAGE_DIRECTIVE}
 """
 
         try:

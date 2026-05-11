@@ -15,6 +15,7 @@ from typing import Any
 import structlog
 import tiktoken
 
+from src.core.localization import ANALYSIS_OUTPUT_LANG
 from src.core.utils.date_utils import utcnow
 
 from ..core.config import Settings
@@ -226,7 +227,9 @@ History to summarize:
 {history_text}
 
 Provide a concise summary that captures the essential insights and patterns.
-Format: Clear, structured summary with key points."""
+Format: Clear, structured summary with key points.
+
+LANGUAGE REQUIREMENT: Respond in {"English" if ANALYSIS_OUTPUT_LANG == "en" else ANALYSIS_OUTPUT_LANG}. Keep ticker symbols, numbers, currency amounts, percentages, and ISO timestamps verbatim."""
 
         # Use LLM to generate summary
         if llm_service:

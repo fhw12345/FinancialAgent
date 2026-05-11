@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.1] - 2026-05-11
+
+### Lock analysis pipeline to English; add CJK guard in persistence translator
+
+Root-cause fix for the inverted `_zh` MongoDB fields: DashScope (Qwen) interpreted `translate Chinese to zh-CN` as "translate to the other obvious language" and emitted English back into the `_zh` sibling. Two-part fix:
+
+- **A — Analysis pipeline emits English only.** New `ANALYSIS_OUTPUT_LANG = "en"` constant in `src/core/localization.py` (distinct from the user-facing `DEFAULT_LANGUAGE = "zh-CN"`). Phase 1 research (`src/agent/portfolio/phase1_research.py`), Phase 2 decisions (`src/agent/portfolio/phase2_decisions.py`), and history summarization (`src/services/context_window_manager.py`) now all source their language directive from this constant. `PHASE1_PROMPT_LANG=zh` remains as an emergency override; default flipped from zh to en. The persistence translator (`translation_service.translate_batch`) now always sees an unambiguous English → zh-CN direction.
+- **B — Defense-in-depth CJK guard in `persistence_translator.py`.** New `_is_already_cjk()` helper (≥3 CJK chars in U+4E00..U+9FFF / U+3400..U+4DBF, or ≥1% non-space ratio) is checked before each field is enqueued for translation. Already-Chinese fields are skipped, no `_zh` sibling is written, and a structlog `translation_persistence_cjk_skip` INFO line records the field, text length, and CJK ratio for audit.
+
+Tests: `test_phase1_prompt_lang.py` reworked (default expects English now; `zh` override still tested); `test_persistence_translator.py` gains 6 new cases for the CJK guard. 37 tests pass across `tests/test_phase1_prompt_lang.py`, `tests/test_persistence_translator.py`, and `tests/test_context_window_manager.py`.
+
 ## [0.29.0] - 2026-05-11
 
 ### Migrate quote / price / fundamentals / news / movers from Alpha Vantage to yfinance
