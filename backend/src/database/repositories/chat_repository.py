@@ -8,6 +8,7 @@ filter by user_id.
 """
 
 import uuid
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 import structlog
@@ -22,6 +23,13 @@ if TYPE_CHECKING:
     from src.database.redis import RedisCache
 
 logger = structlog.get_logger()
+
+# Empty chat shells (chats with no messages and a null last_message_at) get
+# auto-created on every symbol selection in the UI. They drown out real history
+# in the chat list once they age past a few days. Brand-new empty chats remain
+# visible so the user can still click into them right after creation; only
+# week-old abandoned shells are filtered out of `list_by_user`.
+_EMPTY_SHELL_HIDE_AFTER = timedelta(days=7)
 
 
 class ChatRepository:
@@ -86,17 +94,74 @@ class ChatRepository:
         skip: int = 0,
         include_archived: bool = False,
     ) -> list[Chat]:
-        """List all chats. user_id parameter is ignored (kept for API compat)."""
-        query: dict[str, Any] = {}
-        if not include_archived:
-            query["is_archived"] = False
+        """List all chats. user_id parameter is ignored (kept for API compat).
 
-        cursor = (
-            self.collection.find(query).sort("updated_at", -1).skip(skip).limit(limit)
+        Returns chats ordered by effective recency (`last_message_at` if set,
+        otherwise `created_at`), descending. Empty-shell chats that have no
+        `last_message_at`, no messages in the `messages` collection, AND were
+        created more than `_EMPTY_SHELL_HIDE_AFTER` ago are filtered out so
+        abandoned auto-created chats stop drowning the list.
+        """
+        cutoff = utcnow() - _EMPTY_SHELL_HIDE_AFTER
+
+        pipeline: list[dict[str, Any]] = []
+
+        if not include_archived:
+            pipeline.append({"$match": {"is_archived": False}})
+
+        pipeline.extend(
+            [
+                {
+                    "$lookup": {
+                        "from": "messages",
+                        "let": {"cid": "$chat_id"},
+                        "pipeline": [
+                            {"$match": {"$expr": {"$eq": ["$chat_id", "$$cid"]}}},
+                            {"$count": "n"},
+                        ],
+                        "as": "_msg_count",
+                    }
+                },
+                {
+                    "$addFields": {
+                        "_message_count": {
+                            "$ifNull": [
+                                {"$arrayElemAt": ["$_msg_count.n", 0]},
+                                0,
+                            ]
+                        },
+                        "_effective_recency": {
+                            "$ifNull": ["$last_message_at", "$created_at"]
+                        },
+                    }
+                },
+                {
+                    "$match": {
+                        "$nor": [
+                            {
+                                "last_message_at": None,
+                                "_message_count": 0,
+                                "created_at": {"$lt": cutoff},
+                            }
+                        ]
+                    }
+                },
+                {"$sort": {"_effective_recency": -1}},
+                {"$skip": skip},
+                {"$limit": limit},
+                {
+                    "$project": {
+                        "_id": 0,
+                        "_msg_count": 0,
+                        "_message_count": 0,
+                        "_effective_recency": 0,
+                    }
+                },
+            ]
         )
 
-        chats = []
-        async for chat_dict in cursor:
+        chats: list[Chat] = []
+        async for chat_dict in self.collection.aggregate(pipeline):
             chat_dict.pop("_id", None)
             chats.append(Chat(**chat_dict))
         return chats
