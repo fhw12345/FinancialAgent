@@ -139,6 +139,33 @@ async def test_cjk_text_skipped_no_translate_batch_call() -> None:
 
 
 @pytest.mark.asyncio
+async def test_cjk_skip_logs_warning_for_visibility(capsys) -> None:
+    """The CJK skip path indicates either legacy data or a new leak in the
+    analysis pipeline. After the English-lock patch it must surface as a
+    WARNING (not INFO) so docker logs make future regressions obvious.
+    """
+    fake_redis = FakeRedis()
+    with patch(
+        "src.services.persistence_translator.translate_batch",
+        new=AsyncMock(return_value=["unused"]),
+    ):
+        await translate_for_persistence(
+            {"reasoning": "买入苹果，因为第四季度服务业务增长加速。"},
+            redis_cache=fake_redis,
+        )
+    # structlog renders to stdout in tests; assert both the WARNING level
+    # tag and the structured event name appear.
+    captured = capsys.readouterr().out
+    assert "translation_persistence_cjk_skip" in captured, (
+        "CJK skip event must be logged so future analysis-pipeline leaks "
+        "are visible in docker logs."
+    )
+    assert "warning" in captured.lower(), (
+        "CJK skip must log at WARNING level (was INFO before 0.29.3)."
+    )
+
+
+@pytest.mark.asyncio
 async def test_english_text_translates_normally() -> None:
     """Pure English text passes the guard and gets a _zh sibling."""
     fake_redis = FakeRedis()

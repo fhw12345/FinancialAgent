@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.3] - 2026-05-12
+
+### Close the Phase 1 + fallback Phase 2 Chinese leaks (analysis pipeline truly English now)
+
+Despite 0.29.2 declaring `ANALYSIS_OUTPUT_LANG = "en"` and Phase 1 / Phase 2 each appending an "Respond in English" directive to their prompts, MongoDB kept receiving Chinese in `portfolio_orders.metadata.reasoning` and `full_research`, and the Portfolio analysis history rendered faded Chinese text under zh-CN. Audit of every LLM call site in the analysis pipeline turned up two unfixed leaks:
+
+- **`agent/portfolio/phase1_research.py:279`** — `self.react_agent.ainvoke(prompt, conversation_history=...)` was called without `language=`, so the inner agent defaulted to `DEFAULT_LANGUAGE = "zh-CN"` (see `langgraph_react_agent.py:729`) and appended `"IMPORTANT: Respond in Simplified Chinese (简体中文)."` to the user message tail (line 802-803). The tail directive overrode Phase 1's own English directive and Qwen/DashScope reasoned in Chinese. Fix: pass `language=ANALYSIS_OUTPUT_LANG` explicitly.
+- **`agent/portfolio/flows.py:610`** — the fallback `_phase2_for_symbols` path used when the regular portfolio agent isn't available built its prompt inline without any language directive. Decisions returned here landed in `TradingDecision.reasoning` (a base field). Fix: append a `LANGUAGE REQUIREMENT: Respond in English` block sourced from `ANALYSIS_OUTPUT_LANG`.
+
+Plus a small visibility upgrade:
+
+- **`services/persistence_translator.py`** — bumped the `translation_persistence_cjk_skip` log from `INFO` to `WARNING` and added a `text_head` snippet. Post-0.29.3 the analysis pipeline must emit English only, so a CJK source on the persistence boundary is now either legacy/migration data or evidence of a regression in some LLM call site — surface it loudly in docker logs.
+- **`core/localization.py`** — tightened `ANALYSIS_OUTPUT_LANG` type from `str` to `SupportedLanguage` so passing it through `react_agent.ainvoke(language=...)` type-checks cleanly.
+
+Tests:
+- `test_phase1_prompt_lang.py` — AST-level regression asserting `react_agent.ainvoke` in `phase1_research.py` is called with `language=ANALYSIS_OUTPUT_LANG` (not a string literal).
+- `test_flows_phase2_lang.py` (new) — asserts the fallback Phase 2 prompt template contains a `LANGUAGE REQUIREMENT` line and references `ANALYSIS_OUTPUT_LANG`.
+- `test_persistence_translator.py` — new test asserting the CJK skip path logs at WARNING level (regression on visibility).
+
+Bumps backend 0.29.2 → 0.29.3.
+
 ## [0.29.2] - 2026-05-11
 
 ### Lock analysis pipeline to English; add CJK guard in persistence translator

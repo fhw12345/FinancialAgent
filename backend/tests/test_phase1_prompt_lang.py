@@ -65,3 +65,47 @@ def test_garbage_value_falls_back_to_english() -> None:
     # invariant locks the analysis layer to English.
     assert "Respond in English" in out
     assert "Simplified Chinese" not in out
+
+
+def test_phase1_passes_language_to_react_agent() -> None:
+    """Regression: phase1_research.py must pass `language=ANALYSIS_OUTPUT_LANG`
+    to `react_agent.ainvoke`. Without it the agent defaults to
+    `DEFAULT_LANGUAGE = "zh-CN"` and appends a "Respond in Simplified Chinese"
+    directive to the user message tail, which overrides Phase 1's own English
+    directive and causes Chinese to leak into the analysis-output base field.
+    """
+    import ast
+    from pathlib import Path
+
+    src = Path("src/agent/portfolio/phase1_research.py").read_text(encoding="utf-8")
+    tree = ast.parse(src)
+
+    found = False
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        # match `<something>.react_agent.ainvoke(...)` or
+        # `self.react_agent.ainvoke(...)`
+        func = node.func
+        if not (
+            isinstance(func, ast.Attribute)
+            and func.attr == "ainvoke"
+            and isinstance(func.value, ast.Attribute)
+            and func.value.attr == "react_agent"
+        ):
+            continue
+        kw_names = {kw.arg for kw in node.keywords}
+        assert "language" in kw_names, (
+            "react_agent.ainvoke() in phase1_research.py must pass "
+            "language=ANALYSIS_OUTPUT_LANG to override the zh-CN default "
+            "injected by langgraph_react_agent.ainvoke."
+        )
+        # value should be the ANALYSIS_OUTPUT_LANG name reference, not a
+        # string literal — keep the invariant single-sourced.
+        lang_kw = next(kw for kw in node.keywords if kw.arg == "language")
+        assert isinstance(lang_kw.value, ast.Name) and (
+            lang_kw.value.id == "ANALYSIS_OUTPUT_LANG"
+        ), "language= must reference ANALYSIS_OUTPUT_LANG, not a hardcoded literal"
+        found = True
+
+    assert found, "no react_agent.ainvoke() call found in phase1_research.py"

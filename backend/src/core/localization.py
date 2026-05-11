@@ -21,7 +21,7 @@ DEFAULT_LANGUAGE: SupportedLanguage = "zh-CN"
 # `translation_service.translate_batch` for zh-CN display. Locked to "en" so
 # the English -> zh-CN translation direction is unambiguous and DashScope
 # cannot reverse it.
-ANALYSIS_OUTPUT_LANG: str = "en"
+ANALYSIS_OUTPUT_LANG: SupportedLanguage = "en"
 
 # Language display names
 LANGUAGE_NAMES: dict[str, str] = {

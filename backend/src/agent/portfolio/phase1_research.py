@@ -277,7 +277,9 @@ prose. You MUST:
                 conversation_history_length=len(conversation_history),
             )
             response = await self.react_agent.ainvoke(
-                prompt, conversation_history=conversation_history
+                prompt,
+                conversation_history=conversation_history,
+                language=ANALYSIS_OUTPUT_LANG,
             )
 
             # Parse response

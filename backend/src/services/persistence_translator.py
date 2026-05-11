@@ -92,11 +92,19 @@ async def translate_for_persistence(
                 if 0x4E00 <= ord(ch) <= 0x9FFF or 0x3400 <= ord(ch) <= 0x4DBF
             )
             ratio = (cjk_count / non_space) if non_space else 0.0
-            logger.info(
+            # WARNING (not info): after the Stream 1 / English-lock patches
+            # the analysis pipeline should emit English only. A persistence
+            # call arriving with a CJK source field is therefore either a
+            # legacy/migration row or evidence of a new leak in some LLM
+            # call site. Surface it loudly so future regressions are
+            # caught in docker logs rather than waiting for the UI to
+            # show faded Chinese text.
+            logger.warning(
                 "translation_persistence_cjk_skip",
                 field=key,
                 text_len=len(text),
                 cjk_ratio=round(ratio, 4),
+                text_head=text[:80],
             )
             continue
         payload_indices.append(i)

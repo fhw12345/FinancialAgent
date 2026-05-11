@@ -28,6 +28,7 @@ from typing import Any
 import structlog
 
 from ...core.utils.date_utils import utcnow
+from ...core.localization import ANALYSIS_OUTPUT_LANG
 from ...database.repositories.holding_repository import HoldingRepository
 from ...database.repositories.portfolio_order_repository import (
     PortfolioOrderRepository,
@@ -602,7 +603,13 @@ async def _phase2_for_symbols(
 
     prompt = (
         f"You are a senior portfolio manager.\n\n"
-        f"{risk_line}\n{cash_line}\n\n{pos_block}\n\n{instruction}"
+        f"{risk_line}\n{cash_line}\n\n{pos_block}\n\n{instruction}\n\n"
+        f"LANGUAGE REQUIREMENT: Respond in "
+        f"{'English' if ANALYSIS_OUTPUT_LANG == 'en' else ANALYSIS_OUTPUT_LANG}. "
+        f"Keep ticker symbols, numbers, currency amounts, percentages, and ISO "
+        f"timestamps verbatim. The frontend translates display strings on the "
+        f"persistence boundary; this prompt does not need to add translations "
+        f"inline."
     )
     logger.info("phase2_call", flow=flow_label, symbols_count=len(symbols))
 
