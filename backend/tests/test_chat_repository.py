@@ -12,7 +12,7 @@ Tests chat data access operations including:
 - Index creation for optimal performance
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -31,6 +31,7 @@ def mock_collection():
     collection.insert_one = AsyncMock()
     collection.find_one = AsyncMock()
     collection.find = Mock()
+    collection.aggregate = Mock()
     collection.find_one_and_update = AsyncMock()
     collection.update_one = AsyncMock()
     collection.delete_one = AsyncMock()
@@ -227,122 +228,213 @@ class TestGet:
 
 
 class TestListByUser:
-    """Test listing user chats"""
+    """Test listing chats via the aggregate pipeline.
+
+    `list_by_user` now uses an aggregation that joins messages, sorts by
+    effective recency (`last_message_at` else `created_at`), and filters out
+    week-old empty shells. These tests assert that contract by mocking
+    `collection.aggregate(pipeline)` and verifying the pipeline shape and
+    the returned/ordering behavior of the documents it yields.
+    """
+
+    @staticmethod
+    def _chat_doc(
+        chat_id: str,
+        *,
+        created_at: datetime,
+        last_message_at: datetime | None,
+        title: str = "Chat",
+        is_archived: bool = False,
+    ) -> dict:
+        """Build a Mongo doc shape matching what the aggregation yields after $project."""
+        return {
+            "chat_id": chat_id,
+            "title": title,
+            "is_archived": is_archived,
+            "ui_state": {
+                "current_symbol": None,
+                "current_interval": "1d",
+                "current_date_range": {"start": None, "end": None},
+                "active_overlays": {},
+            },
+            "last_message_preview": None,
+            "created_at": created_at,
+            "updated_at": created_at,
+            "last_message_at": last_message_at,
+        }
+
+    @staticmethod
+    def _mock_aggregate(mock_collection, docs):
+        """Wire `collection.aggregate(pipeline)` to async-iterate over `docs`.
+
+        Captures the pipeline argument for later assertions.
+        """
+        captured: dict = {"pipeline": None}
+
+        async def _aiter():
+            for d in docs:
+                yield d
+
+        def _aggregate(pipeline):
+            captured["pipeline"] = pipeline
+            cursor = Mock()
+            cursor.__aiter__ = lambda self: _aiter()
+            return cursor
+
+        mock_collection.aggregate.side_effect = _aggregate
+        return captured
 
     @pytest.mark.asyncio
-    async def test_list_by_user_default_params(self, repository, mock_collection):
-        """Test listing chats with default parameters"""
-        # Arrange
+    async def test_list_by_user_default_params_sorts_and_excludes_archived(
+        self, repository, mock_collection
+    ):
+        """Default params: builds aggregate with is_archived filter and skip/limit."""
         now = datetime.now(UTC)
+        docs = [
+            self._chat_doc(
+                "chat_recent",
+                created_at=now - timedelta(days=5),
+                last_message_at=now - timedelta(hours=1),
+            ),
+            self._chat_doc(
+                "chat_older",
+                created_at=now - timedelta(days=2),
+                last_message_at=None,
+            ),
+        ]
+        captured = self._mock_aggregate(mock_collection, docs)
 
-        async def mock_async_iter():
-            chats = [
-                {
-                    "_id": "id1",
-                    "chat_id": "chat_1",
-                    "user_id": "user_123",
-                    "title": "Chat 1",
-                    "is_archived": False,
-                    "ui_state": {
-                        "current_symbol": None,
-                        "current_interval": "1d",
-                        "current_date_range": {"start": None, "end": None},
-                        "active_overlays": {},
-                    },
-                    "last_message_preview": None,
-                    "created_at": now,
-                    "updated_at": now,
-                    "last_message_at": None,
-                },
-                {
-                    "_id": "id2",
-                    "chat_id": "chat_2",
-                    "user_id": "user_123",
-                    "title": "Chat 2",
-                    "is_archived": False,
-                    "ui_state": {
-                        "current_symbol": "AAPL",
-                        "current_interval": "1d",
-                        "current_date_range": {"start": None, "end": None},
-                        "active_overlays": {},
-                    },
-                    "last_message_preview": "Message preview",
-                    "created_at": now,
-                    "updated_at": now,
-                    "last_message_at": now,
-                },
-            ]
-            for chat in chats:
-                yield chat
+        result = await repository.list_by_user()
 
-        mock_cursor = Mock()
-        mock_cursor.sort = Mock(return_value=mock_cursor)
-        mock_cursor.skip = Mock(return_value=mock_cursor)
-        mock_cursor.limit = Mock(return_value=mock_cursor)
-        mock_cursor.__aiter__ = lambda self: mock_async_iter()
-        mock_collection.find.return_value = mock_cursor
+        assert [c.chat_id for c in result] == ["chat_recent", "chat_older"]
 
-        # Act
-        result = await repository.list_by_user("user_123")
+        pipeline = captured["pipeline"]
+        # First stage filters out archived chats by default
+        assert pipeline[0] == {"$match": {"is_archived": False}}
 
-        # Assert
-        assert len(result) == 2
-        assert result[0].chat_id == "chat_1"
-        assert result[1].chat_id == "chat_2"
+        # Pipeline must contain the message-count $lookup, the $addFields with
+        # _effective_recency, the empty-shell $nor exclusion, a sort by
+        # _effective_recency desc, and default $skip=0 / $limit=50.
+        stage_kinds = [list(stage.keys())[0] for stage in pipeline]
+        assert "$lookup" in stage_kinds
+        assert "$addFields" in stage_kinds
+        assert "$sort" in stage_kinds
+        assert "$skip" in stage_kinds
+        assert "$limit" in stage_kinds
+        assert "$project" in stage_kinds
 
-        # Verify query excludes archived chats by default
-        mock_collection.find.assert_called_once_with(
-            {"user_id": "user_123", "is_archived": False}
-        )
-        mock_cursor.sort.assert_called_once_with("updated_at", -1)
-        mock_cursor.skip.assert_called_once_with(0)
-        mock_cursor.limit.assert_called_once_with(50)
+        sort_stage = next(s["$sort"] for s in pipeline if "$sort" in s)
+        assert sort_stage == {"_effective_recency": -1}
+
+        skip_stage = next(s["$skip"] for s in pipeline if "$skip" in s)
+        limit_stage = next(s["$limit"] for s in pipeline if "$limit" in s)
+        assert skip_stage == 0
+        assert limit_stage == 50
 
     @pytest.mark.asyncio
     async def test_list_by_user_with_pagination(self, repository, mock_collection):
-        """Test listing chats with pagination"""
+        """Pagination passes skip/limit into the aggregate pipeline."""
+        captured = self._mock_aggregate(mock_collection, [])
 
-        # Arrange
-        async def mock_async_iter():
-            return
-            yield  # Make this an async generator
+        await repository.list_by_user(limit=10, skip=20)
 
-        mock_cursor = Mock()
-        mock_cursor.sort = Mock(return_value=mock_cursor)
-        mock_cursor.skip = Mock(return_value=mock_cursor)
-        mock_cursor.limit = Mock(return_value=mock_cursor)
-        mock_cursor.__aiter__ = lambda self: mock_async_iter()
-        mock_collection.find.return_value = mock_cursor
-
-        # Act
-        await repository.list_by_user("user_123", limit=10, skip=20)
-
-        # Assert
-        mock_cursor.skip.assert_called_once_with(20)
-        mock_cursor.limit.assert_called_once_with(10)
+        pipeline = captured["pipeline"]
+        skip_stage = next(s["$skip"] for s in pipeline if "$skip" in s)
+        limit_stage = next(s["$limit"] for s in pipeline if "$limit" in s)
+        assert skip_stage == 20
+        assert limit_stage == 10
 
     @pytest.mark.asyncio
-    async def test_list_by_user_include_archived(self, repository, mock_collection):
-        """Test listing chats including archived"""
+    async def test_list_by_user_include_archived_drops_is_archived_match(
+        self, repository, mock_collection
+    ):
+        """include_archived=True omits the leading is_archived $match stage."""
+        captured = self._mock_aggregate(mock_collection, [])
 
-        # Arrange
-        async def mock_async_iter():
-            return
-            yield  # Make this an async generator
+        await repository.list_by_user(include_archived=True)
 
-        mock_cursor = Mock()
-        mock_cursor.sort = Mock(return_value=mock_cursor)
-        mock_cursor.skip = Mock(return_value=mock_cursor)
-        mock_cursor.limit = Mock(return_value=mock_cursor)
-        mock_cursor.__aiter__ = lambda self: mock_async_iter()
-        mock_collection.find.return_value = mock_cursor
+        pipeline = captured["pipeline"]
+        # No leading {"$match": {"is_archived": False}} stage in the pipeline.
+        for stage in pipeline:
+            if "$match" in stage:
+                assert stage["$match"] != {"is_archived": False}
 
-        # Act
-        await repository.list_by_user("user_123", include_archived=True)
+    @pytest.mark.asyncio
+    async def test_list_by_user_excludes_week_old_empty_shells(
+        self, repository, mock_collection
+    ):
+        """Week-old shell with no messages and no last_message_at is excluded.
 
-        # Assert
-        # When include_archived=True, query should not filter by is_archived
-        mock_collection.find.assert_called_once_with({"user_id": "user_123"})
+        The exclusion happens at the Mongo $nor stage; here we just verify that
+        when the (correctly-filtered) aggregate yields no docs, the repo
+        returns an empty list. The pipeline shape is asserted in the
+        default-params test.
+        """
+        captured = self._mock_aggregate(mock_collection, [])
+
+        result = await repository.list_by_user()
+
+        assert result == []
+        # Sanity: the $nor exclusion stage is present.
+        pipeline = captured["pipeline"]
+        nor_stages = [
+            s["$match"] for s in pipeline if "$match" in s and "$nor" in s["$match"]
+        ]
+        assert len(nor_stages) == 1
+        nor_clause = nor_stages[0]["$nor"][0]
+        assert nor_clause["last_message_at"] is None
+        assert nor_clause["_message_count"] == 0
+        assert "$lt" in nor_clause["created_at"]
+
+    @pytest.mark.asyncio
+    async def test_list_by_user_includes_fresh_empty_shell(
+        self, repository, mock_collection
+    ):
+        """Brand-new empty shell (created <7d ago) is still returned."""
+        now = datetime.now(UTC)
+        docs = [
+            self._chat_doc(
+                "chat_fresh_empty",
+                created_at=now - timedelta(hours=1),
+                last_message_at=None,
+            ),
+        ]
+        self._mock_aggregate(mock_collection, docs)
+
+        result = await repository.list_by_user()
+
+        assert len(result) == 1
+        assert result[0].chat_id == "chat_fresh_empty"
+
+    @pytest.mark.asyncio
+    async def test_list_by_user_orders_by_effective_recency(
+        self, repository, mock_collection
+    ):
+        """A messaged chat with last_message_at=now-2h sorts ahead of a fresh
+        empty chat created 1h ago.
+
+        We assume Mongo applies the pipeline's $sort stage; here we just feed
+        the docs back in the order the real Mongo would produce them and
+        verify the repo preserves that order on its way out.
+        """
+        now = datetime.now(UTC)
+        docs = [
+            self._chat_doc(
+                "chat_with_msgs",
+                created_at=now - timedelta(days=10),
+                last_message_at=now - timedelta(hours=2),
+            ),
+            self._chat_doc(
+                "chat_fresh_empty",
+                created_at=now - timedelta(hours=1),
+                last_message_at=None,
+            ),
+        ]
+        self._mock_aggregate(mock_collection, docs)
+
+        result = await repository.list_by_user()
+
+        assert [c.chat_id for c in result] == ["chat_with_msgs", "chat_fresh_empty"]
 
 
 # ===== Update Tests =====

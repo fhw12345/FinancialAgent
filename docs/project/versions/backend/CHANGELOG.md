@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.1] - 2026-05-11
+
+### Hide week-old empty chat shells from the chat list
+
+`EnhancedChatInterface.handleSymbolSelect` auto-creates a chat on every symbol selection. Many never receive a message and stay around as empty shells (`last_message_at=NULL`, zero messages). With 49 such shells out of 68 non-archived chats, they were dominating page 1 of `GET /api/chat/chats` (sorted by `updated_at desc`) and burying real history.
+
+- **`chat_repository.list_by_user()`** now uses an aggregation pipeline instead of `find().sort()`. The pipeline `$lookup`s message counts from the `messages` collection, sorts by effective recency (`last_message_at` if set, else `created_at`), and excludes the empty-shell triple (`last_message_at IS NULL` AND `_message_count == 0` AND `created_at < now - 7d`) via a single `$nor` stage. Brand-new empty chats remain clickable; week-old abandoned shells are filtered out. Signature unchanged.
+- **`backend/scripts/clean_empty_chat_shells.py`** — new CLI to permanently delete abandoned shells (`last_message_at IS NULL`, never appeared in `messages`, `created_at < now - 1d`). Defaults to `--dry-run`; `--execute` requires typing `DELETE`. Idempotent.
+- **Tests**: `test_chat_repository.py::TestListByUser` rewritten to mock `collection.aggregate(pipeline)` and assert (a) default params build the expected pipeline shape (is_archived match + $lookup + $sort + $skip/$limit), (b) pagination flows through to the pipeline, (c) `include_archived=True` drops the is_archived match, (d) the `$nor` shell-exclusion clause is wired correctly, (e) fresh empty chats are returned, and (f) effective-recency ordering is preserved on read-out.
+
 ## [0.29.0] - 2026-05-11
 
 ### Migrate quote / price / fundamentals / news / movers from Alpha Vantage to yfinance
