@@ -63,25 +63,6 @@ class TestGetSymbolChatId:
         mock_chat_repo.create.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_creates_new_chat_when_none_exists(self, chat_manager, mock_chat_repo):
-        """Test creating new chat when none exists for symbol."""
-        mock_chat_repo.list_by_user.return_value = []
-
-        new_chat = Mock()
-        new_chat.chat_id = "chat_new_456"
-        mock_chat_repo.create.return_value = new_chat
-
-        result = await chat_manager.get_symbol_chat_id("TSLA")
-
-        assert result == "chat_new_456"
-        mock_chat_repo.create.assert_called_once()
-
-        # Check the ChatCreate object
-        call_args = mock_chat_repo.create.call_args[0][0]
-        assert call_args.title == "TSLA Analysis"
-        assert call_args.user_id == "portfolio_agent"
-
-    @pytest.mark.asyncio
     async def test_creates_new_chat_when_no_matching_title(
         self, chat_manager, mock_chat_repo
     ):

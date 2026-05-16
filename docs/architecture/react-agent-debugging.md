@@ -1,3 +1,14 @@
+---
+title: ReAct Agent — Components, Patterns & Debugging
+status: shipped
+version: backend@0.7.0+
+last_updated: 2026-05-16
+owner: maintainer
+related_paths:
+  - backend/src/api/chat/streaming/react_agent.py
+  - backend/src/agent/
+---
+
 # ReAct Agent - Components, Patterns & Debugging
 
 Detailed technical reference for the LangGraph ReAct Agent implementation.

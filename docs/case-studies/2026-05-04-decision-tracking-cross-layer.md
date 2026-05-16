@@ -1,4 +1,28 @@
+---
+title: Decision Tracking — Cross-Layer Instrumentation
+status: shipped
+version: backend@0.16.x
+last_updated: 2026-05-04
+owner: maintainer
+related_paths:
+  - backend/src/database/repositories/
+  - backend/src/services/watchlist/
+  - frontend/src/components/portfolio/
+---
+
 # 决策追踪：跨多个层的 instrumentation + "我在调谁？"端口陷阱
+
+> **TL;DR (EN)**: AI emitted BUY/SELL/HOLD decisions but nothing validated
+> whether they were right — HOLDs were dropped and decision-time anchor
+> prices were not persisted. This case walks through wiring an end-to-end
+> post-hoc P&L evaluation across five layers (Mongo schema → repository →
+> cron service → API → frontend), and re-stepping on the same "which
+> container am I actually talking to?" port-confusion trap from an earlier
+> case.
+> **TL;DR (中文)**: 产品给 BUY/SELL/HOLD 决策但无人验证对错；HOLD 被丢弃、
+> 订单价格 anchor 没存。本文记录把"事后 P&L 评估"系统跨 5 层（Mongo schema
+> → repo → cron → API → 前端）接通的全过程，并第二次踩进同一类端口/容器
+> 混淆陷阱。
 
 > Date: 2026-05-04
 > Component: 端到端 decision tracking（model + repo + cron + API + frontend）

@@ -1,4 +1,28 @@
+---
+title: SEC EDGAR Form 4 URL Resolution
+status: shipped
+version: backend@0.27.x
+last_updated: 2026-05-09
+owner: maintainer
+related_paths:
+  - backend/src/agent/tools/sec_edgar/form4.py
+---
+
 # SEC EDGAR Form 4：从 atom feed 到 primary doc 的 URL 解析陷阱
+
+> **TL;DR (EN)**: 18 unit tests with `httpx.MockTransport` were green, but
+> the first integration test against the real SEC returned 404 on all 5
+> filings — every filing-index URL was being transformed into a
+> nonexistent primary-doc URL. The mocks accepted any string the code
+> produced; the real EDGAR endpoint demanded a precise path shape.
+> Lesson: when an external API has unforgiving URL conventions, the
+> path-shape contract belongs in the unit suite, not just in slow
+> integration runs.
+> **TL;DR (中文)**: 18 个 `httpx.MockTransport` 单测全绿，第一个集成测试
+> 打真实 SEC 时 5 个 filing 全部 404——`...-index.htm` → primary doc XML
+> 的 URL 转换写错了。Mock 接受任何字符串，真 EDGAR 要精确路径。教训：
+> 外部 API 的 URL 约定不容错时，路径形状本身应该作为契约测试在单测里
+> 就锁死。
 
 > Date: 2026-05-09
 > Component: backend/src/agent/tools/sec_edgar/form4.py

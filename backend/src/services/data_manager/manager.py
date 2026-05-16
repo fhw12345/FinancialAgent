@@ -723,9 +723,7 @@ class DataManager:
             info = await self._fetch_yfinance_info(symbol)
             return info or {}
 
-        cached = await self._cache.get_with_fetch(
-            cache_key, fetch_func, self.TTL_QUOTE
-        )
+        cached = await self._cache.get_with_fetch(cache_key, fetch_func, self.TTL_QUOTE)
         if not isinstance(cached, dict) or not cached:
             return
         companion = _extended_hours_companion(

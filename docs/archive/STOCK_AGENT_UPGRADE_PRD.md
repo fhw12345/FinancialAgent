@@ -1,5 +1,9 @@
 # PRD: Stock Analysis Agent — Trustworthy Daily Briefing Upgrade
 
+> **Archived** — kept for historical context. This PRD was frozen on 2026-05-08
+> and drove the Wave 1–3 stock-agent upgrade. The shipped architecture is
+> described in [`docs/features/portfolio-agent-architecture-refactor.md`](../features/portfolio-agent-architecture-refactor.md).
+
 **Status:** FROZEN 2026-05-08
 **Owner:** orchestrator (per repo CLAUDE.md, autonomous mode NOT opted in — wave-by-wave user signoff required)
 **Scope:** `backend/src/agent/portfolio/`, `backend/src/agent/tools/`, `backend/src/models/trading_decision.py`, `frontend/src/components/orders/`, `frontend/src/components/reports/`

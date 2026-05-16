@@ -1,9 +1,21 @@
+---
+title: Extended Hours Trading Data (Pre-Market & After-Hours)
+status: shipped
+version: backend@0.24.0, frontend@0.19.0
+last_updated: 2026-05-16
+owner: maintainer
+related_paths:
+  - backend/src/services/data_manager/types.py
+  - backend/src/services/market_data/yfinance_bars.py
+  - frontend/src/components/portfolio/PortfolioSummaryTable.tsx
+---
+
 # Feature: Extended Hours Trading Data (Pre-Market & After-Hours)
 
-> **Status**: Draft
-> **Created**: 2025-10-30
-> **Last Updated**: 2025-10-30
-> **Owner**: Financial Agent Team
+> Shipped in backend v0.24.0 / frontend v0.19.0. The original design document
+> (`QuoteData.session` literal + SessionBadge UI) lived as a separate
+> implementation plan during development; this spec is the canonical reference
+> for the shipped behavior.
 
 ## Context
 
@@ -211,7 +223,7 @@ Frontend Chart (color-coded by session)
 
 ## Security Considerations
 
-**API Key Management**: Store in K8s Secret or Azure Key Vault (External Secrets Operator), accessible only to backend service
+**API Key Management**: Store in `.env` (gitignored), loaded into the backend container at startup.
 
 **Data Validation**: Validate timestamps (4:00 AM - 8:00 PM ET), verify positive price/volume values, sanitize symbol input
 

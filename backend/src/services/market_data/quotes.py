@@ -203,7 +203,11 @@ class QuotesMixin(AlphaVantageBase):
             return result
         except Exception as yf_err:
             if not self.api_key:
-                logger.error("yfinance quote failed (no AV fallback)", symbol=symbol, error=str(yf_err))
+                logger.error(
+                    "yfinance quote failed (no AV fallback)",
+                    symbol=symbol,
+                    error=str(yf_err),
+                )
                 raise
             logger.warning(
                 "yfinance quote failed, trying Alpha Vantage",
@@ -340,9 +344,9 @@ class QuotesMixin(AlphaVantageBase):
                     "current_status": status,
                     "local_open": "09:30",
                     "local_close": "16:00",
-                    "primary_exchanges": "NYSE, NASDAQ"
-                    if region == "United States"
-                    else "",
+                    "primary_exchanges": (
+                        "NYSE, NASDAQ" if region == "United States" else ""
+                    ),
                     "notes": "yfinance fallback — heuristic schedule",
                     "local_time": local_now.strftime("%Y-%m-%d %H:%M %Z"),
                     "utc_time": utc_now.strftime("%Y-%m-%d %H:%M UTC"),

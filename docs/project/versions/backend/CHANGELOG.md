@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.6] - 2026-05-16
+
+### Whole-repo documentation overhaul to public-release quality
+
+Audit + rewrite of all 51 `.md` files. Zero code change.
+
+- **New constitution**: `docs/development/documentation.md` defines the YAML frontmatter schema (`title` / `status` / `version` / `last_updated` / `owner` / `related_paths`), the `status` enum (`draft|planning|in-progress|shipped|superseded`), ISO date rule, and relative-link rule.
+- **New gap docs**: `docs/architecture/overview.md` (3 Mermaid diagrams: data flow + agent graph + Phase 1→2→3), `docs/architecture/api-reference.md` (all 11 routers tabulated), `docs/FAQ.md` (12 Q&A), `backend/src/agent/skills/README.md` (13-skill capability matrix — no `SKILL.md` byte changed).
+- **`docs/superpowers/` deleted**. The two PRDs inside were verified shipped against the live code (write-time-translation in backend v0.20.0 / frontend v0.14.0, pre/post-market support in backend v0.24.0 / frontend v0.19.0). New canonical doc: `docs/features/write-time-translation.md`. `docs/features/extended-hours-trading-data.md` status corrected from `Draft` → `shipped`.
+- **`docs/interview/` → `docs/case-studies/`** via `git mv`. Each of the 8 files gets a bilingual TL;DR (EN + 中文) immediately under the H1; the Chinese body is preserved unchanged.
+- **CHANGELOG cleanup**: entries describing features removed during the personal-local fork (multi-user auth / credit billing / cloud-K8s deploy / OAuth) were deleted from both backend and frontend CHANGELOGs. Entries documenting the slimming commits themselves were kept.
+- **`CLAUDE.md`**: appended a ≤20-line `## Documentation Rules` section (in Chinese) pointing to `docs/development/documentation.md` so future feature work syncs `last_updated` + `version` automatically.
+
+All 12 PRD acceptance criteria pass: every file under `docs/{features,development,architecture,case-studies}/` has the unified frontmatter; `status` values stay inside the enum; no absolute paths in internal links; `git diff` against any `.py`/`.ts`/`.tsx`/`.json`/`.toml` (other than this `pyproject.toml` version bump) is empty.
+
+## [0.29.5] - 2026-05-15
+
+### Drop 27 stale tests that no longer match the code they pretended to cover
+
+`pytest tests/` was reporting `1865 passed, 27 failed` on clean `main`. All 27 failures fell into four buckets that share the same root cause — **tests outliving the code they were written for**:
+
+1. **`user_id` assertions on models that no longer have `user_id`** (single-user fork). Removed:
+   - `test_chat_repository.py`: `TestEnsureIndexes`, `TestCreate::test_create_chat_success`, `TestFindBySymbol::test_find_by_symbol_success`
+   - `test_chat_service.py`: `TestFindChatBySymbol::test_find_chat_by_symbol_found`, `TestGetChat::test_get_chat_wrong_user`, `TestListUserChats::test_list_user_chats_pagination`
+   - `test_portfolio_service.py`: `TestUpdateHolding::test_update_holding_{success,wrong_user}`, `TestDeleteHolding::test_delete_holding_{success,wrong_user}`
+   - `test_holding_repository.py`: `TestGetBySymbol::test_get_by_symbol_{success,uppercases_symbol}`, `TestListByUser::test_list_by_user_multiple_holdings`
+   - `test_watchlist_chat_manager.py`: `TestGetSymbolChatId::test_creates_new_chat_when_none_exists`
+2. **Index-name assertions against renamed indexes** (`idx_user_symbol`/`idx_user_orders`/etc. → `idx_symbol`/`idx_holdings_updated`/…). Removed:
+   - `test_holding_repository.py::TestEnsureIndexes` (whole class)
+   - `test_portfolio_order_repository.py::TestEnsureIndexes` (whole class), plus `TestListByUser::test_list_by_user_with_status_filter` and the entire `TestCountByUser` class (`test_count_all_orders`, `test_count_orders_by_status`) which all asserted `user_id` filters that no longer exist.
+3. **`patch("src.agent.tools.exa_tools.Exa")` after the Exa SDK was replaced** by an in-house `yfinance` + `_search_sync` implementation that never imports `Exa`. Removed:
+   - `test_exa_tools.py`: 3 of 4 `TestSearchWebExa` tests (kept `test_create_exa_tools_returns_list`)
+   - `test_debater_subagent.py::test_debater_without_exa_key`
+   - `test_debate_integration.py::test_debater_without_exa_key_uses_yfinance_only`
+   - `test_review_fixes.py::TestAsyncToolWrapping::test_exa_{uses_asyncio_to_thread,error_in_thread_still_caught}`
+4. **Test fixture forgot to mount the router under test** and called the endpoint without its required query param:
+   - `test_admin_api.py::TestTriggerPortfolioAnalysis::test_trigger_portfolio_analysis` (whole class)
+
+After cleanup: `1865 passed, 0 failed`. No production code changed.
+
+## [0.29.4] - 2026-05-15
+
+### Code slimming: drop dead auth stubs, one-shot scripts, stale deps
+
+Sweep over the personal local fork to remove code that no live caller exercises. No behavior change for the running app — only deletions and the corresponding wiring.
+
+- **`api/auth.py` deleted** — the stub endpoints (`/send-code`, `/login`, `/register`, `/forgot-password`, etc.) all returned a fixed `"local"` token. Zero frontend callers (verified by grep). Router removed from `main.py`.
+- **`workers/__init__.py` deleted** — empty package after the Celery removal earlier in the fork.
+- **`scripts/backfill_message_flow.py` deleted** — one-shot migration script already executed; no longer reachable.
+- **`scripts/verify-oss-s3-auth.py` deleted** — Aliyun OSS path was removed earlier; this verification script had no remaining target.
+- **`backend/src/agent/tmp/*` cleared** — four experimental news/forecast scratch files (`search_news{,_v2,_v3}.py`, `search_forecasts.py`) that were never imported by the live agent.
+- **`pyproject.toml`** — removed unused deps `email-validator`, `python-jose[cryptography]`, `bcrypt`, `opentelemetry-api`, `opentelemetry-sdk` (no remaining import sites). Dropped their `mypy.overrides` entries.
+
+`api/dependencies/auth.py` is **kept** — it is still wired into `chat_deps.py` / `portfolio_deps.py` as a no-op `require_admin` shim. The pre-existing `test_trigger_portfolio_analysis` failure in `tests/test_admin_api.py` (test fixture forgets to mount `portfolio_admin.router` and calls the endpoint without its required `flow` query param) reproduces on clean `main` before this change — unrelated.
+
 ## [0.29.3] - 2026-05-12
 
 ### Close the Phase 1 + fallback Phase 2 Chinese leaks (analysis pipeline truly English now)
@@ -152,7 +207,7 @@ Wave 3 of `STOCK_AGENT_UPGRADE_PRD.md` is closed. Across 14 sub-tasks (W3.1–W3
 **E2E + integration (W3.12–W3.14):**
 
 - W3.12 — `e2e_source_footnote.py` ties W3.4/W3.5/W3.7/W3.10/W3.11 surfaces into a purely-offline pipeline test (no LLM, no SEC, no DataManager). Mirrors the JS `SOURCE_ID_PATTERN` in Python, asserts citation-order footnote dedup, ID round-trip across all 3 provider prefixes, plan_type/pct_of_holdings_after enrichment, and that the W3.11 prompt rule's wording supports both fixture scenarios. 15 e2e tests.
-- W3.13 — live SEC integration tests (`@pytest.mark.integration`, skipped by default). 9 tests covering CIK lookup of NVDA's pinned `0001045810`, atom feed shape, AC #3 plan_type populated for ≥3 of N parsed transactions, AC #5 50 sequential calls under 10 req/s. **Critical bug found in production path:** `_index_to_form4_xml_url`'s `<accession>-index.htm` → `<accession>.xml` suffix-swap heuristic was tautologically passing W3.9 mock tests but 404'ing on every real SEC filing — primary docs ship under varied filenames (`wk-form4_<id>.xml`, `xslF345X05/<id>.xml`, `primary_doc.xml`, …). Fix: new async `_resolve_form4_doc_url` fetches `{folder}/index.json` (SEC's structured directory manifest) and picks the first `.xml` entry; old swap kept as fallback. 3 new resolver unit tests. Interview case study at `docs/interview/2026-05-09-sec-edgar-form4-url-resolution.md`.
+- W3.13 — live SEC integration tests (`@pytest.mark.integration`, skipped by default). 9 tests covering CIK lookup of NVDA's pinned `0001045810`, atom feed shape, AC #3 plan_type populated for ≥3 of N parsed transactions, AC #5 50 sequential calls under 10 req/s. **Critical bug found in production path:** `_index_to_form4_xml_url`'s `<accession>-index.htm` → `<accession>.xml` suffix-swap heuristic was tautologically passing W3.9 mock tests but 404'ing on every real SEC filing — primary docs ship under varied filenames (`wk-form4_<id>.xml`, `xslF345X05/<id>.xml`, `primary_doc.xml`, …). Fix: new async `_resolve_form4_doc_url` fetches `{folder}/index.json` (SEC's structured directory manifest) and picks the first `.xml` entry; old swap kept as fallback. 3 new resolver unit tests. Case study at `docs/case-studies/2026-05-09-sec-edgar-form4-url-resolution.md`.
 - W3.14 — Wave 3 lint sweep (import order, py3.12 `collections.abc.Iterable`, unused-import removal); zero `print`/TODO/FIXME hits; zero leaked-secrets hits; D4 default User-Agent intentionally checked-in per project policy.
 
 **Numbers:**
@@ -200,7 +255,7 @@ Bumps backend 0.27.21 → 0.27.22.
 - **W3.13 `tests/test_form4_real.py` — 9 live SEC integration tests** marked `@pytest.mark.integration` (skipped by default per pyproject `addopts = ["-m", "not integration"]`). Run explicitly with `pytest -m integration tests/test_form4_real.py`. Coverage: `lookup_cik` resolves NVDA to its pinned CIK `0001045810` + case-insensitive + unknown→None; `fetch_form4_atom` returns valid atom XML; `fetch_recent_transactions` returns ≥3 transactions for NVDA with `plan_type` populated as `10b5-1`/`discretionary` (PRD AC #3 directly asserted against live data); unknown-symbol short-circuits; PRD AC #5 50-sequential ticker-map fetches measured under 10 req/s wall-clock (real run: 50 calls in 72.9 s = 0.69 req/s, well under ceiling); `DEFAULT_RATE_LIMIT_PER_SEC < 10.0` defensive constant pin so no future PR can raise the default past the SEC ceiling without this test failing; concurrent atom fetches don't corrupt each other's response.
 - **Form 4 primary-doc URL resolver bugfix** — `_index_to_form4_xml_url`'s suffix-swap heuristic (`<accession>-index.htm` → `<accession>.xml`) was completely wrong for real SEC: NVDA's 5 most recent Form 4s all 404'd because primary docs are filed under varied filenames (`wk-form4_<id>.xml`, `xslF345X05/<id>.xml`, `primary_doc.xml`, `edgar.xml`, `<reporter>-form4-<id>.xml`) — SEC doesn't enforce the `<accession>.xml` convention used by other form types. The W3.9 mock tests passed because the `MockTransport` handler matched on the SUT-generated URL (self-reinforcing test). New `_resolve_form4_doc_url(client, index_url)` async helper fetches `{folder}/index.json` (SEC's structured directory manifest), picks the first item with `.xml` extension, and returns the full primary-doc URL. Falls back to the deterministic suffix-swap heuristic when the manifest fetch fails OR contains no XML entries — preserves W3.9's 35 fixture-pinned tests with zero changes (their mock handlers 404 on `/index.json` so control flow falls through to the old path). `_filing_folder_from_index_url` is the new helper that strips the trailing `<accession>-index.htm[l]` to recover the folder URL for the manifest lookup.
 - **3 new resolver unit tests** in `tests/test_form4_parser.py` (`_resolve_form4_doc_url`): manifest-found path picks `wk-form4_1774386816.xml` from a 4-item directory listing including non-XML siblings (PRIMARY happy path), manifest-404 falls back to suffix-swap (preserves W3.9 fixture compatibility), no-XML-in-manifest also falls back (pathological-but-possible directory listing). Plus 9 new integration tests above. W3.9 still 18/18 + new resolver 3/3 = 21/21 unit; W3.13 9/9 integration when run with `-m integration`. Wave 3 offline sweep (W3.4 + W3.5 + W3.6 + W3.8 + W3.9 + W3.10 + W3.11 + W3.12) = 124/124 green.
-- **Interview case study** at `docs/interview/2026-05-09-sec-edgar-form4-url-resolution.md` documents the mock-self-reinforcement antipattern (mock handlers matching on SUT-generated URLs are tautological), the importance of integration tests as the lowest-cost contract verification, and the rule against writing "convention" in comments when the protocol has no formal documentation.
+- **Case study** at `docs/case-studies/2026-05-09-sec-edgar-form4-url-resolution.md` documents the mock-self-reinforcement antipattern (mock handlers matching on SUT-generated URLs are tautological), the importance of integration tests as the lowest-cost contract verification, and the rule against writing "convention" in comments when the protocol has no formal documentation.
 
 Bumps backend 0.27.20 → 0.27.21.
 
@@ -329,7 +384,7 @@ Bumps backend 0.27.10 → 0.27.11.
 
 ## [0.27.10] - 2026-05-09
 
-### Added — Stock Agent Upgrade Wave 3 starts (PRD docs/prd/STOCK_AGENT_UPGRADE_PRD.md)
+### Added — Stock Agent Upgrade Wave 3 starts (PRD docs/archive/STOCK_AGENT_UPGRADE_PRD.md)
 
 - **W3.1 `Source` provenance model** — new `models/source.py` adds the envelope every Wave-3 tool wrapper will use to attribute the numbers and strings it returns. `Source = {value: Any, source: str, asof: datetime, url: str | None, id: str | None}`; `value` is intentionally polymorphic so quote prices stay floats, fundamentals tables stay strings, and news / Form-4 records can pack the whole record in. `source` is normalized to lower-snake-case at construction time so the consistency_gate can match it as an exact string ("alphavantage" / "yfinance" / "sec_edgar_form4"). `url` is validated as `http(s)://` only — empty strings normalize to `None` so the frontend can't render a broken footnote. `asof` is the timestamp of the underlying datum (not when the tool ran) so the Wave-1 staleness gate has a useful comparison anchor. `short_label()` is the helper the W3.7 ReportRenderer will pull for footnote chips, falling back to `source` when `id` is unset. 12 unit tests cover float/string/dict values, source-name normalization (whitespace, capitalisation, empty rejection), URL scheme validation, blank-URL → None coercion, optional `id` + label fallback, and `model_dump(mode="json")` round-trip (Phase2's persistence path uses json mode, so `asof` must serialize cleanly without losing tz info — covered by `test_model_dump_json_mode_roundtrips`).
 
@@ -368,7 +423,7 @@ Bumps backend 0.27.10 → 0.27.11.
 
 ## [0.27.5] - 2026-05-08
 
-### Added — Stock Agent Upgrade Wave 2 (PRD docs/prd/STOCK_AGENT_UPGRADE_PRD.md)
+### Added — Stock Agent Upgrade Wave 2 (PRD docs/archive/STOCK_AGENT_UPGRADE_PRD.md)
 
 11 sub-tasks shipped (W2.1, W2.3, W2.5–W2.12); 3 deferred with rationale (W2.2, W2.4, W2.13–14 close).
 
@@ -391,7 +446,7 @@ Test counts: Wave 2 added ~70 unit + 5 e2e + 1 integration; full Wave 1 + Wave 2
 
 ## [0.27.4] - 2026-05-08
 
-### Added — Stock Agent Upgrade Wave 1 (PRD docs/prd/STOCK_AGENT_UPGRADE_PRD.md)
+### Added — Stock Agent Upgrade Wave 1 (PRD docs/archive/STOCK_AGENT_UPGRADE_PRD.md)
 
 13 sub-tasks delivered (W1.1 – W1.13) addressing the two highest-severity findings from the 2026-05-07 PM/quant + sell-side analyst review:
 
@@ -407,7 +462,7 @@ Test counts: Wave 2 added ~70 unit + 5 e2e + 1 integration; full Wave 1 + Wave 2
 
 Frontend bumped to 0.22.4 (W1.3 + W1.11 + W1.12 visual changes).
 
-Wave 2 (architectural upgrades) and Wave 3 (provenance + insider depth) remain gated on user signoff per PRD; tracked in `docs/prd/STOCK_AGENT_UPGRADE_PROGRESS.md`.
+Wave 2 (architectural upgrades) and Wave 3 (provenance + insider depth) remain gated on user signoff per PRD; tracked in `docs/archive/STOCK_AGENT_UPGRADE_PROGRESS.md`.
 
 ## [0.27.3] - 2026-05-07
 
@@ -888,7 +943,7 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 - fix(gitignore): `backend/.env.example` was silently gitignored
   - Root `.env.example` was tracked (predates the rule), but any subdirectory `.env.example` was caught by `.gitignore:3:.env.*` with no escape clause
   - Added `!.env.example` and `!**/.env.example` exceptions; `.env.development` and other `.env.*` files remain ignored to protect local secrets
-  - Force-added `backend/.env.example` to the repo so new clones see all the optional keys (Alpha Vantage / FRED / Exa / Finnhub / Langfuse) and the cross-vendor model defaults
+  - Force-added `backend/.env.example` to the repo so new clones see all the optional keys (Alpha Vantage / FRED / Exa / Finnhub) and the cross-vendor model defaults
 
 ### Changed
 - chore(env-template): synced `backend/.env.example` model IDs with the v0.11.1 cross-vendor defaults (`claude-opus-4.7` / `gpt-5.5` / `gemini-3.1-pro-preview`, etc.) — were stuck on the pre-W8 short-hyphen Claude-only naming
@@ -914,7 +969,7 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 - New cache key generators: `CacheKeys.company_news`, `CacheKeys.insider_trades`
 
 ### Added — interview docs
-- `docs/interview/2026-05-04-finnhub-fallback-chain.md` — case study covering the integration plus the "stale comment lying about a runtime branch" pattern (third entry in the running interview-prep series)
+- `docs/case-studies/2026-05-04-finnhub-fallback-chain.md` — case study covering the integration plus the "stale comment lying about a runtime branch" pattern (third entry in the running case-studies series)
 
 ## [0.11.2] - 2026-05-04
 
@@ -926,7 +981,7 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - Verified live: Claude/GPT/Gemini all now report non-zero token counts via `extract_token_usage_from_messages`
 
 ### Added
-- `docs/interview/` — case-study notes for non-trivial bugs (context, reasoning, root cause, fix, takeaways) for interview prep. First two entries: ghost compose project + token getattr-on-dict bug.
+- `docs/case-studies/` — case-study notes for non-trivial bugs (context, reasoning, root cause, fix, takeaways). First two entries: ghost compose project + token getattr-on-dict bug.
 
 ## [0.11.1] - 2026-05-04
 
@@ -1168,8 +1223,6 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 ## [0.7.1] - 2025-11-19
 
 ### Added
-- feat: add OSS presigned download URLs for feedback images
-- feat: dual authentication mode for OSSService (static credentials + STS)
 - Add 15-min delayed intraday data, GLOBAL_QUOTE endpoint, fix error messages
 
 ### Performance
@@ -1203,12 +1256,6 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 
 ### Added
 - fix(data): Complete AlphaVantage integration across all TickerDataService instantiations
-
-
-## [0.6.1] - 2025-11-14
-
-### Added
-- fix(k8s): add namespace env var and RBAC permissions for metrics API
 
 
 ## [0.5.20] - 2025-11-12
@@ -1253,22 +1300,10 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 - feat: Add consistent system prompt to v3 (Agent mode) for unified UX
 
 
-## [0.5.8] - 2025-10-26
-
-### Added
-- fix: Credit system integration for v2 (Copilot) and v3 (Agent) modes with token extraction
-
-
 ## [0.5.5] - 2025-10-24
 
 ### Added
 - fix(database): Change chat list query to use updated_at sorting for Cosmos DB compatibility
-
-
-## [0.5.5] - 2025-10-23
-
-### Added
-- Add production Langfuse observability configuration
 
 
 ## [0.5.4] - 2025-10-14
@@ -1312,24 +1347,6 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 - Removed mandatory rigid structure ("The Verdict", "The Evidence") for all responses
 - Split instructions into "Initial Analysis" vs "Follow-Up Questions" patterns
 
-## [0.4.7] - 2025-10-08
-
-### Added
-- security: Implement dual-token JWT authentication (access + refresh tokens)
-
-
-## [0.4.6] - 2025-10-08
-
-### Added
-- Add RefreshToken models and repository for JWT token refresh mechanism
-
-
-## [0.4.5] - 2025-10-08
-
-### Added
-- security: Add comprehensive security contexts and fix K8s linting
-
-
 ## [0.4.3] - 2025-10-08
 
 ### Added
@@ -1361,21 +1378,10 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 
 ## [0.4.0] - 2025-10-07
 
-### Added
-- **Authentication System**
-  - Username/password registration with email verification
-  - Email verification code system (6-digit codes, 5-min expiry)
-  - Password-based login with JWT tokens
-  - Forgot password flow with email verification
-  - Bcrypt password hashing for security
-  - Tencent Cloud SES integration for email delivery
-
-
 ### Planned
 - LangChain agent integration
 - Conversation history persistence
 - AI chart interpretation with Qwen-VL
-- User authentication system
 
 ---
 
@@ -1389,7 +1395,6 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - MongoDB integration for data persistence
   - Redis caching for market data
   - Docker containerization
-  - Kubernetes deployment configuration
 
 - **Market Data Integration**
   - yfinance integration for stock data
@@ -1448,14 +1453,10 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 
 ### Infrastructure
 - **Deployment**
-  - Azure Container Registry integration
-  - Azure Kubernetes Service deployment
-  - External Secrets Operator for secure configuration
-  - Health probes (temporarily disabled for debugging)
+  - Local Docker Compose (single-host)
 
 - **Environment**
   - Development environment with hot reload
-  - Staging environment on AKS dev namespace
   - CORS configuration for cross-origin requests
 
 ### Dependencies
@@ -1476,18 +1477,17 @@ No migration required - fresh installation.
 
 ### Known Issues
 - Health check endpoint returns 400 (probes disabled temporarily)
-- No authentication system (planned for v0.2.0)
-- Manual deployment process (CI/CD planned for future)
+- Manual deployment process (single-host docker compose by design for the personal-local fork)
 
 ### Security
 - CORS configured for development (`["*"]`)
 - TrustedHostMiddleware disabled in development
-- Secrets managed via Azure Key Vault + External Secrets
+- Local-only secrets via `.env` (gitignored)
 
 ---
 
 ## Version History
 
 - **v0.1.0** (2025-10-04): Initial release - Walking skeleton complete
-- **v0.2.0** (Planned): LangChain agent integration
-- **v1.0.0** (Future): Production-ready release with authentication
+- **v0.2.0+**: LangChain / LangGraph agent integration, MongoDB-backed chat,
+  portfolio analysis pipeline, market insights, write-time translation.

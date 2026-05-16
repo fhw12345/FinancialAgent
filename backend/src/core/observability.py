@@ -6,8 +6,9 @@ If LANGFUSE_ENABLED=false (default) or langfuse package not installed,
 """
 
 import os
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable
+from typing import Any
 
 LANGFUSE_ENABLED = os.getenv("LANGFUSE_ENABLED", "false").lower() == "true"
 
@@ -30,7 +31,9 @@ def _noop_observe(*args: Any, **kwargs: Any) -> Callable:
 
 if LANGFUSE_ENABLED:
     try:
-        from langfuse.decorators import observe as _real_observe  # type: ignore[import-not-found]
+        from langfuse.decorators import (
+            observe as _real_observe,  # type: ignore[import-not-found]
+        )
 
         observe = _real_observe
     except ImportError:

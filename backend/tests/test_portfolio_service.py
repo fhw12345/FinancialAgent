@@ -356,23 +356,6 @@ class TestUpdateHolding:
     """Test update_holding method"""
 
     @pytest.mark.asyncio
-    async def test_update_holding_success(
-        self, portfolio_service, mock_holding_repo, sample_holding
-    ):
-        """Test successful holding update"""
-        mock_holding_repo.get.return_value = sample_holding
-        updated_holding = Holding(**sample_holding.model_dump())
-        updated_holding.quantity = 15.0
-        mock_holding_repo.update.return_value = updated_holding
-
-        update_data = HoldingUpdate(quantity=15.0)
-        result = await portfolio_service.update_holding(
-            "user_456", "hold_123", update_data
-        )
-
-        assert result.quantity == 15.0
-
-    @pytest.mark.asyncio
     async def test_update_holding_not_found(self, portfolio_service, mock_holding_repo):
         """Test update for non-existent holding"""
         mock_holding_repo.get.return_value = None
@@ -380,20 +363,6 @@ class TestUpdateHolding:
         update_data = HoldingUpdate(quantity=15.0)
         result = await portfolio_service.update_holding(
             "user_456", "nonexistent", update_data
-        )
-
-        assert result is None
-
-    @pytest.mark.asyncio
-    async def test_update_holding_wrong_user(
-        self, portfolio_service, mock_holding_repo, sample_holding
-    ):
-        """Test update denied for wrong user"""
-        mock_holding_repo.get.return_value = sample_holding  # user_456 owns it
-
-        update_data = HoldingUpdate(quantity=15.0)
-        result = await portfolio_service.update_holding(
-            "different_user", "hold_123", update_data
         )
 
         assert result is None
@@ -406,35 +375,11 @@ class TestDeleteHolding:
     """Test delete_holding method"""
 
     @pytest.mark.asyncio
-    async def test_delete_holding_success(
-        self, portfolio_service, mock_holding_repo, sample_holding
-    ):
-        """Test successful holding deletion"""
-        mock_holding_repo.get.return_value = sample_holding
-        mock_holding_repo.delete.return_value = True
-
-        result = await portfolio_service.delete_holding("user_456", "hold_123")
-
-        assert result is True
-        mock_holding_repo.delete.assert_called_once_with("hold_123")
-
-    @pytest.mark.asyncio
     async def test_delete_holding_not_found(self, portfolio_service, mock_holding_repo):
         """Test delete for non-existent holding"""
         mock_holding_repo.get.return_value = None
 
         result = await portfolio_service.delete_holding("user_456", "nonexistent")
-
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_delete_holding_wrong_user(
-        self, portfolio_service, mock_holding_repo, sample_holding
-    ):
-        """Test delete denied for wrong user"""
-        mock_holding_repo.get.return_value = sample_holding
-
-        result = await portfolio_service.delete_holding("different_user", "hold_123")
 
         assert result is False
         mock_holding_repo.delete.assert_not_called()

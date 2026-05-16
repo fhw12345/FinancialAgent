@@ -31,7 +31,9 @@ MODELS: dict[str, str] = {
     # 1m-internal: 935k context window (best for ReAct + 24 tools + history)
     "deep_planner": os.getenv("MODEL_DEEP_PLANNER", "claude-opus-4.7-xhigh"),
     "react_agent": os.getenv("MODEL_REACT_AGENT", "claude-opus-4.7-1m-internal"),
-    "portfolio_decisions": os.getenv("MODEL_PORTFOLIO_DECISIONS", "claude-opus-4.7-xhigh"),
+    "portfolio_decisions": os.getenv(
+        "MODEL_PORTFOLIO_DECISIONS", "claude-opus-4.7-xhigh"
+    ),
     "verdict": os.getenv("MODEL_VERDICT", "claude-opus-4.7-xhigh"),
     "sub_technical": os.getenv("MODEL_SUB_TECHNICAL", "claude-opus-4.7"),
     "simple_chat": os.getenv("MODEL_SIMPLE_CHAT", "claude-haiku-4.5"),

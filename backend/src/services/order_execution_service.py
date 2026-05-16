@@ -159,9 +159,7 @@ async def mark_order_executed(
         await _adjust_cash_balance(mongodb, -cash_delta)
         await apply_transaction(tx, holding_repo, sign=-1)
         await tx_repo.delete(tx.transaction_id)
-        raise OrderNotFoundError(
-            f"order {order_id} disappeared while marking filled"
-        )
+        raise OrderNotFoundError(f"order {order_id} disappeared while marking filled")
 
     cash_warning = (
         f"cash_balance is now {new_cash:.2f} (negative — BUY exceeded available cash)"

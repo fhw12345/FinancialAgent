@@ -332,7 +332,10 @@ async def get_market_movers(
         data = await yfinance_movers.get_market_movers()
     except Exception as e:
         yf_error = str(e)
-        logger.warning("yfinance market movers failed, falling back to Alpha Vantage", error=yf_error)
+        logger.warning(
+            "yfinance market movers failed, falling back to Alpha Vantage",
+            error=yf_error,
+        )
 
     if data is None:
         try:

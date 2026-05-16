@@ -1,4 +1,26 @@
+---
+title: Vite + Docker HMR Silent Failure on Windows
+status: shipped
+version: frontend@0.16.4
+last_updated: 2026-05-06
+owner: maintainer
+related_paths:
+  - docker-compose.yml
+  - frontend/vite.config.ts
+---
+
 # "代码改了 / 容器看得见 / 浏览器没生效"：Vite + Docker on Windows 的 HMR 静默失效
+
+> **TL;DR (EN)**: Source on the host had the fix, the file inside the
+> container had the fix, ESLint and the build passed, the user still saw
+> raw markdown. Windows + Docker bind mounts propagate file *content* but
+> not inotify *events*. Vite never noticed, never recompiled, never
+> hot-reloaded. Habit (always running `npm run dev` in the container) had
+> been masking the bug for weeks because of accidental restarts.
+> **TL;DR (中文)**: 主机上代码改了、容器里文件也是新的、ESLint 跑过、build
+> 没报错，但浏览器还是 raw md。Windows + Docker bind mount 会传文件**内容**
+> 但**不传 inotify 事件**——Vite 完全感知不到，不会重新编译。长期靠"无意
+> 重启容器"的好习惯把这个 bug 掩盖了 N 周。
 
 > Date: 2026-05-06
 > Component: Vite dev server / Docker bind mount / inotify

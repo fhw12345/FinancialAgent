@@ -1,3 +1,14 @@
+---
+title: Error Handling and Debugging Guide
+status: shipped
+version: backend@0.5.3+
+last_updated: 2026-05-16
+owner: maintainer
+related_paths:
+  - backend/src/core/exceptions.py
+  - backend/src/database/mongodb.py
+---
+
 # Error Handling & Debugging Guide
 
 ## Overview
@@ -332,7 +343,7 @@ console.info('[Config] Environment:', import.meta.env.MODE)
   "level": "error",
   "timestamp": "2025-10-07T12:34:56Z",
   "message": "Application error occurred",
-  "path": "/api/auth/register",
+  "path": "/api/chat/chats",
   "method": "POST",
   "error_type": "database_error",  // ← Easy to filter/alert on
   "status_code": 500,
@@ -344,13 +355,13 @@ console.info('[Config] Environment:', import.meta.env.MODE)
 **Monitoring queries:**
 ```bash
 # Find all database errors
-kubectl logs -f deployment/backend | jq 'select(.error_type == "database_error")'
+docker compose logs backend | jq 'select(.error_type == "database_error")'
 
 # Find all external service errors
-kubectl logs -f deployment/backend | jq 'select(.error_type == "external_service_error")'
+docker compose logs backend | jq 'select(.error_type == "external_service_error")'
 
 # Alert on configuration errors (should only happen at startup)
-kubectl logs -f deployment/backend | jq 'select(.error_type == "configuration_error")'
+docker compose logs backend | jq 'select(.error_type == "configuration_error")'
 ```
 
 ---

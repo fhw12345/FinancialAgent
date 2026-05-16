@@ -1,8 +1,15 @@
-# Market Insights Trend Visualization
+---
+title: Market Insights Trend Visualization
+status: shipped
+version: backend@0.9.0, frontend@0.11.4
+last_updated: 2025-12-30
+owner: maintainer
+related_paths:
+  - backend/src/api/insights/
+  - frontend/src/components/MarketInsights/
+---
 
-**Status**: Deployed (Phase 2 Complete)
-**Version**: Backend v0.9.0, Frontend v0.11.4
-**Last Updated**: 2025-12-30
+# Market Insights Trend Visualization
 
 ## Overview
 
@@ -101,26 +108,12 @@ Returns:
 - Dark theme variant for header card
 - Displays "Risk Over Time" label
 
-## CronJob Management
+## Snapshot Trigger
 
-### Check Status
+Snapshots are produced on demand via the admin API:
+
 ```bash
-KUBECONFIG=~/.kube/config-ack-prod kubectl get cronjob -n financial-agent
-```
-
-### Suspend/Resume
-```bash
-# Suspend
-kubectl patch cronjob insights-snapshot-trigger -n financial-agent -p '{"spec":{"suspend":true}}'
-
-# Resume
-kubectl patch cronjob insights-snapshot-trigger -n financial-agent -p '{"spec":{"suspend":false}}'
-```
-
-### Manual Trigger
-```bash
-# Via admin API
-curl -X POST http://localhost:3000/api/admin/insights/trigger-snapshot \
+curl -X POST http://localhost:8000/api/admin/insights/trigger-snapshot \
   -H "Authorization: Bearer $TOKEN"
 ```
 

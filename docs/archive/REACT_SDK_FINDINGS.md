@@ -1,5 +1,9 @@
 # ReAct SDK Research Findings
 
+> **Archived** — research notes that led to the LangGraph SDK adoption shipped
+> in backend v0.7.0. See [`docs/features/langgraph-sdk-react-agent.md`](../features/langgraph-sdk-react-agent.md)
+> for the production design.
+
 **Date**: 2025-10-20
 **Research Goal**: Evaluate LangGraph's `create_react_agent` SDK vs custom state machine for flexible auto-planning financial agent
 

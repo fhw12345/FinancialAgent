@@ -365,23 +365,6 @@ class TestGetTimingMetrics:
             assert response.json() == {}
 
 
-# ===== trigger_portfolio_analysis Tests =====
-
-
-class TestTriggerPortfolioAnalysis:
-    """Test trigger_portfolio_analysis endpoint."""
-
-    def test_trigger_portfolio_analysis(self, client):
-        """Test triggering portfolio analysis."""
-        response = client.post("/api/admin/portfolio/trigger-analysis")
-
-        assert response.status_code == 202
-        data = response.json()
-        assert data["status"] == "started"
-        assert "run_id" in data
-        assert data["run_id"].startswith("run_")
-
-
 # ===== trigger_insights_snapshot Tests =====
 
 

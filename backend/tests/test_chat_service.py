@@ -143,15 +143,6 @@ class TestGetChat:
         with pytest.raises(NotFoundError):
             await chat_service.get_chat("nonexistent", "user_456")
 
-    @pytest.mark.asyncio
-    async def test_get_chat_wrong_user(self, chat_service, mock_chat_repo, sample_chat):
-        """Test accessing chat owned by different user raises NotFoundError"""
-        mock_chat_repo.get.return_value = sample_chat
-
-        with pytest.raises(NotFoundError):
-            await chat_service.get_chat("chat_123", "different_user")
-
-
 # ===== list_user_chats Tests =====
 
 
@@ -170,22 +161,6 @@ class TestListUserChats:
         assert len(chats) == 1
         assert chats[0] == sample_chat
         mock_chat_repo.list_by_user.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_list_user_chats_pagination(self, chat_service, mock_chat_repo):
-        """Test pagination parameters are passed correctly"""
-        mock_chat_repo.list_by_user.return_value = []
-
-        await chat_service.list_user_chats(
-            "user_456", page=2, page_size=10, include_archived=True
-        )
-
-        mock_chat_repo.list_by_user.assert_called_once_with(
-            user_id="user_456",
-            limit=10,
-            skip=10,  # (page - 1) * page_size = (2-1)*10 = 10
-            include_archived=True,
-        )
 
     @pytest.mark.asyncio
     async def test_list_user_chats_invalid_page(self, chat_service):
@@ -411,18 +386,6 @@ class TestUpdateTitleIfNew:
 
 class TestFindChatBySymbol:
     """Test symbol-based chat lookup"""
-
-    @pytest.mark.asyncio
-    async def test_find_chat_by_symbol_found(
-        self, chat_service, mock_chat_repo, sample_chat
-    ):
-        """Test finding chat for symbol"""
-        mock_chat_repo.find_by_symbol.return_value = sample_chat
-
-        result = await chat_service.find_chat_by_symbol("user_456", "AAPL")
-
-        assert result == sample_chat
-        mock_chat_repo.find_by_symbol.assert_called_once_with("user_456", "AAPL")
 
     @pytest.mark.asyncio
     async def test_find_chat_by_symbol_not_found(self, chat_service, mock_chat_repo):

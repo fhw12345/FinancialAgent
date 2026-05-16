@@ -1,11 +1,15 @@
-# Chat Symbol Context Injection
-
-**Feature ID**: `chat-symbol-context-injection`
-**Status**: ✅ Implemented
-**Version**: Backend v0.8.1+ (planned)
-**Date**: 2025-11-27
-
 ---
+title: Chat Symbol Context Injection
+status: shipped
+version: backend@0.8.1+
+last_updated: 2025-11-27
+owner: maintainer
+related_paths:
+  - backend/src/api/chat/
+  - frontend/src/components/Chat/
+---
+
+# Chat Symbol Context Injection
 
 ## Overview
 
@@ -208,7 +212,7 @@ docker compose logs -f backend
 **Test Scenarios**:
 
 1. **Scenario A**:
-   - Login: http://localhost:3000 (admin/<password>)
+   - Open http://localhost:3000
    - Select symbol "GOOG"
    - Send: "What's the trend?"
    - Verify: Agent uses GOOG in response
@@ -326,7 +330,7 @@ A: Check backend logs for "Symbol context injected" messages with your chat_id.
 ## References
 
 - [CLAUDE.md - Development Guide](../../CLAUDE.md)
-- [System Design](../architecture/system-design.md)
+- [Agent Architecture](../architecture/agent-architecture.md)
 - [Chat API Documentation](../../backend/src/api/chat.py)
 - [UI State Sync Hook](../../frontend/src/hooks/useUIStateSync.ts)
 - [Implementation Plan](./../.claude/plan/chat-symbol-context-injection.md)

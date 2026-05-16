@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "financial-agent-backend"
-version = "0.29.3"
+version = "0.29.6"
 description = "AI-Enhanced Financial Analysis Platform Backend"
 authors = []
 # readme = "README.md"
@@ -14,7 +14,6 @@ dependencies = [
     "uvicorn[standard]>=0.24.0",
     "pydantic>=2.5.0",
     "pydantic-settings>=2.1.0",
-    "email-validator>=2.1.0",           # Email validation for pydantic
     "motor>=3.3.0",           # Async MongoDB driver
     "redis>=5.0.0",
     "langchain>=0.3.0",
@@ -29,14 +28,10 @@ dependencies = [
     "numpy>=1.26.0",
     "scipy>=1.11.0",
     "structlog>=23.2.0",
-    "python-jose[cryptography]>=3.3.0",  # JWT handling
     "python-multipart>=0.0.6",         # File uploads
     "httpx>=0.25.0",                    # Async HTTP client
     "tenacity>=8.2.0",                  # Retry logic
-    "bcrypt>=4.0.0",                    # Password hashing
     "kubernetes>=30.0.0",               # Kubernetes client for metrics
-    "opentelemetry-api>=1.20.0",        # OpenTelemetry API
-    "opentelemetry-sdk>=1.20.0",        # OpenTelemetry SDK
     "slowapi>=0.1.9",                   # Rate limiting for FastAPI
     "tiktoken>=0.7.0",                  # Token counting for context window management
     "deepagents>=0.3.12",                # Deep hierarchical agent framework
@@ -129,13 +124,11 @@ module = [
     "fastapi.*",
     "pydantic_settings.*",
     "pandas.*",
-    "jose.*",
     "dashscope.*",
     "uvicorn.*",
     "langchain.*",
     "langchain_community.*",
     "langchain_core.*",
-    "opentelemetry.*",
     "deepagents.*",
 ]
 ignore_missing_imports = true

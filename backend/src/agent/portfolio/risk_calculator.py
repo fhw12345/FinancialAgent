@@ -255,9 +255,11 @@ async def compute_portfolio_risk(
         "sector_exposure": sector_exposure,
         "beta_weighted_exposure": round(beta_weighted_exposure, 4),
         "position_concentration_hhi": round(hhi, 4),
-        "largest_position": {"symbol": largest_sym, "weight": round(largest_w, 4)}
-        if largest_sym
-        else None,
+        "largest_position": (
+            {"symbol": largest_sym, "weight": round(largest_w, 4)}
+            if largest_sym
+            else None
+        ),
         "correlation_matrix": correlation_matrix,
         "portfolio_sigma_annualised": portfolio_sigma,
         "assumed_beta_for": assumed_beta_for,

@@ -27,7 +27,6 @@ Granularity → yfinance interval/period mapping:
 from __future__ import annotations
 
 import asyncio
-from typing import Any
 
 import pandas as pd
 import structlog

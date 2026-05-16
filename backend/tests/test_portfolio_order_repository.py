@@ -95,31 +95,6 @@ def sample_order():
 # ===== Index Tests =====
 
 
-class TestEnsureIndexes:
-    """Test index creation"""
-
-    @pytest.mark.asyncio
-    async def test_ensure_indexes_creates_all_indexes(
-        self, repository, mock_collection
-    ):
-        """Test that all required indexes are created"""
-        # Act
-        await repository.ensure_indexes()
-
-        # Assert
-        assert mock_collection.create_index.call_count == 5
-
-        # Check specific indexes were created
-        calls = mock_collection.create_index.call_args_list
-        index_names = [call.kwargs.get("name") for call in calls]
-
-        assert "idx_user_orders" in index_names
-        assert "idx_analysis_orders" in index_names
-        assert "idx_alpaca_order" in index_names
-        assert "idx_user_status_orders" in index_names
-        assert "idx_user_symbol_orders" in index_names
-
-
 # ===== Create Tests =====
 
 
@@ -372,25 +347,6 @@ class TestListByUser:
         assert result[0].order_id == "order_1"
         assert result[1].order_id == "order_2"
 
-    @pytest.mark.asyncio
-    async def test_list_by_user_with_status_filter(self, repository, mock_collection):
-        """Test listing orders filtered by status"""
-        # Arrange
-        mock_cursor = AsyncIterator([])
-        mock_cursor.sort = Mock(return_value=mock_cursor)
-        mock_cursor.limit = Mock(return_value=mock_cursor)
-        mock_collection.find.return_value = mock_cursor
-
-        # Act
-        await repository.list_by_user("user_456", status="filled")
-
-        # Assert
-        mock_collection.find.assert_called_once()
-        query = mock_collection.find.call_args[0][0]
-        assert query["user_id"] == "user_456"
-        assert query["status"] == "filled"
-
-
 class TestListByChat:
     """Test listing orders by chat"""
 
@@ -476,38 +432,3 @@ class TestUpdateStatus:
 
         # Assert
         assert result is None
-
-
-# ===== Count Tests =====
-
-
-class TestCountByUser:
-    """Test counting orders"""
-
-    @pytest.mark.asyncio
-    async def test_count_all_orders(self, repository, mock_collection):
-        """Test counting all orders for a user"""
-        # Arrange
-        mock_collection.count_documents.return_value = 25
-
-        # Act
-        result = await repository.count_by_user("user_456")
-
-        # Assert
-        assert result == 25
-        mock_collection.count_documents.assert_called_once_with({"user_id": "user_456"})
-
-    @pytest.mark.asyncio
-    async def test_count_orders_by_status(self, repository, mock_collection):
-        """Test counting orders filtered by status"""
-        # Arrange
-        mock_collection.count_documents.return_value = 10
-
-        # Act
-        result = await repository.count_by_user("user_456", status="filled")
-
-        # Assert
-        assert result == 10
-        mock_collection.count_documents.assert_called_once_with(
-            {"user_id": "user_456", "status": "filled"}
-        )

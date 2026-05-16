@@ -30,9 +30,7 @@ class HoldingRepository:
     async def ensure_indexes(self) -> None:
         """Create indexes for optimal query performance."""
         # Unique index on symbol (no per-user partition)
-        await self.collection.create_index(
-            "symbol", name="idx_symbol", unique=True
-        )
+        await self.collection.create_index("symbol", name="idx_symbol", unique=True)
         await self.collection.create_index(
             [("updated_at", -1)],
             name="idx_holdings_updated",

@@ -1,3 +1,14 @@
+---
+title: Financial Agent Architecture Design
+status: shipped
+version: backend@0.7.0+
+last_updated: 2026-05-16
+owner: maintainer
+related_paths:
+  - backend/src/agent/
+  - backend/src/api/chat/streaming/
+---
+
 # Financial Agent Architecture Design
 
 ## 12-Factor Agent Implementation
@@ -8,9 +19,6 @@
 from pydantic_settings import BaseSettings
 
 class AgentConfig(BaseSettings):
-    langfuse_public_key: str
-    langfuse_secret_key: str
-    langfuse_host: str = "http://localhost:3001"
     mongodb_url: str
     redis_url: str
     dashscope_api_key: str
@@ -21,10 +29,10 @@ class AgentConfig(BaseSettings):
 
 ### Factor 2: Own Your Prompts
 ```python
-# Local prompt management with Langfuse tracking
+# Local prompt management
 from langchain_core.prompts import ChatPromptTemplate
 
-# Prompts defined locally, tracked in Langfuse
+# Prompts defined locally and version-controlled in this repo
 PROMPTS = {
     "system": ChatPromptTemplate.from_messages([
         ("system", "You are a financial analysis assistant..."),
@@ -34,7 +42,7 @@ PROMPTS = {
         "Analyze Fibonacci levels for {symbol}..."
     )
 }
-# Note: Langfuse automatically tracks prompt usage and versions
+# Note: Prompt versions are tracked via git; structlog adds run-time context
 ```
 
 ### Factor 3: External Dependencies as Services
@@ -188,13 +196,11 @@ class IntentClassifier:
 
 ### Factor 9: Error Handling & Observability
 ```python
-from langfuse.decorators import observe
 import structlog
 
 logger = structlog.get_logger()
 
 class FinancialAnalysisTool:
-    @observe(name="fibonacci_analysis")
     async def analyze_fibonacci(self, state: FinancialAgentState) -> FinancialAgentState:
         try:
             # Reuse existing CLI analyzer

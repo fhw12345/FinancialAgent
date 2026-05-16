@@ -63,9 +63,7 @@ def create_finnhub_quote_tool(data_manager: object) -> list:
         ext_line = ""
         if ext_price is not None and ext_session in ("pre", "post"):
             label = "After-hours" if ext_session == "post" else "Pre-market"
-            pct_str = (
-                f" ({ext_pct:+.2f}%)" if isinstance(ext_pct, int | float) else ""
-            )
+            pct_str = f" ({ext_pct:+.2f}%)" if isinstance(ext_pct, int | float) else ""
             ext_line = f"{label}: ${ext_price:.2f}{pct_str} vs primary print\n"
         body = (
             f"{q.symbol}: ${q.price:.2f} ({q.change:+.2f}, {q.change_percent:+.2f}%)\n"

@@ -9,11 +9,6 @@ import type {
   DeepStreamEvent,
   MarketStatus,
 } from "../types/api";
-import {
-  refreshTokenIfNeeded,
-  retryWithRefreshToken,
-  performTokenRefresh,
-} from "./tokenRefresh";
 
 // Configure axios with base URL
 // In production, use empty string for relative URLs (nginx proxy)
@@ -33,40 +28,6 @@ const api = axios.create({
 
 // Export the configured axios instance for use in other services
 export const apiClient = api;
-
-// Request interceptor for authentication with auto-refresh
-api.interceptors.request.use(
-  async (config) => {
-    return await refreshTokenIfNeeded(config);
-  },
-  (error) => {
-    return Promise.reject(error);
-  },
-);
-
-// Response interceptor for error handling
-api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  async (error) => {
-    const originalRequest = error.config;
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      const newToken = await retryWithRefreshToken();
-
-      if (newToken) {
-        // Retry original request with new token
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        return api(originalRequest);
-      }
-    }
-
-    return Promise.reject(error);
-  },
-);
 
 // Health service
 export const healthService = {
@@ -354,27 +315,11 @@ export const chatService = {
       }
     };
 
-    // Main request flow with 401 retry
     void (async () => {
       try {
-        let response = await makeStreamRequest(
+        const response = await makeStreamRequest(
           localStorage.getItem("access_token"),
         );
-
-        // Handle 401 - try refresh token and retry
-        if (response.status === 401) {
-          console.log(
-            "[Streaming] Got 401, attempting token refresh and retry...",
-          );
-          const newToken = await performTokenRefresh();
-
-          if (newToken) {
-            // Retry with new token
-            response = await makeStreamRequest(newToken);
-          }
-          // W3b: auth removed — no redirect on 401; fall through and let the
-          // request error normally if the backend still rejects it.
-        }
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

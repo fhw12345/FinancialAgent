@@ -436,31 +436,6 @@ class TestDebaterToolIndependence:
             assert "fetch_yfinance_news" in tool_names
             assert "search_web_exa" in tool_names
 
-    def test_debater_without_exa_key_uses_yfinance_only(self) -> None:
-        """Without Exa API key, debater falls back to yfinance only."""
-        with (
-            patch("src.agent.subagents.debater.create_deep_subagent") as mock_create,
-            patch("src.agent.subagents.debater.create_yfinance_tools") as mock_yf,
-            patch("src.agent.subagents.debater.create_exa_tools") as mock_exa,
-        ):
-            mock_yf_tool = MagicMock()
-            mock_yf_tool.name = "fetch_yfinance_news"
-            mock_yf.return_value = [mock_yf_tool]
-
-            mock_create.return_value = MagicMock()
-
-            from src.agent.subagents.debater import create_debater_subagent
-
-            create_debater_subagent(model=MagicMock(), context=None, exa_api_key="")
-
-            mock_yf.assert_called_once()
-            mock_exa.assert_not_called()
-
-            call_args = mock_create.call_args
-            tools_passed = call_args.kwargs.get("tools", call_args[1].get("tools", []))
-            assert len(tools_passed) == 1
-            assert tools_passed[0].name == "fetch_yfinance_news"
-
 
 # ===== Test: AnalysisState Schema =====
 

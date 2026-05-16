@@ -113,22 +113,35 @@ async def get_company_overview(symbol: str) -> dict[str, Any]:
 
 _CASH_FLOW_FIELDS: list[tuple[str, list[str]]] = [
     # AV key, yfinance row candidates
-    ("operatingCashflow", ["Operating Cash Flow", "Total Cash From Operating Activities"]),
+    (
+        "operatingCashflow",
+        ["Operating Cash Flow", "Total Cash From Operating Activities"],
+    ),
     ("capitalExpenditures", ["Capital Expenditure", "Capital Expenditures"]),
     ("dividendPayout", ["Cash Dividends Paid", "Common Stock Dividend Paid"]),
-    ("cashflowFromInvestment", ["Investing Cash Flow", "Total Cashflows From Investing Activities"]),
-    ("cashflowFromFinancing", ["Financing Cash Flow", "Total Cash From Financing Activities"]),
+    (
+        "cashflowFromInvestment",
+        ["Investing Cash Flow", "Total Cashflows From Investing Activities"],
+    ),
+    (
+        "cashflowFromFinancing",
+        ["Financing Cash Flow", "Total Cash From Financing Activities"],
+    ),
     ("netIncome", ["Net Income From Continuing Operations", "Net Income"]),
 ]
 
 
-def _df_to_reports(df: pd.DataFrame, fields: list[tuple[str, list[str]]]) -> list[dict[str, Any]]:
+def _df_to_reports(
+    df: pd.DataFrame, fields: list[tuple[str, list[str]]]
+) -> list[dict[str, Any]]:
     if df is None or df.empty:
         return []
     reports = []
     for col in df.columns:
         report: dict[str, Any] = {
-            "fiscalDateEnding": col.strftime("%Y-%m-%d") if hasattr(col, "strftime") else str(col),
+            "fiscalDateEnding": (
+                col.strftime("%Y-%m-%d") if hasattr(col, "strftime") else str(col)
+            ),
         }
         for av_key, candidates in fields:
             v = _row_value(df, candidates, col)
@@ -205,6 +218,7 @@ def _get_vader():
     global _vader_analyzer
     if _vader_analyzer is None:
         from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
         _vader_analyzer = SentimentIntensityAnalyzer()
     return _vader_analyzer
 
@@ -237,7 +251,11 @@ def _news_sync(symbol: str, limit: int) -> dict[str, Any]:
         content = item.get("content") if isinstance(item, dict) else None
         if isinstance(content, dict):
             title = content.get("title", "")
-            url = (content.get("clickThroughUrl") or {}).get("url") or (content.get("canonicalUrl") or {}).get("url") or ""
+            url = (
+                (content.get("clickThroughUrl") or {}).get("url")
+                or (content.get("canonicalUrl") or {}).get("url")
+                or ""
+            )
             source = (content.get("provider") or {}).get("displayName", "")
             published = content.get("pubDate") or ""
             summary = content.get("summary") or content.get("description") or ""
@@ -253,20 +271,24 @@ def _news_sync(symbol: str, limit: int) -> dict[str, Any]:
             )
             summary = item.get("summary", "") or ""
         score, label = _vader_score(f"{title}. {summary}")
-        feed.append({
-            "title": title,
-            "url": url,
-            "source": source,
-            "time_published": published,
-            "summary": summary,
-            "overall_sentiment_score": score,
-            "overall_sentiment_label": label,
-            "ticker_sentiment": [{
-                "ticker": symbol.upper(),
-                "ticker_sentiment_score": str(score),
-                "ticker_sentiment_label": label,
-            }],
-        })
+        feed.append(
+            {
+                "title": title,
+                "url": url,
+                "source": source,
+                "time_published": published,
+                "summary": summary,
+                "overall_sentiment_score": score,
+                "overall_sentiment_label": label,
+                "ticker_sentiment": [
+                    {
+                        "ticker": symbol.upper(),
+                        "ticker_sentiment_score": str(score),
+                        "ticker_sentiment_label": label,
+                    }
+                ],
+            }
+        )
     return {
         "feed": feed,
         "sentiment_score_definition": (
@@ -278,9 +300,7 @@ def _news_sync(symbol: str, limit: int) -> dict[str, Any]:
     }
 
 
-async def get_news_sentiment(
-    tickers: str, limit: int = 50
-) -> dict[str, Any]:
+async def get_news_sentiment(tickers: str, limit: int = 50) -> dict[str, Any]:
     """Fetch news for the first ticker only (route only passes one symbol)."""
     symbol = tickers.split(",")[0].strip()
     return await asyncio.to_thread(_news_sync, symbol, limit)

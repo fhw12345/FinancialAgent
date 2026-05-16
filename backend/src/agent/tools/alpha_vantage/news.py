@@ -103,9 +103,7 @@ def create_news_tools(
             asof_day = asof.strftime("%Y-%m-%d")
             asof_repr = asof.strftime("%Y-%m-%dT%H:%MZ")
             sid = f"AV-N-{symbol.upper()}-{asof_day}"
-            return (
-                f"{body}\n\nSource: alphavantage [{sid}] asof {asof_repr}"
-            )
+            return f"{body}\n\nSource: alphavantage [{sid}] asof {asof_repr}"
 
         except Exception as e:
             logger.error("News sentiment tool failed", symbol=symbol, error=str(e))

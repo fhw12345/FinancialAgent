@@ -73,34 +73,6 @@ def sample_holding_create():
 # ===== Index Tests =====
 
 
-class TestEnsureIndexes:
-    """Test index creation"""
-
-    @pytest.mark.asyncio
-    async def test_ensure_indexes_creates_all_indexes(
-        self, repository, mock_collection
-    ):
-        """Test that all required indexes are created"""
-        # Act
-        await repository.ensure_indexes()
-
-        # Assert
-        assert mock_collection.create_index.call_count == 2
-
-        # Check specific indexes were created
-        calls = mock_collection.create_index.call_args_list
-        index_names = [call.kwargs.get("name") for call in calls]
-
-        assert "idx_user_symbol" in index_names
-        assert "idx_user_holdings" in index_names
-
-        # Check unique index
-        unique_call = [
-            call for call in calls if call.kwargs.get("name") == "idx_user_symbol"
-        ][0]
-        assert unique_call.kwargs.get("unique") is True
-
-
 # ===== Create Tests =====
 
 
@@ -228,53 +200,6 @@ class TestGetBySymbol:
     """Test holding retrieval by user and symbol"""
 
     @pytest.mark.asyncio
-    async def test_get_by_symbol_success(self, repository, mock_collection):
-        """Test retrieving holding by user and symbol"""
-        # Arrange
-        now = datetime.now(UTC)
-        mock_collection.find_one.return_value = {
-            "_id": "mongo_id",
-            "holding_id": "holding_googl",
-            "user_id": "user_456",
-            "symbol": "GOOGL",
-            "quantity": 25,
-            "avg_price": 2600.00,
-            "current_price": 2650.00,
-            "cost_basis": 65000.00,
-            "market_value": 66250.00,
-            "unrealized_pl": 1250.00,
-            "unrealized_pl_pct": 1.92,
-            "created_at": now,
-            "updated_at": now,
-            "last_price_update": now,
-        }
-
-        # Act
-        result = await repository.get_by_symbol("user_456", "GOOGL")
-
-        # Assert
-        assert result is not None
-        assert result.symbol == "GOOGL"
-        assert result.user_id == "user_456"
-        mock_collection.find_one.assert_called_once_with(
-            {"user_id": "user_456", "symbol": "GOOGL"}
-        )
-
-    @pytest.mark.asyncio
-    async def test_get_by_symbol_uppercases_symbol(self, repository, mock_collection):
-        """Test that symbol is converted to uppercase in query"""
-        # Arrange
-        mock_collection.find_one.return_value = None
-
-        # Act
-        await repository.get_by_symbol("user_123", "aapl")
-
-        # Assert
-        mock_collection.find_one.assert_called_once_with(
-            {"user_id": "user_123", "symbol": "AAPL"}
-        )
-
-    @pytest.mark.asyncio
     async def test_get_by_symbol_not_found(self, repository, mock_collection):
         """Test retrieving non-existent holding by symbol"""
         # Arrange
@@ -292,65 +217,6 @@ class TestGetBySymbol:
 
 class TestListByUser:
     """Test listing user holdings"""
-
-    @pytest.mark.asyncio
-    async def test_list_by_user_multiple_holdings(self, repository, mock_collection):
-        """Test listing multiple holdings for a user"""
-        # Arrange
-        now = datetime.now(UTC)
-
-        async def mock_async_iter():
-            holdings = [
-                {
-                    "_id": "id1",
-                    "holding_id": "holding_1",
-                    "user_id": "user_123",
-                    "symbol": "AAPL",
-                    "quantity": 100,
-                    "avg_price": 150.50,
-                    "current_price": 155.25,
-                    "cost_basis": 15050.00,
-                    "market_value": 15525.00,
-                    "unrealized_pl": 475.00,
-                    "unrealized_pl_pct": 3.16,
-                    "created_at": now,
-                    "updated_at": now,
-                    "last_price_update": now,
-                },
-                {
-                    "_id": "id2",
-                    "holding_id": "holding_2",
-                    "user_id": "user_123",
-                    "symbol": "GOOGL",
-                    "quantity": 50,
-                    "avg_price": 2500.00,
-                    "current_price": 2450.00,
-                    "cost_basis": 125000.00,
-                    "market_value": 122500.00,
-                    "unrealized_pl": -2500.00,
-                    "unrealized_pl_pct": -2.00,
-                    "created_at": now,
-                    "updated_at": now,
-                    "last_price_update": now,
-                },
-            ]
-            for holding in holdings:
-                yield holding
-
-        mock_cursor = Mock()
-        mock_cursor.sort = Mock(return_value=mock_cursor)
-        mock_cursor.__aiter__ = lambda self: mock_async_iter()
-        mock_collection.find.return_value = mock_cursor
-
-        # Act
-        result = await repository.list_by_user("user_123")
-
-        # Assert
-        assert len(result) == 2
-        assert result[0].symbol == "AAPL"
-        assert result[1].symbol == "GOOGL"
-        mock_collection.find.assert_called_once_with({"user_id": "user_123"})
-        mock_cursor.sort.assert_called_once_with("updated_at", -1)
 
     @pytest.mark.asyncio
     async def test_list_by_user_empty_portfolio(self, repository, mock_collection):

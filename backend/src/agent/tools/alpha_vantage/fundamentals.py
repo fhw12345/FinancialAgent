@@ -69,9 +69,7 @@ def _parse_av_date(value: Any) -> datetime | None:
         return None
 
 
-def _statement_asof(
-    data: dict[str, Any] | None, *, period: str
-) -> datetime | None:
+def _statement_asof(data: dict[str, Any] | None, *, period: str) -> datetime | None:
     """Pull the most recent ``fiscalDateEnding`` from an AV statement payload.
 
     AV cash-flow / balance-sheet responses have the shape:
@@ -116,9 +114,7 @@ def _append_source_footnote(
     sid = _fundamentals_source_id(
         source=source, symbol=symbol, field_code=field_code, asof=asof
     )
-    asof_repr = (
-        asof.strftime("%Y-%m-%dT%H:%MZ") if asof else "asof unknown"
-    )
+    asof_repr = asof.strftime("%Y-%m-%dT%H:%MZ") if asof else "asof unknown"
     return f"{body}\n\nSource: {source} [{sid}] asof {asof_repr}"
 
 
@@ -356,10 +352,9 @@ def create_fundamental_tools(
                 # AV insider rows carry `transaction_date`; pick the most
                 # recent (rows are returned newest-first per AV contract).
                 rows = data.get("data") or []
-                asof = (
-                    _parse_av_date(rows[0].get("transaction_date") if rows else None)
-                    or datetime.now(UTC)
-                )
+                asof = _parse_av_date(
+                    rows[0].get("transaction_date") if rows else None
+                ) or datetime.now(UTC)
                 return _append_source_footnote(
                     body,
                     source="alphavantage",

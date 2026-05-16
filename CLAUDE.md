@@ -59,3 +59,13 @@ NEVER commit secrets (API keys, tokens, passwords, connection strings).
 - Start with the simplest fix that works
 - Avoid duplicating logic across files
 - Compare environments when something works locally but not elsewhere
+
+## Documentation Rules
+
+- 所有 `docs/features/*.md` 必须使用统一 YAML frontmatter（`status` / `version` / `last_updated` / `owner` / `related_paths`）
+- `status` 字段枚举：`draft` | `planning` | `in-progress` | `shipped` | `superseded`
+- 日期一律 ISO 格式 `YYYY-MM-DD`
+- 内部链接全部相对路径；新增 doc 时必须更新 `docs/README.md`
+- 添加 / 修改 feature 时同步 `docs/features/<name>.md` 的 `last_updated` 与 `version`
+- 修 bug / 踩坑后写一篇 `docs/case-studies/YYYY-MM-DD-<slug>.md`
+- 完整规则见 [`docs/development/documentation.md`](docs/development/documentation.md)

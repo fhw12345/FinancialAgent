@@ -1,3 +1,14 @@
+---
+title: How LangGraph ReAct Agent Works with Chat API
+status: shipped
+version: backend@0.7.0+
+last_updated: 2026-05-16
+owner: maintainer
+related_paths:
+  - backend/src/api/chat/streaming/react_agent.py
+  - backend/src/agent/
+---
+
 # How LangGraph ReAct Agent Works with Chat API
 
 **Complete Integration Flow** - From HTTP Request to AI Response

@@ -1,8 +1,16 @@
-# Backend API Module Restructure
+---
+title: Backend API Module Restructure
+status: shipped
+version: backend@0.8.8
+last_updated: 2025-12-14
+owner: maintainer
+related_paths:
+  - backend/src/api/
+  - backend/src/agent/
+  - backend/src/services/
+---
 
-> **Status**: Completed (2025-12-14)
-> **Version**: v0.8.8
-> **Commits**: be481da, 8f87c5f, 8040bde, d4c9fb5, 0719a6e
+# Backend API Module Restructure
 
 ## Overview
 
@@ -174,7 +182,7 @@ cd backend && make test
 
 - [Portfolio Agent Architecture](portfolio-agent-architecture-refactor.md) - 3-phase analysis details
 - [Coding Standards](../development/coding-standards.md) - File length limits
-- [System Design](../architecture/system-design.md) - Overall architecture
+- [Agent Architecture](../architecture/agent-architecture.md) - Overall architecture
 
 ---
 

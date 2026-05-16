@@ -20,7 +20,6 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from .api.admin import router as admin_router
 from .api.analysis import router as analysis_router
-from .api.auth import router as auth_router
 from .api.chat import router as chat_router
 from .api.dependencies.rate_limit import limiter
 from .api.dependencies.timing_middleware import TimingMiddleware
@@ -423,7 +422,6 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(health_router, prefix="/api", tags=["health"])
     app.include_router(admin_router)  # Admin-only monitoring endpoints
-    app.include_router(auth_router)
     app.include_router(analysis_router)
     app.include_router(market_data_router)
     app.include_router(chat_router)  # Persistent MongoDB-based chat

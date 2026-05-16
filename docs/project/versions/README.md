@@ -1,5 +1,10 @@
 # Version Management System
 
+> This directory tracks per-component changelogs. Backend and frontend are
+> versioned independently following Semantic Versioning 2.0. The full
+> documentation policy (frontmatter, status enum, dates) lives in
+> [docs/development/documentation.md](../../development/documentation.md).
+
 ## Overview
 
 Financial Agent uses **independent semantic versioning** for backend and frontend components, enabling separate deployment cycles while maintaining compatibility tracking.
@@ -75,26 +80,9 @@ The pre-commit hook (`scripts/validate-version.sh`) checks:
 Docker images use semantic version tags matching source code:
 
 ```bash
-# Development
-backend:0.2.1-dev
-frontend:0.3.0-dev
-
-# Staging (Release Candidate)
-backend:0.2.1-rc.1
-frontend:0.3.0-rc.1
-
-# Production
 backend:0.2.1
 frontend:0.3.0
 ```
-
-### Environment Tagging Strategy
-
-| Environment | Tag Format | Example | Use Case |
-|-------------|------------|---------|----------|
-| Development | `X.Y.Z-dev` | `0.2.1-dev` | Local/cluster dev testing |
-| Staging | `X.Y.Z-rc.N` | `0.2.1-rc.1` | Pre-production validation |
-| Production | `X.Y.Z` | `0.2.1` | Production deployments |
 
 ## Version Workflow
 
@@ -140,37 +128,6 @@ git commit -m "feat: Add new analysis endpoint"
 # Tag with component prefix
 git tag backend-v0.2.0
 git tag frontend-v0.1.1
-
-# Push tags
-git push --tags
-```
-
-### 5. Build Versioned Images
-
-```bash
-# Use version from package.json/pyproject.toml
-BACKEND_VERSION=$(python -c "import tomllib; print(tomllib.load(open('backend/pyproject.toml', 'rb'))['project']['version'])")
-FRONTEND_VERSION=$(node -p "require('./frontend/package.json').version")
-
-# Build with versioned tags
-az acr build --registry financialAgent \
-  --image financial-agent/backend:${BACKEND_VERSION} \
-  --file backend/Dockerfile backend/
-
-az acr build --registry financialAgent \
-  --image financial-agent/frontend:${FRONTEND_VERSION} \
-  --target production \
-  --file frontend/Dockerfile frontend/
-```
-
-### 6. Deploy with Kustomize
-
-```bash
-# Update kustomization.yaml with new version
-cd .pipeline/k8s/overlays/dev
-kustomize edit set image financial-agent/backend:${BACKEND_VERSION}
-
-kubectl apply -k .pipeline/k8s/overlays/dev/
 ```
 
 ## Documentation Structure
@@ -178,15 +135,10 @@ kubectl apply -k .pipeline/k8s/overlays/dev/
 ```
 docs/project/versions/
 ├── README.md                    # This file
-├── VERSION_MATRIX.md            # Component compatibility matrix
 ├── backend/
-│   └── CHANGELOG.md            # Backend version history (primary)
+│   └── CHANGELOG.md            # Backend version history
 └── frontend/
-    └── CHANGELOG.md            # Frontend version history (primary)
-
-docs/archive/versions/          # Historical detailed release notes
-├── backend/v*.md              # Archived backend version files
-└── frontend/v*.md             # Archived frontend version files
+    └── CHANGELOG.md            # Frontend version history
 ```
 
 ### Changelog Format
@@ -209,11 +161,7 @@ Each component maintains a CHANGELOG.md following [Keep a Changelog](https://kee
 - Dividend yield validation for MSFT
 ```
 
-> **Note**: Detailed historical release notes are archived in `docs/archive/versions/`. The CHANGELOG.md files contain the essential version history.
-
-## Compatibility Matrix
-
-See [VERSION_MATRIX.md](VERSION_MATRIX.md) for detailed compatibility tracking between components.
+> **Note**: CHANGELOG.md files are the primary version history record.
 
 ## Best Practices
 
@@ -261,15 +209,6 @@ cat frontend/package.json | grep version
 **Solution**: You're trying to use a duplicate version. Increment further:
 ```bash
 ./scripts/bump-version.sh backend patch  # Try next version
-```
-
-### Image Build Failed
-
-**Error**: Image tag doesn't match version
-
-**Solution**: Always use version from source files:
-```bash
-BACKEND_VERSION=$(python -c "import tomllib; print(tomllib.load(open('backend/pyproject.toml', 'rb'))['project']['version'])")
 ```
 
 ## Future Enhancements

@@ -38,7 +38,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-
 SOURCE_NAME_MAX = 64
 SOURCE_URL_MAX = 2048
 SOURCE_ID_MAX = 64
@@ -125,9 +124,7 @@ class Source(BaseModel):
         if not v:
             return None
         if not (v.startswith("http://") or v.startswith("https://")):
-            raise ValueError(
-                f"url must start with http:// or https://, got {v!r}"
-            )
+            raise ValueError(f"url must start with http:// or https://, got {v!r}")
         return v
 
     def short_label(self) -> str:

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.12] - 2026-05-15
+
+### Code slimming: collapse authStorage stub, drop tokenRefresh
+
+Companion to backend 0.29.4. The fork's real auth was removed long ago; the frontend kept ~150 lines of stub flow code (`sendVerificationCode`, `verifyCodeAndLogin`, `registerUser`, `loginWithPassword`, `resetPassword`, `getCurrentUser`, `refreshAccessToken`, `logout`, `logoutAll`) plus a `tokenRefresh.ts` helper that all immediately returned `null` or the literal `"local"`. None had any live caller.
+
+- **`services/authService.ts`** — rewrote from 156 lines to ~16. `authStorage` now exposes only `getAccessToken(): string | null` returning the literal `"local"` (the backend `require_admin` is a no-op but consumers still attach `Authorization: Bearer local`). Removed all stub flow exports + `User`/`LoginResponse`/`SendCodeResponse` types.
+- **`services/tokenRefresh.ts` deleted** — all three exports (`refreshTokenIfNeeded`, `performTokenRefresh`, `retryWithRefreshToken`) returned `null` or unchanged config.
+- **`services/api.ts`** — removed the unused request interceptor that proactively called `refreshTokenIfNeeded`, the response interceptor's 401 retry block, and the streaming function's 401 retry path.
+- **`components/portfolio/CronController.tsx`** — `authStorage.getToken()` → `authStorage.getAccessToken()` to match the slimmed shape (the only caller of the old name).
+- **`pages/PortfolioDashboard.tsx`** — replaced `authStorage.getUser()?.is_admin` admin gate with a constant `true` since this is a single-user local fork. Dropped the now-unused `authStorage` import.
+
+`tsc --noEmit` non-test error count is unchanged (34 → 34); the two new errors introduced by the slim are fixed in this same change.
+
 ## [0.22.11] - 2026-05-12
 
 ### Skip /api/translate when the source text is already the target language (no faded Chinese)
@@ -68,7 +82,7 @@ Bumps frontend 0.22.7 → 0.22.8.
 
 ### Added — Stock Agent Upgrade Wave 2 visual surface
 
-Companion to backend v0.27.5 (PRD `docs/prd/STOCK_AGENT_UPGRADE_PRD.md`).
+Companion to backend v0.27.5 (PRD `docs/archive/STOCK_AGENT_UPGRADE_PRD.md`).
 
 - **W2.11 ResearchPanel** (`components/portfolio/ResearchPanel.tsx`) — new component rendered inside the DecisionTracker expanded row. Renders five optional structured-research sections when present:
   - **Thesis** — 3 numbered bullets
@@ -85,7 +99,7 @@ E2E `e2e_research_panel.py`: 3-row mock (FULL / BAD_PROB / BARE) — VERDICT PAS
 
 ### Added — Stock Agent Upgrade Wave 1 visual surface
 
-Companion to backend v0.27.4 (PRD `docs/prd/STOCK_AGENT_UPGRADE_PRD.md`).
+Companion to backend v0.27.4 (PRD `docs/archive/STOCK_AGENT_UPGRADE_PRD.md`).
 
 - **W1.3 IntentBadge** (`components/portfolio/IntentBadge.tsx`) — direction-aware chip next to SideBadge so a SELL is visibly disambiguated: 平多 (slate) / 做空 (rose) / 建多 (emerald) / 平空 (slate). DecisionTracker also renders amber "⚠ 几何" chip for legacy migrated rows where `metadata.legacy_short_geometry === true`.
 - **W1.11 Global disclaimer** — App.tsx footer adds persistent watermark "🤖 AI-generated · Not investment advice. Verify all data and consult a licensed advisor before executing any trade." Visible on every page (Chat / Portfolio / Insights / Health). Tagged `data-testid="ai-disclaimer"`.
@@ -449,10 +463,6 @@ E2E coverage (`e2e_intent_disclaimer.py`, `e2e_disclaimer.py`, `e2e_data_quality
 
 ## [0.7.0] - 2025-10-08
 
-### Added
-- feat(auth): Frontend dual-token JWT authentication with auto-refresh
-
-
 ## [0.6.1] - 2025-10-08
 
 ### Added
@@ -486,19 +496,8 @@ E2E coverage (`e2e_intent_disclaimer.py`, `e2e_disclaimer.py`, `e2e_data_quality
 
 ## [0.4.0] - 2025-10-07
 
-### Added
-- **Authentication UI**
-  - Login page with email/password fields
-  - Registration flow: email → verification code → username/password
-  - Forgot password flow with email verification
-  - JWT token storage in localStorage
-  - Auto-login after successful registration/password reset
-  - Error handling and validation messages
-
-
 ### Planned
 - Advanced charting with TradingView integration
-- User authentication and session management
 - Chat history persistence
 - Mobile responsive design improvements
 
@@ -533,7 +532,6 @@ E2E coverage (`e2e_intent_disclaimer.py`, `e2e_disclaimer.py`, `e2e_data_quality
   - TailwindCSS styling
   - Nginx production server
   - Docker multi-stage builds
-  - Kubernetes deployment
 
 - **API Client**
   - Axios-based API client with error handling
@@ -555,8 +553,7 @@ E2E coverage (`e2e_intent_disclaimer.py`, `e2e_disclaimer.py`, `e2e_data_quality
 
 ### Infrastructure
 - **Deployment**
-  - Azure Container Registry integration
-  - Azure Kubernetes Service deployment
+  - Local Docker Compose
   - Nginx reverse proxy for API calls
   - Production-optimized builds
 
@@ -579,7 +576,6 @@ None - Initial release
 ### Known Issues
 - No chart visualization (placeholder only)
 - No conversation history persistence
-- No user authentication
 - Mobile UI needs optimization
 
 ---
@@ -587,5 +583,5 @@ None - Initial release
 ## Version History
 
 - **v0.1.0** (2025-10-04): Initial release - Walking skeleton complete
-- **v0.2.0** (Planned): Advanced charting and UI improvements
-- **v1.0.0** (Future): Production-ready with auth and full features
+- **v0.2.0+**: Conversational chat with persistence, advanced charting,
+  portfolio dashboard, i18n with write-time translation.

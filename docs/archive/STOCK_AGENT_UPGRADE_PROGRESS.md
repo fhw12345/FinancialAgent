@@ -1,5 +1,9 @@
 # Stock Agent Upgrade — Progress Tracker
 
+> **Archived** — historical execution log for the Wave 1–3 stock-agent
+> upgrade. Kept as a record of how the work landed; the shipped behavior is
+> documented in [`docs/features/portfolio-agent-architecture-refactor.md`](../features/portfolio-agent-architecture-refactor.md).
+
 **PRD:** [STOCK_AGENT_UPGRADE_PRD.md](./STOCK_AGENT_UPGRADE_PRD.md) (frozen 2026-05-08)
 **Started:** 2026-05-08
 **Owner:** orchestrator

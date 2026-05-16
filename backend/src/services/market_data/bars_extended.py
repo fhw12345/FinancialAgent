@@ -229,18 +229,34 @@ class BarsExtendedMixin(AlphaVantageBase):
         # most chart endpoints (returns "Information" upsell payload). AV is
         # used only as a fallback when yfinance fails AND a key is configured.
         frontend_to_granularity = {
-            "1m": "1min", "1min": "1min",
-            "5m": "5min", "5min": "5min",
-            "15m": "15min", "15min": "15min",
-            "30m": "30min", "30min": "30min",
-            "60m": "60min", "60min": "60min", "1h": "60min",
-            "1d": "daily", "day": "daily",
-            "1w": "weekly", "1wk": "weekly", "week": "weekly",
-            "1mo": "monthly", "1M": "monthly", "month": "monthly",
+            "1m": "1min",
+            "1min": "1min",
+            "5m": "5min",
+            "5min": "5min",
+            "15m": "15min",
+            "15min": "15min",
+            "30m": "30min",
+            "30min": "30min",
+            "60m": "60min",
+            "60min": "60min",
+            "1h": "60min",
+            "1d": "daily",
+            "day": "daily",
+            "1w": "weekly",
+            "1wk": "weekly",
+            "week": "weekly",
+            "1mo": "monthly",
+            "1M": "monthly",
+            "month": "monthly",
         }
         granularity = frontend_to_granularity.get(interval)
         if granularity:
-            outputsize = "full" if (start_date and end_date) or interval in ("1d", "1w", "1wk", "1mo", "1M") else "compact"
+            outputsize = (
+                "full"
+                if (start_date and end_date)
+                or interval in ("1d", "1w", "1wk", "1mo", "1M")
+                else "compact"
+            )
             try:
                 df_yf = await yfinance_bars.get_bars(symbol, granularity, outputsize)
                 logger.info(

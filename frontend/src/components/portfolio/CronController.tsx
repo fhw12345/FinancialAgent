@@ -31,7 +31,7 @@ export function CronController() {
     setTriggerStatus({ type: null, message: '' });
 
     try {
-      const token = authStorage.getToken();
+      const token = authStorage.getAccessToken();
       const response = await fetch(`${API_BASE_URL}/api/admin/portfolio/trigger-analysis`, {
         method: 'POST',
         headers: {

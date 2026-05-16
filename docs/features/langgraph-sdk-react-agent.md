@@ -1,11 +1,17 @@
+---
+title: LangGraph SDK ReAct Agent Implementation
+status: shipped
+version: backend@0.7.0+
+last_updated: 2025-12-14
+owner: maintainer
+related_paths:
+  - backend/src/agent/langgraph_react_agent.py
+  - backend/src/api/chat/streaming/react_agent.py
+---
+
 # LangGraph SDK ReAct Agent Implementation
 
 **Feature**: Flexible Auto-Planning Agent using LangGraph's `create_react_agent` SDK
-
-**Status**: ✅ **DEPLOYED** (Primary chat agent since v0.7.0)
-
-**Implementation Date**: 2025-10-20
-**Last Updated**: 2025-12-14
 
 **Location**: `backend/src/agent/langgraph_react_agent.py`
 
@@ -76,12 +82,9 @@ User Query
    - State persists across invocations
    - No manual state passing needed
 
-4. **Langfuse Integration**: SDK v3 callback handler pattern
-   ```python
-   Langfuse(public_key=..., secret_key=..., host=...)
-   handler = CallbackHandler()  # No args after global init
-   agent.ainvoke(..., config={"callbacks": [handler]})
-   ```
+4. **Observability**: structlog JSON logs scope each agent invocation by `chat_id`
+   - Tool calls / results / latencies logged per node
+   - No external tracing dependency required for local-only fork
 
 ---
 
@@ -227,7 +230,7 @@ Tool execution sequence:
 | **Message History** | ✅ `MemorySaver` checkpointer | ❌ Manual state passing |
 | **Context Compression** | ✅ Compressed tool returns (2-3 lines) | ⚠️ Full dicts in state |
 | **Custom State Fields** | ❌ Messages only | ✅ TypedDict with custom fields |
-| **Observability** | ✅ Langfuse callback handler | ✅ Per-node `@observe` |
+| **Observability** | ✅ structlog JSON traces | ✅ structlog per-node bound context |
 | **Flexibility** | ✅ LLM adapts to query | ⚠️ Fixed routing paths |
 | **Maintenance** | ✅ Low (SDK updates) | ⚠️ High (manual graph) |
 
@@ -284,19 +287,12 @@ Tool execution sequence:
 
 **Impact**: 99.5% size reduction, context window preserved
 
-### 4. Langfuse Integration
+### 4. Observability
 
-**SDK v3 Pattern** (2025):
-```python
-# Global init (once per agent)
-Langfuse(public_key=..., secret_key=..., host=...)
-
-# Per-invocation callback
-handler = CallbackHandler()  # No args
-agent.ainvoke(..., config={"callbacks": [handler]})
-```
-
-**Status**: ⚠️ **Temporarily disabled** due to SOCKS proxy issues in local testing. Will re-enable in production.
+structlog JSON logs scope each agent invocation by `chat_id`, with one log
+record per tool call / tool result / synthesis step. No external tracing
+dependency is required for the local-only fork; logs are tailed via
+`docker compose logs -f backend`.
 
 ---
 
@@ -376,11 +372,11 @@ INFO | 🔍 DEBUG: Full LLM Prompt | message_count=3 | full_messages=[
 
 **Status**: Accepted limitation - sequential chaining is sufficient for financial analysis workflows
 
-### 3. Langfuse SOCKS Proxy Issue - ✅ RESOLVED
+### 3. Observability Backend Removed - ✅ RESOLVED
 
-**Issue**: `httpx` SOCKS proxy error in local environment
+**Issue**: Earlier iterations integrated an external tracing service that required SOCKS proxying in local environments
 
-**Resolution**: Langfuse now deployed to production (http://localhost:3001) with direct connectivity. Local dev uses Docker network without proxy issues.
+**Resolution**: External tracing was removed when forking to the personal local-only build. Observability is now handled by structlog JSON logs streamed via `docker compose logs`.
 
 ### 4. Test Fixture Warnings - ⚠️ LOW PRIORITY
 
@@ -452,6 +448,5 @@ async def send_message(...):
 ## References
 
 - LangGraph Documentation: https://langchain-ai.github.io/langgraph/
-- Langfuse Integration: https://langfuse.com/integrations/frameworks/langchain
 - ReAct Pattern Paper: https://arxiv.org/abs/2210.03629
-- Test Results: See `backend/tests/REACT_SDK_FINDINGS.md`
+- Test Results: See [`docs/archive/REACT_SDK_FINDINGS.md`](../archive/REACT_SDK_FINDINGS.md)

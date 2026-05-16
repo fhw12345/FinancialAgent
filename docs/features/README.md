@@ -236,15 +236,23 @@ Feature is complete when:
 Browse existing feature specs in this directory for examples:
 
 ### Architecture & Refactoring
-- **[Backend API Module Restructure](backend-api-module-restructure.md)** - v0.8.8 modular package structure for API, agent, and services layers
-- **[Portfolio Agent Architecture](portfolio-agent-architecture-refactor.md)** - 3-phase analysis (research → decisions → execution)
-
-### Observability & Monitoring
-- **[Langfuse Observability](langfuse-observability.md)** - LLM trace visualization with Langfuse v3.x (PostgreSQL, ClickHouse, MinIO, Redis)
+- **[Backend API Module Restructure](backend-api-module-restructure.md)** — v0.8.8 modular package structure for API, agent, and services layers
+- **[Portfolio Agent Architecture](portfolio-agent-architecture-refactor.md)** — 3-phase analysis (research → decisions → execution)
 
 ### AI & Agent System
-- **[LangGraph SDK ReAct Agent](langgraph-sdk-react-agent.md)** - SDK-based ReAct agent implementation with autonomous tool selection
-- **[LLM Model Selection](llm-model-selection.md)** - Multi-provider LLM support with dynamic model switching
+- **[LangGraph SDK ReAct Agent](langgraph-sdk-react-agent.md)** — SDK-based ReAct agent implementation with autonomous tool selection
+- **[Chat Symbol Context](chat-symbol-context.md)** — inject the active UI symbol into chat context so the agent does not have to re-ask
+- **[Write-Time Translation](write-time-translation.md)** — translate LLM output to `zh-CN` on the write path so the read path skips `/api/translate`
+
+### Market Data & Visualization
+- **[Market Insights Trend Visualization](market-insights-trend-visualization.md)** — sparklines + expanded trend charts for the daily insights snapshot
+- **[Extended-Hours Trading Data](extended-hours-trading-data.md)** — pre-market / after-hours session badges + quote routing
+- **[Symbol Search & Chart Improvements](symbol-search-and-chart-improvements.md)** — deduplication, OHLC tooltips, custom date ranges
+- **[Fibonacci Trend Detection Improvements](fibonacci-trend-detection-improvements.md)** — adaptive swing lookback + direction labeling
+
+> **Index parity rule**: every `*.md` in this directory (except `README.md`)
+> must appear in the list above with `status: shipped | in-progress |
+> planning`. Do not list specs that have been deleted.
 
 ## Workflow
 

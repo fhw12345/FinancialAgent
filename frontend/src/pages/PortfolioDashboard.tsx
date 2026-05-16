@@ -32,7 +32,7 @@ import { MarketMovers } from "../components/MarketMovers";
 import { ChatSidebar } from "../components/chat/ChatSidebar";
 import { ChatMessages } from "../components/chat/ChatMessages";
 import { formatPL, getPLColor } from "../services/portfolioApi";
-import { authStorage } from "../services/authService";
+
 
 export default function PortfolioDashboard() {
   const { t } = useTranslation(["portfolio", "common"]);
@@ -46,9 +46,8 @@ export default function PortfolioDashboard() {
   ); // Sort order for messages in modal
   const [analysisType, setAnalysisType] = useState<string>(""); // Analysis type filter ("individual" or "portfolio")
 
-  // Admin check - only admin users can see cron controller
-  const currentUser = authStorage.getUser();
-  const isAdmin = !!currentUser?.is_admin;
+  // Single-user local fork — always treated as admin.
+  const isAdmin = true;
 
   const {
     data: summary,

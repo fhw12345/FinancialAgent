@@ -147,7 +147,10 @@ class Form4Client:
         self._user_agent = user_agent or get_user_agent()
         self._bucket = _TokenBucket(rate_per_sec)
         self._client = httpx.AsyncClient(
-            headers={"User-Agent": self._user_agent, "Accept": "application/atom+xml,application/xml,text/xml,*/*"},
+            headers={
+                "User-Agent": self._user_agent,
+                "Accept": "application/atom+xml,application/xml,text/xml,*/*",
+            },
             timeout=timeout_sec,
             transport=transport,
         )
@@ -276,9 +279,18 @@ _DATE_PATTERNS = (
 )
 
 _MONTH_NAMES = {
-    "january": 1, "february": 2, "march": 3, "april": 4,
-    "may": 5, "june": 6, "july": 7, "august": 8,
-    "september": 9, "october": 10, "november": 11, "december": 12,
+    "january": 1,
+    "february": 2,
+    "march": 3,
+    "april": 4,
+    "may": 5,
+    "june": 6,
+    "july": 7,
+    "august": 8,
+    "september": 9,
+    "october": 10,
+    "november": 11,
+    "december": 12,
 }
 
 
@@ -571,21 +583,37 @@ def parse_form4_detail(detail_xml: str) -> list[Form4Transaction]:
         tx_date = _parse_iso_date(_xml_text(_xml_value_child(tx_date_el)))
 
         coding_el = _walk_first(tx, "transactionCoding")
-        code_el = _walk_first(coding_el, "transactionCode") if coding_el is not None else None
+        code_el = (
+            _walk_first(coding_el, "transactionCode") if coding_el is not None else None
+        )
         tx_code = _xml_text(code_el)
 
         amounts_el = _walk_first(tx, "transactionAmounts")
         shares = None
         share_price = None
         if amounts_el is not None:
-            shares = _parse_float(_xml_text(_xml_value_child(_walk_first(amounts_el, "transactionShares"))))
-            share_price = _parse_float(_xml_text(_xml_value_child(_walk_first(amounts_el, "transactionPricePerShare"))))
+            shares = _parse_float(
+                _xml_text(
+                    _xml_value_child(_walk_first(amounts_el, "transactionShares"))
+                )
+            )
+            share_price = _parse_float(
+                _xml_text(
+                    _xml_value_child(
+                        _walk_first(amounts_el, "transactionPricePerShare")
+                    )
+                )
+            )
 
         post_el = _walk_first(tx, "postTransactionAmounts")
         shares_after = None
         if post_el is not None:
             shares_after = _parse_float(
-                _xml_text(_xml_value_child(_walk_first(post_el, "sharesOwnedFollowingTransaction")))
+                _xml_text(
+                    _xml_value_child(
+                        _walk_first(post_el, "sharesOwnedFollowingTransaction")
+                    )
+                )
             )
 
         # Collect footnote ids referenced anywhere under this tx.

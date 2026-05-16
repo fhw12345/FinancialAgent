@@ -1,4 +1,26 @@
+---
+title: Ghost Compose Project
+status: shipped
+version: n/a
+last_updated: 2026-05-04
+owner: maintainer
+related_paths:
+  - docker-compose.yml
+---
+
 # Ghost Compose Project：以为容器坏了，其实根本不是我们的容器
+
+> **TL;DR (EN)**: `docker ps` showed our backend in a restart loop with
+> `ModuleNotFoundError: No module named 'src'`. The whole afternoon was
+> spent debugging the wrong containers — another `docker-compose` project
+> on the same host had been auto-named identically and was running its
+> own (broken) image. On Windows, Docker's bind mount also silently
+> created an empty directory instead of refusing to start.
+> **TL;DR (中文)**: `docker ps` 显示 backend 反复重启报
+> `ModuleNotFoundError: No module named 'src'`，一整天都在 debug
+> 错的容器——另一个 compose 项目在同一台机器上被自动命名成同名，跑的
+> 是它自己的（坏的）镜像。Windows 下 Docker bind mount 还会**静默建
+> 空目录**而不是直接拒绝启动。
 
 > Date: 2026-05-04
 > Component: Docker Compose / 本地开发环境

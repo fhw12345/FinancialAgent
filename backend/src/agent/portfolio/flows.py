@@ -27,8 +27,8 @@ from typing import Any
 
 import structlog
 
-from ...core.utils.date_utils import utcnow
 from ...core.localization import ANALYSIS_OUTPUT_LANG
+from ...core.utils.date_utils import utcnow
 from ...database.repositories.holding_repository import HoldingRepository
 from ...database.repositories.portfolio_order_repository import (
     PortfolioOrderRepository,

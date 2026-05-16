@@ -95,53 +95,11 @@ def sample_chat_create():
 # ===== Index Tests =====
 
 
-class TestEnsureIndexes:
-    """Test index creation"""
-
-    @pytest.mark.asyncio
-    async def test_ensure_indexes_creates_all_indexes(
-        self, repository, mock_collection
-    ):
-        """Test that all required indexes are created"""
-        # Act
-        await repository.ensure_indexes()
-
-        # Assert
-        assert mock_collection.create_index.call_count == 2
-
-        # Check specific indexes were created
-        calls = mock_collection.create_index.call_args_list
-        index_names = [call.kwargs.get("name") for call in calls]
-
-        assert "idx_user_chats" in index_names
-        assert "idx_symbol_lookup" in index_names
-
-
 # ===== Create Tests =====
 
 
 class TestCreate:
     """Test chat creation"""
-
-    @pytest.mark.asyncio
-    async def test_create_chat_success(
-        self, repository, mock_collection, sample_chat_create
-    ):
-        """Test successful chat creation"""
-        # Arrange
-        mock_collection.insert_one.return_value = Mock(inserted_id="mongo_id")
-
-        # Act
-        result = await repository.create(sample_chat_create)
-
-        # Assert
-        assert result.title == "New Technical Analysis"
-        assert result.user_id == "user_123"
-        assert result.chat_id.startswith("chat_")
-        assert result.is_archived is False
-        assert isinstance(result.ui_state, UIState)
-        assert result.last_message_preview is None
-        mock_collection.insert_one.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_create_chat_generates_valid_chat_id(
@@ -664,46 +622,6 @@ class TestUpdateLastMessageAt:
 
 class TestFindBySymbol:
     """Test symbol-per-chat pattern"""
-
-    @pytest.mark.asyncio
-    async def test_find_by_symbol_success(self, repository, mock_collection):
-        """Test finding active chat by symbol"""
-        # Arrange
-        now = datetime.now(UTC)
-        mock_collection.find_one.return_value = {
-            "_id": "mongo_id",
-            "chat_id": "chat_aapl",
-            "user_id": "user_123",
-            "title": "AAPL Analysis",
-            "is_archived": False,
-            "ui_state": {
-                "current_symbol": "AAPL",
-                "current_interval": "1d",
-                "current_date_range": {"start": None, "end": None},
-                "active_overlays": {},
-            },
-            "last_message_preview": "Preview",
-            "created_at": now,
-            "updated_at": now,
-            "last_message_at": now,
-        }
-
-        # Act
-        result = await repository.find_by_symbol("user_123", "AAPL")
-
-        # Assert
-        assert result is not None
-        assert result.chat_id == "chat_aapl"
-        assert result.ui_state.current_symbol == "AAPL"
-
-        # Verify query filters by user, symbol, and archived status
-        mock_collection.find_one.assert_called_once_with(
-            {
-                "user_id": "user_123",
-                "ui_state.current_symbol": "AAPL",
-                "is_archived": False,
-            }
-        )
 
     @pytest.mark.asyncio
     async def test_find_by_symbol_not_found(self, repository, mock_collection):

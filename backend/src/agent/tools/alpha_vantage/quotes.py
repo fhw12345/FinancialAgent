@@ -181,9 +181,7 @@ def create_quote_tools(
             ext_session = quote_data.get("ext_hours_session")
             ext_pct = quote_data.get("ext_hours_change_percent")
             if ext_price is not None and ext_session in ("pre", "post"):
-                label = (
-                    "After-hours" if ext_session == "post" else "Pre-market"
-                )
+                label = "After-hours" if ext_session == "post" else "Pre-market"
                 pct_str = (
                     f" ({ext_pct:+.2f}%)" if isinstance(ext_pct, int | float) else ""
                 )
@@ -202,9 +200,7 @@ def create_quote_tools(
             if source_name:
                 source_id = _quote_source_id(source_name, symbol, asof_dt)
                 asof_repr = (
-                    asof_dt.strftime("%Y-%m-%dT%H:%MZ")
-                    if asof_dt
-                    else "asof unknown"
+                    asof_dt.strftime("%Y-%m-%dT%H:%MZ") if asof_dt else "asof unknown"
                 )
                 output_lines.append(
                     f"Source: {source_name} [{source_id}] asof {asof_repr}"

@@ -50,7 +50,9 @@ class ChatService:
         self.message_repo = message_repo
         self.settings = settings
 
-    async def create_chat(self, user_id: str | None = None, title: str = "New Chat") -> Chat:
+    async def create_chat(
+        self, user_id: str | None = None, title: str = "New Chat"
+    ) -> Chat:
         """
         Create a new chat. user_id ignored (W5b: schema no longer has user_id).
         """
@@ -152,7 +154,11 @@ class ChatService:
         return message
 
     async def get_chat_messages(
-        self, chat_id: str, user_id: str | None = None, limit: int | None = None, offset: int = 0
+        self,
+        chat_id: str,
+        user_id: str | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[Message]:
         """Get messages for chat. user_id ignored (W5b)."""
         await self.get_chat(chat_id)
@@ -264,11 +270,15 @@ class ChatService:
 
         return title
 
-    async def find_chat_by_symbol(self, user_id: str | None = None, symbol: str = "") -> Chat | None:
+    async def find_chat_by_symbol(
+        self, user_id: str | None = None, symbol: str = ""
+    ) -> Chat | None:
         """Find active chat for symbol. user_id ignored (W5b)."""
         return await self.chat_repo.find_by_symbol(symbol=symbol)
 
-    async def get_or_create_symbol_chat(self, user_id: str | None = None, symbol: str = "") -> Chat:
+    async def get_or_create_symbol_chat(
+        self, user_id: str | None = None, symbol: str = ""
+    ) -> Chat:
         """Get existing chat for symbol or create new one. user_id ignored (W5b)."""
         existing_chat = await self.find_chat_by_symbol(symbol=symbol)
 

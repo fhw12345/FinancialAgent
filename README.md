@@ -40,3 +40,12 @@ Frontend commands run inside the container:
 `docker compose exec frontend npm <cmd>`.
 
 See `CONTRIBUTING.md` and `CLAUDE.md` for the development workflow.
+
+## Documentation
+
+- [Architecture Overview](docs/architecture/overview.md) — system in one paragraph + Mermaid diagrams
+- [Getting Started](docs/development/getting-started.md) — local install + first request
+- [API Reference](docs/architecture/api-reference.md) — endpoints grouped by router
+- [FAQ](docs/FAQ.md) — common gotchas (docker exec, .env reload, yfinance 429, …)
+- [Case Studies](docs/case-studies/README.md) — bilingual debugging walkthroughs
+- [Docs Index](docs/README.md) — full table of contents

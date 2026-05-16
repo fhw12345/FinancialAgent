@@ -1,4 +1,26 @@
+---
+title: Finnhub Fallback Chain & the "Lying Comment" Pattern
+status: shipped
+version: backend@0.15.x
+last_updated: 2026-05-04
+owner: maintainer
+related_paths:
+  - backend/src/services/data_manager/
+  - backend/src/services/market_data/finnhub.py
+---
+
 # Finnhub 集成：fallback 链 + "注释撒谎"模式
+
+> **TL;DR (EN)**: Alpha Vantage's 5-call/minute, 500/day limit could not
+> survive a single Deep ReAct run. We added Finnhub as the new primary
+> provider, demoted AV to fallback, and kept yfinance as the safety net.
+> The architectural decision (put the fallback chain in `DataManager`,
+> not in each tool) paid off; along the way we found a "lying comment"
+> in the existing AV service that said one thing and did another.
+> **TL;DR (中文)**: AV 5/分钟、500/天 撑不住一次 Deep ReAct（31 个 sub-agent
+> 工具调用）。引入 Finnhub 作为新 primary、AV 退 fallback、yfinance 兜底；
+> fallback 链放在 `DataManager` 而非每个 tool。过程中发现了一处"注释撒谎"
+> ——AV service 的注释和实现不一致的潜伏 bug。
 
 > Date: 2026-05-04
 > Component: backend/src/services/data_manager + finnhub provider

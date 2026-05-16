@@ -1,4 +1,30 @@
+---
+title: Translation Pipeline — Four Root Causes from One UI Bug
+status: shipped
+version: backend@0.20.x, frontend@0.14.x
+last_updated: 2026-05-05
+owner: maintainer
+related_paths:
+  - backend/src/services/persistence_translator.py
+  - frontend/src/hooks/useTranslated.ts
+  - frontend/src/components/portfolio/DecisionTracker.tsx
+---
+
 # DecisionTracker "已经是中文了还在转圈"：一个 UI bug 牵出 4 层根因
+
+> **TL;DR (EN)**: One user complaint ("DecisionTracker translation is still
+> broken") unfolded across four rounds of clarifying questions and exposed
+> four independent root causes: (1) React Query cache hit returning
+> `isLoading=true`, (2) write-time translation not yet propagated to that
+> screen, (3) the LLM silently truncating long outputs due to `max_tokens`,
+> and (4) Full-Research modal rendering raw markdown. The lesson: when the
+> user keeps refining the bug report, each refinement may be a different
+> root cause, not a clarification of the first one.
+> **TL;DR (中文)**: 一句"翻译还是有问题"经过 4 次澄清，暴露 4 个独立根因：
+> React Query 缓存命中但 `isLoading=true` 背离；write-time translation 尚未
+> 接到这个页面；LLM 因为 `max_tokens` 静默截断长输出；Full Research modal
+> 渲染了 raw markdown。当用户每次反馈都更精确一点时，每一次往往是新的
+> 根因而不是同一个 bug 的澄清。
 
 > Date: 2026-05-05
 > Component: 前端翻译管道 / 后端持久化 / LLM token 上限 / Markdown 渲染

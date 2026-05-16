@@ -35,9 +35,7 @@ class ToolExecutionRepository:
         await self.collection.create_index(
             [("chat_id", 1), ("started_at", -1)], name="idx_chat_tools"
         )
-        await self.collection.create_index(
-            [("started_at", -1)], name="idx_started_at"
-        )
+        await self.collection.create_index([("started_at", -1)], name="idx_started_at")
         await self.collection.create_index(
             [("tool_source", 1), ("is_paid_api", 1)], name="idx_tool_cost"
         )

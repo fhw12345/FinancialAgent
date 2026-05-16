@@ -40,9 +40,17 @@ class FundamentalsMixin(AlphaVantageBase):
             return data
         except Exception as yf_err:
             if not self.api_key:
-                logger.error("yfinance overview failed (no AV fallback)", symbol=symbol, error=str(yf_err))
+                logger.error(
+                    "yfinance overview failed (no AV fallback)",
+                    symbol=symbol,
+                    error=str(yf_err),
+                )
                 raise
-            logger.warning("yfinance overview failed, trying Alpha Vantage", symbol=symbol, error=str(yf_err))
+            logger.warning(
+                "yfinance overview failed, trying Alpha Vantage",
+                symbol=symbol,
+                error=str(yf_err),
+            )
         try:
             return await fundamentals_av.fetch_company_overview(self, symbol)
         except Exception as e:
@@ -62,9 +70,17 @@ class FundamentalsMixin(AlphaVantageBase):
             return data
         except Exception as yf_err:
             if not self.api_key:
-                logger.error("yfinance cash flow failed (no AV fallback)", symbol=symbol, error=str(yf_err))
+                logger.error(
+                    "yfinance cash flow failed (no AV fallback)",
+                    symbol=symbol,
+                    error=str(yf_err),
+                )
                 raise
-            logger.warning("yfinance cash flow failed, trying Alpha Vantage", symbol=symbol, error=str(yf_err))
+            logger.warning(
+                "yfinance cash flow failed, trying Alpha Vantage",
+                symbol=symbol,
+                error=str(yf_err),
+            )
         try:
             return await fundamentals_av.fetch_cash_flow(self, symbol)
         except Exception as e:
@@ -84,9 +100,17 @@ class FundamentalsMixin(AlphaVantageBase):
             return data
         except Exception as yf_err:
             if not self.api_key:
-                logger.error("yfinance balance sheet failed (no AV fallback)", symbol=symbol, error=str(yf_err))
+                logger.error(
+                    "yfinance balance sheet failed (no AV fallback)",
+                    symbol=symbol,
+                    error=str(yf_err),
+                )
                 raise
-            logger.warning("yfinance balance sheet failed, trying Alpha Vantage", symbol=symbol, error=str(yf_err))
+            logger.warning(
+                "yfinance balance sheet failed, trying Alpha Vantage",
+                symbol=symbol,
+                error=str(yf_err),
+            )
         try:
             return await fundamentals_av.fetch_balance_sheet(self, symbol)
         except Exception as e:
@@ -105,18 +129,39 @@ class FundamentalsMixin(AlphaVantageBase):
         require AV — no equivalent in yfinance."""
         if tickers and not topics:
             try:
-                data = await yfinance_fundamentals.get_news_sentiment(tickers, limit=limit)
-                logger.info("News sentiment via yfinance", tickers=tickers, news_count=len(data.get("feed", [])))
+                data = await yfinance_fundamentals.get_news_sentiment(
+                    tickers, limit=limit
+                )
+                logger.info(
+                    "News sentiment via yfinance",
+                    tickers=tickers,
+                    news_count=len(data.get("feed", [])),
+                )
                 return data
             except Exception as yf_err:
                 if not self.api_key:
-                    logger.error("yfinance news failed (no AV fallback)", tickers=tickers, error=str(yf_err))
+                    logger.error(
+                        "yfinance news failed (no AV fallback)",
+                        tickers=tickers,
+                        error=str(yf_err),
+                    )
                     raise
-                logger.warning("yfinance news failed, trying Alpha Vantage", tickers=tickers, error=str(yf_err))
+                logger.warning(
+                    "yfinance news failed, trying Alpha Vantage",
+                    tickers=tickers,
+                    error=str(yf_err),
+                )
         try:
-            return await fundamentals_av.fetch_news_sentiment(self, tickers, topics, limit, sort)
+            return await fundamentals_av.fetch_news_sentiment(
+                self, tickers, topics, limit, sort
+            )
         except Exception as e:
-            logger.error("News sentiment fetch failed", tickers=tickers, topics=topics, error=str(e))
+            logger.error(
+                "News sentiment fetch failed",
+                tickers=tickers,
+                topics=topics,
+                error=str(e),
+            )
             raise
 
     async def get_top_gainers_losers(self) -> dict[str, Any]:
@@ -132,9 +177,13 @@ class FundamentalsMixin(AlphaVantageBase):
             return data
         except Exception as yf_err:
             if not self.api_key:
-                logger.error("yfinance movers failed (no AV fallback)", error=str(yf_err))
+                logger.error(
+                    "yfinance movers failed (no AV fallback)", error=str(yf_err)
+                )
                 raise
-            logger.warning("yfinance movers failed, trying Alpha Vantage", error=str(yf_err))
+            logger.warning(
+                "yfinance movers failed, trying Alpha Vantage", error=str(yf_err)
+            )
         try:
             return await fundamentals_av.fetch_top_gainers_losers(self)
         except Exception as e:

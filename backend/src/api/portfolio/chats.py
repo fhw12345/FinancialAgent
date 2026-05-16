@@ -190,9 +190,7 @@ async def get_portfolio_chat_history(
                 if isinstance(msg_ts, datetime) and msg_ts.tzinfo is None:
                     msg_ts = msg_ts.replace(tzinfo=UTC)
                 ts_iso = (
-                    msg_ts.isoformat()
-                    if isinstance(msg_ts, datetime)
-                    else str(msg_ts)
+                    msg_ts.isoformat() if isinstance(msg_ts, datetime) else str(msg_ts)
                 )
 
                 # Card title — use Chinese category prefix:
@@ -222,9 +220,7 @@ async def get_portfolio_chat_history(
                     )
                     card_symbol = syms[0] if len(syms) == 1 else None
                 else:
-                    parent_symbol = (
-                        title.split(" ")[0] if " " in title else title
-                    )
+                    parent_symbol = title.split(" ")[0] if " " in title else title
                     card_title = (
                         f"个股分析 · {parent_symbol} · {ts_iso}"
                         if isinstance(msg_ts, datetime)

@@ -1,9 +1,21 @@
+---
+title: Symbol Search and Chart Visualization Improvements
+status: in-progress
+version: backend@0.8.x, frontend@0.10.x
+last_updated: 2026-05-16
+owner: maintainer
+related_paths:
+  - backend/src/api/market/search.py
+  - backend/src/api/market/prices.py
+  - frontend/src/components/Chart/
+---
+
 # Symbol Search and Chart Visualization Improvements
 
-**Status**: Planning
-**Priority**: High
-**Complexity**: Medium-High
-**Estimated Effort**: 8-12 days
+> Phase 1 (deduplication, match_type ranking, OHLC tooltip) shipped. Phase 2
+> backend date-range support (`start_date` / `end_date` in analysis endpoints)
+> shipped; matching frontend `DateRangePicker` component not yet implemented.
+> Phase 3 candlestick / volume overlay still planning.
 
 ## Context
 

@@ -1,4 +1,26 @@
+---
+title: SELL = "Close Long" Prompt Semantics
+status: shipped
+version: backend@0.18.x
+last_updated: 2026-05-05
+owner: maintainer
+related_paths:
+  - backend/src/services/watchlist/phase2_decisions.py
+---
+
 # SELL 平多仓的"砍仓回平"：LLM 输出歧义不要用文档兜，回 prompt 找根因
+
+> **TL;DR (EN)**: A SELL recommendation came out with `entry_price`,
+> `stop_loss`, and `take_profit` written as if it were opening a short
+> position ("if it breaks above $655, cut losses and flip"). The reflex
+> is to "explain the fields better in the UI." The right fix was to
+> rewrite the *prompt* so the LLM uses long-position-closing semantics
+> when the action is SELL. Documentation cannot rescue a prompt that
+> emits ambiguous text.
+> **TL;DR (中文)**: SELL 决策的 `entry_price` / `stop_loss` / `take_profit`
+> 字段输出像在"开空头"（"涨破 $655 就砍仓回平"）。直觉是"在 UI 上把
+> 字段解释清楚"。正确做法是回 prompt 改根因——让 LLM 在 SELL 时使用
+> "平多仓"语义。文档兜不住 prompt 本身生成的歧义文本。
 
 > Date: 2026-05-05
 > Component: Phase 2 LLM prompt（portfolio decision price levels）

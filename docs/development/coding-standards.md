@@ -1,3 +1,15 @@
+---
+title: Coding Standards and Best Practices
+status: shipped
+version: n/a
+last_updated: 2026-05-16
+owner: maintainer
+related_paths:
+  - backend/pyproject.toml
+  - frontend/package.json
+  - .pre-commit-config.yaml
+---
+
 # Coding Standards and Best Practices
 
 ## General Principles
@@ -71,7 +83,9 @@ else:
 
 **Pre-commit Validation**: mypy runs automatically on all commits. Fix all errors before committing.
 
-**Learn More**: See [v0.5.3 Release Notes](../project/versions/backend/v0.5.3.md) for comprehensive type safety improvements.
+**Learn More**: See the backend CHANGELOG —
+[`docs/project/versions/backend/CHANGELOG.md`](../project/versions/backend/CHANGELOG.md) —
+for the v0.5.3 type-safety pass and subsequent enforcement bumps.
 
 ### Code Organization
 ```python
@@ -398,9 +412,8 @@ Now returns empty array with appropriate message.
 
 ### Secrets Management
 - ❌ Never commit secrets to git
-- ✅ Use environment variables
+- ✅ Use environment variables (`.env`, gitignored)
 - ✅ Use `.env.example` for documentation
-- ✅ Store production secrets in Azure Key Vault
 
 ### Input Validation
 ```python

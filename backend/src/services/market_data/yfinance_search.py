@@ -44,7 +44,9 @@ _US_EXCHANGES = {
 }
 
 
-def _is_us_equity(symbol: str | None, exchange: str | None, quote_type: str | None) -> bool:
+def _is_us_equity(
+    symbol: str | None, exchange: str | None, quote_type: str | None
+) -> bool:
     if not symbol or "." in symbol:
         # Foreign tickers are formatted SYMBOL.EXCHANGE on Yahoo
         # (e.g. CRWV.MX, I1V.F). US tickers have no dot.
@@ -66,7 +68,9 @@ def _ticker_probe(query: str) -> dict[str, Any] | None:
     except Exception as e:
         logger.debug("yfinance Ticker probe failed", query=q, error=str(e))
         return None
-    if not _is_us_equity(info.get("symbol"), info.get("exchange"), info.get("quoteType")):
+    if not _is_us_equity(
+        info.get("symbol"), info.get("exchange"), info.get("quoteType")
+    ):
         return None
     if info.get("symbol", "").upper() != q:
         # Defensive: yfinance sometimes echoes back a different symbol on a

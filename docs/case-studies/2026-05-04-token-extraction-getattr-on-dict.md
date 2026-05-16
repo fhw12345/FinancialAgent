@@ -1,4 +1,27 @@
+---
+title: Token Count Always Zero — getattr on a dict
+status: shipped
+version: backend@0.14.x
+last_updated: 2026-05-04
+owner: maintainer
+related_paths:
+  - backend/src/core/utils/token_utils.py
+---
+
 # Token 统计永远是 0：getattr 用在 dict 上的隐性失败
+
+> **TL;DR (EN)**: After 500 seconds, 5 sub-agents and 100+ tool calls, every
+> token counter logged as zero. The first suspicion (cross-vendor LLM
+> response shape change) was wrong; the real culprit was
+> `getattr(usage_metadata, "input_tokens", 0)` being called on a `dict`,
+> which silently returned the default. Compounded by `Mock` stubs in the
+> unit tests that returned objects with attribute access, so the bug only
+> appeared in production.
+> **TL;DR (中文)**: 500 秒、5 个 sub-agent、上百次工具调用，token 计数器
+> 全是 0。第一直觉"跨厂商 LLM 字段变了"错了，真凶是
+> `getattr(usage_metadata, "input_tokens", 0)` 调用在 dict 上——dict 上的
+> getattr 不抛错而是静默返回默认值。测试用 `Mock` 返回的对象支持属性访问，
+> 所以单测全绿、生产全 0。
 
 > Date: 2026-05-04
 > Component: backend/src/core/utils/token_utils.py

@@ -1,18 +1,30 @@
+---
+title: Portfolio Agent Architecture Refactor
+status: shipped
+version: backend@0.10.x+
+last_updated: 2026-05-16
+owner: maintainer
+related_paths:
+  - backend/src/services/watchlist/analysis.py
+  - backend/src/services/watchlist/order_handler.py
+  - backend/src/services/watchlist_analyzer.py
+---
+
 # Portfolio Agent Architecture Refactor
 
 ## Context
 
-The current portfolio analysis cron job has inefficient agent orchestration:
-- Each symbol analysis includes portfolio context and makes 2 LLM calls (ainvoke + ainvoke_structured)
-- Individual symbols make portfolio decisions in isolation
-- Market movers are analyzed but excluded from execution (waste)
-- Multiple "Portfolio Optimization Analysis" traces in Langfuse are confusing
+The previous portfolio analysis cron job had inefficient agent orchestration:
+- Each symbol analysis included portfolio context and made 2 LLM calls (ainvoke + ainvoke_structured)
+- Individual symbols made portfolio decisions in isolation
+- Market movers were analyzed but excluded from execution (waste)
+- All symbol analyses shared the same trace name, making structured-log triage confusing
 
 ## Problem Statement
 
 1. **Inefficient**: 29 agent calls for 14 symbols (14 ainvoke + 14 ainvoke_structured + 1 aggregation)
 2. **Poor Decision Quality**: Each symbol gets individual portfolio-aware decision before seeing other analyses
-3. **Confusing Traces**: All symbol analyses named "Portfolio Optimization Analysis" in Langfuse
+3. **Confusing Traces**: All symbol analyses named "Portfolio Optimization Analysis" in structured logs
 4. **Wasted Compute**: Market movers analyzed but never executed
 
 ## Proposed Solution
@@ -241,7 +253,7 @@ for order in sorted_orders:
 4. **Phase 2**: Single ainvoke_structured() returns List[TradingDecision]
 5. **Phase 2**: All decisions made holistically with full portfolio visibility
 6. **Phase 3**: SELLs execute first to gain liquidity before BUYs
-7. **Langfuse**: Clear trace names - "Symbol Research: X" vs "Portfolio Decision"
+7. **Observability**: Clear log trace names — "Symbol Research: X" vs "Portfolio Decision"
 8. **Efficiency**: Total LLM calls reduced from 29 to ~6 for typical portfolio
 
 ## Migration Notes
@@ -254,6 +266,6 @@ for order in sorted_orders:
 ## Testing Plan
 
 1. Dry-run with `dry_run=True` to verify flow
-2. Check Langfuse traces for correct naming
+2. Check structured log traces for correct naming
 3. Verify decision quality with test portfolio
 4. Confirm order execution sequence (SELLs before BUYs)

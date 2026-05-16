@@ -447,9 +447,7 @@ async def trigger_watchlist_analysis(
             mongo = getattr(request.app.state, "mongodb", None)
             if mongo is not None:
                 try:
-                    repo = WatchlistRepository(
-                        mongo.get_collection("watchlist_items")
-                    )
+                    repo = WatchlistRepository(mongo.get_collection("watchlist_items"))
                     items = await repo.get_by_user(limit=200)
                     match = next(
                         (it for it in items if it.symbol.upper() == sym_upper),

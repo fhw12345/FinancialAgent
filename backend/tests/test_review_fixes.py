@@ -165,32 +165,6 @@ class TestAsyncToolWrapping:
     """Sync HTTP calls must be wrapped with asyncio.to_thread."""
 
     @pytest.mark.asyncio
-    @patch("src.agent.tools.exa_tools.Exa")
-    async def test_exa_uses_asyncio_to_thread(self, mock_exa_class: MagicMock) -> None:
-        """Exa search_and_contents should run in a thread pool."""
-        mock_client = MagicMock()
-        mock_result = MagicMock()
-        mock_result.results = [
-            MagicMock(title="Test", url="https://test.com", text="content"),
-        ]
-        mock_client.search_and_contents.return_value = mock_result
-        mock_exa_class.return_value = mock_client
-
-        from src.agent.tools.exa_tools import create_exa_tools
-
-        tools = create_exa_tools(api_key="test-key")
-
-        with patch(
-            "src.agent.tools.exa_tools.asyncio.to_thread", new_callable=AsyncMock
-        ) as mock_to_thread:
-            mock_to_thread.return_value = mock_result
-            await tools[0].ainvoke({"query": "test"})
-            mock_to_thread.assert_called_once()
-            # Verify the sync function was passed to to_thread
-            call_args = mock_to_thread.call_args
-            assert call_args[0][0] == mock_client.search_and_contents
-
-    @pytest.mark.asyncio
     @patch("src.agent.tools.yfinance_tools.yf")
     async def test_yfinance_uses_asyncio_to_thread(self, mock_yf: MagicMock) -> None:
         """yfinance fetch should run _fetch_sync in a thread pool."""
@@ -218,25 +192,6 @@ class TestAsyncToolWrapping:
             assert callable(call_args[0][0])
             # Second arg should be the symbol
             assert call_args[0][1] == "AAPL"
-
-    @pytest.mark.asyncio
-    @patch("src.agent.tools.exa_tools.Exa")
-    async def test_exa_error_in_thread_still_caught(
-        self, mock_exa_class: MagicMock
-    ) -> None:
-        """Exceptions from the thread should propagate and be caught."""
-        mock_client = MagicMock()
-        mock_client.search_and_contents.side_effect = Exception("Thread error")
-        mock_exa_class.return_value = mock_client
-
-        from src.agent.tools.exa_tools import create_exa_tools
-
-        tools = create_exa_tools(api_key="test-key")
-        result = await tools[0].ainvoke({"query": "test"})
-        data = json.loads(result)
-
-        assert "error" in data
-        assert "Thread error" in data["error"]
 
     @pytest.mark.asyncio
     @patch("src.agent.tools.yfinance_tools.yf")

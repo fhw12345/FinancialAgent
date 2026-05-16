@@ -1,10 +1,15 @@
-# Feature Spec: Fibonacci Trend Detection Improvements
-
-**Date**: 2025-10-27
-**Status**: ✅ **Implemented** (v0.5.10 - 2025-10-30)
-**Priority**: High (Critical UX Issue)
-
 ---
+title: Fibonacci Trend Detection Improvements
+status: shipped
+version: backend@0.5.10
+last_updated: 2025-10-30
+owner: maintainer
+related_paths:
+  - backend/src/core/analysis/fibonacci/
+  - backend/src/api/analysis/fibonacci.py
+---
+
+# Feature Spec: Fibonacci Trend Detection Improvements
 
 ## Context
 
