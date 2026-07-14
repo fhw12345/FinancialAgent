@@ -3,23 +3,6 @@ export interface HealthResponse {
   environment: string;
   version: string;
   timestamp: string;
-  kubernetes?: {
-    running_in_kubernetes: boolean;
-    pod_name?: string;
-    node_name?: string;
-    namespace?: string;
-    node_pool?: string;
-    resources?: {
-      requests: {
-        cpu: string;
-        memory: string;
-      };
-      limits: {
-        cpu: string;
-        memory: string;
-      };
-    };
-  };
   dependencies: {
     mongodb: {
       connected: boolean;
@@ -163,7 +146,7 @@ export interface ToolCall {
   icon: string;
   symbol?: string;
   invoked_at: string;
-  metadata?: Record<string, unknown>;
+  metadata?: unknown;
 }
 
 export interface Message {

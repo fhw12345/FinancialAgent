@@ -6,18 +6,19 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ./backend/.env.development  # Load all config from gitignored file
+      - ./backend/.env.development # Load all config from gitignored file
     environment:
       - ENVIRONMENT=development
       - MAESTRO_BASE_URL=http://host.docker.internal:23333/api/anthropic
+      - COPILOT_REVERSE_BASE_URL=http://host.docker.internal:8765/cc
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       - mongodb
       - redis
     volumes:
-      - ./backend:/app  # Mount full backend directory
-      - backend_deps:/home/app/.local  # Persist pip user install packages
+      - ./backend:/app # Mount full backend directory
+      - backend_deps:/home/app/.local # Persist pip user install packages
     restart: unless-stopped
 
   frontend:
@@ -31,78 +32,6 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    restart: unless-stopped
-
-  # Portfolio Analysis Agent (Standalone)
-  # Run manually: docker compose run --rm portfolio-agent
-  # Or with args: docker compose run --rm portfolio-agent python scripts/run_portfolio_analysis.py --dry-run
-  portfolio-agent:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    command: python scripts/run_portfolio_analysis.py
-    env_file:
-      - ./backend/.env.development
-    environment:
-      - ENVIRONMENT=development
-      - MAESTRO_BASE_URL=http://host.docker.internal:23333/api/anthropic
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      - mongodb
-      - redis
-    volumes:
-      - ./backend:/app
-      - backend_deps:/home/app/.local
-    profiles:
-      - tools  # Only run when explicitly requested
-
-  # Portfolio Analysis Cron (Scheduled)
-  # Configurable interval for local testing (default: 1440 minutes = 24 hours)
-  # Production: 8 PM EST (01:00 UTC) daily via K8s CronJob
-  portfolio-cron:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    command: >
-      bash -c "
-        INTERVAL=$${CRON_INTERVAL_MINUTES:-1440};
-        ENABLED=$${CRON_ENABLED:-true};
-
-        echo \"Portfolio Cron Configuration:\";
-        echo \"  Enabled: $$ENABLED\";
-        echo \"  Interval: $$INTERVAL minutes\";
-
-        if [ \"$$ENABLED\" = \"false\" ]; then
-          echo 'Cron disabled. Sleeping indefinitely...';
-          sleep infinity;
-        fi;
-
-        echo \"Starting portfolio analysis loop (runs every $$INTERVAL minutes)...\";
-        while true; do
-          echo \"[$(date)] Running portfolio analysis...\";
-          python scripts/run_portfolio_analysis.py;
-          echo \"[$(date)] Refreshing holding prices...\";
-          python scripts/refresh_holding_prices.py;
-          echo \"[$(date)] Computing decision P&L snapshots...\";
-          python scripts/run_pnl_snapshots.py;
-          echo \"[$(date)] Cycle complete. Next run in $$INTERVAL minutes.\";
-          sleep $$((INTERVAL * 60));
-        done
-      "
-    env_file:
-      - ./backend/.env.development
-    environment:
-      - ENVIRONMENT=development
-      - MAESTRO_BASE_URL=http://host.docker.internal:23333/api/anthropic
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      - mongodb
-      - redis
-    volumes:
-      - ./backend:/app
-      - backend_deps:/home/app/.local
     restart: unless-stopped
 
   mongodb:
@@ -126,4 +55,4 @@ services:
 volumes:
   mongodb_data:
   redis_data:
-  backend_deps:  # Persist Python packages across restarts
+  backend_deps: # Persist Python packages across restarts

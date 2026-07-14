@@ -7,7 +7,6 @@
  */
 
 import { flushSync } from "react-dom";
-import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { analysisService } from "../../services/analysis";
 import { chatService } from "../../services/api";
@@ -20,7 +19,6 @@ import {
   formatMacroResponse,
   formatMarketMoversResponse,
   formatNewsSentimentResponse,
-  formatFundamentalsResponse,
   formatStochasticResponse,
 } from "./analysisFormatters";
 import { calculateDateRange } from "../../utils/dateRangeCalculator";
@@ -29,7 +27,6 @@ import {
   extractStochasticMetadata,
 } from "../../utils/analysisMetadataExtractor";
 import { createToolCall, TOOL_REGISTRY, type ToolName } from "../../constants/toolRegistry";
-import type { ModelSettings } from "../../types/models";
 import type { DeepStreamEvent } from "../../types/api";
 import i18n from "../../i18n";
 
@@ -44,7 +41,6 @@ export const useAnalysis = (
   _selectedInterval?: string,
   chatId?: string | null,
   setChatId?: (id: string) => void,
-  modelSettings?: ModelSettings,
   agentMode?: "v2" | "v3" | "v4-deep",
   onDeepEvent?: (event: DeepStreamEvent) => void,
 ) => {
@@ -209,10 +205,6 @@ export const useAnalysis = (
           onDeepEvent,
           // LLM Configuration options
           {
-            model: modelSettings?.model ?? "qwen-plus",
-            thinking_enabled: modelSettings?.thinking_enabled ?? false,
-            max_tokens: modelSettings?.max_tokens ?? 3000,
-            debug_enabled: modelSettings?.debug_enabled ?? false,
             agent_version: agentMode, // Pass agent mode (v2/v3/v4-deep)
             // Language configuration - get from i18n
             language: (i18n.language === "zh-CN" || i18n.language === "en" ? i18n.language : "zh-CN") as "zh-CN" | "en",
@@ -418,8 +410,6 @@ export const useButtonAnalysis = (
 
           // Track chatId across nested calls to avoid creating duplicate chats
           let activeChatId = chatId;
-          let userMessageSaved = false;
-
           // First, save user message (the trigger)
           chatService.sendMessageStreamPersistent(
             userMessage,
@@ -435,8 +425,6 @@ export const useButtonAnalysis = (
             () => {},
             () => {
               // User message saved successfully
-              userMessageSaved = true;
-
               // Now save assistant response
               chatService.sendMessageStreamPersistent(
                 response.content,

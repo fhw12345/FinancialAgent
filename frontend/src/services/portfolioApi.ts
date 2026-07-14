@@ -1,9 +1,4 @@
-/**
- * Portfolio API client for Alpaca paper trading integration.
- *
- * All portfolio data comes from Alpaca API (single source of truth).
- * No manual holdings management - Alpaca handles all positions.
- */
+/** Portfolio API client for locally managed holdings and decisions. */
 
 import { apiClient } from "./api";
 import type {
@@ -14,7 +9,7 @@ import type {
 } from "../types/portfolio";
 
 /**
- * Get all holdings from Alpaca (single source of truth).
+ * Get all local holdings.
  */
 export async function getHoldings(): Promise<Holding[]> {
   const response = await apiClient.get<Holding[]>("/api/portfolio/holdings");
@@ -22,7 +17,7 @@ export async function getHoldings(): Promise<Holding[]> {
 }
 
 /**
- * Get portfolio summary from Alpaca account.
+ * Get the local portfolio summary.
  */
 export async function getPortfolioSummary(): Promise<PortfolioSummary> {
   const response = await apiClient.get<PortfolioSummary>(

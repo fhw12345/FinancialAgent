@@ -10,16 +10,12 @@ import type {
   MarketStatus,
 } from "../types/api";
 
-// Configure axios with base URL
-// In production, use empty string for relative URLs (nginx proxy)
-// In development, use localhost
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+
+// Configure the local backend client.
 const api = axios.create({
-  baseURL:
-    import.meta.env.VITE_API_URL !== undefined
-      ? import.meta.env.VITE_API_URL
-      : import.meta.env.MODE === "production"
-        ? ""
-        : "http://localhost:8000",
+  baseURL: API_BASE_URL,
   timeout: 30000, // 30 seconds for analysis requests
   headers: {
     "Content-Type": "application/json",
@@ -66,7 +62,7 @@ export const healthService = {
 // ===== Persistent Chat API =====
 export const chatService = {
   /**
-   * List all chats for the authenticated user
+   * List all local chats
    */
   async listChats(
     page: number = 1,
@@ -182,10 +178,6 @@ export const chatService = {
       tool_call?: any; // Tool invocation metadata for collapsible UI wrapper
       // Agent Configuration
       agent_version?: "v2" | "v3" | "v4-deep"; // v2: simple chat, v3: ReAct agent, v4-deep: deep analysis
-      // LLM Configuration
-      model?: string;
-      thinking_enabled?: boolean;
-      max_tokens?: number;
       debug_enabled?: boolean; // Enable debug logging in backend
       // Language Configuration
       language?: "zh-CN" | "en"; // Response language (default: zh-CN)
@@ -193,23 +185,14 @@ export const chatService = {
       current_symbol?: string;
     },
   ): () => void {
-    const baseURL =
-      import.meta.env.VITE_API_URL !== undefined
-        ? import.meta.env.VITE_API_URL
-        : import.meta.env.MODE === "production"
-          ? ""
-          : "http://localhost:8000";
-
-    const url = `${baseURL}/api/chat/stream`;
+    const url = `${API_BASE_URL}/api/chat/stream`;
     const controller = new AbortController();
 
-    // Helper to make the streaming request
-    const makeStreamRequest = async (accessToken: string | null) => {
+    const makeStreamRequest = async () => {
       return fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
           ...(options?.debug_enabled ? { "X-Debug": "true" } : {}),
         },
         body: JSON.stringify({
@@ -222,10 +205,6 @@ export const chatService = {
           tool_call: options?.tool_call,
           // Agent Configuration
           agent_version: options?.agent_version ?? "v3", // Default to v3 (ReAct agent)
-          // LLM Configuration
-          model: options?.model ?? "qwen-plus",
-          thinking_enabled: options?.thinking_enabled ?? false,
-          max_tokens: options?.max_tokens ?? 3000,
           // Language Configuration
           language: options?.language ?? "zh-CN",
           // Symbol Context (priority over DB ui_state)
@@ -317,9 +296,7 @@ export const chatService = {
 
     void (async () => {
       try {
-        const response = await makeStreamRequest(
-          localStorage.getItem("access_token"),
-        );
+        const response = await makeStreamRequest();
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

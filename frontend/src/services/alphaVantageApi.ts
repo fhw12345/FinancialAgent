@@ -2,7 +2,7 @@
  * Alpha Vantage API Client
  *
  * Provides typed methods for accessing Alpha Vantage market data endpoints.
- * All endpoints require authentication via get_current_user_id dependency.
+ * Calls the local backend market-data endpoints.
  */
 
 import { apiClient } from "./api";

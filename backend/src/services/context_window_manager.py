@@ -35,12 +35,12 @@ class ContextWindowManager:
             settings: Application settings with context limits and thresholds
         """
         self.settings = settings
-        self.context_limits = settings.llm_context_limits
+        self.context_limit = settings.llm_context_limit
         self.compact_threshold = settings.compact_threshold_ratio  # 0.5 = 50%
         self.compact_target = settings.compact_target_ratio  # 0.1 = 10%
         self.tail_keep = settings.tail_messages_keep  # 3 messages
 
-        # Initialize tokenizer (using cl100k_base for GPT-4/Qwen compatibility)
+        # cl100k_base provides a stable approximation across Maestro models.
         try:
             self.tokenizer = tiktoken.get_encoding("cl100k_base")
         except Exception as e:
@@ -93,19 +93,16 @@ class ContextWindowManager:
         """
         return sum(self.calculate_message_tokens(msg) for msg in messages)
 
-    def should_compact(self, total_tokens: int, model: str = "qwen-plus") -> bool:
+    def should_compact(self, total_tokens: int) -> bool:
         """
         Check if context should be compacted.
 
         Args:
             total_tokens: Current total token count
-            model: LLM model name to get limit for
-
         Returns:
             True if tokens exceed threshold (75% of limit)
         """
-        limit = self.context_limits.get(model, 100_000)  # Default to 100K
-        threshold = int(limit * self.compact_threshold)
+        threshold = int(self.context_limit * self.compact_threshold)
 
         should_compact = total_tokens > threshold
 
@@ -114,8 +111,7 @@ class ContextWindowManager:
                 "Context compaction needed",
                 total_tokens=total_tokens,
                 threshold=threshold,
-                model=model,
-                utilization_pct=round((total_tokens / limit) * 100, 1),
+                utilization_pct=round((total_tokens / self.context_limit) * 100, 1),
             )
 
         return should_compact

@@ -5,14 +5,13 @@ Tests context window management including token estimation,
 context structure extraction, and summarization.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import Mock
 
 import pytest
 
 from src.models.message import Message
 from src.services.context_window_manager import ContextWindowManager
-
 
 # ===== Fixtures =====
 
@@ -21,14 +20,10 @@ from src.services.context_window_manager import ContextWindowManager
 def mock_settings():
     """Mock Settings"""
     settings = Mock()
-    settings.llm_context_limits = {
-        "qwen-plus": 100000,
-        "qwen-turbo": 50000,
-    }
+    settings.llm_context_limit = 100000
     settings.compact_threshold_ratio = 0.5  # 50%
     settings.compact_target_ratio = 0.1  # 10%
     settings.tail_messages_keep = 3
-    settings.summarization_model = "qwen-turbo"
     return settings
 
 
@@ -48,7 +43,7 @@ def sample_messages():
             role="system",
             content="You are a financial analyst.",
             source="user",
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
         ),
         Message(
             message_id="msg_2",
@@ -56,7 +51,7 @@ def sample_messages():
             role="user",
             content="Analyze AAPL stock",
             source="user",
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
         ),
         Message(
             message_id="msg_3",
@@ -64,7 +59,7 @@ def sample_messages():
             role="assistant",
             content="AAPL shows strong fundamentals with good earnings.",
             source="llm",
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
         ),
         Message(
             message_id="msg_4",
@@ -72,7 +67,7 @@ def sample_messages():
             role="user",
             content="What about technical indicators?",
             source="user",
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
         ),
         Message(
             message_id="msg_5",
@@ -80,7 +75,7 @@ def sample_messages():
             role="assistant",
             content="Technical analysis shows RSI at 65, MACD is bullish.",
             source="llm",
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
         ),
     ]
 
@@ -156,23 +151,16 @@ class TestShouldCompact:
 
     def test_should_compact_below_threshold(self, context_manager):
         """Test no compaction when below threshold"""
-        # qwen-plus limit is 100000, threshold at 50% = 50000
-        assert context_manager.should_compact(25000, "qwen-plus") is False
+        assert context_manager.should_compact(25000) is False
 
     def test_should_compact_above_threshold(self, context_manager):
         """Test compaction when above threshold"""
         # Above 50% threshold
-        assert context_manager.should_compact(60000, "qwen-plus") is True
+        assert context_manager.should_compact(60000) is True
 
     def test_should_compact_at_threshold(self, context_manager):
         """Test at exact threshold (should not compact)"""
-        assert context_manager.should_compact(50000, "qwen-plus") is False
-
-    def test_should_compact_unknown_model(self, context_manager):
-        """Test with unknown model (uses default limit)"""
-        # Default is 100K, threshold at 50% = 50K
-        result = context_manager.should_compact(60000, "unknown-model")
-        assert result is True
+        assert context_manager.should_compact(50000) is False
 
 
 # ===== extract_context_structure Tests =====
@@ -212,7 +200,7 @@ class TestExtractContextStructure:
                 role="system",
                 content="System prompt",
                 source="user",
-                timestamp=datetime.now(timezone.utc).isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
             )
         ]
         head, body, tail = context_manager.extract_context_structure(messages)
@@ -230,7 +218,7 @@ class TestExtractContextStructure:
                 role="user",
                 content="User message",
                 source="user",
-                timestamp=datetime.now(timezone.utc).isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
             ),
             Message(
                 message_id="msg_2",
@@ -238,7 +226,7 @@ class TestExtractContextStructure:
                 role="assistant",
                 content="Assistant reply",
                 source="llm",
-                timestamp=datetime.now(timezone.utc).isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
             ),
         ]
         head, body, tail = context_manager.extract_context_structure(messages)
@@ -268,8 +256,8 @@ class TestFallbackSummary:
 
     def test_fallback_summary_with_date_range(self, context_manager, sample_messages):
         """Test fallback summary with date range"""
-        start = datetime(2025, 1, 1, tzinfo=timezone.utc)
-        end = datetime(2025, 1, 31, tzinfo=timezone.utc)
+        start = datetime(2025, 1, 1, tzinfo=UTC)
+        end = datetime(2025, 1, 31, tzinfo=UTC)
         summary = context_manager._fallback_summary(
             sample_messages, date_range=(start, end)
         )

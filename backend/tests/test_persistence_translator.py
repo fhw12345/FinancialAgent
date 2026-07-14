@@ -160,9 +160,9 @@ async def test_cjk_skip_logs_warning_for_visibility(capsys) -> None:
         "CJK skip event must be logged so future analysis-pipeline leaks "
         "are visible in docker logs."
     )
-    assert "warning" in captured.lower(), (
-        "CJK skip must log at WARNING level (was INFO before 0.29.3)."
-    )
+    assert (
+        "warning" in captured.lower()
+    ), "CJK skip must log at WARNING level (was INFO before 0.29.3)."
 
 
 @pytest.mark.asyncio

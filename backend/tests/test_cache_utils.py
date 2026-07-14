@@ -10,7 +10,6 @@ Tests caching key generation and TTL strategies for:
 
 from src.core.utils.cache_utils import (
     INTERVAL_TTL_MAP,
-    TOOL_TTL_MAP,
     generate_tool_cache_key,
     get_api_cost,
     get_tool_ttl,
@@ -287,7 +286,6 @@ class TestGetToolTTL:
         """Test TTL for commodity prices"""
         # Arrange & Act
         ttl_wti = get_tool_ttl("WTI")
-        ttl_gold = get_tool_ttl("GOLD") if "GOLD" in TOOL_TTL_MAP else 1800
 
         # Assert - Commodities update every 30 minutes
         assert ttl_wti == 1800

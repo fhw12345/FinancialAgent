@@ -33,18 +33,12 @@ class Settings(BaseSettings):
     )
 
     # Environment
-    environment: Literal["development", "test", "production"] = "development"
+    environment: Literal["development", "test"] = "development"
 
     # Database connections
     mongodb_url: str = "mongodb://localhost:27017/financial_agent"
     redis_url: str = "redis://localhost:6379"
 
-    # Security
-    secret_key: str = "dev-secret-key-change-in-production"
-    admin_secret: str = "dev-admin-secret-change-in-production"  # For CronJob auth
-    allowed_hosts: list[str] = [
-        "*"
-    ]  # Allow all hosts (override via ALLOWED_HOSTS env var)
     cors_origins: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
@@ -60,38 +54,44 @@ class Settings(BaseSettings):
     langfuse_secret_key: str | None = None
     langfuse_host: str | None = None
 
-    # External APIs - LLM (W8: all LLM traffic routed via Agent Maestro)
+    # LLM provider routing
+    llm_provider: Literal["maestro", "anthropic", "copilot_reverse"] = "maestro"
+
+    # Agent Maestro
     maestro_base_url: str = "http://localhost:23333/api/anthropic"
     maestro_auth_token: str = "Powered by Agent Maestro"
 
-    # LLM Configuration (legacy fields kept for backward compat with callers
-    # that still read default_llm_model / default_llm_temperature; the actual
-    # model selection now lives in src.agent.llm_factory.MODELS).
-    default_llm_model: str = "claude-sonnet-4-6"  # informational only
+    # Direct Anthropic API
+    anthropic_base_url: str = "https://api.anthropic.com"
+    anthropic_api_key: str = ""
+    anthropic_model: str = ""
+
+    # GitHub Copilot reverse proxy. The sibling repository is named
+    # copilot-bridge; the public flag remains copilot_reverse.
+    copilot_reverse_base_url: str = "http://localhost:8765/cc"
+    copilot_reverse_auth_token: str = "dummy"
+    copilot_reverse_model: str = ""
+
+    # Agent Maestro role assignments
+    model_deep_planner: str = "claude-opus-4.8"
+    model_react_agent: str = "claude-sonnet-5"
+    model_portfolio_decisions: str = "claude-opus-4.8"
+    model_verdict: str = "claude-opus-4.8"
+    model_sub_technical: str = "claude-sonnet-5"
+    model_simple_chat: str = "claude-haiku-4.5"
+    model_sub_financial: str = "gpt-5.6-sol"
+    model_portfolio_research: str = "gpt-5.6-sol"
+    model_sub_debater: str = "gemini-3.1-pro-preview"
+    model_sub_news: str = "gemini-3.5-flash"
+    model_summary: str = "gemini-3.5-flash"
+
     default_llm_temperature: float = 0.7
 
-    # Context Window Management (Portfolio Agent History)
-    # Limits per model name. Includes legacy qwen entries (still referenced by
-    # historical message metadata) and Claude models served via Maestro.
-    llm_context_limits: dict[str, int] = {
-        "qwen-plus": 100_000,
-        "qwen-plus-latest": 100_000,
-        "qwen-max": 30_000,
-        "qwen-max-latest": 30_000,
-        "qwen-turbo": 8_000,
-        "qwen-turbo-latest": 8_000,
-        "qwen-flash": 8_000,
-        "deepseek-chat": 64_000,
-        "claude-opus-4-7": 200_000,
-        "claude-sonnet-4-6": 200_000,
-        "claude-haiku-4-5": 200_000,
-    }
+    # Context window management
+    llm_context_limit: int = 200_000
     compact_threshold_ratio: float = 0.75
     compact_target_ratio: float = 0.25
     tail_messages_keep: int = 3
-    summarization_model: str = (
-        "claude-haiku-4-5"  # informational; routing via llm_factory
-    )
 
     # External APIs - Market Data
     # W7: All paid market-data keys removed. yfinance (free, no key) is the
@@ -107,8 +107,6 @@ class Settings(BaseSettings):
     )
 
     # Development mode settings
-    dev_bypass_email_verification: bool = False  # Skip actual email sending in dev mode
-    dev_bypass_verification_code: str = "888888"  # Fixed code for dev bypass (6-digit)
     dev_analysis_symbols: str = (
         ""  # Comma-separated symbols to analyze in dev mode (empty = all)
     )
@@ -122,9 +120,7 @@ class Settings(BaseSettings):
     cache_ttl_news: int = 3600  # News/sentiment (1 hour)
     cache_ttl_historical: int = 7200  # Historical data (2 hours)
     cache_ttl_fundamentals: int = 86400  # Company fundamentals (24 hours)
-    cache_ttl_insights: int = (
-        86400  # AI insights (24 hours - synced with daily CronJob)
-    )
+    cache_ttl_insights: int = 86400  # AI insights (24 hours)
 
     # Alpha Vantage Fundamentals Tool Limits
     fundamentals_max_quarterly_periods: int = (
@@ -146,9 +142,6 @@ class Settings(BaseSettings):
     token_budget_summary: int = 4000  # Context summarization
     token_warning_threshold: float = 0.8  # Warn at 80% of budget
 
-    # Kubernetes configuration
-    kubernetes_namespace: str = "default"  # K8s namespace for metrics collection
-
     # Portfolio Analysis settings
     portfolio_analysis_batch_size: int = 5  # Concurrent symbol analysis batch size
     portfolio_analysis_min_success_rate: float = (
@@ -166,11 +159,6 @@ class Settings(BaseSettings):
     def is_development(self) -> bool:
         """Check if running in development mode."""
         return self.environment == "development"
-
-    @property
-    def is_production(self) -> bool:
-        """Check if running in production mode."""
-        return self.environment == "production"
 
 
 @lru_cache

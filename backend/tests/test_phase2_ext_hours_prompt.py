@@ -39,9 +39,7 @@ def test_prompt_specifies_one_percent_materiality_threshold() -> None:
     drift' isn't confused with 'material gap'. ±1% matches the PRD."""
     src = _src()
     collapsed = " ".join(src.split())
-    has_threshold = (
-        "±1%" in collapsed or "1.0%" in collapsed or "± 1%" in collapsed
-    )
+    has_threshold = "±1%" in collapsed or "1.0%" in collapsed or "± 1%" in collapsed
     assert has_threshold, (
         "W3.18 rule must name an explicit materiality threshold (±1% per "
         "PRD) so the LLM doesn't flag every 5bps drift."

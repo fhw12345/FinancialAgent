@@ -13,7 +13,6 @@ from contextlib import asynccontextmanager
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -25,7 +24,6 @@ from .api.dependencies.rate_limit import limiter
 from .api.dependencies.timing_middleware import TimingMiddleware
 from .api.health import router as health_router
 from .api.insights import router as insights_router
-from .api.llm_models import router as llm_models_router
 from .api.market_data import router as market_data_router
 from .api.portfolio import router as portfolio_router
 from .api.portfolio_admin import router as portfolio_admin_router
@@ -47,7 +45,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan management for database connections."""
     settings = get_settings()
 
-    logger.info("Starting Financial Agent Backend", environment=settings.environment)
+    logger.info(
+        "Starting Financial Agent Backend",
+        environment=settings.environment,
+        llm_provider=settings.llm_provider,
+    )
 
     # Initialize database connections
     mongodb = MongoDB()
@@ -56,6 +58,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Initialize service variables before try block to ensure they're defined
     # in the finally block even if an early exception occurs
     market_service = None
+    data_manager = None
 
     try:
         await mongodb.connect(settings.mongodb_url)
@@ -121,10 +124,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await user_tx_repo.ensure_indexes()
         logger.info("User transaction indexes created")
 
-        # Initialize MCP tools for ReAct agent (if configured)
-        # This loads 118 Alpha Vantage tools via MCP protocol
+        # Initialize the shared local ReAct toolset.
         from .agent.langgraph_react_agent import FinancialAnalysisReActAgent
-        from .core.data.ticker_data_service import TickerDataService
         from .database.repositories.tool_execution_repository import (
             ToolExecutionRepository,
         )
@@ -137,11 +138,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         try:
             # Create agent instance (will be cached as singleton in dependency injection)
             market_service = AlphaVantageMarketDataService(settings=settings)
-            ticker_service = TickerDataService(
-                redis_cache=redis_cache,
-                alpha_vantage_service=market_service,
-            )
-
             # Initialize tool execution tracking
             tool_exec_collection = mongodb.get_collection("tool_executions")
             tool_exec_repo = ToolExecutionRepository(tool_exec_collection)
@@ -191,7 +187,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             # Create agent with tool cache wrapper and Redis for insights caching
             react_agent = FinancialAnalysisReActAgent(
                 settings=settings,
-                ticker_data_service=ticker_service,
                 market_service=market_service,
                 tool_cache_wrapper=tool_cache_wrapper,
                 redis_cache=redis_cache,  # Enable 30min caching for AI Sector Risk
@@ -217,7 +212,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                     react_agent=react_agent,
                     redis_cache=redis_cache,
                     market_service=market_service,
-                    trading_service=None,  # Alpaca removed in W5a
                 )
                 logger.info("PortfolioAnalysisAgent initialized for dashboard flows")
             except Exception as _pa_e:
@@ -245,7 +239,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             market_service=market_service,  # Pass Alpha Vantage service for price data
             settings=settings,  # Pass application settings for context management
             agent=react_agent,  # Pass agent for LLM-based analysis
-            trading_service=None,  # Alpaca trading removed; orders are suggestions only
             order_repository=order_repo,  # Pass order repository for MongoDB persistence
             data_manager=data_manager,  # Singleton DataManager for cached OHLCV access
         )
@@ -337,13 +330,6 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Security middleware - only in production
-    if settings.environment == "production":
-        app.add_middleware(
-            TrustedHostMiddleware,
-            allowed_hosts=settings.allowed_hosts,
-        )
-
     # CORS middleware for frontend communication
     app.add_middleware(
         CORSMiddleware,
@@ -428,7 +414,6 @@ def create_app() -> FastAPI:
     app.include_router(portfolio_router)  # Portfolio holdings management
     app.include_router(portfolio_admin_router)  # Two-button analysis + settings
     app.include_router(watchlist_router)  # Watchlist symbol tracking
-    app.include_router(llm_models_router)  # LLM model selection and pricing
     app.include_router(insights_router)  # Market Insights Platform
     app.include_router(translate_router)  # On-demand translation for LLM output
 

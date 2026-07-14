@@ -32,7 +32,6 @@ from src.agent.tools.finnhub.news import (
     create_finnhub_news_tool,
 )
 
-
 # ---------------------------------------------------------------------------
 # _news_source_id helper
 # ---------------------------------------------------------------------------
@@ -50,7 +49,9 @@ def test_news_source_id_alphavantage_prefix() -> None:
 
 def test_news_source_id_unknown_provider_uses_uppercased() -> None:
     asof = datetime(2026, 5, 9, tzinfo=UTC)
-    assert _news_source_id("custom_feed", "AAPL", asof) == "CUSTOM_FEED-N-AAPL-2026-05-09"
+    assert (
+        _news_source_id("custom_feed", "AAPL", asof) == "CUSTOM_FEED-N-AAPL-2026-05-09"
+    )
 
 
 # ---------------------------------------------------------------------------

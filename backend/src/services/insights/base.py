@@ -55,7 +55,7 @@ class InsightCategoryBase(ABC):
 
     # Default cache TTL for calculated metrics (uses settings.cache_ttl_insights)
     # This class attribute is kept for backward compatibility but settings takes precedence
-    CACHE_TTL_SECONDS: int = 86400  # 24 hours - synced with daily CronJob
+    CACHE_TTL_SECONDS: int = 86400
 
     def __init__(
         self,

@@ -263,13 +263,6 @@ function computeKpis(decisions: DecisionRow[]): Kpis {
   };
 }
 
-function fmtPct(v: number | null, opts: { signed?: boolean } = {}) {
-  if (v === null || Number.isNaN(v)) return "—";
-  const pct = v * (opts.signed === false ? 1 : 1); // pass-through
-  const sign = opts.signed && pct > 0 ? "+" : "";
-  return `${sign}${(pct * (opts.signed ? 1 : 100)).toFixed(opts.signed ? 2 : 0)}%`;
-}
-
 // hit rate is 0-1 → render as integer percent
 function fmtHit(v: number | null) {
   if (v === null) return "—";
@@ -577,17 +570,17 @@ function DecisionRows({
         </td>
         <td className="py-2 pr-3 text-gray-700 font-mono text-xs">
           {d.metadata?.entry_price != null
-            ? `$${(d.metadata.entry_price as number).toFixed(2)}`
+            ? `$${(d.metadata.entry_price).toFixed(2)}`
             : "—"}
         </td>
         <td className="py-2 pr-3 text-red-600 font-mono text-xs">
           {d.metadata?.stop_loss != null
-            ? `$${(d.metadata.stop_loss as number).toFixed(2)}`
+            ? `$${(d.metadata.stop_loss).toFixed(2)}`
             : "—"}
         </td>
         <td className="py-2 pr-3 text-green-600 font-mono text-xs">
           {d.metadata?.take_profit != null
-            ? `$${(d.metadata.take_profit as number).toFixed(2)}`
+            ? `$${(d.metadata.take_profit).toFixed(2)}`
             : "—"}
         </td>
         <td className="py-2 pr-3 text-gray-700 text-xs">
@@ -646,7 +639,7 @@ function DecisionRows({
               <Translated
                 text={reasoning}
                 precomputed={
-                  (d.metadata?.reasoning_zh as string | null | undefined) ??
+                  (d.metadata?.reasoning_zh) ??
                   null
                 }
               />
@@ -664,10 +657,7 @@ function DecisionRows({
                         symbol: d.symbol,
                         text: String(d.metadata?.full_research || ""),
                         text_zh:
-                          (d.metadata?.full_research_zh as
-                            | string
-                            | null
-                            | undefined) ?? null,
+                          (d.metadata?.full_research_zh) ?? null,
                       });
                     }}
                     className="inline-flex items-center gap-1 rounded border border-blue-300 bg-white px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
@@ -710,9 +700,9 @@ export function DecisionTracker() {
   const decisions = data?.decisions ?? [];
 
   const openMarkModal = (d: DecisionRow) => {
-    const entry = (d.metadata?.entry_price as number | null | undefined) ?? null;
+    const entry = (d.metadata?.entry_price) ?? null;
     const sizePct =
-      (d.metadata?.position_size_percent as number | null | undefined) ?? null;
+      (d.metadata?.position_size_percent) ?? null;
     const cash = settings?.cash_balance ?? 0;
     const px = entry ?? d.decision_price ?? 0;
     let qty = 0;
@@ -813,7 +803,7 @@ export function DecisionTracker() {
         )}
         {error && (
           <div className="text-sm text-red-600">
-            Failed to load decisions: {(error as Error).message}
+            Failed to load decisions: {(error).message}
           </div>
         )}
 
@@ -987,7 +977,7 @@ export function DecisionTracker() {
         <MarkExecutedModal
           state={markModal}
           isPending={markMut.isPending}
-          error={markMut.error as Error | null}
+          error={markMut.error}
           onClose={() => {
             setMarkModal(null);
             markMut.reset();
@@ -1064,7 +1054,7 @@ function MarkExecutedModal({
           <div className="text-xs text-gray-500">
             LLM suggested:{" "}
             {decision.metadata?.entry_price != null
-              ? `entry $${(decision.metadata.entry_price as number).toFixed(2)}`
+              ? `entry $${(decision.metadata.entry_price).toFixed(2)}`
               : "no entry price"}
             {decision.metadata?.position_size_percent != null
               ? ` · size ${decision.metadata.position_size_percent}%`

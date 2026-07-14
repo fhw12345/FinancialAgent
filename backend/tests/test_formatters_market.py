@@ -4,10 +4,7 @@ Unit tests for MarketFormatter.
 Tests news sentiment, market movers, insider transactions, and ETF profile formatting.
 """
 
-import pytest
-
 from src.services.formatters.market import MarketFormatter
-
 
 # ===== format_news_sentiment Tests =====
 
@@ -182,14 +179,34 @@ class TestFormatMarketMovers:
         """Test formatting with gainers, losers, and active"""
         raw_data = {
             "top_gainers": [
-                {"ticker": "AAPL", "price": "150.00", "change_percentage": "+5%", "volume": "10000000"},
-                {"ticker": "MSFT", "price": "300.00", "change_percentage": "+3%", "volume": "8000000"},
+                {
+                    "ticker": "AAPL",
+                    "price": "150.00",
+                    "change_percentage": "+5%",
+                    "volume": "10000000",
+                },
+                {
+                    "ticker": "MSFT",
+                    "price": "300.00",
+                    "change_percentage": "+3%",
+                    "volume": "8000000",
+                },
             ],
             "top_losers": [
-                {"ticker": "META", "price": "200.00", "change_percentage": "-4%", "volume": "5000000"},
+                {
+                    "ticker": "META",
+                    "price": "200.00",
+                    "change_percentage": "-4%",
+                    "volume": "5000000",
+                },
             ],
             "most_actively_traded": [
-                {"ticker": "TSLA", "price": "250.00", "change_percentage": "+1%", "volume": "20000000"},
+                {
+                    "ticker": "TSLA",
+                    "price": "250.00",
+                    "change_percentage": "+1%",
+                    "volume": "20000000",
+                },
             ],
         }
 
@@ -211,7 +228,12 @@ class TestFormatMarketMovers:
         """Test formatting with only gainers"""
         raw_data = {
             "top_gainers": [
-                {"ticker": "AAPL", "price": "150.00", "change_percentage": "+5%", "volume": "10000000"},
+                {
+                    "ticker": "AAPL",
+                    "price": "150.00",
+                    "change_percentage": "+5%",
+                    "volume": "10000000",
+                },
             ],
             "top_losers": [],
             "most_actively_traded": [],
@@ -242,7 +264,12 @@ class TestFormatMarketMovers:
         """Test volume is formatted in millions"""
         raw_data = {
             "top_gainers": [
-                {"ticker": "AAPL", "price": "150.00", "change_percentage": "+5%", "volume": "15000000"},
+                {
+                    "ticker": "AAPL",
+                    "price": "150.00",
+                    "change_percentage": "+5%",
+                    "volume": "15000000",
+                },
             ],
             "top_losers": [],
             "most_actively_traded": [],
@@ -259,7 +286,12 @@ class TestFormatMarketMovers:
         """Test that only top 5 are shown in each category"""
         raw_data = {
             "top_gainers": [
-                {"ticker": f"STOCK{i}", "price": "100.00", "change_percentage": "+1%", "volume": "1000000"}
+                {
+                    "ticker": f"STOCK{i}",
+                    "price": "100.00",
+                    "change_percentage": "+1%",
+                    "volume": "1000000",
+                }
                 for i in range(10)
             ],
             "top_losers": [],

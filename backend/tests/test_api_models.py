@@ -278,9 +278,9 @@ class TestStockFundamentalsValidation:
 
         # Verify dividend yield is reasonable
         assert response.dividend_yield == 0.41
-        assert 0 < response.dividend_yield < 10, (
-            f"Dividend yield {response.dividend_yield}% should be reasonable (0-10%)"
-        )
+        assert (
+            0 < response.dividend_yield < 10
+        ), f"Dividend yield {response.dividend_yield}% should be reasonable (0-10%)"
 
     def test_fundamentals_response_rejects_unrealistic_dividend_yield(self):
         """Test that unrealistic dividend yields are caught during validation."""

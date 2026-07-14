@@ -14,7 +14,7 @@ Usage:
     raise DatabaseError("Invalid database name: contains query parameters")
 
     # External API errors → 503 Service Unavailable
-    raise ExternalServiceError("Tencent SES timeout", service="tencent_ses")
+    raise ExternalServiceError("Agent Maestro timeout", service="maestro")
 """
 
 from typing import Any
@@ -61,20 +61,6 @@ class ValidationError(AppError):
 
     status_code = 400
     error_type = "validation_error"
-
-
-class AuthenticationError(AppError):
-    """Authentication failed (e.g., invalid credentials, expired token)."""
-
-    status_code = 401
-    error_type = "authentication_error"
-
-
-class AuthorizationError(AppError):
-    """User lacks permission for requested resource."""
-
-    status_code = 403
-    error_type = "authorization_error"
 
 
 class NotFoundError(AppError):
@@ -137,10 +123,9 @@ class ExternalServiceError(AppError):
     External service unavailable or returned error.
 
     Examples:
-        - Tencent SES API timeout
         - yfinance API rate limit
-        - Alibaba DashScope model error
-        - Azure Cosmos DB throttling
+        - Agent Maestro timeout
+        - Finnhub service error
 
     Maps to 503 Service Unavailable (third-party problem, retry may help).
     """

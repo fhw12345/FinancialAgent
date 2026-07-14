@@ -11,24 +11,16 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.api.dependencies.auth import get_current_user_id
 from src.api.market.status import MarketStatusResponse, router
-
 
 # ===== Test Client Setup =====
 
 
 @pytest.fixture
 def client():
-    """Create test client with mocked auth"""
+    """Create test client."""
     app = FastAPI()
     app.include_router(router, prefix="/market")
-
-    # Override auth dependency
-    async def mock_user():
-        return "user_123"
-
-    app.dependency_overrides[get_current_user_id] = mock_user
 
     return TestClient(app)
 

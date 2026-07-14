@@ -60,6 +60,7 @@ def _tx(
 # enrich_insider_rows
 # ---------------------------------------------------------------------------
 
+
 class TestEnrichInsiderRows:
     def test_no_form4_returns_shallow_copies(self) -> None:
         rows = [{"transactionDate": "2025-04-01", "share": 1000}]
@@ -77,8 +78,13 @@ class TestEnrichInsiderRows:
     def test_matched_row_merges_plan_and_holdings(self) -> None:
         rows = [{"transactionDate": "2025-04-01", "share": 1000}]
         txs = [
-            _tx(date(2025, 4, 1), 1000.0, plan=PLAN_TYPE_10B5_1, after=100_000.0,
-                adopted=date(2024, 12, 15))
+            _tx(
+                date(2025, 4, 1),
+                1000.0,
+                plan=PLAN_TYPE_10B5_1,
+                after=100_000.0,
+                adopted=date(2024, 12, 15),
+            )
         ]
         out = enrich_insider_rows(rows, txs)
         r = out[0]
@@ -147,6 +153,7 @@ class TestEnrichInsiderRows:
 # compute_pct_of_holdings_after
 # ---------------------------------------------------------------------------
 
+
 class TestPctOfHoldingsAfter:
     def test_happy_path(self) -> None:
         row = {"share": 5000, "shares_owned_after": 100_000}
@@ -181,6 +188,7 @@ class TestPctOfHoldingsAfter:
 # Last12moSummary + build_last_12mo_summary
 # ---------------------------------------------------------------------------
 
+
 class TestLast12moSummary:
     def test_empty_renders_no_transactions(self) -> None:
         s = Last12moSummary(transaction_count=0, plan_breakdown={}, total_shares=0.0)
@@ -201,10 +209,10 @@ class TestLast12moSummary:
     def test_window_includes_anchor_and_excludes_pre_cutoff(self) -> None:
         anchor = date(2026, 5, 1)
         txs = [
-            _tx(date(2026, 5, 1), 100.0),                      # anchor
-            _tx(date(2026, 4, 30), 200.0),                     # 1 day inside
-            _tx(date(2025, 5, 2), 300.0),                      # at cutoff edge
-            _tx(anchor.replace(year=2024), 999.0),             # 2 yrs prior — out
+            _tx(date(2026, 5, 1), 100.0),  # anchor
+            _tx(date(2026, 4, 30), 200.0),  # 1 day inside
+            _tx(date(2025, 5, 2), 300.0),  # at cutoff edge
+            _tx(anchor.replace(year=2024), 999.0),  # 2 yrs prior — out
         ]
         s = build_last_12mo_summary(txs, anchor_date=anchor)
         assert s.transaction_count == 3
@@ -253,6 +261,7 @@ class TestLast12moSummary:
 # ---------------------------------------------------------------------------
 # render_enriched_row
 # ---------------------------------------------------------------------------
+
 
 class TestRenderEnrichedRow:
     def test_pre_enrichment_baseline(self) -> None:
@@ -303,8 +312,12 @@ class TestRenderEnrichedRow:
         assert "plan=discretionary" in out
 
     def test_alpha_vantage_shape(self) -> None:
-        row = {"Date": "2025-04-01", "Insider": "Smith John", "Shares": 2500,
-               "Transaction": "Sale"}
+        row = {
+            "Date": "2025-04-01",
+            "Insider": "Smith John",
+            "Shares": 2500,
+            "Transaction": "Sale",
+        }
         out = render_enriched_row(row)
         assert "Smith John" in out
         assert "2025-04-01" in out

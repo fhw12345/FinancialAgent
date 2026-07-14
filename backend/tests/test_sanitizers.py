@@ -4,15 +4,12 @@ Unit tests for shared sanitizers.
 Tests text sanitization for API keys, passwords, and other sensitive data.
 """
 
-import pytest
-
 from src.shared.sanitizers import (
     is_sensitive_field,
     sanitize_api_response,
     sanitize_exception_message,
     sanitize_text,
 )
-
 
 # ===== sanitize_text Tests =====
 

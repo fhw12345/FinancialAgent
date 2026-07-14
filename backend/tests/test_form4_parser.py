@@ -44,33 +44,45 @@ from src.agent.tools.sec_edgar.form4 import (
 
 
 def test_classify_plan_type_recognizes_canonical_10b5_1_phrasing() -> None:
-    assert classify_plan_type(
-        "Sale executed under a Rule 10b5-1 plan adopted on March 1, 2024."
-    ) == PLAN_TYPE_10B5_1
+    assert (
+        classify_plan_type(
+            "Sale executed under a Rule 10b5-1 plan adopted on March 1, 2024."
+        )
+        == PLAN_TYPE_10B5_1
+    )
 
 
 def test_classify_plan_type_handles_unhyphenated_10b5_1() -> None:
-    assert classify_plan_type(
-        "Pursuant to a Rule 10b5 1 trading plan dated 2024-03-01."
-    ) == PLAN_TYPE_10B5_1
+    assert (
+        classify_plan_type("Pursuant to a Rule 10b5 1 trading plan dated 2024-03-01.")
+        == PLAN_TYPE_10B5_1
+    )
 
 
 def test_classify_plan_type_explicit_discretionary_overrides_10b5() -> None:
     """Real filings sometimes spell out BOTH phrases ('not pursuant
     to a Rule 10b5-1') and the discretionary signal must win."""
-    assert classify_plan_type(
-        "This transaction was not pursuant to a Rule 10b5-1 trading plan."
-    ) == PLAN_TYPE_DISCRETIONARY
+    assert (
+        classify_plan_type(
+            "This transaction was not pursuant to a Rule 10b5-1 trading plan."
+        )
+        == PLAN_TYPE_DISCRETIONARY
+    )
 
 
 def test_classify_plan_type_recognizes_bare_discretionary() -> None:
-    assert classify_plan_type(
-        "Sale executed at the reporting person's discretionary direction."
-    ) == PLAN_TYPE_DISCRETIONARY
+    assert (
+        classify_plan_type(
+            "Sale executed at the reporting person's discretionary direction."
+        )
+        == PLAN_TYPE_DISCRETIONARY
+    )
 
 
 def test_classify_plan_type_returns_unknown_when_text_is_silent() -> None:
-    assert classify_plan_type("Bona fide gift to a charitable trust.") == PLAN_TYPE_UNKNOWN
+    assert (
+        classify_plan_type("Bona fide gift to a charitable trust.") == PLAN_TYPE_UNKNOWN
+    )
     assert classify_plan_type("") == PLAN_TYPE_UNKNOWN
     assert classify_plan_type("    ") == PLAN_TYPE_UNKNOWN
 
@@ -81,9 +93,9 @@ def test_classify_plan_type_returns_unknown_when_text_is_silent() -> None:
 
 
 def test_extract_plan_adopted_date_iso_form() -> None:
-    assert extract_plan_adopted_date(
-        "10b5-1 plan adopted 2024-03-01."
-    ) == date(2024, 3, 1)
+    assert extract_plan_adopted_date("10b5-1 plan adopted 2024-03-01.") == date(
+        2024, 3, 1
+    )
 
 
 def test_extract_plan_adopted_date_prose_form() -> None:
@@ -91,9 +103,7 @@ def test_extract_plan_adopted_date_prose_form() -> None:
         "Plan adopted on March 1, 2024 by the reporting person."
     ) == date(2024, 3, 1)
     # Day without comma is also valid shape.
-    assert extract_plan_adopted_date(
-        "Adopted September 12 2025"
-    ) == date(2025, 9, 12)
+    assert extract_plan_adopted_date("Adopted September 12 2025") == date(2025, 9, 12)
 
 
 def test_extract_plan_adopted_date_us_numeric_form() -> None:
@@ -312,18 +322,26 @@ def _build_handler():
     """Mock SEC: ticker map, atom feed, two filing-detail XMLs."""
 
     detail_a = _FORM4_DETAIL_10B5_1
-    detail_b = _FORM4_DETAIL_DISCRETIONARY.replace("NVDA", "AAPL")  # 2nd filing for AAPL
+    detail_b = _FORM4_DETAIL_DISCRETIONARY.replace(
+        "NVDA", "AAPL"
+    )  # 2nd filing for AAPL
 
     def handler(request: httpx.Request) -> httpx.Response:
         url = str(request.url)
         if url == TICKER_MAP_URL:
             return httpx.Response(200, json=_TICKER_MAP_BODY)
         if "browse-edgar" in url:
-            return httpx.Response(200, text=_ATOM_FEED, headers={"Content-Type": "application/atom+xml"})
+            return httpx.Response(
+                200, text=_ATOM_FEED, headers={"Content-Type": "application/atom+xml"}
+            )
         if url.endswith("0000320193-26-000123.xml"):
-            return httpx.Response(200, text=detail_a, headers={"Content-Type": "application/xml"})
+            return httpx.Response(
+                200, text=detail_a, headers={"Content-Type": "application/xml"}
+            )
         if url.endswith("0000320193-26-000124.xml"):
-            return httpx.Response(200, text=detail_b, headers={"Content-Type": "application/xml"})
+            return httpx.Response(
+                200, text=detail_b, headers={"Content-Type": "application/xml"}
+            )
         return httpx.Response(404, text="not mocked")
 
     return handler
@@ -389,9 +407,7 @@ async def test_resolve_form4_doc_url_picks_xml_from_manifest() -> None:
     rather than rely on the suffix-swap fallback."""
     from src.agent.tools.sec_edgar.form4 import _resolve_form4_doc_url
 
-    folder = (
-        "https://www.sec.gov/Archives/edgar/data/1045810/000119903926000003/"
-    )
+    folder = "https://www.sec.gov/Archives/edgar/data/1045810/000119903926000003/"
     index_url = folder + "0001199039-26-000003-index.htm"
     manifest = {
         "directory": {

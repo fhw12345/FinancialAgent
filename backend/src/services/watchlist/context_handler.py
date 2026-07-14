@@ -60,10 +60,7 @@ class ContextHandler:
             )
 
             # Check if compaction is needed (> 50% of context limit)
-            model = getattr(self.settings, "default_llm_model", "qwen-plus")
-            should_compact = self.context_manager.should_compact(
-                total_tokens, model=model
-            )
+            should_compact = self.context_manager.should_compact(total_tokens)
 
             if should_compact:
                 logger.info(

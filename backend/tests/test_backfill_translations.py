@@ -9,6 +9,8 @@ import pytest_asyncio
 
 from scripts.backfill_translations import backfill_collection
 
+pytestmark = pytest.mark.integration
+
 
 @pytest_asyncio.fixture
 async def messages_collection():

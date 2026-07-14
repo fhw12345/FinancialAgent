@@ -7,7 +7,6 @@ The tests require updates to work with the current service architecture.
 This file is kept for reference but contains no active tests.
 """
 
-
 # All test classes have been removed - they were marked with:
 # @pytest.mark.skip(reason="Service changes - requires test updates")
 #

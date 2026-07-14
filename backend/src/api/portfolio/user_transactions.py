@@ -26,9 +26,9 @@ from ...services.holdings_ledger import (
     OversellError,
     apply_transaction,
 )
-from ..dependencies.auth import get_mongodb
 from ..dependencies.portfolio_deps import get_holding_repository
 from ..dependencies.rate_limit import limiter
+from ..dependencies.storage import get_mongodb
 
 logger = structlog.get_logger()
 

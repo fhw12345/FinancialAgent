@@ -30,12 +30,12 @@ class OrderOptimizer(OrderOptimizerBase):
     Responsibilities:
     1. Convert TradingDecisions from Phase 2 into OrderExecutionPlan
     2. Calculate share quantities and apply liquidity constraints
-    3. Execute orders (SELLs first for liquidity, then scaled BUYs)
+    3. Persist suggestions (SELLs first for liquidity, then scaled BUYs)
 
     This class combines functionality from:
     - OrderOptimizerBase: Initialization and dependency management
     - PlanBuilder: Building execution plans from trading decisions
-    - OrderExecutor: Executing orders via trading service
+    - OrderExecutor: Persisting order suggestions
     """
 
     async def optimize_trading_decisions(
@@ -77,9 +77,9 @@ class OrderOptimizer(OrderOptimizerBase):
         analysis_results: list[SymbolAnalysisResult],
     ) -> dict[str, Any]:
         """
-        Execute the optimized order plan via Alpaca trading service.
+        Persist the optimized order plan as local suggestions.
 
-        Orders are executed in priority order (SELLs first, then BUYs).
+        Suggestions are stored in priority order (SELLs first, then BUYs).
         Database persistence is batched for efficiency.
 
         Args:
@@ -91,7 +91,6 @@ class OrderOptimizer(OrderOptimizerBase):
             Execution summary with success/failure counts
         """
         executor = OrderExecutor(
-            trading_service=self.trading_service,
             order_repo=self.order_repo,
             message_repo=self.message_repo,
         )

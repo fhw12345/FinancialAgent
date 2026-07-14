@@ -1,7 +1,7 @@
 """
 Token usage extraction utilities for LangChain messages.
 
-Handles multiple message formats from different LLM providers (DashScope, OpenAI, etc.).
+Handles current LangChain usage metadata and generic response fallbacks.
 """
 
 from typing import Any
@@ -13,8 +13,8 @@ def extract_token_usage_from_messages(messages: list[Any]) -> tuple[int, int, in
 
     Supports multiple metadata formats:
     - usage_metadata (newer LangChain format)
-    - response_metadata.token_usage (DashScope/Tongyi format)
-    - response_metadata.usage (OpenAI format)
+    - response_metadata.token_usage
+    - response_metadata.usage
 
     Args:
         messages: List of LangChain message objects (AIMessage, HumanMessage, etc.)
@@ -44,14 +44,10 @@ def extract_token_usage_from_messages(messages: list[Any]) -> tuple[int, int, in
 
         # Fallback to response_metadata (provider-specific formats)
         elif hasattr(msg, "response_metadata") and msg.response_metadata:
-            # Try DashScope/Tongyi format first (token_usage)
-            # Then OpenAI format (usage)
             usage = msg.response_metadata.get(
                 "token_usage"
             ) or msg.response_metadata.get("usage", {})
 
-            # DashScope uses input_tokens/output_tokens
-            # OpenAI uses prompt_tokens/completion_tokens
             total_input_tokens += usage.get("input_tokens", 0) or usage.get(
                 "prompt_tokens", 0
             )

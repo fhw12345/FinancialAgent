@@ -9,7 +9,7 @@ Tests chat and message management with mocked repositories:
 - Symbol-based chat lookup
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -18,7 +18,6 @@ from src.core.exceptions import NotFoundError, ValidationError
 from src.models.chat import Chat, UIState
 from src.models.message import Message, MessageMetadata
 from src.services.chat_service import ChatService
-
 
 # ===== Fixtures =====
 
@@ -69,8 +68,8 @@ def sample_chat():
         user_id="user_456",
         title="Test Chat",
         ui_state=UIState(current_symbol="AAPL"),
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
 
 
@@ -84,7 +83,7 @@ def sample_message():
         content="Test message content",
         source="user",
         metadata=MessageMetadata(),
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
 
 
@@ -95,9 +94,7 @@ class TestCreateChat:
     """Test chat creation"""
 
     @pytest.mark.asyncio
-    async def test_create_chat_success(
-        self, chat_service, mock_chat_repo, sample_chat
-    ):
+    async def test_create_chat_success(self, chat_service, mock_chat_repo, sample_chat):
         """Test successful chat creation"""
         mock_chat_repo.create.return_value = sample_chat
 
@@ -143,6 +140,7 @@ class TestGetChat:
         with pytest.raises(NotFoundError):
             await chat_service.get_chat("nonexistent", "user_456")
 
+
 # ===== list_user_chats Tests =====
 
 
@@ -183,7 +181,12 @@ class TestAddMessage:
 
     @pytest.mark.asyncio
     async def test_add_message_success(
-        self, chat_service, mock_chat_repo, mock_message_repo, sample_chat, sample_message
+        self,
+        chat_service,
+        mock_chat_repo,
+        mock_message_repo,
+        sample_chat,
+        sample_message,
     ):
         """Test successful message addition"""
         mock_chat_repo.get.return_value = sample_chat
@@ -204,7 +207,12 @@ class TestAddMessage:
 
     @pytest.mark.asyncio
     async def test_add_message_with_dict_metadata(
-        self, chat_service, mock_chat_repo, mock_message_repo, sample_chat, sample_message
+        self,
+        chat_service,
+        mock_chat_repo,
+        mock_message_repo,
+        sample_chat,
+        sample_message,
     ):
         """Test adding message with dict metadata containing analysis data"""
         mock_chat_repo.get.return_value = sample_chat
@@ -234,7 +242,12 @@ class TestGetChatMessages:
 
     @pytest.mark.asyncio
     async def test_get_chat_messages_success(
-        self, chat_service, mock_chat_repo, mock_message_repo, sample_chat, sample_message
+        self,
+        chat_service,
+        mock_chat_repo,
+        mock_message_repo,
+        sample_chat,
+        sample_message,
     ):
         """Test successful message retrieval"""
         mock_chat_repo.get.return_value = sample_chat

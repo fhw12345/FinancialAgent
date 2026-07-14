@@ -25,7 +25,6 @@ from src.agent.tools.finnhub.insider import (
     create_finnhub_insider_tool,
 )
 
-
 # ---------------------------------------------------------------------------
 # _insider_source_id helper
 # ---------------------------------------------------------------------------
@@ -58,7 +57,10 @@ def test_insider_source_id_unknown_provider_uses_uppercased() -> None:
 
 def test_row_date_str_picks_first_present_key() -> None:
     # Finnhub-shape
-    assert _row_date_str({"transactionDate": "2026-05-09", "filingDate": "2026-05-10"}) == "2026-05-09"
+    assert (
+        _row_date_str({"transactionDate": "2026-05-09", "filingDate": "2026-05-10"})
+        == "2026-05-09"
+    )
     # AV-shape (no transactionDate, falls through to filingDate)
     assert _row_date_str({"filingDate": "2026-05-09"}) == "2026-05-09"
     # yfinance DataFrame.to_dict shape

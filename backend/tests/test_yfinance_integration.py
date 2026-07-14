@@ -119,9 +119,9 @@ class TestYfinanceAPIIntegration:
                 # Verify data structure
                 expected_columns = ["Open", "High", "Low", "Close", "Volume"]
                 for col in expected_columns:
-                    assert col in data.columns, (
-                        f"Missing column '{col}' in yfinance data"
-                    )
+                    assert (
+                        col in data.columns
+                    ), f"Missing column '{col}' in yfinance data"
 
                 # Verify the correct interval was passed to yfinance
                 mock_ticker.history.assert_called_with(
@@ -251,9 +251,9 @@ class TestYfinanceAPIIntegration:
             has_data = not data.empty
 
             if should_have_data:
-                assert has_data, (
-                    f"Symbol '{symbol}' should have data but returned empty"
-                )
+                assert (
+                    has_data
+                ), f"Symbol '{symbol}' should have data but returned empty"
             # Note: Invalid symbols may or may not return data depending on yfinance behavior
             # We test our handling rather than yfinance's specific responses
 
@@ -299,19 +299,19 @@ class TestYfinanceDataValidation:
             # Test data types
             numeric_columns = ["Open", "High", "Low", "Close", "Volume"]
             for col in numeric_columns:
-                assert pd.api.types.is_numeric_dtype(data[col]), (
-                    f"Column '{col}' should be numeric, got {data[col].dtype}"
-                )
+                assert pd.api.types.is_numeric_dtype(
+                    data[col]
+                ), f"Column '{col}' should be numeric, got {data[col].dtype}"
 
             # Test logical price relationships
             for idx in data.index:
                 row = data.loc[idx]
-                assert row["Low"] <= row["High"], (
-                    f"Low price should be <= High price at {idx}"
-                )
-                assert row["Low"] <= row["Close"] <= row["High"], (
-                    f"Close price should be between Low and High at {idx}"
-                )
+                assert (
+                    row["Low"] <= row["High"]
+                ), f"Low price should be <= High price at {idx}"
+                assert (
+                    row["Low"] <= row["Close"] <= row["High"]
+                ), f"Close price should be between Low and High at {idx}"
 
     @patch("yfinance.Ticker")
     def test_dividend_yield_data_format(self, mock_ticker_class):
@@ -338,9 +338,9 @@ class TestYfinanceDataValidation:
             dividend_yield = info["dividendYield"]
 
             # Test that yfinance returns numeric values
-            assert isinstance(dividend_yield, int | float), (
-                "Dividend yield should be numeric"
-            )
+            assert isinstance(
+                dividend_yield, int | float
+            ), "Dividend yield should be numeric"
 
             # Test decimal format (0.0047 for 0.47%, not 0.47 directly)
             assert 0 <= dividend_yield <= 1, (

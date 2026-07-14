@@ -21,7 +21,6 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.api.dependencies.auth import require_admin
 from src.api.watchlist import router
 from src.models.watchlist import WatchlistItem
 
@@ -29,14 +28,15 @@ from src.models.watchlist import WatchlistItem
 def _make_app(*, mongo: MagicMock | None) -> FastAPI:
     app = FastAPI()
     app.include_router(router)
-    app.dependency_overrides[require_admin] = lambda: None
     app.state.mongodb = mongo
     return app
 
 
 @pytest.fixture
 def patched_run_single_symbol():
-    with patch("src.agent.portfolio.flows.run_single_symbol", new_callable=AsyncMock) as m:
+    with patch(
+        "src.agent.portfolio.flows.run_single_symbol", new_callable=AsyncMock
+    ) as m:
         yield m
 
 

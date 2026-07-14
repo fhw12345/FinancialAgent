@@ -41,7 +41,7 @@ logger = structlog.get_logger()
 
 CACHE_TTL_SECONDS = 86_400  # 1 day
 CACHE_KEY_PREFIX = "llm_translation"
-TRANSLATION_ROLE = "verdict"  # routes to claude-opus-4.7-xhigh via llm_factory
+TRANSLATION_ROLE = "verdict"  # routes to the configured high-quality verdict model
 
 # Sentinel separating translated passages in the model's raw response.
 # Replaces the previous JSON-array protocol — JSON parsing was choking on

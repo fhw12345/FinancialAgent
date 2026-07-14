@@ -14,7 +14,7 @@ from slowapi.util import get_remote_address
 from ...database.mongodb import MongoDB
 from ...database.redis import RedisCache
 from ...services.insights import InsightsCategoryRegistry, InsightsSnapshotService
-from ..dependencies.auth import get_mongodb, get_redis_cache
+from ..dependencies.storage import get_mongodb, get_redis_cache
 from ..schemas.insights_models import (
     CategoriesListResponse,
     CategoryMetadataResponse,

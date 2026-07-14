@@ -86,7 +86,6 @@ async def stream_with_simple_agent(
                 chat_id=chat_id,
                 context_manager=context_manager,
                 message_repo=message_repo,
-                model=request.model,
             )
 
             # ===== SYMBOL CONTEXT INJECTION =====
@@ -122,9 +121,6 @@ async def stream_with_simple_agent(
                     nonlocal full_response
                     async for chunk in agent.stream_chat(
                         messages=conversation_history,
-                        model=request.model,
-                        thinking_enabled=request.thinking_enabled,
-                        max_tokens=request.max_tokens,
                     ):
                         full_response += chunk
                         yield create_chunk_event(chunk)
@@ -162,7 +158,7 @@ async def stream_with_simple_agent(
                 return
 
             # Get token usage from agent (best-effort, for telemetry only)
-            token_usage = agent.get_last_token_usage(model=request.model)
+            token_usage = agent.get_last_token_usage()
 
             # Save assistant message
             await chat_service.add_message(
@@ -172,7 +168,7 @@ async def stream_with_simple_agent(
                 content=full_response,
                 source="llm",
                 metadata=MessageMetadata(
-                    model=request.model,
+                    model="simple_chat",
                     tokens=token_usage.total_tokens if token_usage else 0,
                     input_tokens=token_usage.input_tokens if token_usage else 0,
                     output_tokens=token_usage.output_tokens if token_usage else 0,

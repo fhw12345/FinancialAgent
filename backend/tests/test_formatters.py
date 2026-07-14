@@ -4,8 +4,6 @@ Unit tests for formatters module.
 Tests number formatting, type conversion, and display helpers.
 """
 
-import pytest
-
 from src.shared.formatters import (
     calculate_qoq_growth,
     format_large_number,
@@ -14,7 +12,6 @@ from src.shared.formatters import (
     safe_float,
     safe_int,
 )
-
 
 # ===== safe_float Tests =====
 

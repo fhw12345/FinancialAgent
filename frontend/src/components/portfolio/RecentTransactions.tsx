@@ -106,7 +106,7 @@ export function RecentTransactions() {
       )}
       {error && (
         <div className="text-sm text-red-600">
-          Failed to load: {(error as Error).message}
+          Failed to load: {(error).message}
         </div>
       )}
 

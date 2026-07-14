@@ -26,8 +26,8 @@ from ..models.portfolio_analysis import (
     PortfolioSettings,
     PortfolioSettingsUpdate,
 )
-from .dependencies.auth import get_mongodb
 from .dependencies.rate_limit import limiter
+from .dependencies.storage import get_mongodb
 
 logger = structlog.get_logger()
 

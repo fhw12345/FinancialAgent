@@ -34,7 +34,7 @@ _CJK_MIN_RATIO = 0.01  # 1% of non-space characters
 def _is_already_cjk(text: str) -> bool:
     """Return True if `text` is already Chinese/CJK and must not be re-translated.
 
-    Defense-in-depth guard against the DashScope reverse-translation bug
+    Defense-in-depth guard against reverse-translation regressions
     that emits English when handed already-Chinese text labelled as
     `source_lang=auto, target_lang=zh-CN`. Counts code points in CJK
     Unified Ideographs (U+4E00..U+9FFF) and Extension A (U+3400..U+4DBF).
@@ -70,7 +70,7 @@ async def translate_for_persistence(
 
     Empty / whitespace-only fields short-circuit to None without an LLM call.
     Fields already containing CJK text are skipped (no `_zh` sibling is
-    written) so DashScope cannot reverse-translate them back to English.
+    written) so the translator cannot reverse them back to English.
     On any exception during translation, every {field}_zh value is None.
     The caller is expected to merge the result into its document dict.
     """

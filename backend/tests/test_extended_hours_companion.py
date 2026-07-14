@@ -15,7 +15,6 @@ import pytest
 
 from src.services.data_manager.manager import _extended_hours_companion
 
-
 NOW = datetime(2026, 5, 9, 12, 0, tzinfo=UTC)  # Saturday noon UTC
 
 
@@ -31,8 +30,11 @@ class TestPrimarySessionGate:
         }
         assert (
             _extended_hours_companion(
-                info, primary_session="pre", primary_price=214.80,
-                previous_close=215.20, now=NOW,
+                info,
+                primary_session="pre",
+                primary_price=214.80,
+                previous_close=215.20,
+                now=NOW,
             )
             is None
         ), "primary IS the ext-hours print during pre — companion redundant"
@@ -44,8 +46,11 @@ class TestPrimarySessionGate:
         }
         assert (
             _extended_hours_companion(
-                info, primary_session="post", primary_price=215.05,
-                previous_close=215.20, now=NOW,
+                info,
+                primary_session="post",
+                primary_price=215.05,
+                previous_close=215.20,
+                now=NOW,
             )
             is None
         )
@@ -58,8 +63,11 @@ class TestPrimarySessionGate:
             "preMarketTime": _epoch(NOW - timedelta(hours=4)),
         }
         result = _extended_hours_companion(
-            info, primary_session="regular", primary_price=215.20,
-            previous_close=213.10, now=NOW,
+            info,
+            primary_session="regular",
+            primary_price=215.20,
+            previous_close=213.10,
+            now=NOW,
         )
         assert result is not None
         price, session, _pct, _asof = result
@@ -73,8 +81,11 @@ class TestFreshnessGate:
         post_ts = NOW - timedelta(hours=17)
         info = {"postMarketPrice": 215.05, "postMarketTime": _epoch(post_ts)}
         result = _extended_hours_companion(
-            info, primary_session="closed", primary_price=215.20,
-            previous_close=213.10, now=NOW,
+            info,
+            primary_session="closed",
+            primary_price=215.20,
+            previous_close=213.10,
+            now=NOW,
         )
         assert result is not None
         assert result[1] == "post"
@@ -85,8 +96,11 @@ class TestFreshnessGate:
         info = {"postMarketPrice": 215.05, "postMarketTime": _epoch(post_ts)}
         assert (
             _extended_hours_companion(
-                info, primary_session="closed", primary_price=215.20,
-                previous_close=213.10, now=NOW,
+                info,
+                primary_session="closed",
+                primary_price=215.20,
+                previous_close=213.10,
+                now=NOW,
             )
             is None
         )
@@ -95,8 +109,11 @@ class TestFreshnessGate:
         pre_ts = NOW - timedelta(hours=4)
         info = {"preMarketPrice": 214.80, "preMarketTime": _epoch(pre_ts)}
         result = _extended_hours_companion(
-            info, primary_session="regular", primary_price=215.20,
-            previous_close=213.10, now=NOW,
+            info,
+            primary_session="regular",
+            primary_price=215.20,
+            previous_close=213.10,
+            now=NOW,
         )
         assert result is not None
         assert result[1] == "pre"
@@ -106,8 +123,11 @@ class TestFreshnessGate:
         info = {"preMarketPrice": 214.80, "preMarketTime": _epoch(pre_ts)}
         assert (
             _extended_hours_companion(
-                info, primary_session="regular", primary_price=215.20,
-                previous_close=213.10, now=NOW,
+                info,
+                primary_session="regular",
+                primary_price=215.20,
+                previous_close=213.10,
+                now=NOW,
             )
             is None
         )
@@ -124,8 +144,11 @@ class TestPriceComputation:
             "postMarketTime": _epoch(NOW - timedelta(hours=17)),
         }
         result = _extended_hours_companion(
-            info, primary_session="closed", primary_price=215.20,
-            previous_close=213.10, now=NOW,
+            info,
+            primary_session="closed",
+            primary_price=215.20,
+            previous_close=213.10,
+            now=NOW,
         )
         assert result is not None
         _price, _session, pct, _asof = result
@@ -140,8 +163,11 @@ class TestPriceComputation:
         }
         assert (
             _extended_hours_companion(
-                info, primary_session="closed", primary_price=0.0,
-                previous_close=213.10, now=NOW,
+                info,
+                primary_session="closed",
+                primary_price=0.0,
+                previous_close=213.10,
+                now=NOW,
             )
             is None
         )
@@ -150,8 +176,11 @@ class TestPriceComputation:
         post_ts = NOW - timedelta(hours=17)
         info = {"postMarketPrice": 215.05, "postMarketTime": _epoch(post_ts)}
         result = _extended_hours_companion(
-            info, primary_session="closed", primary_price=215.20,
-            previous_close=213.10, now=NOW,
+            info,
+            primary_session="closed",
+            primary_price=215.20,
+            previous_close=213.10,
+            now=NOW,
         )
         assert result is not None
         _p, _s, _pct, asof = result
@@ -163,8 +192,11 @@ class TestEdgeCases:
     def test_none_info_returns_none(self) -> None:
         assert (
             _extended_hours_companion(
-                None, primary_session="closed", primary_price=215.20,
-                previous_close=213.10, now=NOW,
+                None,
+                primary_session="closed",
+                primary_price=215.20,
+                previous_close=213.10,
+                now=NOW,
             )
             is None
         )
@@ -172,8 +204,11 @@ class TestEdgeCases:
     def test_empty_info_returns_none(self) -> None:
         assert (
             _extended_hours_companion(
-                {}, primary_session="closed", primary_price=215.20,
-                previous_close=213.10, now=NOW,
+                {},
+                primary_session="closed",
+                primary_price=215.20,
+                previous_close=213.10,
+                now=NOW,
             )
             is None
         )
@@ -186,8 +221,11 @@ class TestEdgeCases:
         }
         assert (
             _extended_hours_companion(
-                info, primary_session="closed", primary_price=215.20,
-                previous_close=213.10, now=NOW,
+                info,
+                primary_session="closed",
+                primary_price=215.20,
+                previous_close=213.10,
+                now=NOW,
             )
             is None
         )
@@ -196,8 +234,11 @@ class TestEdgeCases:
         info = {"postMarketPrice": 215.05}  # no postMarketTime
         assert (
             _extended_hours_companion(
-                info, primary_session="closed", primary_price=215.20,
-                previous_close=213.10, now=NOW,
+                info,
+                primary_session="closed",
+                primary_price=215.20,
+                previous_close=213.10,
+                now=NOW,
             )
             is None
         )
@@ -209,8 +250,11 @@ class TestEdgeCases:
         }
         assert (
             _extended_hours_companion(
-                info, primary_session="closed", primary_price=215.20,
-                previous_close=213.10, now=NOW,
+                info,
+                primary_session="closed",
+                primary_price=215.20,
+                previous_close=213.10,
+                now=NOW,
             )
             is None
         )
@@ -226,8 +270,11 @@ class TestEdgeCases:
             "preMarketTime": _epoch(pre_ts),
         }
         result = _extended_hours_companion(
-            info, primary_session="regular", primary_price=215.20,
-            previous_close=213.10, now=NOW,
+            info,
+            primary_session="regular",
+            primary_price=215.20,
+            previous_close=213.10,
+            now=NOW,
         )
         assert result is not None
         assert result[1] == "pre"  # pre is more recent

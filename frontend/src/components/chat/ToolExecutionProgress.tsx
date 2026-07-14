@@ -38,12 +38,10 @@ const DEFAULT_TOOL_METADATA: Record<string, { displayName: string; icon: string 
 };
 
 export function ToolExecutionProgress({
-  toolName,
   displayName,
   icon,
   status,
   symbol,
-  inputs,
   output,
   error,
   durationMs,

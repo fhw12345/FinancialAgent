@@ -2,7 +2,7 @@
 Generic caching utilities for tool execution.
 
 Provides consistent cache key generation and TTL strategies
-for both 1st-party and 3rd-party (MCP) tools.
+for all registered agent tools.
 """
 
 
@@ -228,7 +228,6 @@ def get_tool_ttl(tool_name: str, interval: str | None = None) -> int:
 # Free tier: 25 calls/day, cost = $0/month
 # Estimated cost per call if paying: $49.99/month for 75 calls/min = ~$0.00004/call
 ALPHA_VANTAGE_FREE_TIER_CALL_COST = 0.00004  # Estimated value for tracking only
-ALPACA_PAPER_TRADING_CALL_COST = 0.0  # Paper trading is FREE
 
 
 def get_api_cost(tool_source: str, tool_name: str) -> float:

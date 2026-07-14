@@ -2,10 +2,7 @@
  * Portfolio Dashboard.
  *
  * Header (total market value + P/L) → holdings table → settings/analysis →
- * watchlist. The legacy Robinhood-style price chart was removed (v0.21.0):
- * with Alpaca gone we couldn't compute a true historical equity curve, and
- * the synthesized "current holdings × past prices" version was misleading.
- * Sidebar still shows portfolio agent's analysis history.
+ * watchlist. The sidebar shows portfolio-agent analysis history.
  */
 
 import { useCallback, useState } from "react";
@@ -20,7 +17,7 @@ import { usePortfolioChatDetail } from "../hooks/usePortfolioChatDetail";
 import { PortfolioSummaryTable } from "../components/portfolio/PortfolioSummaryTable";
 import { ResizableColumn } from "../components/portfolio/ResizableColumn";
 import { WatchlistPanel } from "../components/portfolio/WatchlistPanel";
-import { CronController } from "../components/portfolio/CronController";
+import { AnalysisRunner } from "../components/portfolio/AnalysisRunner";
 import { RecentTransactions } from "../components/portfolio/RecentTransactions";
 import { DecisionTracker } from "../components/portfolio/DecisionTracker";
 import {
@@ -45,9 +42,6 @@ export default function PortfolioDashboard() {
     "newest",
   ); // Sort order for messages in modal
   const [analysisType, setAnalysisType] = useState<string>(""); // Analysis type filter ("individual" or "portfolio")
-
-  // Single-user local fork — always treated as admin.
-  const isAdmin = true;
 
   const {
     data: summary,
@@ -152,12 +146,10 @@ export default function PortfolioDashboard() {
               <WatchlistPanel />
             </div>
 
-            {/* Cron Controller (Admin Only) - Global System CronJob */}
-            {isAdmin && (
-              <div className="mt-8">
-                <CronController />
-              </div>
-            )}
+            {/* Local background analysis controls */}
+            <div className="mt-8">
+              <AnalysisRunner />
+            </div>
 
             {/* Footer */}
             <div className="mt-8 text-center text-xs text-gray-400">

@@ -25,26 +25,33 @@ def _src() -> str:
 
 def test_prompt_marks_blocks_required_for_buy_sell() -> None:
     src = _src()
-    assert "REQUIRED for BUY/SELL" in src, (
-        "prompt must explicitly mark structured research blocks REQUIRED"
-    )
+    assert (
+        "REQUIRED for BUY/SELL" in src
+    ), "prompt must explicitly mark structured research blocks REQUIRED"
 
 
 def test_prompt_does_not_call_blocks_optional() -> None:
     """The old prompt said 'optional for back-compat with older runs'.
     Bug #1 root cause was exactly that wording — keep it gone."""
     src = _src()
-    assert "optional for back-compat" not in src, (
-        "old optional framing returned; LLM will go back to emitting null"
-    )
-    assert "Optional Structured Research Blocks" not in src, (
-        "old section header returned"
-    )
+    assert (
+        "optional for back-compat" not in src
+    ), "old optional framing returned; LLM will go back to emitting null"
+    assert (
+        "Optional Structured Research Blocks" not in src
+    ), "old section header returned"
 
 
 def test_prompt_lists_all_w27_block_names() -> None:
     src = _src()
-    for name in ("thesis", "valuation", "price_target", "scenarios", "catalysts", "risks"):
+    for name in (
+        "thesis",
+        "valuation",
+        "price_target",
+        "scenarios",
+        "catalysts",
+        "risks",
+    ):
         assert f"`{name}`" in src, f"prompt does not document `{name}` block"
 
 
@@ -54,7 +61,13 @@ def test_prompt_includes_worked_buy_example() -> None:
     src = _src()
     assert "Worked example" in src
     # Spot-check that the example actually shows the keys, not just names them
-    for key in ('"thesis":', '"valuation":', '"scenarios":', '"catalysts":', '"risks":'):
+    for key in (
+        '"thesis":',
+        '"valuation":',
+        '"scenarios":',
+        '"catalysts":',
+        '"risks":',
+    ):
         assert key in src, f"worked example missing key: {key}"
 
 
@@ -116,7 +129,5 @@ def test_prompt_actually_builds_without_format_error() -> None:
         assert "stop after prompt build" in str(e), f"unexpected RuntimeError: {e}"
     except ValueError as e:
         if "format specifier" in str(e):
-            raise AssertionError(
-                f"prompt f-string has unescaped braces: {e}"
-            ) from e
+            raise AssertionError(f"prompt f-string has unescaped braces: {e}") from e
         raise

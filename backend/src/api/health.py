@@ -108,7 +108,7 @@ async def readiness_check(
     redis_cache: RedisCache = Depends(get_redis),
 ) -> dict[str, Any]:
     """
-    Kubernetes readiness probe endpoint.
+    Readiness endpoint for local dependency checks.
 
     Returns 200 only when all dependencies are ready to serve traffic.
     """
@@ -131,7 +131,7 @@ async def readiness_check(
 @router.get("/health/live")
 async def liveness_check() -> dict[str, Any]:
     """
-    Kubernetes liveness probe endpoint.
+    Liveness endpoint for the local backend process.
 
     Simple check that the application is running.
     """

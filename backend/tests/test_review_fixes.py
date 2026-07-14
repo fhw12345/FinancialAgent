@@ -20,7 +20,6 @@ from src.agent.debate_types import parse_debater_output
 from src.agent.deep_react_agent import AnalysisState
 from src.agent.subagents.debater import TERMINATION_SIGNAL
 
-
 # ===== Fix 1: synthesis_start guard =====
 
 
@@ -42,7 +41,6 @@ class TestSynthesisStartGuard:
         from src.agent.deep_react_agent import DeepReActAgent
 
         settings = MagicMock()
-        settings.default_llm_model = "test"
         settings.dashscope_api_key = "key"
         settings.default_llm_temperature = 0.7
         settings.exa_api_key = ""
@@ -72,7 +70,6 @@ class TestSynthesisStartGuard:
         from src.agent.deep_react_agent import DeepReActAgent
 
         settings = MagicMock()
-        settings.default_llm_model = "test"
         settings.dashscope_api_key = "key"
         settings.default_llm_temperature = 0.7
         settings.exa_api_key = ""

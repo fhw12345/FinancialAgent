@@ -18,6 +18,7 @@ This document explains our custom exception system and debugging improvements de
 ## Problem We're Solving
 
 **Before (Generic Errors):**
+
 ```python
 # All errors look the same
 try:
@@ -33,6 +34,7 @@ except Exception as e:
 ```
 
 **After (Typed Errors):**
+
 ```python
 # Clear error categorization
 try:
@@ -82,6 +84,7 @@ class AppError(Exception):
 ### 400-Level: Client Errors (User's Fault)
 
 #### `ValidationError` (400)
+
 **Use when:** User provided invalid input
 
 ```python
@@ -97,6 +100,7 @@ if not username:
 ```
 
 **HTTP Response:**
+
 ```json
 {
   "status": 400,
@@ -105,38 +109,20 @@ if not username:
 }
 ```
 
-#### `AuthenticationError` (401)
-**Use when:** Login credentials invalid
-
-```python
-from src.core.exceptions import AuthenticationError
-
-if not verify_password(password, user.password_hash):
-    raise AuthenticationError("Invalid username or password")
-```
-
-#### `AuthorizationError` (403)
-**Use when:** User lacks permission
-
-```python
-from src.core.exceptions import AuthorizationError
-
-if user.role != "admin":
-    raise AuthorizationError("Admin access required", user_id=user.id)
-```
-
 #### `NotFoundError` (404)
+
 **Use when:** Resource doesn't exist
 
 ```python
 from src.core.exceptions import NotFoundError
 
-user = await user_repo.get(user_id)
-if not user:
-    raise NotFoundError("User not found", user_id=user_id)
+chat = await chat_repo.get(chat_id)
+if not chat:
+    raise NotFoundError("Chat not found", chat_id=chat_id)
 ```
 
 #### `RateLimitError` (429)
+
 **Use when:** User exceeded rate limit
 
 ```python
@@ -151,6 +137,7 @@ if request_count > limit:
 ### 500-Level: Server Errors (Our Fault)
 
 #### `DatabaseError` (500)
+
 **Use when:** MongoDB, Redis, or database operations fail
 
 ```python
@@ -178,6 +165,7 @@ except Exception as e:
 ```
 
 **Logs:**
+
 ```json
 {
   "error_type": "database_error",
@@ -189,6 +177,7 @@ except Exception as e:
 ```
 
 #### `CacheError` (500)
+
 **Use when:** Redis cache operations fail
 
 ```python
@@ -201,6 +190,7 @@ except Exception as e:
 ```
 
 #### `ConfigurationError` (500)
+
 **Use when:** Application misconfigured (usually startup errors)
 
 ```python
@@ -223,7 +213,8 @@ if settings.rate_limit_window <= 0:
 ### 503: External Service Errors (Third-Party's Fault)
 
 #### `ExternalServiceError` (503)
-**Use when:** External APIs (Tencent, yfinance, DashScope) fail
+
+**Use when:** Market-data providers, Agent Maestro, or other external APIs fail
 
 ```python
 from src.core.exceptions import ExternalServiceError
@@ -256,6 +247,7 @@ if response.status_code >= 500:
 ```
 
 **HTTP Response:**
+
 ```json
 {
   "status": 503,
@@ -265,6 +257,7 @@ if response.status_code >= 500:
 ```
 
 **Logs:**
+
 ```json
 {
   "error_type": "external_service_error",
@@ -284,6 +277,7 @@ if response.status_code >= 500:
 **Problem:** Database name contained query parameters (`_test?ssl=true`), causing `InvalidNamespace` errors that were hard to diagnose.
 
 **Solution:**
+
 ```python
 # backend/src/database/mongodb.py
 
@@ -319,12 +313,16 @@ if db_with_params != database_name:
 **Problem:** Frontend silently used wrong API URL, causing 404 errors.
 
 **Solution:**
+
 ```typescript
 // frontend/src/main.tsx
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || ""
-console.info('[Config] API_BASE_URL:', API_BASE_URL || '(empty - will use relative URLs)')
-console.info('[Config] Environment:', import.meta.env.MODE)
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+console.info(
+  "[Config] API_BASE_URL:",
+  API_BASE_URL || "(empty - will use relative URLs)",
+);
+console.info("[Config] Environment:", import.meta.env.MODE);
 ```
 
 **Before:** 20 minutes checking network tab, verifying env vars
@@ -345,7 +343,7 @@ console.info('[Config] Environment:', import.meta.env.MODE)
   "message": "Application error occurred",
   "path": "/api/chat/chats",
   "method": "POST",
-  "error_type": "database_error",  // ← Easy to filter/alert on
+  "error_type": "database_error", // ← Easy to filter/alert on
   "status_code": 500,
   "raw_db_name": "_test?ssl=true",
   "parsed_db_name": "_test"
@@ -353,6 +351,7 @@ console.info('[Config] Environment:', import.meta.env.MODE)
 ```
 
 **Monitoring queries:**
+
 ```bash
 # Find all database errors
 docker compose logs backend | jq 'select(.error_type == "database_error")'
@@ -373,12 +372,6 @@ The system is designed to be extensible. Add new exceptions as needed:
 ```python
 # backend/src/core/exceptions.py
 
-class StorageError(AppError):
-    """Cloud storage (OSS/S3) operation failed."""
-    status_code = 500
-    error_type = "storage_error"
-
-
 class ChartGenerationError(AppError):
     """Chart rendering failed (matplotlib/plotting issue)."""
     status_code = 500
@@ -386,13 +379,14 @@ class ChartGenerationError(AppError):
 
 
 class LLMError(ExternalServiceError):
-    """LLM API (DashScope, OpenAI) failed."""
+    """Agent Maestro request failed."""
 
     def __init__(self, message: str, model: str, **context):
         super().__init__(message, service="llm", model=model, **context)
 ```
 
 **Usage:**
+
 ```python
 from src.core.exceptions import ChartGenerationError
 
@@ -471,19 +465,18 @@ if "?" in database_name:
 
 ## Summary
 
-| Error Type | Status | When to Use | Example |
-|------------|--------|-------------|---------|
-| `ValidationError` | 400 | Invalid user input | Bad email format |
-| `AuthenticationError` | 401 | Login failed | Wrong password |
-| `AuthorizationError` | 403 | Lacks permission | Non-admin accessing admin endpoint |
-| `NotFoundError` | 404 | Resource missing | User ID doesn't exist |
-| `RateLimitError` | 429 | Too many requests | Exceeded 100 req/min |
-| `DatabaseError` | 500 | DB operation failed | MongoDB connection timeout |
-| `CacheError` | 500 | Redis error | Cache set failed |
-| `ConfigurationError` | 500 | Misconfigured app | Missing env var |
-| `ExternalServiceError` | 503 | Third-party API failed | Tencent SES timeout |
+| Error Type             | Status | When to Use            | Example                    |
+| ---------------------- | ------ | ---------------------- | -------------------------- |
+| `ValidationError`      | 400    | Invalid user input     | Bad symbol format          |
+| `NotFoundError`        | 404    | Resource missing       | Chat ID doesn't exist      |
+| `RateLimitError`       | 429    | Too many requests      | Exceeded 100 req/min       |
+| `DatabaseError`        | 500    | DB operation failed    | MongoDB connection timeout |
+| `CacheError`           | 500    | Redis error            | Cache set failed           |
+| `ConfigurationError`   | 500    | Misconfigured app      | Missing env var            |
+| `ExternalServiceError` | 503    | Third-party API failed | Agent Maestro timeout      |
 
 **Key Benefits:**
+
 1. **Faster debugging**: Error type immediately identifies problem category
 2. **Better monitoring**: Filter/alert on specific error types
 3. **Proper HTTP codes**: 500 vs 503 vs 400 makes troubleshooting obvious

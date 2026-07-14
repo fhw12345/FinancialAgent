@@ -164,6 +164,7 @@ async def test_concurrent_clients_do_not_corrupt_atom_response() -> None:
     not shared, so this verifies no shared mutable state corrupts
     one fetch when another is in flight.
     """
+
     async def _fetch(symbol: str) -> str | None:
         async with Form4Client() as c:
             return await c.fetch_form4_atom(symbol, count=3)

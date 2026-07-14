@@ -28,7 +28,6 @@ docs/
 ├── development/                  # Getting started, coding standards, this doc.
 ├── features/                     # One spec per shipped/planned feature.
 ├── case-studies/                 # Real bugs / design decisions (bilingual TL;DR).
-├── archive/                      # Historical PRDs and superseded designs.
 └── project/
     └── versions/                 # Per-component CHANGELOG.md and version notes.
 ```
@@ -36,9 +35,9 @@ docs/
 Rules:
 
 - **No new top-level directories** without updating this file and `docs/README.md`.
-- **No `superpowers/`, `interview/`, or `prd/`** — those names have been retired.
-  Real PRDs go under `docs/features/<feature-name>.md`; historical PRDs go to
-  `docs/archive/`.
+- **No `superpowers/`, `interview/`, `archive/`, or `prd/`** directories.
+  Keep active specifications under `docs/features/`; use changelogs and case
+  studies for historical context.
 
 ## 2. Frontmatter Schema
 
@@ -49,8 +48,8 @@ and `docs/case-studies/` MUST start with a YAML frontmatter block:
 ---
 title: <human-readable title>
 status: draft | planning | in-progress | shipped | superseded
-version: backend@<x.y.z>, frontend@<x.y.z>   # use "n/a" if not applicable
-last_updated: 2026-05-16                      # ISO YYYY-MM-DD
+version: backend@<x.y.z>, frontend@<x.y.z> # use "n/a" if not applicable
+last_updated: 2026-05-16 # ISO YYYY-MM-DD
 owner: maintainer
 related_paths:
   - <repo-relative path>
@@ -61,20 +60,19 @@ related_paths:
 Exempt from frontmatter:
 
 - `docs/README.md` and category-level `README.md` files (e.g. `docs/features/README.md`).
-- `docs/archive/*.md` (historical snapshots — preserve as-is).
 - `docs/project/versions/**/CHANGELOG.md` (CHANGELOG has its own format).
 - Repo-root `README.md`, `CONTRIBUTING.md`, `CLAUDE.md`.
 
 ### Field semantics
 
-| Field | Required | Notes |
-|---|---|---|
-| `title` | yes | Title-case human label. Need not match the H1 verbatim. |
-| `status` | yes | One of the five enum values below. Never invent new values. |
-| `version` | yes | `backend@x.y.z, frontend@x.y.z`, or `n/a` for non-feature docs. |
-| `last_updated` | yes | ISO `YYYY-MM-DD`. Bump every time you change the body. |
-| `owner` | yes | This repo: always `maintainer`. |
-| `related_paths` | yes | Repo-relative paths the doc describes. ≥ 1 entry. |
+| Field           | Required | Notes                                                           |
+| --------------- | -------- | --------------------------------------------------------------- |
+| `title`         | yes      | Title-case human label. Need not match the H1 verbatim.         |
+| `status`        | yes      | One of the five enum values below. Never invent new values.     |
+| `version`       | yes      | `backend@x.y.z, frontend@x.y.z`, or `n/a` for non-feature docs. |
+| `last_updated`  | yes      | ISO `YYYY-MM-DD`. Bump every time you change the body.          |
+| `owner`         | yes      | This repo: always `maintainer`.                                 |
+| `related_paths` | yes      | Repo-relative paths the doc describes. ≥ 1 entry.               |
 
 ## 3. Status Enum
 
@@ -137,7 +135,7 @@ Files under `docs/case-studies/` follow this structure:
 ```markdown
 ---
 title: <short title>
-status: shipped       # case studies describe past events; use shipped or superseded
+status: shipped # case studies describe past events; use shipped or superseded
 version: n/a
 last_updated: YYYY-MM-DD
 owner: maintainer
@@ -151,18 +149,23 @@ related_paths:
 > **TL;DR (中文)**: 2–3 句中文摘要。
 
 ## 1. Context
+
 What was the situation, what triggered the investigation.
 
 ## 2. Investigation
+
 Hypotheses tried, dead ends, what surprised you.
 
 ## 3. Root Cause
+
 The actual mechanism.
 
 ## 4. Fix
+
 What we changed and why.
 
 ## 5. Lessons
+
 Generalizable takeaways.
 ```
 

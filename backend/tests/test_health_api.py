@@ -10,9 +10,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.api.health import router, get_mongodb, get_redis
+from src.api.health import get_mongodb, get_redis, router
 from src.core.config import get_settings
-
 
 # ===== Fixtures =====
 
@@ -80,7 +79,10 @@ class TestHealthCheck:
 
     def test_health_mongodb_unhealthy(self, client, mock_mongodb, mock_redis):
         """Test health check when MongoDB is unhealthy."""
-        mock_mongodb.health_check.return_value = {"connected": False, "error": "Connection failed"}
+        mock_mongodb.health_check.return_value = {
+            "connected": False,
+            "error": "Connection failed",
+        }
         mock_redis.health_check.return_value = {"connected": True}
 
         response = client.get("/health")
@@ -92,7 +94,10 @@ class TestHealthCheck:
     def test_health_redis_unhealthy(self, client, mock_mongodb, mock_redis):
         """Test health check when Redis is unhealthy."""
         mock_mongodb.health_check.return_value = {"connected": True}
-        mock_redis.health_check.return_value = {"connected": False, "error": "Connection failed"}
+        mock_redis.health_check.return_value = {
+            "connected": False,
+            "error": "Connection failed",
+        }
 
         response = client.get("/health")
 
@@ -130,7 +135,10 @@ class TestMongodbHealth:
 
     def test_mongodb_unhealthy(self, client, mock_mongodb):
         """Test MongoDB health when disconnected."""
-        mock_mongodb.health_check.return_value = {"connected": False, "error": "Connection timeout"}
+        mock_mongodb.health_check.return_value = {
+            "connected": False,
+            "error": "Connection timeout",
+        }
 
         response = client.get("/health/mongodb")
 
@@ -158,7 +166,10 @@ class TestRedisHealth:
 
     def test_redis_unhealthy(self, client, mock_redis):
         """Test Redis health when disconnected."""
-        mock_redis.health_check.return_value = {"connected": False, "error": "Connection refused"}
+        mock_redis.health_check.return_value = {
+            "connected": False,
+            "error": "Connection refused",
+        }
 
         response = client.get("/health/redis")
 

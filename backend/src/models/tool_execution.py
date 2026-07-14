@@ -18,7 +18,7 @@ class ToolExecution(BaseModel):
 
     Records every tool call made by the agent, including:
     - Local tools (fibonacci_analysis_tool, stochastic_analysis_tool)
-    - MCP tools (GLOBAL_QUOTE, RSI, NEWS_SENTIMENT, etc.)
+    - Market-data tools (quotes, indicators, news, etc.)
 
     Enables cost tracking and state restoration.
     """

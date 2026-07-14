@@ -23,7 +23,6 @@ def _order(
         order_id=f"order_{side}_{int(decision_price)}",
         chat_id="c",
         message_id="m",
-        alpaca_order_id=None,
         analysis_id="a",
         symbol="AAPL",
         order_type="market",

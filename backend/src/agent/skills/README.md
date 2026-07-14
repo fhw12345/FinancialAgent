@@ -88,8 +88,8 @@ debater.
 
 - Agent architecture & 12-factor design:
   [`../../../docs/architecture/agent-12-factors.md`](../../../docs/architecture/agent-12-factors.md)
-- ReAct agent integration:
-  [`../../../docs/architecture/react-agent-integration.md`](../../../docs/architecture/react-agent-integration.md)
+- Agent architecture:
+  [`../../../docs/architecture/overview.md`](../../../docs/architecture/overview.md)
 - Portfolio Phase-1/2/3 pipeline:
   [`../../../docs/features/portfolio-agent-architecture-refactor.md`](../../../docs/features/portfolio-agent-architecture-refactor.md)
 - Architecture overview (system map):

@@ -45,7 +45,7 @@ class TestExtractTokenUsageFromMessages:
         assert total_tokens == 150
 
     def test_extract_from_dashscope_format(self):
-        """Test extraction from DashScope/Tongyi token_usage format"""
+        """Test extraction from response_metadata.token_usage."""
         # Arrange
         mock_ai_message = Mock()
         mock_ai_message.__class__.__name__ = "AIMessage"
@@ -268,7 +268,7 @@ class TestExtractTokenUsageFromMessages:
         msg1.usage_metadata = {"input_tokens": 100, "output_tokens": 50}
         msg1.response_metadata = None
 
-        # Message 2: DashScope format
+        # Message 2: response_metadata format
         msg2 = Mock()
         msg2.__class__.__name__ = "AIMessage"
         msg2.usage_metadata = None

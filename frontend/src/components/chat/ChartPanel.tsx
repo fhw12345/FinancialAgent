@@ -60,7 +60,18 @@ interface ChartPanelProps {
   priceDataQuery: UseQueryResult<PriceDataResponse, Error>;
   selectedInterval: TimeInterval;
   selectedDateRange: { start: string; end: string };
-  analysisMutation: UseMutationResult<unknown, Error, string>;
+  analysisMutation: UseMutationResult<
+    unknown,
+    Error,
+    | "fibonacci"
+    | "stochastic"
+    | "macro"
+    | "company_overview"
+    | "cash_flow"
+    | "balance_sheet"
+    | "news_sentiment"
+    | "market_movers"
+  >;
   fibonacciAnalysis: FibonacciMetadata | null;
   handleSymbolSelect: (symbol: string, name: string) => void;
   handleIntervalChange: (interval: TimeInterval) => void;

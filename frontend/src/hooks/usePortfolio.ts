@@ -1,8 +1,4 @@
-/**
- * React Query hooks for portfolio data from Alpaca API.
- *
- * All data is read-only from Alpaca (single source of truth).
- */
+/** React Query hooks for local portfolio data. */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as portfolioApi from "../services/portfolioApi";
@@ -32,7 +28,7 @@ export function useHoldings() {
 }
 
 /**
- * Hook to fetch portfolio summary from Alpaca.
+ * Hook to fetch the local portfolio summary.
  */
 export function usePortfolioSummary() {
   return useQuery({

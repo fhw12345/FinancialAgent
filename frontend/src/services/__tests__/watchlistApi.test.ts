@@ -180,7 +180,9 @@ describe("watchlistApi", () => {
 
       // Assert
       expect(apiClient.post).toHaveBeenCalledWith(
-        "/api/watchlist/analyze"
+        "/api/watchlist/analyze",
+        undefined,
+        { timeout: 120000 },
       );
       expect(result.status).toBe("success");
       expect(result.message).toBe("Analysis triggered for 5 symbols");
@@ -233,7 +235,7 @@ describe("watchlistApi", () => {
       vi.mocked(apiClient.delete).mockResolvedValueOnce({});
 
       // Act - Get empty watchlist
-      let watchlist = await getWatchlist();
+      const watchlist = await getWatchlist();
       expect(watchlist).toHaveLength(0);
 
       // Act - Add symbol

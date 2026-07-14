@@ -11,6 +11,7 @@ import structlog
 from motor.motor_asyncio import AsyncIOMotorCollection
 
 from ...core.config import Settings
+from ...core.local_user import LOCAL_USER_ID
 from ...database.redis import RedisCache
 from ...database.repositories.chat_repository import ChatRepository
 from ...database.repositories.message_repository import MessageRepository
@@ -34,7 +35,6 @@ class WatchlistAnalyzer:
         market_service,  # AlphaVantageMarketDataService for market data
         settings: Settings,  # Application settings for context management
         agent=None,  # LLM agent for analysis
-        trading_service=None,  # Alpaca trading service for order placement
         order_repository=None,  # Repository for persisting orders to MongoDB
         data_manager=None,  # Singleton DataManager for cached OHLCV access
     ):
@@ -46,7 +46,6 @@ class WatchlistAnalyzer:
         self.market_service = market_service
         self.settings = settings
         self.agent = agent
-        self.trading_service = trading_service
         self.order_repository = order_repository
         self.data_manager = data_manager
         self.is_running = False
@@ -68,15 +67,14 @@ class WatchlistAnalyzer:
             settings=self.settings,
             data_manager=self.data_manager,
             agent=self.agent,
-            trading_service=self.trading_service,
             order_repository=self.order_repository,
         )
 
     async def analyze_symbol(
-        self, symbol: str, user_id: str = "default_user", analysis_id: str | None = None
+        self, symbol: str, user_id: str = LOCAL_USER_ID, analysis_id: str | None = None
     ) -> bool:
         """
-        Run LLM agent analysis on a single symbol with MCP tools.
+        Run LLM agent analysis on a single symbol with local tools.
 
         Args:
             symbol: Stock symbol to analyze

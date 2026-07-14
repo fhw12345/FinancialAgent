@@ -1,9 +1,8 @@
 """
 Order suggestion handler for watchlist analysis.
 
-W5a: Alpaca live trading removed. Trading decisions are persisted to MongoDB
-``portfolio_orders`` with ``status="suggested"`` instead of being submitted to
-a broker.
+Trading decisions are persisted to MongoDB ``portfolio_orders`` with
+``status="suggested"``.
 """
 
 import uuid
@@ -24,11 +23,9 @@ class OrderHandler:
     def __init__(
         self,
         message_repo: MessageRepository,
-        trading_service,  # ignored after W5a
         order_repository,
     ):
         self.message_repo = message_repo
-        self.trading_service = None  # broker integration removed
         self.order_repository = order_repository
 
     async def place_order(
@@ -57,7 +54,6 @@ class OrderHandler:
                 chat_id=chat_id,
                 user_id=user_id,
                 message_id=message.message_id if message else None,
-                alpaca_order_id=None,
                 analysis_id=analysis_id,
                 symbol=symbol,
                 order_type="market",

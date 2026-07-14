@@ -14,12 +14,7 @@ from ..database.repositories.tool_execution_repository import ToolExecutionRepos
 from ..services.data_manager import DataManager
 from ..services.database_stats_service import DatabaseStatsService
 from ..services.insights import InsightsSnapshotService
-from ..services.kubernetes_metrics_service import KubernetesMetricsService
-from .dependencies.auth import (
-    get_mongodb,
-    get_redis_cache,
-    require_admin,
-)
+from .dependencies.storage import get_mongodb, get_redis_cache
 from .dependencies.timing_middleware import TimingMiddleware
 from .schemas.admin_models import DatabaseStats, HealthResponse, SystemMetrics
 
@@ -35,87 +30,23 @@ def get_database_stats_service(
     return DatabaseStatsService(mongodb.database)
 
 
-def get_kubernetes_metrics_service() -> KubernetesMetricsService:
-    """Get Kubernetes metrics service instance."""
-    settings = get_settings()
-    return KubernetesMetricsService(namespace=settings.kubernetes_namespace)
-
-
 @router.get("/health", response_model=HealthResponse)
 async def get_system_health(
-    _: None = Depends(require_admin),  # Admin access required
     db_stats_service: DatabaseStatsService = Depends(get_database_stats_service),
-    k8s_service: KubernetesMetricsService = Depends(get_kubernetes_metrics_service),
 ) -> SystemMetrics:
-    """
-    Get comprehensive system health metrics.
-
-    Returns:
-        SystemMetrics with database statistics and Kubernetes metrics (if available)
-    """
-    logger.info("Admin health check requested")
-
-    # Collect database statistics
+    """Get local application and database health metrics."""
     database_stats = await db_stats_service.get_collection_stats()
-
-    # Collect Kubernetes metrics
-    pods = None
-    nodes = None
-    kubernetes_available = k8s_service.available
-
-    if kubernetes_available:
-        try:
-            pods = await k8s_service.get_pod_metrics()
-            nodes = await k8s_service.get_node_metrics()
-            logger.info(
-                "Kubernetes metrics collected",
-                pod_count=len(pods) if pods else 0,
-                node_count=len(nodes) if nodes else 0,
-            )
-        except Exception as e:
-            logger.warning("Failed to collect Kubernetes metrics", error=str(e))
-            kubernetes_available = False
-
-    # Determine health status based on metrics
-    health_status = "healthy"
-
-    # Check for critical resource usage
-    if pods:
-        for pod in pods:
-            if pod.cpu_percentage > 90 or pod.memory_percentage > 90:
-                health_status = "critical"
-                logger.warning(
-                    "Critical resource usage detected",
-                    pod=pod.name,
-                    cpu=pod.cpu_percentage,
-                    memory=pod.memory_percentage,
-                )
-                break
-            elif pod.cpu_percentage > 70 or pod.memory_percentage > 70:
-                health_status = "warning"
-                logger.info(
-                    "High resource usage detected",
-                    pod=pod.name,
-                    cpu=pod.cpu_percentage,
-                    memory=pod.memory_percentage,
-                )
 
     metrics = SystemMetrics(
         timestamp=utcnow(),
         database=database_stats,
-        pods=pods,
-        nodes=nodes,
-        health_status=health_status,
-        kubernetes_available=kubernetes_available,
+        health_status="healthy",
     )
 
     logger.info(
         "System health metrics collected",
         db_collections=len(database_stats),
-        k8s_available=kubernetes_available,
-        pod_count=len(pods) if pods else 0,
-        node_count=len(nodes) if nodes else 0,
-        status=health_status,
+        status=metrics.health_status,
     )
 
     return metrics
@@ -123,13 +54,10 @@ async def get_system_health(
 
 @router.get("/database", response_model=list)
 async def get_database_stats(
-    _: None = Depends(require_admin),
     db_stats_service: DatabaseStatsService = Depends(get_database_stats_service),
 ) -> list[DatabaseStats]:
     """
     Get database collection statistics only.
-
-    **Admin only**: Requires admin privileges.
 
     Returns:
         List of database collection statistics
@@ -138,13 +66,9 @@ async def get_database_stats(
 
 
 @router.get("/timing-metrics")
-async def get_timing_metrics(
-    _: None = Depends(require_admin),
-) -> dict[str, dict[str, float | None]]:
+async def get_timing_metrics() -> dict[str, dict[str, float | None]]:
     """
     Get API endpoint timing metrics (P50, P95, P99 response times).
-
-    **Admin only**: Requires admin privileges.
 
     Returns:
         Dictionary mapping endpoints to their percentile metrics:
@@ -194,25 +118,15 @@ async def trigger_insights_snapshot(
     request: Request,
     mongodb: MongoDB = Depends(get_mongodb),
     redis_cache: RedisCache = Depends(get_redis_cache),
-    _: None = Depends(require_admin),
 ):
     """
-    Trigger insights snapshot creation (admin only).
-
-    This endpoint is designed to be called by:
-    1. Kubernetes CronJob (scheduled daily at 9:30 AM ET)
-    2. Admin UI (manual trigger for testing)
-    3. CLI tools (development/testing)
+    Trigger local insights snapshot creation.
 
     Returns immediately with 202 Accepted. Snapshot creation runs in background.
-
-    **Admin only**: Requires admin privileges.
 
     Returns:
         dict: Status message with run_id
 
-    Raises:
-        HTTPException: 401 if not authenticated as admin
     """
     run_id = f"snapshot_{utcnow().strftime('%Y%m%d_%H%M%S')}"
 
@@ -337,7 +251,6 @@ def get_cache_warming_service(request: Request):
 async def warm_cache(
     request: Request,
     background_tasks: BackgroundTasks,
-    _: None = Depends(require_admin),
 ):
     """
     Trigger cache warming for common symbols.
@@ -371,7 +284,6 @@ async def warm_cache(
 async def warm_market_movers_cache(
     request: Request,
     background_tasks: BackgroundTasks,
-    _: None = Depends(require_admin),
 ):
     """
     Trigger cache warming for current market movers.
@@ -402,7 +314,6 @@ async def warm_market_movers_cache(
 @router.get("/cache/warming-status")
 async def get_cache_warming_status(
     request: Request,
-    _: None = Depends(require_admin),
 ):
     """
     Get current cache warming status.
@@ -422,7 +333,6 @@ async def get_cache_warming_status(
 
 @router.get("/cache/stats")
 async def get_cache_stats(
-    _: None = Depends(require_admin),
     redis_cache: RedisCache = Depends(get_redis_cache),
 ):
     """
@@ -467,7 +377,6 @@ def get_tool_execution_repository(
 async def get_tool_performance_metrics(
     days: int = 7,
     limit: int = 50,
-    _: None = Depends(require_admin),
     tool_repo: ToolExecutionRepository = Depends(get_tool_execution_repository),
 ):
     """
@@ -516,7 +425,6 @@ async def get_tool_performance_metrics(
 async def get_slowest_tools(
     days: int = 7,
     limit: int = 10,
-    _: None = Depends(require_admin),
     tool_repo: ToolExecutionRepository = Depends(get_tool_execution_repository),
 ):
     """
@@ -559,7 +467,6 @@ async def get_slowest_tools(
 @router.get("/llm/token-usage")
 async def get_token_usage_metrics(
     days: int = 7,
-    _: None = Depends(require_admin),
     mongodb: MongoDB = Depends(get_mongodb),
 ):
     """

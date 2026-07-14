@@ -26,21 +26,25 @@ Users viewing Fibonacci analysis on 6-month charts are seeing 10-20 micro-trends
 ### Current Issues
 
 **Bug #1: Too Many Swing Points**
+
 - Current: `swing_lookback=3` (always 3 days regardless of timeframe)
 - Result: 42 swing highs + 39 swing lows on a 180-day chart
 - Impact: Every 3-day wiggle breaks the trend
 
 **Bug #2: Rolling Window Too Small**
+
 - Current: `rolling_window_size=10` days for all chart durations
 - Result: 10-day window on 180-day chart = 171 overlapping micro-trends
 - Impact: Misses the big picture (shows "April 30 - May 13 uptrend" instead of "April - July uptrend")
 
 **Bug #3: Trend Direction Logic Error**
+
 - Current: Uses position in window (`if high_pos < low_pos → Downtrend`)
 - Result: Mislabels trends when high/low positions are reversed
 - Impact: Users see uptrends labeled as downtrends
 
 **Bug #4: Trend Duration Artificially Limited**
+
 - Current: Trend continuation logic stops at arbitrary swing point patterns
 - Result: 150-day uptrends are split into 5 smaller trends
 - Impact: Fibonacci levels become meaningless (drawn on 14-day move instead of 90-day move)
@@ -62,6 +66,7 @@ Users viewing Fibonacci analysis on 6-month charts are seeing 10-20 micro-trends
 #### 1. Period-Based Swing Lookback
 
 **Current**:
+
 ```python
 "1d": TimeframeConfig(swing_lookback=3, ...)  # 3 days
 "1w": TimeframeConfig(swing_lookback=2, ...)  # 2 weeks = 14 days
@@ -69,6 +74,7 @@ Users viewing Fibonacci analysis on 6-month charts are seeing 10-20 micro-trends
 ```
 
 **Proposed**:
+
 ```python
 # ALL timeframes use lookback=3 PERIODS (not days)
 "1d": TimeframeConfig(swing_lookback=3, ...)  # 3 trading days
@@ -83,11 +89,13 @@ Users viewing Fibonacci analysis on 6-month charts are seeing 10-20 micro-trends
 #### 2. Dynamic Prominence (Tolerate Pullbacks)
 
 **Current**:
+
 ```python
 prominence = 0.5  # Fixed $0.50 for all stocks
 ```
 
 **Proposed**:
+
 ```python
 def calculate_dynamic_prominence(data: pd.DataFrame, tolerance_pct: float = 0.03) -> float:
     """
@@ -108,11 +116,13 @@ def calculate_dynamic_prominence(data: pd.DataFrame, tolerance_pct: float = 0.03
 #### 3. Chart-Duration-Based Window Size
 
 **Current**:
+
 ```python
 rolling_window_size = 10  # Always 10 days
 ```
 
 **Proposed**:
+
 ```python
 def calculate_adaptive_window_size(data_points: int, interval: str) -> int:
     """
@@ -137,6 +147,7 @@ def calculate_adaptive_window_size(data_points: int, interval: str) -> int:
 **Current**: `_find_trend_continuation()` stops at first swing point pattern break
 
 **Proposed**:
+
 - Continue trend as long as higher highs/higher lows pattern persists
 - Only stop on **significant retracement** (>20% of trend magnitude)
 - Remove arbitrary pattern-matching limits
@@ -165,6 +176,7 @@ def _find_trend_continuation(
 #### 5. Fix Trend Direction Logic
 
 **Current** (BUGGY):
+
 ```python
 high_pos = window_data.index.get_loc(high_idx)
 low_pos = window_data.index.get_loc(low_idx)
@@ -174,6 +186,7 @@ if high_pos < low_pos:
 ```
 
 **Proposed** (CORRECT):
+
 ```python
 # Method 1: Check price movement from start to end
 start_price = window_data.iloc[0]['Close']
@@ -244,6 +257,7 @@ else:
 ### Before (Current Behavior)
 
 **MSFT 180-day chart (1d interval)**:
+
 - ❌ Shows 7+ micro-trends (7-14 days each)
 - ❌ "Uptrend April 30 - May 13" (14 days, $66 move)
 - ❌ Misses the actual April-July uptrend (90+ days, $170 move)
@@ -252,6 +266,7 @@ else:
 ### After (Expected Behavior)
 
 **MSFT 180-day chart (1d interval)**:
+
 - ✅ Shows 2-3 major trends (30-90+ days each)
 - ✅ "Uptrend April 30 - July 31" (90 days, $170 move)
 - ✅ All trends correctly labeled
@@ -315,11 +330,13 @@ def test_no_duration_caps():
 ## Risk Assessment
 
 **Low Risk**:
+
 - Fixes critical bugs (mislabeled trends)
 - Improves UX significantly
 - Backward compatible (no API changes)
 
 **Mitigation**:
+
 - Comprehensive test coverage
 - A/B test with power users before full rollout
 - Keep old algorithm available via feature flag if needed
@@ -354,6 +371,7 @@ def test_no_duration_caps():
 The **configurable tolerance per timeframe** approach was implemented, which is simpler and more effective than the original proposed solution:
 
 **Implementation Details**:
+
 - Added `tolerance_pct` field to `TimeframeConfig` dataclass
 - Configured tolerance per timeframe:
   - Hourly (1h): 0.5% tolerance (short-term sensitivity)
@@ -364,6 +382,7 @@ The **configurable tolerance per timeframe** approach was implemented, which is 
 - Validated with MSFT Aug 1 - Oct 28 test case
 
 **Why This Approach**:
+
 - Simpler implementation (no complex adaptive window sizing needed)
 - More predictable behavior (tolerance is explicit, not calculated)
 - Easier to tune per timeframe based on market volatility
@@ -372,10 +391,12 @@ The **configurable tolerance per timeframe** approach was implemented, which is 
 ### Validation Results
 
 **Before (Hardcoded 3% Tolerance)**:
+
 - MSFT Aug 1 - Oct 28: Detected as **1 continuous uptrend**
 - Too permissive - missed intermediate trend reversals
 
 **After (0.7% Tolerance for Daily)**:
+
 - MSFT Aug 1 - Oct 28: Detected **5 distinct trends**:
   1. Oct 10 → Oct 28: 📈 Uptrend ($47.72 magnitude)
   2. Aug 4 → Aug 27: 📉 Downtrend ($38.86 magnitude)
@@ -389,6 +410,7 @@ The **configurable tolerance per timeframe** approach was implemented, which is 
 ### Experimentation Process
 
 Multiple tolerance values were tested to find the optimal threshold:
+
 - 3% tolerance → 1 trend (too permissive - original problem)
 - 1.5% tolerance → 3 trends (still merging distinct movements)
 - 1.0% tolerance → 5 trends (good segmentation)
@@ -410,7 +432,6 @@ Multiple tolerance values were tested to find the optimal threshold:
 
 ### See Also
 
-- [Backend v0.5.10 Release Notes](../project/versions/backend/v0.5.10.md) - Complete technical details
 - [Commit 30467a0](https://github.com/.../commit/30467a0) - Initial configurable tolerance implementation
 - [Commit 964a9f7](https://github.com/.../commit/964a9f7) - Refined to 0.7% tolerance
 

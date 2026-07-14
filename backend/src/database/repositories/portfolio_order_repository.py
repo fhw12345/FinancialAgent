@@ -1,12 +1,4 @@
-"""
-Portfolio order repository for order audit trail.
-
-Stores all orders placed through Alpaca with complete audit trail
-linking orders to analysis decisions and chat contexts.
-
-W5b: user_id removed from schema. user_id parameter kept on read methods
-for caller compatibility but ignored.
-"""
+"""Repository for local portfolio decisions and order suggestions."""
 
 from datetime import datetime
 from typing import Any
@@ -45,20 +37,6 @@ class PortfolioOrderRepository:
             [("analysis_id", 1)],
             name="idx_analysis_orders",
         )
-        # Unique on Alpaca id, but only for documents that actually have one.
-        # `sparse=True` doesn't help here because pydantic always writes the
-        # field as null; partialFilterExpression is the correct mongo idiom.
-        # If an old `idx_alpaca_order` index exists from before, drop it first.
-        try:
-            await self.collection.drop_index("idx_alpaca_order")
-        except Exception:
-            pass  # Index didn't exist, fine
-        await self.collection.create_index(
-            [("alpaca_order_id", 1)],
-            name="idx_alpaca_order",
-            unique=True,
-            partialFilterExpression={"alpaca_order_id": {"$type": "string"}},
-        )
         # Status filter
         await self.collection.create_index(
             [("status", 1), ("created_at", -1)],
@@ -81,8 +59,6 @@ class PortfolioOrderRepository:
         Returns:
             Created order
 
-        Raises:
-            DuplicateKeyError: If order with same alpaca_order_id exists
         """
         # Convert to dict for MongoDB
         order_dict = order.model_dump()
@@ -93,7 +69,6 @@ class PortfolioOrderRepository:
         logger.info(
             "Portfolio order created",
             order_id=order.order_id,
-            alpaca_order_id=order.alpaca_order_id,
             symbol=order.symbol,
             side=order.side,
             quantity=order.quantity,
@@ -116,8 +91,6 @@ class PortfolioOrderRepository:
         Returns:
             Number of orders inserted
 
-        Raises:
-            BulkWriteError: If any order fails (e.g., duplicate alpaca_order_id)
         """
         if not orders:
             return 0
@@ -144,28 +117,6 @@ class PortfolioOrderRepository:
             PortfolioOrder if found, None otherwise
         """
         order_dict = await self.collection.find_one({"order_id": order_id})
-
-        if not order_dict:
-            return None
-
-        # Remove MongoDB _id field
-        order_dict.pop("_id", None)
-
-        return PortfolioOrder(**order_dict)
-
-    async def get_by_alpaca_id(self, alpaca_order_id: str) -> PortfolioOrder | None:
-        """
-        Get order by Alpaca order ID.
-
-        Args:
-            alpaca_order_id: Alpaca's native order UUID
-
-        Returns:
-            PortfolioOrder if found, None otherwise
-        """
-        order_dict = await self.collection.find_one(
-            {"alpaca_order_id": alpaca_order_id}
-        )
 
         if not order_dict:
             return None
@@ -247,67 +198,6 @@ class PortfolioOrderRepository:
 
         return orders
 
-    async def update_status(
-        self,
-        alpaca_order_id: str,
-        status: str,
-        filled_qty: float | None = None,
-        filled_avg_price: float | None = None,
-        filled_at: datetime | None = None,
-    ) -> PortfolioOrder | None:
-        """
-        Update order status and fill information.
-
-        Used when order status changes in Alpaca (e.g., filled, canceled).
-
-        Args:
-            alpaca_order_id: Alpaca order UUID
-            status: New status
-            filled_qty: Filled quantity (if status is filled/partially_filled)
-            filled_avg_price: Average fill price
-            filled_at: Fill timestamp
-
-        Returns:
-            Updated order if found, None otherwise
-        """
-        # Build update dict
-        update_dict = {
-            "status": status,
-            "updated_at": utcnow(),
-        }
-
-        if filled_qty is not None:
-            update_dict["filled_qty"] = filled_qty
-
-        if filled_avg_price is not None:
-            update_dict["filled_avg_price"] = filled_avg_price
-
-        if filled_at is not None:
-            update_dict["filled_at"] = filled_at
-
-        # Update in database
-        result = await self.collection.find_one_and_update(
-            {"alpaca_order_id": alpaca_order_id},
-            {"$set": update_dict},
-            return_document=True,
-        )
-
-        if not result:
-            return None
-
-        # Remove MongoDB _id field
-        result.pop("_id", None)
-
-        logger.info(
-            "Order status updated",
-            alpaca_order_id=alpaca_order_id,
-            status=status,
-            filled_qty=filled_qty,
-            filled_avg_price=filled_avg_price,
-        )
-
-        return PortfolioOrder(**result)
-
     async def mark_filled(
         self,
         order_id: str,
@@ -319,10 +209,8 @@ class PortfolioOrderRepository:
         """
         Mark a locally-suggested order as executed by the user.
 
-        This is the DecisionTracker "Mark Executed" path — distinct from
-        `update_status` which keys on `alpaca_order_id` for live trading.
-        Here we key on our DB primary key `order_id` because the order never
-        went through Alpaca.
+        This is the DecisionTracker "Mark Executed" path, keyed by the local
+        order ID.
         """
         update_dict: dict[str, Any] = {
             "status": "filled",

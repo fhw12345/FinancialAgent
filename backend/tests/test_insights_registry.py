@@ -4,20 +4,23 @@ Unit tests for InsightsCategoryRegistry.
 Tests category registration, instantiation, and data retrieval.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+from src.services.insights.base import InsightCategoryBase
+from src.services.insights.models import (
+    CategoryMetadata,
+    InsightCategory,
+    InsightMetric,
+)
 from src.services.insights.registry import (
     InsightsCategoryRegistry,
     _category_registry,
     get_registered_categories,
     register_category,
 )
-from src.services.insights.base import InsightCategoryBase
-from src.services.insights.models import CategoryMetadata, InsightCategory, InsightMetric
-
 
 # ===== Fixtures =====
 
@@ -65,7 +68,7 @@ def mock_insight_category():
         name="Test Category",
         description="A test category",
         icon="📊",
-        last_updated=datetime.now(timezone.utc),
+        last_updated=datetime.now(UTC),
         metrics=[
             InsightMetric(
                 id="test_metric",
@@ -98,6 +101,7 @@ class TestRegisterCategory:
         _category_registry.clear()
 
         try:
+
             @register_category
             class TestCategory(InsightCategoryBase):
                 CATEGORY_ID = "test_register"
@@ -114,6 +118,7 @@ class TestRegisterCategory:
     def test_register_category_no_id(self):
         """Test registration fails without CATEGORY_ID"""
         with pytest.raises(ValueError) as exc_info:
+
             @register_category
             class BadCategory(InsightCategoryBase):
                 CATEGORY_ID = ""  # Empty ID
@@ -152,7 +157,9 @@ class TestInsightsCategoryRegistry:
                 assert registry.settings == mock_settings
                 assert registry.redis_cache == mock_redis_cache
 
-    def test_list_categories(self, mock_settings, mock_redis_cache, mock_category_metadata):
+    def test_list_categories(
+        self, mock_settings, mock_redis_cache, mock_category_metadata
+    ):
         """Test listing categories"""
         with patch.object(
             InsightsCategoryRegistry, "_load_categories", return_value=None
@@ -172,9 +179,7 @@ class TestInsightsCategoryRegistry:
             assert len(result) == 1
             assert result[0].id == "test_category"
 
-    def test_get_category_instance_found(
-        self, mock_settings, mock_redis_cache
-    ):
+    def test_get_category_instance_found(self, mock_settings, mock_redis_cache):
         """Test getting existing category instance"""
         with patch.object(
             InsightsCategoryRegistry, "_load_categories", return_value=None
@@ -191,9 +196,7 @@ class TestInsightsCategoryRegistry:
 
             assert result == mock_instance
 
-    def test_get_category_instance_not_found(
-        self, mock_settings, mock_redis_cache
-    ):
+    def test_get_category_instance_not_found(self, mock_settings, mock_redis_cache):
         """Test getting non-existent category instance"""
         with patch.object(
             InsightsCategoryRegistry, "_load_categories", return_value=None
@@ -232,9 +235,7 @@ class TestInsightsCategoryRegistry:
             mock_instance.get_category_data.assert_called_once_with(force_refresh=False)
 
     @pytest.mark.asyncio
-    async def test_get_category_data_not_found(
-        self, mock_settings, mock_redis_cache
-    ):
+    async def test_get_category_data_not_found(self, mock_settings, mock_redis_cache):
         """Test getting data for non-existent category"""
         with patch.object(
             InsightsCategoryRegistry, "_load_categories", return_value=None
@@ -298,9 +299,7 @@ class TestInsightsCategoryRegistry:
             mock_instance.refresh.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_refresh_category_not_found(
-        self, mock_settings, mock_redis_cache
-    ):
+    async def test_refresh_category_not_found(self, mock_settings, mock_redis_cache):
         """Test refreshing non-existent category"""
         with patch.object(
             InsightsCategoryRegistry, "_load_categories", return_value=None

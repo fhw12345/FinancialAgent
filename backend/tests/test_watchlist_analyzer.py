@@ -11,7 +11,6 @@ import pytest
 
 from src.services.watchlist.analyzer import WatchlistAnalyzer
 
-
 # ===== Fixtures =====
 
 
@@ -75,12 +74,20 @@ class TestWatchlistAnalyzerInit:
         self, mock_collections, mock_redis_cache, mock_market_service, mock_settings
     ):
         """Test initialization sets all dependencies."""
-        with patch("src.services.watchlist.analyzer.WatchlistRepository") as mock_watchlist_repo:
-            with patch("src.services.watchlist.analyzer.MessageRepository") as mock_message_repo:
-                with patch("src.services.watchlist.analyzer.ChatRepository") as mock_chat_repo:
+        with patch(
+            "src.services.watchlist.analyzer.WatchlistRepository"
+        ) as mock_watchlist_repo:
+            with patch(
+                "src.services.watchlist.analyzer.MessageRepository"
+            ) as mock_message_repo:
+                with patch(
+                    "src.services.watchlist.analyzer.ChatRepository"
+                ) as mock_chat_repo:
                     with patch("src.services.watchlist.analyzer.ContextWindowManager"):
                         with patch("src.services.watchlist.analyzer.ChatManager"):
-                            with patch("src.services.watchlist.analyzer.AnalysisEngine"):
+                            with patch(
+                                "src.services.watchlist.analyzer.AnalysisEngine"
+                            ):
                                 analyzer = WatchlistAnalyzer(
                                     watchlist_collection=mock_collections["watchlist"],
                                     messages_collection=mock_collections["messages"],
@@ -104,7 +111,6 @@ class TestWatchlistAnalyzerInit:
     ):
         """Test initialization with optional dependencies."""
         mock_agent = Mock()
-        mock_trading_service = Mock()
         mock_order_repo = Mock()
 
         with patch("src.services.watchlist.analyzer.WatchlistRepository"):
@@ -112,7 +118,9 @@ class TestWatchlistAnalyzerInit:
                 with patch("src.services.watchlist.analyzer.ChatRepository"):
                     with patch("src.services.watchlist.analyzer.ContextWindowManager"):
                         with patch("src.services.watchlist.analyzer.ChatManager"):
-                            with patch("src.services.watchlist.analyzer.AnalysisEngine"):
+                            with patch(
+                                "src.services.watchlist.analyzer.AnalysisEngine"
+                            ):
                                 analyzer = WatchlistAnalyzer(
                                     watchlist_collection=mock_collections["watchlist"],
                                     messages_collection=mock_collections["messages"],
@@ -121,12 +129,10 @@ class TestWatchlistAnalyzerInit:
                                     market_service=mock_market_service,
                                     settings=mock_settings,
                                     agent=mock_agent,
-                                    trading_service=mock_trading_service,
                                     order_repository=mock_order_repo,
                                 )
 
                                 assert analyzer.agent == mock_agent
-                                assert analyzer.trading_service == mock_trading_service
                                 assert analyzer.order_repository == mock_order_repo
 
 
@@ -159,7 +165,7 @@ class TestAnalyzeSymbol:
 
         assert result is False
         analyzer.analysis_engine.analyze_symbol.assert_called_once_with(
-            "TSLA", "default_user", None
+            "TSLA", "local", None
         )
 
 

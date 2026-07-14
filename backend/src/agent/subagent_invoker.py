@@ -2,7 +2,7 @@
 Sub-agent invocation with deepagents graphs and retry logic.
 
 Handles invoking DeepSubAgent instances (backed by deepagents library)
-with exponential backoff retry for DashScope transient errors.
+with exponential backoff retry for transient gateway errors.
 
 Includes DeepToolStreamingCallback for real-time tool event emission
 during sub-agent execution.
@@ -26,7 +26,7 @@ from .subagents import DeepSubAgent
 
 logger = structlog.get_logger()
 
-# Retry configuration for DashScope API
+# Retry configuration for Agent Maestro
 MAX_RETRIES = 3
 _BASE_DELAY = 2.0
 _MAX_DELAY = 30.0

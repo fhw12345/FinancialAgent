@@ -10,7 +10,6 @@ import pytest
 
 from src.services.database_stats_service import DatabaseStatsService
 
-
 # ===== Fixtures =====
 
 
@@ -134,7 +133,10 @@ class TestGetCollectionStats:
     @pytest.mark.asyncio
     async def test_handles_collection_error(self, stats_service, mock_db):
         """Test handles error for individual collection."""
-        mock_db.list_collection_names.return_value = ["good_collection", "bad_collection"]
+        mock_db.list_collection_names.return_value = [
+            "good_collection",
+            "bad_collection",
+        ]
 
         mock_collection = AsyncMock()
         mock_collection.count_documents = AsyncMock(return_value=10)

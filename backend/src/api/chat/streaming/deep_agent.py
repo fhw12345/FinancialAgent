@@ -92,7 +92,6 @@ async def stream_with_deep_agent(
                 chat_id=chat_id,
                 context_manager=context_manager,
                 message_repo=message_repo,
-                model=request.model,
             )
             if (
                 conversation_history

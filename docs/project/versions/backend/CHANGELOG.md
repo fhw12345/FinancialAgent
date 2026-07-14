@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-07-13
+
+### Pure-local architecture cleanup
+
+- Removed the obsolete authentication dependency layer, user model/repository,
+  fixed-token frontend plumbing, and unused auth translations.
+- Removed Kubernetes metrics, cloud deployment hooks, dead production/Nginx
+  frontend stages, and broken portfolio cron/standalone services.
+- Removed broker compatibility fields and parameters; portfolio outputs are
+  now represented only as local decisions, signals, and suggestions.
+- Removed the obsolete MCP adapter dependency and corrected the ReAct
+  documentation to describe the current local 24-tool registry.
+- Replaced legacy Qwen/DashScope model selection and credit-pricing APIs with
+  the actual Agent Maestro role-based routing.
+- Added `LLM_PROVIDER=maestro|anthropic|copilot_reverse`; the Copilot reverse
+  mode connects to the sibling `copilot-bridge` Anthropic endpoint at `/cc`.
+- Refreshed defaults: Opus 4.8 for deep decisions, Sonnet 5 for ReAct and
+  technical work, GPT-5.6 Sol for financial extraction, Gemini 3.1 Pro for
+  adversarial debate, and Gemini 3.5 Flash for news/summary. Copilot reverse
+  uses Opus 4.8/Sonnet 5/Haiku 4.5 plus confirmed Responses models GPT-5.5 and
+  GPT-5.4 Mini.
+- Deleted one-off migration scripts, manual E2E probes, compatibility modules,
+  and superseded architecture documents.
+- Simplified ticker pricing, rate limiting, admin health, portfolio-agent
+  construction, and related tests for the single-user runtime.
+
 ## [0.29.6] - 2026-05-16
 
 ### Whole-repo documentation overhaul to public-release quality
@@ -77,6 +103,7 @@ Plus a small visibility upgrade:
 - **`core/localization.py`** — tightened `ANALYSIS_OUTPUT_LANG` type from `str` to `SupportedLanguage` so passing it through `react_agent.ainvoke(language=...)` type-checks cleanly.
 
 Tests:
+
 - `test_phase1_prompt_lang.py` — AST-level regression asserting `react_agent.ainvoke` in `phase1_research.py` is called with `language=ANALYSIS_OUTPUT_LANG` (not a string literal).
 - `test_flows_phase2_lang.py` (new) — asserts the fallback Phase 2 prompt template contains a `LANGUAGE REQUIREMENT` line and references `ANALYSIS_OUTPUT_LANG`.
 - `test_persistence_translator.py` — new test asserting the CJK skip path logs at WARNING level (regression on visibility).
@@ -119,6 +146,7 @@ The Alpha Vantage free tier (25 req/day) and the move of `OVERVIEW`, `CASH_FLOW`
 - **Test sync**: `test_alphavantage_market_data_service.py` and `test_market_data_quotes.py` add an `autouse` fixture to each `Test*` class that patches `_yf_quote_sync`, `yfinance_fundamentals.get_*`, and `yfinance_movers.get_market_movers` to raise — so the existing AV-contract tests deterministically exercise the AV fallback path instead of flaking on whichever source the network returns first. `test_get_quote_no_key` rewritten to assert that yfinance failure with no AV key propagates (the new contract) instead of asserting AV's "No quote data" message.
 
 **End-to-end verification (curl):**
+
 - `/api/market/quote/NVDA` → `$215.20` (was 400)
 - `/api/market/price/NVDA?interval=1d&period=6mo` → 6mo of OHLC bars (was 400)
 - `/api/analysis/company-overview` → NVIDIA Corporation, market cap $5.23T, P/E 43.83 (was 400)
@@ -136,7 +164,7 @@ The Alpha Vantage free tier (25 req/day) and the move of `OVERVIEW`, `CASH_FLOW`
 Saturday-noon UX gap: the Holdings and Watchlist tables both show the regular-session close (e.g. Friday $215.20) when the market is `closed`, but yfinance has the most recent after-hours print sitting in `Ticker.info` (`postMarketPrice` / `postMarketTime` / `preMarketPrice` / `preMarketTime`) and we never surfaced it. Same gap on the analysis side: Phase 1 quote tools printed only the primary line, so the LLM never saw the companion move and Phase 2 couldn't reason about overnight gaps. This wave adds the companion print end-to-end without disturbing the existing pre/post-session flow (where the primary price IS the ext-hours print and SessionBadge already labels it).
 
 - **`QuoteData` schema** (`src/services/data_manager/types.py`): four new optional fields — `ext_hours_price`, `ext_hours_session` (`"pre"` | `"post"`), `ext_hours_change_percent`, `ext_hours_asof`. Round-trip through `to_dict`/`from_dict`, with full backwards compatibility for legacy redis rows that pre-date the field (parsed with all four = None). 4 serialization tests in `test_quote_data_ext_hours_serialization.py`.
-- **`_extended_hours_companion(info, primary_session, primary_price, previous_close, now)` helper** (`src/services/data_manager/manager.py`): picks a fresh pre/post print from the yfinance `info` dict when the primary session is regular/closed, with freshness gates of 18h post-market (covers Fri 16:30 close → Sat/Sun, blocks Mon morning's stale Friday AH) and 6h pre-market. `change_percent` computed against the *primary* price (the UX question is "how far from what the user just saw on the table"), NOT against previous_close. Returns None during active pre/post sessions so the existing SessionBadge + price-override path stays in charge. 16 unit tests in `test_extended_hours_companion.py`.
+- **`_extended_hours_companion(info, primary_session, primary_price, previous_close, now)` helper** (`src/services/data_manager/manager.py`): picks a fresh pre/post print from the yfinance `info` dict when the primary session is regular/closed, with freshness gates of 18h post-market (covers Fri 16:30 close → Sat/Sun, blocks Mon morning's stale Friday AH) and 6h pre-market. `change_percent` computed against the _primary_ price (the UX question is "how far from what the user just saw on the table"), NOT against previous_close. Returns None during active pre/post sessions so the existing SessionBadge + price-override path stays in charge. 16 unit tests in `test_extended_hours_companion.py`.
 - **`DataManager._enrich_extended_hours_companion(quote)` + `_fetch_yfinance_info(symbol)`** wire the helper into `get_quote()`. Cached separately under `market:quote_ext:{SYMBOL}` (TTL 300s) so the slow `info` HTTP roundtrip doesn't gate the primary quote refresh; failures are non-fatal — the companion is decoration, not load-bearing. `_fetch_yfinance_info` returns only the seven W3.18-relevant keys (saves redis space) and converts any exception to `None` (cache-miss semantics, no corrupt blob written). 9 enrichment tests in `test_data_manager_ext_hours_enrichment.py`.
 - **API surface**: `Holding` + `WatchlistItem` Pydantic models gain four response-only ext-hours fields (NOT persisted to mongo — recomputed each GET). `_enrich_with_quote` (`src/api/portfolio/holdings.py`) and `_enrich_with_live_quote` (`src/api/watchlist.py`) copy the fields from the `QuoteData` onto the row. `HoldingResponse.from_holding` carries them into the API response.
 - **Frontend tables**: new `ExtHoursLine` component (`frontend/src/components/common/ExtHoursLine.tsx`) renders `AH $215.05 (-0.07%)` (post) or `PM $214.80 (-0.19%)` (pre) under the primary price cell — green/red colored, hidden when either price or session is null, hidden when `changePercent` is null but the price is shown. Wired into `PortfolioSummaryTable.tsx` (Holdings) and `WatchlistPanel.tsx`. TS types in `frontend/src/types/portfolio.ts` + `watchlist.ts`. 8 Vitest assertions in `ExtHoursLine.test.tsx`.
@@ -145,7 +173,8 @@ Saturday-noon UX gap: the Holdings and Watchlist tables both show the regular-se
 - **Phase 2 prompt** (`src/agent/portfolio/phase2_decisions.py`): new `Important Considerations` bullet #6. When a companion ≥ ±1% appears in Phase 1 research, `reasoning_summary` MUST name it with its source-ID token before recommending an action — extends the W3.17 citation contract to ext-hours prints, since otherwise the LLM may quote the stale regular-session close and miss the overnight gap. 3 prompt-source-lock tests in `test_phase2_ext_hours_prompt.py`. Reworded the bullet's failure phrasing to avoid colliding with W3.17's `research malpractice` anchor (`test_reasoning_rule_appears_alongside_thesis_rule` was relying on a single occurrence of that phrase to find the W3.17 rule).
 
 **Behavior summary:**
-- Active **pre/post session** (e.g. weekday 18:00 ET): unchanged — primary price is the ext-hours print, SessionBadge says `post`, ext_hours_* fields stay None on the response.
+
+- Active **pre/post session** (e.g. weekday 18:00 ET): unchanged — primary price is the ext-hours print, SessionBadge says `post`, ext*hours*\* fields stay None on the response.
 - **Closed/regular session with fresh companion** (e.g. Saturday with Friday's AH from ~16:30 ET): the secondary `AH $X.XX (±Y%)` / `PM $X.XX (±Y%)` line shows on Holdings + Watchlist tables; Phase 1 research carries the companion line; Phase 2 reasoning_summary cites the move when ≥ ±1%.
 - **Closed/regular session with no fresh companion** (e.g. Tuesday lunch with no overnight news): unchanged — no secondary line.
 
@@ -207,7 +236,7 @@ Wave 3 of `STOCK_AGENT_UPGRADE_PRD.md` is closed. Across 14 sub-tasks (W3.1–W3
 **E2E + integration (W3.12–W3.14):**
 
 - W3.12 — `e2e_source_footnote.py` ties W3.4/W3.5/W3.7/W3.10/W3.11 surfaces into a purely-offline pipeline test (no LLM, no SEC, no DataManager). Mirrors the JS `SOURCE_ID_PATTERN` in Python, asserts citation-order footnote dedup, ID round-trip across all 3 provider prefixes, plan_type/pct_of_holdings_after enrichment, and that the W3.11 prompt rule's wording supports both fixture scenarios. 15 e2e tests.
-- W3.13 — live SEC integration tests (`@pytest.mark.integration`, skipped by default). 9 tests covering CIK lookup of NVDA's pinned `0001045810`, atom feed shape, AC #3 plan_type populated for ≥3 of N parsed transactions, AC #5 50 sequential calls under 10 req/s. **Critical bug found in production path:** `_index_to_form4_xml_url`'s `<accession>-index.htm` → `<accession>.xml` suffix-swap heuristic was tautologically passing W3.9 mock tests but 404'ing on every real SEC filing — primary docs ship under varied filenames (`wk-form4_<id>.xml`, `xslF345X05/<id>.xml`, `primary_doc.xml`, …). Fix: new async `_resolve_form4_doc_url` fetches `{folder}/index.json` (SEC's structured directory manifest) and picks the first `.xml` entry; old swap kept as fallback. 3 new resolver unit tests. Case study at `docs/case-studies/2026-05-09-sec-edgar-form4-url-resolution.md`.
+- W3.13 — live SEC integration tests (`@pytest.mark.integration`, skipped by default). 9 tests covering CIK lookup of NVDA's pinned `0001045810`, atom feed shape, AC #3 plan*type populated for ≥3 of N parsed transactions, AC #5 50 sequential calls under 10 req/s. **Critical bug found in production path:** `_index_to_form4_xml_url`'s `<accession>-index.htm` → `<accession>.xml` suffix-swap heuristic was tautologically passing W3.9 mock tests but 404'ing on every real SEC filing — primary docs ship under varied filenames (`wk-form4*<id>.xml`, `xslF345X05/<id>.xml`, `primary_doc.xml`, …). Fix: new async `\_resolve_form4_doc_url`fetches`{folder}/index.json`(SEC's structured directory manifest) and picks the first`.xml`entry; old swap kept as fallback. 3 new resolver unit tests. Case study at`docs/case-studies/2026-05-09-sec-edgar-form4-url-resolution.md`.
 - W3.14 — Wave 3 lint sweep (import order, py3.12 `collections.abc.Iterable`, unused-import removal); zero `print`/TODO/FIXME hits; zero leaked-secrets hits; D4 default User-Agent intentionally checked-in per project policy.
 
 **Numbers:**
@@ -219,21 +248,21 @@ Wave 3 of `STOCK_AGENT_UPGRADE_PRD.md` is closed. Across 14 sub-tasks (W3.1–W3
 
 **Acceptance criteria audit:**
 
-| AC | Verified by |
-|----|-------------|
-| #1 — every numeric in JSON `valuation`/`price_target`/`scenarios` is a `Source` object | W3.1 + tools wrap their outputs as Source-bearing markdown; structured-Pydantic Source covered by `test_source_model.py`. Backstop test `test_no_bare_floats` is a Wave 4 follow-up. |
-| #2 — UI hover any number → tooltip shows source name + asof | W3.7 frontend renderer + `ResearchPanel.footnotes.test.ts`. |
-| #3 — 5 NVDA Form 4s parsed with `plan_type` populated for ≥3 | W3.13 `test_fetch_recent_transactions_nvda_populates_plan_type` against live SEC. |
-| #4 — 10b5-1 + plan_adopted=2024-03-01 + current=2025-01-01 NOT cited as discretionary bearish | W3.11 prompt rule + W3.12 W3-E4 fixture assertions. |
-| #5 — 50 sequential SEC requests under 10/s | W3.13 `test_rate_limit_50_sequential_under_10_per_sec` (measured 0.69 req/s). |
+| AC                                                                                            | Verified by                                                                                                                                                                          |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| #1 — every numeric in JSON `valuation`/`price_target`/`scenarios` is a `Source` object        | W3.1 + tools wrap their outputs as Source-bearing markdown; structured-Pydantic Source covered by `test_source_model.py`. Backstop test `test_no_bare_floats` is a Wave 4 follow-up. |
+| #2 — UI hover any number → tooltip shows source name + asof                                   | W3.7 frontend renderer + `ResearchPanel.footnotes.test.ts`.                                                                                                                          |
+| #3 — 5 NVDA Form 4s parsed with `plan_type` populated for ≥3                                  | W3.13 `test_fetch_recent_transactions_nvda_populates_plan_type` against live SEC.                                                                                                    |
+| #4 — 10b5-1 + plan_adopted=2024-03-01 + current=2025-01-01 NOT cited as discretionary bearish | W3.11 prompt rule + W3.12 W3-E4 fixture assertions.                                                                                                                                  |
+| #5 — 50 sequential SEC requests under 10/s                                                    | W3.13 `test_rate_limit_50_sequential_under_10_per_sec` (measured 0.69 req/s).                                                                                                        |
 
 **E2E acceptance audit:**
 
-| E2E AC | Verified by |
-|--------|-------------|
-| W3-E1 — every report number has footnote `[n]` superscript with hover | W3.7 + W3.12 |
-| W3-E2 — footnote list at report bottom, non-empty URL opens new tab | W3.7 + W3.12 |
-| W3-E3 — insider table per row: plan_type + pct_of_holdings_after | W3.10 + W3.12 |
+| E2E AC                                                                        | Verified by   |
+| ----------------------------------------------------------------------------- | ------------- |
+| W3-E1 — every report number has footnote `[n]` superscript with hover         | W3.7 + W3.12  |
+| W3-E2 — footnote list at report bottom, non-empty URL opens new tab           | W3.7 + W3.12  |
+| W3-E3 — insider table per row: plan_type + pct_of_holdings_after              | W3.10 + W3.12 |
 | W3-E4 — single 10b5-1 → no bearish; 3-tx discretionary > 5% → bearish framing | W3.11 + W3.12 |
 
 Bumps backend 0.27.22 → 0.28.0 (minor — closes a major feature wave).
@@ -339,7 +368,7 @@ Bumps backend 0.27.14 → 0.27.15.
 ### Added — Wave 3 (W3.5 insider-tool Source-wrap)
 
 - **W3.5 `finnhub_insider_trades` emits a Source-style footnote** — the Finnhub-backed insider tool used by the Phase1 ReAct agent now ends its successful return with `Source: finnhub [FH-INS-AAPL-2026-05-09] asof 2026-05-09T00:00Z`, matching the W3.2 / W3.3 / W3.4 shape. Field code is `INS`, same as the AV-side `get_insider_activity` footnote shipped in W3.3 (commit 815f233) — both insider tools now carry citation handles, so the Phase2 prompt's W3.6 source-ID rule will cover insider claims regardless of which tool the agent picked.
-- **Provider attribution defaults to "finnhub"** — the actual chain in `DataManager._fetch_insider_trades` is Finnhub primary → Alpha Vantage premium (often 403s) → yfinance fallback. The footnote labels the *primary* provider; finer post-fallback attribution is a follow-up (same trade-off as W3.4).
+- **Provider attribution defaults to "finnhub"** — the actual chain in `DataManager._fetch_insider_trades` is Finnhub primary → Alpha Vantage premium (often 403s) → yfinance fallback. The footnote labels the _primary_ provider; finer post-fallback attribution is a follow-up (same trade-off as W3.4).
 - **`asof` = newest transaction date, NOT `now()`** — same rationale as W3.4 news: the freshness of an insider bucket is meaningfully different from when the tool ran. A 6-week-old "last insider sale" cited tomorrow should still read as 6 weeks stale in its footnote, so the wrapper computes `asof` from the latest row across the returned list. The helper `_insider_latest_asof()` walks each row, looks up the date under any of `transactionDate` / `filingDate` / `Date` / `Start Date` (the same fallback chain the existing line renderer used), parses the string with `_parse_row_date()` (Finnhub `YYYY-MM-DD`, AV ISO with seconds, yfinance `DataFrame.to_dict()` shape), and skips malformed entries — a single bad row never kills the footnote.
 - **No footnote on empty / failed paths** — same back-pressure behaviour as W3.4: if `data_manager.get_insider_trades` returns an empty list, the tool returns "No recent insider transactions" without a footnote; if it raises, the tool returns "Failed to fetch insider trades" without a footnote. The W1.10 consistency_gate would otherwise accept a thesis citation that points to a "source" we never actually fetched from.
 - **`_insider_source_id(provider, symbol, asof)` helper** lives in `tools/finnhub/insider.py` next to its primary user, with the same `{PREFIX}-INS-{SYMBOL}-{YYYY-MM-DD}` shape as the W3.3 `get_insider_activity` footnote. Provider prefixes match across all Wave-3 wraps (`finnhub→FH`, `alphavantage→AV`, `yfinance→YF`).
@@ -378,7 +407,7 @@ Bumps backend 0.27.11 → 0.27.12.
 
 - **W3.2 quote tool emits a stable provenance footnote** — the AlphaVantage `get_stock_quote` tool used by the Phase1 ReAct agent now appends a single line at the bottom of the markdown it returns: `Source: yfinance [YF-Q-AAPL-2026-05-09] asof 2026-05-09T18:35Z`. The bracketed token is what the W3.6 Phase2 prompt will require thesis bullets to cite, and what the W3.7 frontend ReportRenderer will resolve into a footnote chip. Footnote ID format is `{PREFIX}-Q-{SYMBOL}-{YYYY-MM-DD}` with the prefix taken from a small registered table (`finnhub→FH`, `yfinance→YF`, `alphavantage→AV`); a yet-to-be-registered provider falls back to upper-cased source name so we never crash. The `asof` is rendered minute-precision UTC so the consistency_gate can parse staleness back out of the markdown if it ever needs to. Legacy cached `QuoteData` rows (written before this change) carry `source=None` / `asof=None` and the tool silently omits the footnote line for them rather than rendering `Source: None [...]`.
 - **`QuoteData.source` + `QuoteData.asof` fields** — `services/data_manager/types.py` extends the dataclass with two optional fields. `to_dict()`/`from_dict()` round-trip the new fields through redis cache and from-cache reconstruction. The Wave-1 staleness gate already lives at the `flows.py:Phase1→Phase2` boundary, so providing `asof` here makes a future "reject if quote >24h" check cheap. Each provider stamps its own value: Finnhub uses `body.t` (epoch seconds from the upstream API), yfinance + AlphaVantage use `datetime.now(UTC)` since neither endpoint returns a server-side timestamp finer than a trading-day string.
-- **9 unit tests** in `tests/test_quote_tool_source_wrap.py`: 5 cover `_quote_source_id` (yfinance / finnhub / alphavantage prefixes, unknown-provider fallback, missing-source-and-asof legacy path), 4 cover the tool itself end-to-end via `tool.ainvoke()` with a stubbed `DataManager` (yfinance / finnhub / alphavantage emit footnote, legacy-row path emits *no* footnote and no malformed `Source: None` line). Full regression sweep across `test_market_data_quotes.py` + `test_data_manager.py` + `test_data_manager_types.py` (114 existing tests) green — adding the new fields is back-compatible.
+- **9 unit tests** in `tests/test_quote_tool_source_wrap.py`: 5 cover `_quote_source_id` (yfinance / finnhub / alphavantage prefixes, unknown-provider fallback, missing-source-and-asof legacy path), 4 cover the tool itself end-to-end via `tool.ainvoke()` with a stubbed `DataManager` (yfinance / finnhub / alphavantage emit footnote, legacy-row path emits _no_ footnote and no malformed `Source: None` line). Full regression sweep across `test_market_data_quotes.py` + `test_data_manager.py` + `test_data_manager_types.py` (114 existing tests) green — adding the new fields is back-compatible.
 
 Bumps backend 0.27.10 → 0.27.11.
 
@@ -404,6 +433,7 @@ Bumps backend 0.27.10 → 0.27.11.
   2. `flows.py:_phase2_for_symbols` (the dashboard-button two-flow path used by holdings + picks) built its persistence dict from only 5 fields (symbol/decision/position_size_percent/confidence/reasoning_summary). Even if the LLM populated thesis/valuation/scenarios/catalysts/risks/derivations/intent/entry/stop/take, this fallback dropped them all on the floor before `_persist_decisions` could write them. Closed the leak by mirroring the full set of fields that the Phase 1→2 path's `_trading_decisions_to_dicts` already passes through.
 
   Verified end-to-end with a real LLM holdings run on 2026-05-08T16:22Z: 6 holdings analyzed → 2 SELL decisions (MU, CRWV) both ship `thesis_n=3`, `valuation_n=2`, `scenarios={bull,base,bear}` with `prob_sum=1.0`, `catalysts_n=2`, `risks_n=3`, `entry_derivation` + `stop_derivation` populated. The 4 HOLDs leave the blocks empty, which is the prompt's allowed behavior for HOLD.
+
 - **Phase2 prompt f-string regression guard** — embedding a JSON worked-example inside the `f"""..."""` decision_prompt template surfaced an obvious-in-hindsight class of bug: every `{` and `}` in the example needed to be doubled to `{{` `}}` or Python's f-string formatter raised `ValueError: Invalid format specifier ...` at request time, killing the whole flow. First holdings run after the prompt rewrite caught it. Doubled all braces in the worked example and added `test_prompt_actually_builds_without_format_error` to `test_phase2_required_research_blocks.py` — it builds the real prompt against an `AsyncMock`-wrapped LLM stub and only succeeds if the f-string evaluation doesn't raise. Two regressions impossible to ship together going forward: (1) prompt source must say `REQUIRED for BUY/SELL` and not `optional for back-compat`, (2) prompt must f-string-build without raising.
 
 ## [0.27.7] - 2026-05-08
@@ -428,7 +458,7 @@ Bumps backend 0.27.10 → 0.27.11.
 11 sub-tasks shipped (W2.1, W2.3, W2.5–W2.12); 3 deferred with rationale (W2.2, W2.4, W2.13–14 close).
 
 - **W2.5 risk_calculator** — pure async function `compute_portfolio_risk()` produces sector_exposure / beta_weighted / cash_pct / HHI / 60d correlation / annualised σ. DI for meta + returns fetchers; 16 unit tests, all hand-computed math within 1e-6 tolerance.
-- **W2.6 wire risk into Phase2 prompt** — _fetch_symbol_meta_for_risk + _fetch_symbol_returns_for_risk wrap yfinance.Ticker.info / .history; render_risk_block_for_prompt injects "## Portfolio Risk" before symbol research. Also rewrote SELL geometry semantics in the same prompt to match the W1.1 validator (long-side stop_loss < entry < take_profit) — without this, every SELL out of Phase2 would have raised ValidationError.
+- **W2.6 wire risk into Phase2 prompt** — \_fetch_symbol_meta_for_risk + \_fetch_symbol_returns_for_risk wrap yfinance.Ticker.info / .history; render_risk_block_for_prompt injects "## Portfolio Risk" before symbol research. Also rewrote SELL geometry semantics in the same prompt to match the W1.1 validator (long-side stop_loss < entry < take_profit) — without this, every SELL out of Phase2 would have raised ValidationError.
 - **W2.7 + W2.8 schema extension** — TradingDecision gains 5 optional structured-research blocks: thesis (3 bullets), valuation (≥2 ValuationMethods), price_target (PriceTarget), scenarios (bull/base/bear ScenarioSet, prob sum 1.0±0.02), catalysts (list[Catalyst]), risks (3 ranked). All optional → back-compat with old payloads. 21 unit tests pin the contract.
 - **W2.9 numeric derivation** — new `models/derivations.py` with `Derivation {value, formula, inputs}` + `atr_stop()` and `vol_adjusted_size()` helpers. TradingDecision gains entry/stop/target/size_derivation. Cross-validator: derivation.value must match its corresponding price within 0.5%. 16 unit tests.
 - **W2.10 prompt teaches new schema + derivation rules** — Phase2 prompt now describes every new field, requires each `scenarios.*.probability` rationale to cite a base rate or historical frequency, and tells the LLM to attach Derivation to concrete numbers (or use a qualitative band instead). Also moved derivations.py from `agent/portfolio/` to `models/` to break a circular import.
@@ -467,6 +497,7 @@ Wave 2 (architectural upgrades) and Wave 3 (provenance + insider depth) remain g
 ## [0.27.3] - 2026-05-07
 
 ### Fixed
+
 - **fix(watchlist): 间歇性"有些有价有些没有" — 超时调到 10s + quote snapshot 持久化** — 之前 `_enrich_with_live_quote` 每次 GET 实时拉每个 symbol 的 quote，6s 超时，单 symbol 失败就 swallow + log warning，那行 `current_price` 留空，前端 `item.current_price != null` 判定失败 → 该行不渲染价。开盘前后 yfinance 拥堵，6s 不够，log 实测 13:44–14:10 ET 共 27 次 `watchlist_quote_enrichment_failed error_type=TimeoutError`，每次不同 subset 中招（INTC/TSLA/MSFT/GOOGL/SNDK/BE/CRWV 都中过）。
   - **A. 超时 6s → 10s**（`backend/src/api/watchlist.py:28`）。多数 timeout 立刻消失；cache hit 仍 ~5ms。
   - **B. quote snapshot 持久化**：`WatchlistItem` 的 `current_price` / `last_price_update` / `last_session` / `day_change_percent` 4 个字段从 transient 改为持久化字段（`backend/src/models/watchlist.py:42-67`），enrich 成功后写回 mongo（新增 `WatchlistRepository.update_quote_snapshot()`，`backend/src/database/repositories/watchlist_repository.py:109-134`）。下次 endpoint 命中 timeout 时，item 已经从 mongo 带着上次成功的快照返回，前端直接渲染那个值，不再空白。
@@ -476,6 +507,7 @@ Wave 2 (architectural upgrades) and Wave 3 (provenance + insider depth) remain g
 ## [0.27.2] - 2026-05-07
 
 ### Fixed
+
 - **fix(translation): 持仓分析显示英文 — separator 协议替换 JSON parse + fallback 不再伪装翻译** — Portfolio 分析历史里近两次"持仓分析"chat modal 显示英文（5/7 13:33、5/6 15:34）。根因不是 dashscope 断网，是 `_parse_llm_output` 用 `json.loads` 严格解析 LLM 返回的 JSON 数组，而 LLM 把 markdown 翻译里的真实换行直接写进 JSON string（违反 spec），`json.loads` 抛 `Invalid control character` → parser 返回 None → `translate_batch:175-179` 把英文原文当 "translated" 写进 out → `translate_for_persistence` 把英文原文写进 `Message.content_zh` → 前端 `useTranslated` 拿到非空 precomputed 直接返回 → 用户看到英文。Mongo 实测 13 条文档（2 messages + 11 portfolio_orders.full_research_zh）的 `_zh` 字段字面等于 `content`/`full_research`。
   - **Prompt 协议从 JSON 数组换成 separator-delimited 纯文本**：`_SYSTEM_PROMPT` rule 6 + Example 改为用 `<<<TRANSLATION_SEPARATOR>>>` 分隔多段译文。彻底消除 escape 地狱。
   - **`_parse_llm_output` 重写为 split + strip**：28 行，零 JSON 解析。
@@ -490,6 +522,7 @@ Wave 2 (architectural upgrades) and Wave 3 (provenance + insider depth) remain g
 ## [0.27.1] - 2026-05-07
 
 ### Fixed
+
 - **fix(quote): 盘前/盘后时段返回真实延伸时段价** — `yfinance.fast_info.last_price` 只在 regular session 更新，盘前/盘后期间它一直停在前一日 RTH close 附近，导致 holdings/watchlist 的 `price` 字段在 09:00-09:30 ET 实测显示 287.51（≈昨收 287.40），而真实盘前价已经走到 289.35（+0.65% 被吞掉）。
   - 抽出 `_extended_hours_price(hist, session, fallback)` helper（`backend/src/services/data_manager/manager.py`），先过滤 `Volume > 0` 行，pre/post session 时返回 1m prepost bar 的最后 Close，否则回退到 `fast_info.last_price`
   - 重排 `_fetch_quote_yfinance`：先取 1m prepost hist + derive session，再让 helper 决定 price，最后算 change/change_percent（`previous_close` 仍锚定 RTH close，change% 才有意义）
@@ -501,6 +534,7 @@ Wave 2 (architectural upgrades) and Wave 3 (provenance + insider depth) remain g
 ## [0.27.0] - 2026-05-07
 
 ### Added
+
 - **feat(holdings/watchlist): 今日涨幅 (day_change_percent)** — 两表都暴露今日 vs 昨收 % 改变。复用 QuoteData.change_percent（三个 provider 都已经返回过来），enrich 阶段写到 transient 字段
   - `Holding.day_change_percent: float | None`（不入 mongo）
   - `WatchlistItem.day_change_percent: float | None`（不入 mongo）
@@ -511,6 +545,7 @@ Wave 2 (architectural upgrades) and Wave 3 (provenance + insider depth) remain g
 ## [0.26.0] - 2026-05-07
 
 ### Removed
+
 - **change(portfolio-chart): 删掉 Robinhood 风格的 portfolio value 时间序列图表** — Alpaca 移除后没办法算真实历史净值。v0.25.1 用"当前持仓 × 历史价"回放出来一条线，但今天才买的股票被当作 1 年前就持有，昨天卖掉的根本不出现，这条线长得漂亮但**信息错的**，比空着还误导。
   - 删 `backend/src/api/portfolio/history.py`、移除 router 注册
   - 删 `PortfolioHistoryDataPoint` / `AnalysisMarker` / `OrderMarker` / `PortfolioHistoryResponse` schema 类
@@ -519,12 +554,14 @@ Wave 2 (architectural upgrades) and Wave 3 (provenance + insider depth) remain g
 ## [0.25.2] - 2026-05-06
 
 ### Fixed
+
 - **fix(watchlist-time): added_at / last_analyzed_at 带 UTC 后缀** — Mongo Motor 反序列化 BSON UTC 成 naive datetime，Pydantic 输出无 `Z` 的 ISO，前端 `new Date(iso)` 当本地时间解析 → "上次分析" 显示偏 8 小时。`_enrich_with_live_quote` 顺手把这俩字段补上 `tzinfo=UTC`。同 v0.23.0 holdings 的修法。
 - **fix(watchlist-prices): quote 超时从 3s 调到 6s** — 9 路并发但首次 cold-cache yfinance 往返常超过 3s（实测 9 行有 7 行 timeout）。改 6s 后 9 行 enrich 8 行成功（MU 之前看不到价现在 $660.74）。redis cache hit 还是 ~5ms，调高 timeout 不影响热路径
 
 ## [0.25.1] - 2026-05-06
 
 ### Fixed
+
 - **fix(portfolio-chart): 图表恢复显示** — `/api/portfolio/history` 之前 W5a Alpaca 移除后**有意返回空 data_points**，前端图表区一直白板。现在用本地 holdings × yfinance OHLCV 回放出 portfolio value 时间序列：
   - 1D → 5min bars (今日)
   - 1M → daily bars (~30 天)
@@ -537,38 +574,46 @@ Wave 2 (architectural upgrades) and Wave 3 (provenance + insider depth) remain g
 ## [0.25.0] - 2026-05-06
 
 ### Added
+
 - **feat(watchlist): GET /api/watchlist 现在并发拉实时报价 enrich 每行** — `WatchlistItem` model 加 transient 字段 `current_price` / `last_price_update` / `last_session`（**不**写 mongo，纯 response-only）。GET 时通过 DataManager 并发拉 quote（最多 8 路并发，每个 quote 3s 超时），失败行静默跳过保留无 price 状态。借力 DataManager 自带的 redis 30s quote cache，重复 GET 不会真的撞到上游
 - **feat(watchlist): POST /api/watchlist/analyze?symbol=BE 单股分析分支** — 没传 symbol 时还是批量（force=True，跳已持仓），传 symbol 时调 `analyze_symbol(sym)` 直接跑那一只。rate limit 从 2/min 抬到 10/min（per-row 按钮场景需要）。symbol 校验 `[A-Z0-9.]{1,10}` 防注入
 
 ### Notes
+
 - watchlist 字段是 transient 的（model 默认 None，mongo 里没列）—— 不破老数据，不需要 migration
 - DataManager.get_quote 有 redis 30s cache，watchlist 9 行的话首次 GET ~9 个 quote 调用、之后 30s 内重复 GET 几乎全 cache HIT
 
 ## [0.24.2] - 2026-05-06
 
 ### Changed
+
 - **change(watchlist-analysis): "立即分析"自动跳过已经在 holdings 里的 symbol** — `WatchlistAnalyzer.run_analysis_cycle` (force=True 路径) 在拿到 watchlist items 后，先 query mongo `holdings` collection 把已持仓的 symbol 集中起来，从待分析列表里 filter 掉。这些股票走"持仓分析"那条线就行，watchlist 这边再跑一遍是浪费 quote + LLM 调用。Mongo 读用 `watchlist_repo.collection.database["holdings"]`，零新注入点。读失败时只打 warning 不阻断（保守 fallback：宁可分析重也不能跑不出来）
 
 ## [0.24.1] - 2026-05-06
 
 ### Fixed
+
 - **fix(symbol-search): 热门股 BE / PLTR / HOOD / RIVN / SOFI 等搜不到** — `_search_local_universe` 之前只查 `sector_universe.csv`（515 只大盘），命中前缀/名字匹配就直接返回，**不再走 yfinance fallback**。结果用户搜 `BE` 拿到 BEN/BBY/BDX 但永远看不到 Bloom Energy 本身（不在 515 大盘里）。
 
 ### Added
+
 - 新增 **`backend/data/tickers_directory.csv`**（6868 只活跃 US ticker）— 来自 Nasdaq Trader 公开发布的 `nasdaqlisted.txt` + `otherlisted.txt`，过滤 Test Issue / ETF / Rights / Warrants / Units。Schema 窄：`symbol,name,exchange`，专门给 search endpoint 用，跟 `sector_universe.csv`（带 sector/market_cap 富数据，picks 流程用）严格分离
 - 新增 `backend/scripts/build_tickers_directory.py` 拉取 + 过滤 + 去重，`docker compose exec backend python scripts/build_tickers_directory.py` 重新生成（Nasdaq Trader 每日发布，手动刷新即可）
 - 新增 `backend/src/data/tickers_directory.py` loader，`@lru_cache` 单例读
 
 ### Changed
+
 - `_search_local_universe` 改成两表 union：sector_universe 优先（保留 sector 富数据），同 symbol 时 directory 表跳过避免重复。Ranking 逻辑不变（exact > prefix > name-prefix > fuzzy）
 
 ### Notes
+
 - 没动 sector_universe.csv —— picks/portfolio 决策流程读它的 sector + market_cap 字段，不能污染
 - yfinance fallback 仍然保留（v0.17.3 加的），现在主要兜底"非 US 上市"或"超新 IPO 还没进 Nasdaq Trader 列表"的边缘场景
 
 ## [0.24.0] - 2026-05-06
 
 ### Added
+
 - **feat(quotes): 引入盘前/盘后 (extended-hours) 报价支持** — 之前所有 holding 的 `current_price` 永远是上一根 RTH bar；财报后开盘前那段大幅波动看不到。现在 yfinance 路径用 `prepost=True` 取最新延长时段成交，按 yfinance 的 bar 顺序天然就是 `iloc[-1]` 胜出，匹配 Robinhood/Yahoo 主页行为。
   - `QuoteData` 加 `session: Literal["pre","regular","post","closed"] = "regular"`；`to_dict`/`from_dict` 透传，旧缓存读出来默认 `regular`，零迁移
   - `yfinance_bars.get_bars` 加 `prepost: bool = False` 参数；`yfinance_indicators.compute_indicator` 显式 `prepost=False` 锁意图（指标永远 RTH-only，避免 prepost bar 污染 SMA/EMA 等）
@@ -578,26 +623,31 @@ Wave 2 (architectural upgrades) and Wave 3 (provenance + insider depth) remain g
   - **Phase 2 portfolio 决策 prompt 在非 regular 时段插「市场时段提示」** —— 警告 LLM 延长时段流动性薄、可能跳空，建议延后下单或调整 entry。warn-not-block，不阻断决策
 
 ### Notes
+
 - **Finnhub `/quote` 和 Alpha Vantage `GLOBAL_QUOTE` 都做不到** —— 都是 RTH-only 接口，硬编码 `session="regular"` + docstring 说明限制。**只有 yfinance 路径**能产出 `pre`/`post`/`closed` 标签
 - 老 holdings 行没 `last_session` 字段 → 类型 `Optional[str]`，前端 null 时不显示 chip。零数据迁移
-- 循环导入用函数级 `from . import get_market_session` 规避（market_data.__init__ 反向 import quotes/manager 链路）
+- 循环导入用函数级 `from . import get_market_session` 规避（market_data.**init** 反向 import quotes/manager 链路）
 - `current_price` / `market_value` / `unrealized_pl` 全部按"最新成交"算 —— 即使是稀薄的盘后偏离价。"prefer latest"是有意为之
 
 ### Tests
+
 - `test_market_session_boundaries.py` — 14 case 覆盖 pre/regular/post/closed 切换 + 周末 + 时区转换
 - `test_phase2_session_stanza.py` — source-inspection 验 Phase 2 prompt 注入点 + 三个中文标签 + warn-not-block 约束
 
 ## [0.23.0] - 2026-05-06
 
 ### Fixed
+
 - **fix(portfolio-schema): `last_price_update` / `created_at` / `updated_at` 在 `HoldingResponse` 里现在带 UTC 时区后缀** — Mongo Motor 把 BSON UTC datetime 反序列化成 naive `datetime`，Pydantic 默认输出 ISO `2026-05-06T03:37:37.780000` 不带 `Z`。前端 `new Date(str)` 把 naive ISO 当本地时间解析（按 ECMA-262），导致 zh-CN UI 显示 UTC 时间而不是北京时间。`portfolio_models.py:from_holding` 现在用 `_as_utc(dt)` 给 naive 字段补上 `tzinfo=UTC`，输出变成 `...+00:00`，前端能正确换算成 Asia/Shanghai。
 
 ### Added
+
 - **feat(holdings): PATCH `/holdings/{id}` 现在也走 `_enrich_with_quote(persist=True)`** — 之前只有 POST/refresh-prices 会更新 `last_price_update`，PATCH 改持仓只动 `updated_at`、不刷价，导致"最后更新"显示和实际行情脱钩。现在编辑数量/均价后也会同步抓一次实时价、写回 mongo。
 
 ## [0.22.0] - 2026-05-06
 
 ### Added
+
 - **feat(mark-executed): 把"LLM 建议链"和"实际成交链"接上，一键 Mark Executed 同步 cash + holdings + transactions + orders 四张表** — 之前 DecisionTracker 只能看 LLM 给的 BUY/SELL 建议，但实际有没有按它做、做了多少、cash 还剩多少，跟决策本身完全脱钩。现在每条 `status="suggested"` 的 BUY/SELL order 旁边一个 `Mark Executed` 按钮，点开 modal（默认 qty 自动按 `position_size_percent * cash / entry_price` floor 算、默认 price 用 LLM 给的 `entry_price`、SELL 默认填当前 holding qty），用户改完确认。
   - 新建 `services/order_execution_service.py:mark_order_executed`，5 步带补偿回滚的编排：(1) 校验 order 存在 & status=suggested & side∈{buy,sell}；(2) 写 `user_transactions` 行（带 `portfolio_order_id` 反指针）；(3) 调 `holdings_ledger.apply_transaction` 走加权均价 BUY / 减仓 SELL；(4) `$inc` 调整 `user_settings.cash_balance`（BUY 减 / SELL 加，**允许变负数 + warning**）；(5) `portfolio_orders` 翻成 `status=filled` 带 `user_transaction_id` 正向指针。任一步失败回滚前面的步骤——单用户本地工具不上 multi-doc transaction 是有意为之，补偿模式买的简单性比 ACID 更值。
   - 新接口 `POST /api/portfolio/orders/{order_id}/mark-executed`，map service 异常到 404/409/400/500：`OrderNotFoundError` 404、`OrderAlreadyFilledError` 409、`OrderNotExecutableError`/oversell/no-cash 400
@@ -611,16 +661,19 @@ Wave 2 (architectural upgrades) and Wave 3 (provenance + insider depth) remain g
   - `api/portfolio/chats.py:get_portfolio_chat_history` 卡片 title 生成读 `flow` 字段：`holdings → 持仓分析 · ...`、`picks → 今日推荐 · ...`、单 symbol Phase 2 / non-portfolio chat → `个股分析 · ...`
 
 ### Removed
+
 - **chore(dead-code): 删掉 `_write_summary_chat` 孤儿消息路径** — 之前每跑一次 holdings/picks 都会向一个虚拟的 `system-run-{flow}-{date}` chat_id 写一条 summary message，但**那个 chat_id 从来没在 `chats` collection 创建过**，所以这些消息是"没爹"的孤儿，sidebar 历史压根读不出来。真正写历史的是 `_store_portfolio_decision_message`（往 `Portfolio Decisions` chat 里塞 message），summary chat 完全是浪费。一并删掉 `flows.py` 里两处 `message_repo` 局部变量、`MessageRepository` / `MessageCreate` / `MessageMetadata` 三个 import。
 
 ## [0.21.4] - 2026-05-05
 
 ### Fixed
+
 - **fix(picks-flow): `_SymbolStub` 没有 `watchlist_id` 字段，picks 流程在 Phase 1 收尾时崩** — 用户跑 today's picks 时报 `AttributeError: '_SymbolStub' object has no attribute 'watchlist_id'`。根因：`agent/portfolio/phase1_research.py:_run_phase1_research` 在 watchlist 分支收尾时无脑调 `watchlist_repo.update_last_analyzed(watchlist_item.watchlist_id, ...)`，假设入参一定是真实 `WatchlistItem`；但 picks 流程为 sector-filtered 候选股传的是 `_SymbolStub(symbol=...)` 鸭子类型对象（这些股票根本不在用户 watchlist 里，没 `watchlist_id` 可言）。改成 `wl_id = getattr(watchlist_item, "watchlist_id", None); if wl_id is not None: ...`——只在真 WatchlistItem 上戳 last-analyzed 时间戳，stub 直接跳过。
 
 ## [0.21.3] - 2026-05-05
 
 ### Changed
+
 - **change(decisions): full_research 也走写入时预翻译，停掉点开 Full Research 时的 12 秒 LLM 等待** — 用户反馈"点开 full research 时明明已经显示中文了，还在灰色等翻译"。根因：`reasoning_zh` 上一版已经预翻译，但 `full_research`（Phase 1 给每个 symbol 的完整研究 markdown，几 KB）从来没存过中文版，前端 modal 里 `<Translated text={researchModal.text} />` 没传 `precomputed`，每次开 modal 都要现调一次 `/api/translate` 走 12-15 秒 Qwen 翻译，看到的"已经是中文"是 React Query 内存缓存命中而 `isLoading=true` 仍在挂着，所以一直灰着。
   - `agent/portfolio/flows.py:_persist_decisions` 现在同时预翻译 reasoning + full_research，但策略不同：reasoning 走原来的批量（一次 LLM 调用翻所有 symbol），full_research 因为单条几 KB 体积太大，每个 symbol **独立调用、并发跑**——一次性塞多条长 markdown 到 system+user prompt 风险高（容易超 `max_tokens=4096` 上限、JSON 数组解析容易被未转义引号搞崩、一条失败拖垮全批）。并发 + 独立成败让一个 symbol 翻失败不影响其它。
   - `services/translation_service.py:_llm_translate` 的 `max_tokens` 从 4096 提到 16384。中文 token 比英文密 ~1.5x，5-10KB 英文 markdown 翻成中文很容易超过 4096 → 之前长文本翻译其实是被静默截断的。短文（reasoning）实际消耗不到 1000 token，调高上限没成本。
@@ -629,33 +682,38 @@ Wave 2 (architectural upgrades) and Wave 3 (provenance + insider depth) remain g
 ## [0.21.2] - 2026-05-05
 
 ### Changed
+
 - **change(decisions): Phase 2 写入时预翻译 `reasoning_zh`，停掉 DecisionTracker 的实时 LLM 调用** — 用户反馈"Decision Tracker 那边的翻译还是有问题：他还是第一次就是实时的 call llm 翻译，而不是直接显示已经有的翻译"。根因：`agent/portfolio/flows.py:_persist_decisions` 把 `reasoning_summary` 写进 `metadata.reasoning` 时从来没调过 `translate_for_persistence`，所以前端 `<Translated text={reasoning} />` 第一次渲染时只能现调 `/api/translate`，每条都要等一次 Qwen 翻译往返。修法跟 `chat_repository.py:title_zh` 完全一样：写入前批量喂给 `translate_for_persistence`，把 `reasoning_zh` 一起塞进 `metadata`，让前端用 `precomputed=` prop 直接显示存好的中文。`_persist_decisions` 加 `redis_cache` 参数，4 个调用点（holdings/picks 的 fallback 和 full pipeline 路径）都从 `app.state.redis` 透传进去。一次运行所有决策的 reasoning 走一次 batch 翻译，比按行触发省 LLM 调用数。注意：MongoDB 里已存的旧行没有 `reasoning_zh`，下次跑 Phase 2 之前展开旧 row 还会 fallback 到 lazy 路径，这是预期行为。
 
 ## [0.21.1] - 2026-05-05
 
 ### Changed
+
 - **change(phase2-prompt): SELL 平多仓语义说清，reasoning 必须 cite 三个位的 anchor** — 用户反馈 MU 那条 SELL 决策的 entry $645 没在 reasoning 里点出锚点，只点了 stop $652 和 target $576。同时 SELL 平掉已有持仓时 stop_loss / take_profit 的字面语义有点拧巴（"涨破 $655 砍仓回平"在没有空仓的语境下不通），LLM 自己有时也写得含糊。`agent/portfolio/phase2_decisions.py` 的 Price Levels 章节加一段，明确 SELL=平多仓时三个价位的真实意思：`entry_price` = 挂卖单价，`stop_loss` = 价反向涨破就**撤单**别卖（不是真止损），`take_profit` = 卖单不成交时跌到这是补救 last-resort 平仓价。同时强制 reasoning_summary 必须为**三个价位都**点 anchor，不只是 stop/target。
 
 ## [0.21.0] - 2026-05-05
 
 ### Changed
+
 - **change(technical-indicators): yfinance + pandas-ta-classic 升为主源，AV 降级 fallback** — `agent/tools/alpha_vantage/technical.py` 里 3 个 AV-direct 工具（`get_trend_indicator` SMA/EMA/VWAP、`get_momentum_indicator` RSI/MACD/STOCH、`get_volume_indicator` AD/OBV/ADX/AROON/BBANDS）现在先走本地 pandas-ta-classic 计算（基于 yfinance OHLCV 全量历史 bars），AV `TECHNICAL_INDICATOR` endpoint 只在 yfinance 失败时兜底。原因：AV free-tier 25 req/day 几次页面加载就被烤干，之前一旦超 quota 这 11 个指标全部消失，LLM 给 entry/stop/take_profit 的论据就掉一半；本地算法没 quota，跟之前 commit `1b2fee3`（"yfinance + FRED primary, Alpha Vantage demoted to fallback"）的方向一致。
   - 新建 `services/market_data/yfinance_indicators.py:compute_indicator(symbol, function, interval, time_period)`，每个 AV `function` 映射到 pandas-ta-classic 调用，输出列名重命名以匹配 `format_technical_indicator` 的契约（MACD → `MACD`/`MACD_Hist`/`MACD_Signal`；BBANDS → `Real Upper/Middle/Lower Band`；其余按 AV 风格起名）
   - `services/formatters/technical.py` 和 `services/formatters/__init__.py` 的 `format_technical_indicator(...)` 加 `data_source: str = "yfinance_local"` 参数；输出顶部那行 `Data Source: ...` 现在反映实际服务路径（happy path 显示 `yfinance_local`，AV 兜底显示 `alpha_vantage_fallback`）
   - 新依赖 `pandas-ta-classic>=0.5.44`（pandas-ta 的 numpy 2.x 兼容 fork；原版 `from numpy import NaN` 在 numpy 2.x 已删，装不上）
 
 ### Migration
-- **必须 rebuild backend image**：deps 改了，`docker compose up -d --force-recreate backend` 不够，要先 `docker compose build backend` 再 up
 
+- **必须 rebuild backend image**：deps 改了，`docker compose up -d --force-recreate backend` 不够，要先 `docker compose build backend` 再 up
 
 ## [0.20.6] - 2026-05-05
 
 ### Added
+
 - **feat(decisions): Phase 2 决策三件套 entry / stop / target，且必须引用工具里的位** — `models/trading_decision.py` 的 `TradingDecision` 加三个 `float | None` 字段：`entry_price`（限价入场）、`stop_loss`（止损）、`take_profit`（止盈）。`gt=0` 校验，HOLD 必须为 None，BUY/SELL 必须填。`reasoning_summary` 同步要求"MUST cite the specific tool-derived levels you used"——光说"看好"没用，得点出 fib 0.618 / swing low / 阻力位这种工具里实际跑出来的位才行。`agent/portfolio/phase2_decisions.py` 在系统提示里加了一整节 "Price Levels (REQUIRED for BUY/SELL)"，逐条列清楚 BUY 的 stop 在 entry 下面、TP 在上面、SELL 反过来；同时给了样例 reasoning。落库走 `agent/portfolio/flows.py:_persist_decisions`：`entry_price → PortfolioOrder.limit_price`、`stop_loss → stop_price`，三个都额外塞 `metadata` 兜底（前端读 metadata 拿 take_profit，因为 PortfolioOrder 没有原生的 take_profit 列）。Phase 2 落库的 markdown 表格也从 4 列扩成 7 列：Symbol / Decision / Size % / Entry / Stop / Target / Confidence。
 
 ## [0.20.5] - 2026-05-05
 
 ### Fixed
+
 - **fix(time): 「分析历史」卡片时间永远卡在 UTC** — `api/portfolio/chats.py` 给前端造的 `card_title` 是 `f"{symbol} · {msg_ts.strftime('%H:%M')}"`，UTC 13:49 直接拼成死字符串「`AAPL · 13:49`」，前端 i18n 救不了——它就是字面量。同一个文件的 `latest_timestamp` 也漏：Motor 默认 `tz_aware=False`，从 BSON UTC 读出来的 datetime 是 naive，`.isoformat()` 出来不带 `+00:00`，浏览器把它当**机器本地时间**解析（北京浏览器 = 北京视角），相对时间「N 分钟前」错 8 小时。这版两处都修：
   - `msg_ts.replace(tzinfo=UTC)` 兜住 naive datetime，`.isoformat()` 出来带 `+00:00`，前端 `new Date(...)` / `formatTimestamp` 能正确转 zh → Asia/Shanghai
   - `card_title` 改成嵌入完整 ISO 而不是 raw `HH:MM`：`f"{symbol} · {ts_iso}"`。前端 `ChatListItem` 配套加 `localizeTimestamps` 包装（frontend v0.15.2），把 ISO 替换为当前 locale 的 `HH:MM`
@@ -663,32 +721,38 @@ Wave 2 (architectural upgrades) and Wave 3 (provenance + insider depth) remain g
 ## [0.20.4] - 2026-05-05
 
 ### Fixed
+
 - **fix(health): `/api/health` 的 `timestamp` 是死的桩字符串** — `api/health.py:65` 写死了 `"2025-01-20T00:00:00Z"`，注释说"will be auto-generated in production"，但根本没人改回来。线上每次 hit `/api/health` 都返这个 2025-01 的字符串，前端 HealthPage 拿来 `formatTimestamp` 渲染就一直是「2025-01-20」固定显示，跟实际服务状态完全脱钩。换成 `datetime.now(UTC).isoformat()`。
 
 ## [0.20.3] - 2026-05-05
 
 ### Fixed
+
 - **fix(time): 报告生成时间和 LLM 看到的"今天"不对** — 上一版只修了**前端展示层**的 UTC+8 渲染，但**源头**还有大量 `datetime.now()`（无 tz）输出 ISO 字符串发给前端，前端 `new Date(naive_iso)` 把它当机器本地时间解析，结果中文界面下时间还是漂的。这版分两类修：
   - **写出去给前端显示的 ISO**：换成 `datetime.now(UTC).isoformat()`，输出带 `+00:00`，前端 `formatTimestamp` 看到 tz-aware 才能按 zh-CN 转 Asia/Shanghai。触达 `core/analysis/stochastic_analyzer.py`、`core/analysis/macro_analyzer.py`、`core/analysis/fibonacci/analyzer.py`（`analysis_date` 字段）；`api/analysis/technical.py`（`generation_date`）；`api/market/prices.py`（`last_updated` / `timestamp`）。
   - **塞进 prompt 给 LLM 看的"今天"**：换成 `datetime.now(ZoneInfo("Asia/Shanghai"))`。本地工具的目标用户在中国，UTC 比北京慢 8 小时，深夜跑分析时给 LLM 写"今天是昨天"。触达 `agent/llm_client.py:get_financial_agent_system_prompt()`、`agent/langgraph_react_agent.py:_today`、`agent/context.py:AgentContext.current_date/six_months_ago`（含 `from_dict` 兜底分支）、`services/formatters/base.py:current_year`（财务季度过滤）、`services/watchlist/analysis.py:end_date`（fibonacci 窗口端点）、`core/data/ticker_data_service.py:today`（缓存 TTL 判断）。
   - **不动**：`langgraph_react_agent.py:723,725` 的 `trace_id` / `thread_name`，纯字符串 ID，不渲染、不参与时间比较。
 
 ### Why
+
 v0.15.0 (frontend) 加了 `formatTimestamp` 把 zh-CN locale 强制转 Asia/Shanghai，但前提是**输入的 ISO 字符串已经带 tz**（比如 `+00:00` 或 `Z`）。老代码大量 `datetime.now().isoformat()` 输出 naive 字符串，浏览器侧 `new Date()` 看到 naive 字符串会按浏览器本地时区当真——于是用户看到的"报告生成时间"会差一个时区偏移。源头修干净后，所有面向 UI 的时间戳都是显式 UTC，前端再统一按 locale 渲染，链路自洽。
 
 ## [0.20.2] - 2026-05-05
 
 ### Fixed
+
 - **fix(analysis): 混合 naive/aware datetime 触发 `Tz-aware datetime.datetime cannot be converted to datetime64`** — Redis 缓存里旧的 OHLCV 条目走 `OHLCVData.from_dict()` 时 `datetime.fromisoformat()` 保留原字符串的 tz 信息（早期写入的可能是 naive），新拉的 yfinance 数据在 `DataManager._fetch_ohlcv_yfinance()` 里被强制 UTC-aware。两批拼起来时 `pd.DatetimeIndex([...])` 拒绝混合输入。把 `stochastic_analyzer.py` 和 `fibonacci/analyzer.py` 里的 `pd.DatetimeIndex(...)` 全换成 `pd.to_datetime(..., utc=True)`，这个调用会把混合列表里的所有 datetime 统一规整到 UTC-aware。`langgraph_react_agent.py` 里 `df.index >= pd.Timestamp(cutoff_date)` 比较前先 `tz_localize("UTC")`（market_service 返回的 index 可能是 naive，cutoff_date 是 tz-aware）。修完以后 SNDK/GOOGL/NVDA/CRWV 的 stochastic + fibonacci 指标都能正常算出来。
 
 ## [0.20.1] - 2026-05-05
 
 ### Fixed
+
 - **fix(watchlist): 「等待首次分析」永远不消失** — `WatchlistAnalyzer.run_analysis_cycle()` 里 `for item in items` 循环读 `item.user_id`, 但 W5b 已经把 `user_id` 从 `WatchlistItem` 上拿掉了，每次手动触发都 `AttributeError: 'WatchlistItem' object has no attribute 'user_id'` 直接挂。把循环里几处 `item.user_id` 全删了——`analyze_symbol()` 和 `update_last_analyzed()` 自身的 `user_id` 形参都是 ignored optional，调用点不传也没事。修完以后 SNDK/GOOGL/NVDA/CRWV 的 `last_analyzed_at` 都正常落地了（finally 块兜底，单只 symbol 数据源失败不会卡住下一只）。
 
 ## [0.20.0] - 2026-05-05
 
 ### Added — 写入时翻译 (LLM 内容 zh-CN 上墙更快、Redis 1 天 TTL 不再失效)
+
 之前 LLM 生成的英文内容（chat 消息正文 / chat 标题 / 最近一条预览）通过前端 `POST /api/translate` 按需翻译，命中 Redis 1 天 TTL；TTL 一过同一段又得重新打 LLM。这版改成写入 MongoDB **之前** 同步翻译，`<field>_zh` 持久化在 sibling 字段，前端拿到就直接渲染，不打 `/api/translate`。
 
 - **`src/services/persistence_translator.py`** — 写路径翻译边界。包一层 `translate_batch(...)`：批量空字段短路、整批失败返 `{f"{k}_zh": None}` 不抛（前端走原本的 lazy fallback，不会破坏写入）。
@@ -698,23 +762,27 @@ v0.15.0 (frontend) 加了 `formatTimestamp` 把 zh-CN locale 强制转 Asia/Shan
 - **8 个调用点同步改造** — `main.py`、`chat_deps.py`、`history.py`、`portfolio/agent.py`、`portfolio/flows.py`、`watchlist/analyzer.py`、`scripts/test_repositories.py` 全部改成把 `redis_cache` 透传到 repository 构造。`PortfolioAnalysisAgent` 也加 `redis_cache` 参数。
 
 ### Tests
+
 新加 17 个测试: `test_persistence_translator.py` (3) + `test_message_repository.py` (3) + `test_backfill_translations.py` (3) + `test_chat_repository.py` 写入时分支 (4 含 transient-failure 守卫回归)。所有 17 个全过。
 现有的 29 个失败测试是 W5b user-id 移除等旧 refactor 的遗留 baseline，与本次修改无关（在父 commit 上同样失败）。
 
 ## [0.19.2] - 2026-05-05
 
 ### Changed
+
 - **change(phase2-decisions): reasoning 不再截断 + 主表去掉 Reasoning 列** — 之前每条 decision 的 reasoning 在表格里被砍到 80 字加 `...`，关键判断丢了。把 Reasoning 列从主表里移除（长句撑表格列宽，强制横向滚动），改成表格下方 `#### Reasoning` 子段落，每条 decision 一行 `**SYMBOL (DECISION)** — 完整 reasoning`。表格保持 4 列紧凑可读，全文 reasoning 单独段落呼吸。仅影响新跑的分析；MongoDB 里已存在的旧 message 截断版本保持原样。
 
 ## [0.19.1] - 2026-05-05
 
 ### Changed
+
 - **change(portfolio-chats): 分析历史每次跑都出独立卡片** — 之前 `/api/portfolio/chat-history` 按 chat 标题分组，所有 portfolio 分析都被塞进同一个 `Portfolio Decisions` chat，结果用户跑 N 次只看到 1 张侧边栏卡。现在改成"每条 message → 一张卡"，title 自动生成为 `Analysis · MU, AAPL, CRWV · 04:45`（symbols 截断 +N，时间精确到分）。`chat_id` 字段沿用 `message_id`，前端契约（`Chat[]` 形状）零修改。新加 `parent_chat_id` 字段方便调试。
 - **change(portfolio-chats): DELETE / GET `/chats/{id}` 支持 message_id** — 路径参数以 `msg_` 开头时按 message 操作（删/读单条），其它形状沿用 chat 级行为，保留遗留删除路径不破坏。
 
 ## [0.19.0] - 2026-05-05
 
 ### Changed — yfinance / FRED 升主源，AV 退 fallback (~80% 配额释放)
+
 Alpha Vantage 免费 25 req/day 几次页面加载就用光，导致 "Data sources are
 severely rate-limited" 反复出现。把所有有免费替代源的路径全部翻转：
 
@@ -727,7 +795,7 @@ severely rate-limited" 反复出现。把所有有免费替代源的路径全部
 - **`DataManager._fetch_ohlcv()`** 改成 yfinance 主、AV 备。新建
   `services/market_data/yfinance_bars.py` 适配器，把 yfinance Ticker.history
   的 1m/5m/15m/30m/60m/1d/1wk/1mo 映射到现有 Granularity，输出列名
-  Open/High/Low/Close/Volume 跟 AV 一致，DataManager._dataframe_to_ohlcv
+  Open/High/Low/Close/Volume 跟 AV 一致，DataManager.\_dataframe_to_ohlcv
   零修改。验证 AAPL daily 61 bars / 1min 390 bars 全正确。
 - **`DataManager._fetch_treasury()`** 改成 FRED 主、AV 备。FRED 是美联储官方
   数据源（DGS3MO/DGS2/DGS5/DGS10/DGS30），权威性高于 AV，且有现成的
@@ -748,11 +816,13 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 ## [0.18.1] - 2026-05-05
 
 ### Fixed
+
 - **fix(translation): research 报告开头的免责声明仍是英文** — Opus 4.7 看到 "Alpha Vantage rate-limited, but Finnhub data is sufficient..." 这种数据源元注释，会模糊地当成"非正文"保留原样不翻，导致 CRWV / AAPL 的 View Full Research 中段落混语种。强化 system prompt：明确要求"translate EVERY sentence — including disclaimers, data-source notes, error messages, and meta-commentary; no English sentence should remain"。同时加强 markdown 保护规则（headers / tables / lists 逐字保留，不合并不重排）。所有已污染的 zh-CN 缓存已清空，会按新 prompt 重新生成。
 
 ## [0.18.0] - 2026-05-05
 
 ### Added — i18n 翻译层 (Prompt 全英 + 展示前翻译)
+
 - **新增 `POST /api/translate`** — body `{texts: string[], target_lang: "zh-CN"}` → `{translations: string[]}`. 同长度同顺序，永不 5xx（任何后端故障返回原英文）。
 - **`services/translation_service.py`** — 用现有 `llm_factory.get_llm("verdict")`（claude-opus-4.7-xhigh）走批量翻译，sha1(text) → Redis 缓存，TTL 1 天。一次请求里：先并发查 Redis 拿命中，再把 miss 全部塞一次 LLM 调用，最后写回 Redis。设计上 prompt 系统不变，模型输出在前端展示前才翻译。
 - **System prompt 规则**：保留 ticker / 数字 / 货币 / 百分比 / 日期原样，使用大陆财经术语，输出 JSON 数组。fence/extra prose 都能解析。
@@ -762,21 +832,25 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 ## [0.17.3] - 2026-05-05
 
 ### Added
+
 - **feat(symbol-search): yfinance 兜底，能查到本地 CSV + AV 都没有的票（如 CRWV）** — 用户搜 CRWV (CoreWeave，2025-03 IPO) 自动补全空的，因为本地 `sector_universe.csv` 只有 S&P 500 + Nasdaq 100 共 515 只，AV `SYMBOL_SEARCH` 又被 25 次/天的免费配额卡死。新增 `services/market_data/yfinance_search.py`：精确 ticker 走 `yf.Ticker(q).info`，模糊查询走 `yf.Search(q)`，结果过滤只留美股交易所（NMS/NYQ/PCX 等，不带点号），输出 `SymbolSearchResult` 形状直接复用前端契约。`/api/market/search` 现在三级链路 CSV → AV → yfinance，AV 抛错被吞，最终返空也不再 500。
 
 ## [0.17.2] - 2026-05-05
 
 ### Changed
+
 - **feat(market-movers): yfinance 升为主源，Alpha Vantage 退到 fallback** — Alpha Vantage 免费 API key 每日 25 次配额几次页面加载就用完，导致 `加载市场行情失败 / 500`。yfinance (`yf.screen("day_gainers"/"day_losers"/"most_actives")`) 无 key、无每日上限、字段全。新加 `services/market_data/yfinance_movers.py` 适配器把 yfinance quote dict 映射成 AV 的 `{ticker, price, change_amount, change_percentage, volume}` 形状，前端零改动。`/api/market/market-movers` 路由现在先 yfinance；失败才回落 AV；都失败返 503（不是 500，因为不是我们崩了）。响应里加 `source` 字段标识本次数据来源。
 
 ## [0.17.1] - 2026-05-05
 
 ### Fixed
+
 - **fix(holdings): cascade-delete user_transactions when a holding is deleted** — previously deleting a holding via the Holdings UI left orphan rows in `user_transactions`. The next attempt to delete those orphans called `apply_transaction(sign=-1)` which tried to SELL from a holding that no longer existed → `NoHoldingToSellError` → 409. Now `DELETE /api/portfolio/holdings/{id}` first removes all `user_transactions` for that symbol, then deletes the holding, keeping the ledger and holdings collection in sync. New `UserTransactionRepository.delete_by_symbol()` plus a regression test in `test_holdings_crud.py::TestDeleteHolding::test_cascades_transactions_for_symbol`.
 
 ## [0.17.0] - 2026-05-04
 
 ### Added — manual transactions ledger
+
 - New `user_transactions` collection — separate from `portfolio_orders` (which now strictly carries AI decision rows). The user-entered ledger of "I really bought/sold this" with auto-sync to holdings.
 - `POST/GET/PATCH/DELETE /api/portfolio/user-transactions` with reverse-and-forward holdings sync. Edit/delete reverse-applies the old version, then forward-applies the new one; oversell raises 400, holdings-state-changed mid-edit raises 409.
 - `+ Add Transaction` button on Portfolio Holdings card header (next to Refresh / Add Holding).
@@ -784,15 +858,18 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 - `RecentTransactions` rewritten — now shows ONLY user-entered transactions (not AI decision rows). Inline edit + delete buttons per row. Holdings auto-sync via the backend on every mutation.
 
 ### Fixed
+
 - fix(holding-modal): mouse-drag to select numeric value triggered `onWheel→blur()` and killed the selection. Switched to `onWheelCapture={e.preventDefault()}` which stops scroll-wheel value changes without disturbing focus/selection.
 
 ## [0.16.1] - 2026-05-04
 
 ### Fixed (the v0.16.0 known issue is now resolved)
+
 - **fix(react-agent): system prompt was a callable returning a string** — `create_react_agent(prompt=<callable>)` in newer langgraph expects either a string or a callable returning `list[BaseMessage]`. We were passing `(state) -> str`. langgraph silently treated the returned string as a user-role utterance, so the actual financial-analyst system prompt **never reached the LLM**. Result: every Phase 1 invocation returned generic "I'm ready to help" with `tool_executions=0`. Fixed by passing a static prompt string built at agent init. Date drift over a 24h cycle is acceptable (agent restarts on deploy).
 - **fix(timeout): `react_agent` LLM timeout 30s → 180s** — Claude with 24 tool schemas needs ≥30s/step; 30s caused `APITimeoutError` swallowed by langgraph and surfaced as a zero-tool response.
 
 ### Changed — model assignments to top-tier per vendor
+
 - `react_agent` → **claude-opus-4.7-1m-internal** (935k context — needed for 24 tools + history headroom)
 - `deep_planner`, `portfolio_decisions`, `verdict` → **claude-opus-4.7-xhigh** (extra reasoning budget)
 - `sub_technical` → **claude-opus-4.7**
@@ -803,38 +880,45 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 - All overrides removed from `.env.development` so per-vendor flagships flow through from `.env.base`.
 
 ### Verified
+
 - Holdings flow on 3 holdings: ~90s end-to-end. Each symbol triggered 5-8 real tool calls (`tool_executions=5,8,8`), produced 1500+ char Chinese research reports citing concrete prices, RSI levels, news ("芯片股 4 月飙升 70%+"). For unknown OTC tickers (CRWCY) the agent transparently tried `get_stock_quote`, `get_company_overview`, `search_ticker("crown holdings")` and reported the data gap.
 
 ## [0.16.0] - 2026-05-04
 
 ### Changed — full Phase 1+2 pipeline behind both dashboard buttons
+
 - **Analyze My Holdings** and **Today's Picks** no longer use the simplified single-LLM-call shortcut. Both now route through the existing `PortfolioAnalysisAgent`'s real Phase 1 (ReAct + 118 MCP tools per symbol) → Phase 2 (structured `PortfolioDecisionList`) pipeline, with Phase 3 deliberately skipped (no order optimization needed).
 - Picks: universe → risk-adaptive filter to 50 → **capped at 20** for Phase 1 (`PICKS_PHASE1_CAP`) to keep runtime ≈5-15min instead of 25-75min. Phase 2 still picks Top 5 BUYs from those 20.
 - Per-symbol research is **not** persisted as separate chats (no chat-list pollution). Instead the full Phase 1 markdown text rides on `portfolio_orders.metadata.full_research`. Deletion of the decision deletes the research with it.
 - One **aggregated summary chat** per run is written to `messages` with `chat_id="system-run-{flow}-{date}"`, listing each symbol with its action / confidence / short reasoning. Replaces N per-symbol chats from the cron path.
 
 ### Added
+
 - `phase1_research.py:_run_phase1_research(...suppress_chat=True)` and `_analyze_symbol(...suppress_chat=True)` — gates the per-symbol chat write so the dashboard flow can suppress chat-list pollution. Backward-compatible (default False).
 - `flows.py` graceful fallback to the old simplified path when `app.state.portfolio_agent` is unavailable.
 - `app.state.portfolio_agent` singleton built at startup (single LangGraph instance, not re-created per click).
 - DecisionTracker frontend: per-row `[📄 View Full Research]` button in the expand pane → modal renders the full Phase 1 markdown text. Pure client-side state.
 
 ### Known issue (tracked separately)
+
 - The ReAct agent currently returns generic "I'm ready to help" responses for some Phase 1 prompts, with `tool_executions=0` even after the built-in retry-with-nudge. Pipeline wiring is correct; the failure is inside `react_agent.ainvoke()` tool-binding under the cross-vendor llm_factory routing. Tracked as a follow-up.
 
 ## [0.15.6] - 2026-05-04
 
 ### Added
+
 - feat(decisions): expandable reasoning row in DecisionTracker. AI's full reasoning text + suggested position size are now visible (was already in DB and API response, just never rendered). Added a confidence column (`Conf` 0-10). Click any row with reasoning to expand a blue-highlighted detail row underneath.
 
 ## [0.15.5] - 2026-05-04
 
 ### Fixed
-- fix(transactions): "Recent Transactions" panel was showing HOLD signals as SELL orders. RecentTransactions.tsx:182 hardcoded `isBuy = side === "buy"`, so the new `side="hold"` rows fell through to the SELL branch (red icon, "SELL" badge). Compounded by the fact that HOLD signals shouldn't appear in a *transactions* panel at all (they're recommendations, not trades). Fix: `GET /api/portfolio/transactions` now filters out `decision_type="signal"` rows server-side. Real BUY/SELL orders (decision_type="order" or legacy null) still appear normally.
+
+- fix(transactions): "Recent Transactions" panel was showing HOLD signals as SELL orders. RecentTransactions.tsx:182 hardcoded `isBuy = side === "buy"`, so the new `side="hold"` rows fell through to the SELL branch (red icon, "SELL" badge). Compounded by the fact that HOLD signals shouldn't appear in a _transactions_ panel at all (they're recommendations, not trades). Fix: `GET /api/portfolio/transactions` now filters out `decision_type="signal"` rows server-side. Real BUY/SELL orders (decision_type="order" or legacy null) still appear normally.
 
 ## [0.15.4] - 2026-05-04
 
 ### Added
+
 - feat(holdings): on-demand price refresh — solves the "I just added AAPL but it shows $0" surprise.
   - `POST /api/portfolio/holdings/refresh-prices` — concurrent (sem=8) DataManager.get_quote per holding, persists via `repo.update_price`. Same logic as the nightly cron.
   - `[Refresh Prices]` button in the Portfolio Holdings card header (next to Add Holding). Uses `useRefreshHoldingPrices` mutation that invalidates holdings + summary queries.
@@ -843,12 +927,14 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 ## [0.15.3] - 2026-05-04
 
 ### Fixed
+
 - fix(search): `GET /api/market/search` returned empty results because Alpha Vantage rate-limited the container's outbound IP (25/day on free tier; the same IP was already exhausted by other AV calls earlier in the session). Made search local-first: query the committed `sector_universe.csv` (515 large-caps) before falling back to AV. Result: instant exact/prefix/name matches for the bulk of common symbols, zero network. AV is only consulted when the local universe has no hit (rare ADRs, tiny caps).
 - This is the same root-cause family as v0.13.1 + v0.15.1: code calling AV directly without DataManager fallback. Long-term cleanup wave still pending.
 
 ## [0.15.2] - 2026-05-04
 
 ### Changed
+
 - feat(ui): added autocomplete to all symbol inputs by reusing the existing `<SymbolSearch>` primitive (already production-grade in ChartPanel).
   - **HoldingFormModal** (Add Holding modal): replaced plain `<input {...register("symbol")}>` with `<SymbolSearch>` wired through `setValue` + hidden register input. Edit mode keeps the locked plain input since symbol is the row identity.
   - **WatchlistPanel** (Add to watchlist): replaced plain symbol input with `<SymbolSearch>`; selection sets `newSymbol` state, form submit stays the same.
@@ -858,11 +944,13 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 ## [0.15.1] - 2026-05-04
 
 ### Fixed
+
 - fix(watchlist): adding symbols Alpha Vantage doesn't know (recent IPOs like CRWV, also any symbol when AV is rate-limited) failed with "Symbol not found in market" 400. Watchlist validation went straight to AV and didn't fall back. Added DataManager fallback (Finnhub → AV → yfinance) as a third validation layer in `backend/src/api/watchlist.py:add_to_watchlist`. CRWV now validates via Finnhub at $128.20 and saves successfully.
 
 ## [0.15.0] - 2026-05-04
 
 ### Added — Two-button portfolio analysis
+
 - feat(analysis): two new dashboard buttons that trigger LLM-driven portfolio analysis
   - **Analyze My Holdings** — runs Phase 2 LLM on every existing position; returns BUY (add) / SELL (trim/exit) / HOLD per symbol
   - **Today's Picks** — sector-filtered Top 5 BUY recommendations from S&P 500 + Nasdaq 100 universe (no holdings overlap by design)
@@ -879,23 +967,27 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 - Frontend: `SettingsPanel`, `AnalysisButtons`, DecisionTracker source-tab toggle (All / Holdings / Today's Picks)
 
 ### E2E verification (real LLM calls)
+
 - Holdings flow: 13s end-to-end on 3 holdings → AAPL=HOLD, NVDA=BUY, TSLA=SELL persisted
 - Picks flow: 30s on Technology sector (25 finalists) → Top 5 = NVDA/AVGO/MSFT/ANET/LRCX, all BUY conf 7-9, position_size_pct=15 (= max_position_pct)
 - Empty holdings short-circuit: status=done immediately, message "Add holdings first", zero LLM calls
 - Empty sectors short-circuit: same pattern, message "No sectors selected — pick at least one."
 
 ### Notes
+
 - Cron container's `run_portfolio_analysis.py` reference is still dead (script not created); to be addressed in a follow-up. The new flows run via the trigger endpoint, not the cron loop.
 
 ## [0.14.1] - 2026-05-04
 
 ### Added
+
 - feat(holdings): nightly cron `scripts/refresh_holding_prices.py` walks every holding, calls `DataManager.get_quote` (Finnhub → AV → yfinance fallback), writes `current_price` + `market_value` + `unrealized_pl` back via `repo.update_price`. Wired into `portfolio-cron` loop alongside `run_portfolio_analysis.py` and `run_pnl_snapshots.py`. Closes the gap where `POST /holdings` enriched the response but never persisted to mongo, so subsequent GETs showed `current_price=null` until edited.
 - E2E verified: insert 3 holdings → GET shows curr=null → run script → GET shows live prices + P&L for all three.
 
 ## [0.14.0] - 2026-05-04
 
 ### Added — Holdings CRUD
+
 - feat(holdings): POST/PATCH/DELETE endpoints for direct holdings management
   - `POST /api/portfolio/holdings` — create new row, OR merge into existing same-symbol row using weighted-average cost: `new_avg = (q1*p1 + q2*p2) / (q1+q2)`. Returns enriched response with live `current_price` / `market_value` / `unrealized_pl` from `DataManager.get_quote` (3s timeout, gracefully nulls on failure)
   - `PATCH /api/portfolio/holdings/{id}` — partial update on quantity / avg_price; `cost_basis` recalculated in repo. Returns 404 if id unknown, 422 if both fields omitted
@@ -904,23 +996,27 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 - 13 new backend tests covering POST happy/merge/422/uppercase, PATCH happy/404/empty, DELETE happy/404, quote enrichment success + failure paths
 
 ### Fixed
+
 - fix(holdings): pre-existing repo crash on `HoldingCreate.avg_price=None` is now defended at the API layer with explicit 422
 - The frontend already shipped `useAddHolding` / `useUpdateHolding` / `useDeleteHolding` mutation hooks calling these paths; the backend was the missing piece
 
 ## [0.13.1] - 2026-05-04
 
 ### Fixed (decision tracking E2E surfaced 4 bugs)
+
 - fix(data-manager): `get_price_on_date` always returned None when Alpha Vantage was rate-limited (it only walked AV; Finnhub free tier has no historical bars). Now falls back to yfinance for the historical lookup path; also handles weekend horizons + market-still-open edge case via 4-day forward + 3-day backward scan window.
 - fix(repo): `idx_alpaca_order` was unique+sparse, but `sparse=True` doesn't help when pydantic writes `alpaca_order_id` as null (field exists, just is null). Switched to `partialFilterExpression={"alpaca_order_id": {"$type": "string"}}` so the unique constraint only applies to documents that actually have a broker id. Without this fix, the second HOLD signal in any portfolio analysis run would fail with `DuplicateKeyError`.
 - fix(pnl-service): `snapshot_decision` crashed with "can't compare offset-naive and offset-aware datetimes" when reading PortfolioOrder from mongo (pymongo returns naive datetimes by default). Coerce `created_at` to UTC-aware before the horizon comparison.
 - fix(yfinance-fallback): the previous `_price_on_date_yfinance` window was too narrow (`-2d ... +max_forward+1d`) and used inefficient row-by-row dataframe filtering; rewrote as a `dict[date_str → close]` lookup with a 4-day pre-pad, and added backward fallback for the "horizon ends on a weekend or today before market close" case.
 
 ### Added
+
 - All four bugs above were caught by an actual end-to-end run (insert 3 fake aged decisions → run cron → verify pnl_snapshots in mongo → hit /api/decisions). Documented in the cross-layer case study.
 
 ## [0.13.0] - 2026-05-04
 
 ### Added — Decision Tracking Dashboard
+
 - feat(decisions): persist every AI decision (BUY/SELL/HOLD/Deep ReAct verdict) with the price at decision time, then mark to market at 7d/30d/90d horizons via cron
   - `PortfolioOrder` gains `decision_price`, `decision_type` ('order'|'signal'), `pnl_snapshots` dict (mongo migration-free; defaults handled at model level)
   - `OrderExecutor` now writes `OptimizedOrder.estimated_price` into `decision_price` (was being dropped)
@@ -935,22 +1031,26 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - 13 new pnl_service tests
 
 ### Changed
+
 - `DataManager.__init__` is now `(redis_cache, alpha_vantage_service, finnhub_service=None)` — `finnhub_service` already defaulted to None in v0.12.0 so existing callers unaffected; documenting here for completeness
 
 ## [0.12.1] - 2026-05-04
 
 ### Fixed
+
 - fix(gitignore): `backend/.env.example` was silently gitignored
   - Root `.env.example` was tracked (predates the rule), but any subdirectory `.env.example` was caught by `.gitignore:3:.env.*` with no escape clause
   - Added `!.env.example` and `!**/.env.example` exceptions; `.env.development` and other `.env.*` files remain ignored to protect local secrets
   - Force-added `backend/.env.example` to the repo so new clones see all the optional keys (Alpha Vantage / FRED / Exa / Finnhub) and the cross-vendor model defaults
 
 ### Changed
+
 - chore(env-template): synced `backend/.env.example` model IDs with the v0.11.1 cross-vendor defaults (`claude-opus-4.7` / `gpt-5.5` / `gemini-3.1-pro-preview`, etc.) — were stuck on the pre-W8 short-hyphen Claude-only naming
 
 ## [0.12.0] - 2026-05-04
 
 ### Added
+
 - feat(market-data): Finnhub as third provider with three-tier fallback chain
   - New `FinnhubService` (`backend/src/services/finnhub/`) — 60/min free tier, no daily cap
   - Three new LangChain tools: `finnhub_quote`, `finnhub_news`, `finnhub_insider_trades` (categorized into `news` and `financial` sub-agent groups)
@@ -960,20 +1060,24 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - 19 new tests (`test_finnhub_service.py` + `test_data_manager_fallback.py`) covering all 5 fallback states per method
 
 ### Fixed
+
 - fix(data-manager): broken AV→yfinance fallback that was claimed in comments but never implemented
   - `_fetch_quote` previously caught all exceptions and re-raised `DataFetchError("alpha_vantage")` — there was no fallback branch
   - Now correctly routes to yfinance when both Finnhub and AV fail; only raises `DataFetchError("all_providers")` when all three providers fail
 
 ### Added — config
+
 - `finnhub_api_key: str = ""` in `Settings` (declared in `core/config.py`)
 - New cache key generators: `CacheKeys.company_news`, `CacheKeys.insider_trades`
 
 ### Added — interview docs
+
 - `docs/case-studies/2026-05-04-finnhub-fallback-chain.md` — case study covering the integration plus the "stale comment lying about a runtime branch" pattern (third entry in the running case-studies series)
 
 ## [0.11.2] - 2026-05-04
 
 ### Fixed
+
 - fix(token-utils): `extract_token_usage_from_messages` always returned 0
   - Root cause: code used `getattr(msg.usage_metadata, "input_tokens", 0)` but LangChain's `usage_metadata` is a `TypedDict`, not an object — `getattr` always hit the default
   - Affected all vendors (Claude / GPT / Gemini), pre-existed before the cross-vendor refactor; surfaced while investigating `input_tokens=0 output_tokens=0` in Deep ReAct logs
@@ -981,11 +1085,13 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - Verified live: Claude/GPT/Gemini all now report non-zero token counts via `extract_token_usage_from_messages`
 
 ### Added
+
 - `docs/case-studies/` — case-study notes for non-trivial bugs (context, reasoning, root cause, fix, takeaways). First two entries: ghost compose project + token getattr-on-dict bug.
 
 ## [0.11.1] - 2026-05-04
 
 ### Changed
+
 - refactor(llm): cross-vendor per-role model assignments via Agent Maestro
   - Previously all roles routed to Claude (opus-4-7 / sonnet-4-6 / haiku-4-5)
   - Now mixed across three vendors for diversity and task fit:
@@ -999,12 +1105,14 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 - All vendors reach FinancialAgent through Maestro's Anthropic-compatible endpoint (`/api/anthropic`); single `ChatAnthropic` wrapper continues to work because Maestro performs vendor protocol translation server-side
 
 ### Added
+
 - `backend/tests/smoke_cross_vendor.py` — per-role chat + tool-calling smoke test
 - `backend/tests/e2e_deep_react.py` — full Deep ReAct flow driver (sub-agents → debate → verdict) for cross-vendor verification
 
 ## [0.11.0] - 2026-02-23
 
 ### Added
+
 - feat(deep-agent): Debate quality improvement with independent verification
   - New yfinance news tool (`fetch_yfinance_news`) for independent market data
   - New Exa web search tool (`search_web_exa`) for independent news verification
@@ -1018,6 +1126,7 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - `exa_api_key` config setting for debater independent verification
 
 ### Changed
+
 - Refactored `deep_react_agent.py` orchestrator for symmetric debate protocol
   - Merged `research_node` + `rebuttal_node` into unified `main_agent_node`
   - `debate_node` now parses structured JSON via `parse_debater_output()`
@@ -1027,12 +1136,13 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 ## [0.10.1] - 2026-01-11
 
 ### Added
-- fix(agent): add historical prices tool to prevent date/price hallucination
 
+- fix(agent): add historical prices tool to prevent date/price hallucination
 
 ## [0.10.0] - 2025-12-31
 
 ### Added
+
 - feat(agent): Story 2.8 - Reusable Put/Call Ratio (PCR) Service with AI Tool
   - New `get_put_call_ratio` AI tool for per-symbol options sentiment analysis
   - Shared `DataManager.get_symbol_pcr()` with Redis caching (1-hour TTL)
@@ -1042,10 +1152,10 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - AI Sector Risk metric refactored to reuse cached PCR calculations
 - Replace yield_curve with market_liquidity metric using FRED API (Story 2.7)
 
-
 ## [0.9.0] - 2025-12-30
 
 ### Added
+
 - feat(insights): Story 2.6 - Options Put/Call Ratio metric with ATM Dollar-Weighted methodology
   - New OptionsMixin for Alpha Vantage HISTORICAL_OPTIONS endpoint
   - DML support for quotes and options data with caching
@@ -1064,33 +1174,36 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   7. Fed Expectations (12%)
 
 ### Changed
+
 - Rebalanced composite weights for 7 metrics totaling 100%
 - Updated all insights tests to expect 7 metrics
 
 ## [0.8.10] - 2025-12-30
 
 ### Added
-- fix: Apply split adjustment to all OHLC prices for daily/weekly/monthly bars
 
+- fix: Apply split adjustment to all OHLC prices for daily/weekly/monthly bars
 
 ## [0.8.10] - 2025-12-29
 
 ### Added
-- fix(insights): increase cache TTL from 30min to 24hrs for instant page loads
 
+- fix(insights): increase cache TTL from 30min to 24hrs for instant page loads
 
 ## [0.8.9] - 2025-12-23
 
 ### Added
-- Enable Redis caching for AI Sector Risk agent tools (30min TTL)
 
+- Enable Redis caching for AI Sector Risk agent tools (30min TTL)
 
 ## [0.8.8] - 2025-12-14
 
 ### Added
+
 - feat: add context compaction to chat API to prevent context window overflow
 
 ### Changed
+
 - refactor(api): restructure API layer into modular packages
   - `analysis.py` → `analysis/` (fibonacci, technical, fundamentals, macro, news, history)
   - `chat.py` → `chat/` (endpoints, helpers, streaming/)
@@ -1111,20 +1224,21 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - Consolidated sanitization logic from multiple modules
 
 ### Removed
+
 - Deprecated monolithic API files (analysis.py, chat.py, feedback.py, portfolio.py)
   - All functionality migrated to new modular structure
   - Original files deleted after migration verified
 
-
 ## [0.8.7] - 2025-12-13
 
 ### Added
-- feat: add get_stock_quote tool with market status API support
 
+- feat: add get_stock_quote tool with market status API support
 
 ## [0.8.6] - 2025-12-10
 
 ### Added
+
 - feat(compaction): Persist summary messages and delete old messages during context compaction
   - Added `is_summary` and `summarized_message_count` fields to `MessageMetadata`
   - Added `delete_old_messages_keep_recent()` method to `MessageRepository`
@@ -1132,10 +1246,10 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - Summary messages marked with `is_summary: true` are never deleted
 - fix(portfolio): initialize OptimizedOrder priority to valid value to prevent ValidationError
 
-
 ## [0.8.5] - 2025-12-02
 
 ### Added
+
 - feat(portfolio): Short position handling in order optimizer
   - Added `is_cover` field to `OptimizedOrder` model to identify cover orders
   - Automatic detection of short positions (negative quantity)
@@ -1144,6 +1258,7 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - Clear logging for short position conversions
 
 ### Changed
+
 - refactor(portfolio): 3-phase architecture for portfolio analysis
   - Phase 1: Pure symbol research (concurrent, independent)
   - Phase 2: Single holistic decision call via `PortfolioDecisionList`
@@ -1158,6 +1273,7 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 ## [0.8.4] - 2025-11-29
 
 ### Added
+
 - feat(portfolio): Failed order persistence with error tracking
   - Added `error_message` field to `PortfolioOrder` model for storing raw API error messages
   - Failed orders now saved to MongoDB with status="failed" and error details
@@ -1169,6 +1285,7 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - Query handles both plain status ("filled") and enum format ("OrderStatus.FILLED")
 
 ### Fixed
+
 - fix(db): MongoDB sparse index for nullable `alpaca_order_id` field
   - Added `sparse=True` to allow multiple NULL values (failed orders have no Alpaca ID)
   - Fixes duplicate key error when persisting multiple failed orders
@@ -1176,6 +1293,7 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 ## [0.8.3] - 2025-11-28
 
 ### Added
+
 - feat(portfolio): Structured output and order aggregation for portfolio analysis
   - Two-phase analysis with aggregation hook: Phase 1 (symbol analysis) → Phase 2 (order optimization) → Phase 3 (execution)
   - New Pydantic models: `TradingDecision`, `OptimizedOrder`, `OrderExecutionPlan`, `SymbolAnalysisResult`
@@ -1186,18 +1304,20 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - Eliminates unreliable regex parsing of LLM text responses
 
 ### Changed
+
 - Refactored `portfolio_analysis_agent.py` to use structured output instead of regex parsing
 - Extracted order aggregation/execution logic to separate `OrderOptimizer` class
 
 ## [0.8.2] - 2025-11-27
 
 ### Added
-- feat(chat): auto-inject selected symbol from UI to agent context
 
+- feat(chat): auto-inject selected symbol from UI to agent context
 
 ## [0.8.1] - 2025-11-27
 
 ### Fixed
+
 - **Watchlist Symbol Validation**: Enhanced validation with multi-layer fallback strategies
   - Primary: Exact symbol match in SYMBOL_SEARCH results
   - Fallback 1: High-confidence match (score >= 0.9)
@@ -1208,6 +1328,7 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 ## [0.8.0] - 2025-11-26
 
 ### Added
+
 - feat(portfolio): Unified portfolio-aware analysis prompt for holistic position management
   - Single prompt replacing 3 separate prompts (holdings, watchlist, market_movers)
   - Dynamic portfolio context injection (equity, buying_power, cash, all positions)
@@ -1216,6 +1337,7 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - Position sizing suggestions based on total equity percentage
 
 ### Changed
+
 - Enhanced portfolio analysis with full portfolio context awareness
 - Improved decision recommendations considering liquidity and diversification
 - Value opportunity detection for market panic situations
@@ -1223,18 +1345,22 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 ## [0.7.1] - 2025-11-19
 
 ### Added
+
 - Add 15-min delayed intraday data, GLOBAL_QUOTE endpoint, fix error messages
 
 ### Performance
+
 - Batch chunk streaming: Reduce SSE events by 90% (CHUNK_SIZE=10 chars/event vs 1 char/event)
 - Reduces typical 1300-char response from 1300 events to 130 events
 
 ### Reliability
+
 - Add circuit breaker for tool event queue (MAX_QUEUE_SIZE=100) to prevent memory exhaustion
 - Fix deadlock in background streaming loop - check agent completion in timeout handler
 - Fix generator early exit bug preventing final answer streaming
 
 ### Bug Fixes
+
 - Fix feedback images not displaying in private bucket (presigned download URLs)
 - Fix tool progress message injection causing assistant message displacement
 - Add agent completion check in asyncio.TimeoutError handler
@@ -1243,119 +1369,122 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 ## [0.7.0] - 2025-11-15
 
 ### Added
-- feat(agent): add real-time tool execution streaming with SSE callbacks and strategic prompt engineering
 
+- feat(agent): add real-time tool execution streaming with SSE callbacks and strategic prompt engineering
 
 ## [0.6.2] - 2025-11-14
 
 ### Added
-- perf: add 30-minute Redis caching to market movers endpoint to reduce API calls
 
+- perf: add 30-minute Redis caching to market movers endpoint to reduce API calls
 
 ## [0.6.1] - 2025-11-14
 
 ### Added
-- fix(data): Complete AlphaVantage integration across all TickerDataService instantiations
 
+- fix(data): Complete AlphaVantage integration across all TickerDataService instantiations
 
 ## [0.5.20] - 2025-11-12
 
 ### Added
-- Skip deprecated yfinance tests pending Alpha Vantage implementation
 
+- Skip deprecated yfinance tests pending Alpha Vantage implementation
 
 ## [0.5.18] - 2025-11-12
 
 ### Added
-- Replace yfinance with hybrid Alpaca + Polygon.io for market data to fix ACK rate limiting
 
+- Replace yfinance with hybrid Alpaca + Polygon.io for market data to fix ACK rate limiting
 
 ## [0.5.15] - 2025-11-11
 
 ### Added
-- Fix exact symbol search bug - direct ticker validation now runs when Search returns empty results
 
+- Fix exact symbol search bug - direct ticker validation now runs when Search returns empty results
 
 ## [0.5.13] - 2025-11-06
 
 ### Added
-- Fixed portfolio chart timeout (asyncio.to_thread), order persistence (PortfolioOrderRepository), agent recursion limit (25→50)
 
+- Fixed portfolio chart timeout (asyncio.to_thread), order persistence (PortfolioOrderRepository), agent recursion limit (25→50)
 
 ## [0.5.12] - 2025-10-31
 
 ### Added
-- fix(oss): Use HTTPS for presigned URLs to fix mixed content error
 
+- fix(oss): Use HTTPS for presigned URLs to fix mixed content error
 
 ## [0.5.11] - 2025-10-31
 
 ### Added
-- feat(feedback): Add image upload with OSS integration
 
+- feat(feedback): Add image upload with OSS integration
 
 ## [0.5.9] - 2025-10-26
 
 ### Added
-- feat: Add consistent system prompt to v3 (Agent mode) for unified UX
 
+- feat: Add consistent system prompt to v3 (Agent mode) for unified UX
 
 ## [0.5.5] - 2025-10-24
 
 ### Added
-- fix(database): Change chat list query to use updated_at sorting for Cosmos DB compatibility
 
+- fix(database): Change chat list query to use updated_at sorting for Cosmos DB compatibility
 
 ## [0.5.4] - 2025-10-14
 
 ### Added
-- Fix MongoDB index name conflict causing backend startup failure
 
+- Fix MongoDB index name conflict causing backend startup failure
 
 ## [0.5.3] - 2025-10-13
 
 ### Added
-- Complete type safety - Resolve 107 mypy errors with comprehensive type annotations
 
+- Complete type safety - Resolve 107 mypy errors with comprehensive type annotations
 
 ## [0.5.0] - 2025-10-10
 
 ### Added
-- Add admin health dashboard with database statistics monitoring, implement admin role-based access control
 
+- Add admin health dashboard with database statistics monitoring, implement admin role-based access control
 
 ## [0.4.10] - 2025-10-09
 
 ### Added
-- Remove 500+ lines of deprecated session management code, simplify ChatAgent to direct LLM wrapper, eliminate SessionManager bridge pattern
 
+- Remove 500+ lines of deprecated session management code, simplify ChatAgent to direct LLM wrapper, eliminate SessionManager bridge pattern
 
 ## [0.4.9] - 2025-10-09
 
 ### Added
-- Security: Implement atomic token rotation using MongoDB transactions to prevent race conditions during refresh token renewal. Falls back to best-effort on standalone MongoDB.
 
+- Security: Implement atomic token rotation using MongoDB transactions to prevent race conditions during refresh token renewal. Falls back to best-effort on standalone MongoDB.
 
 ## [0.4.8] - 2025-10-08
 
 ### Added
+
 - feat(agent): Context-adaptive LLM response style (structured for initial analysis, conversational for follow-ups)
 - feat(agent): Instruction for LLM to match formatting style from conversation history
 - feat(agent): Simplified system prompt with less over-instruction
 
 ### Changed
+
 - Removed mandatory rigid structure ("The Verdict", "The Evidence") for all responses
 - Split instructions into "Initial Analysis" vs "Follow-Up Questions" patterns
 
 ## [0.4.3] - 2025-10-08
 
 ### Added
-- Add DELETE /api/chat/chats/{chat_id} endpoint for chat deletion
 
+- Add DELETE /api/chat/chats/{chat_id} endpoint for chat deletion
 
 ## [0.4.1] - 2025-10-07
 
 ### Fixed
+
 - **MongoDB Database Name Parsing** (Critical)
   - Fixed database name extraction to strip query parameters from Cosmos DB URLs
   - Bug: `mongodb://host/dbname?ssl=true` was parsed as `dbname?ssl=true` instead of `dbname`
@@ -1364,12 +1493,14 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - Hidden locally because local MongoDB doesn't use query parameters
 
 ### Added
+
 - **Custom Exception Hierarchy**
   - Added `ConfigurationError` for configuration validation failures
   - Added `DatabaseError` for database connection/operation failures
   - Proper error categorization (400=user error, 500=database, 503=external service)
 
 ### Changed
+
 - **Enhanced MongoDB Logging**
   - Log parsed vs raw database name when query parameters present
   - Log validation errors with detailed context (raw value, parsed value, invalid chars)
@@ -1379,6 +1510,7 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 ## [0.4.0] - 2025-10-07
 
 ### Planned
+
 - LangChain agent integration
 - Conversation history persistence
 - AI chart interpretation with Qwen-VL
@@ -1390,6 +1522,7 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 **Initial Release** - Walking Skeleton Complete
 
 ### Added
+
 - **Core Infrastructure**
   - FastAPI application with health monitoring
   - MongoDB integration for data persistence
@@ -1434,6 +1567,7 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - Pre-commit hooks
 
 ### Fixed
+
 - **Dividend Yield Validation** (Critical Bug)
   - Smart detection for yfinance format inconsistencies
   - Handle both decimal (0.025) and percentage (0.71) formats
@@ -1446,12 +1580,14 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - Prevent 422 errors from invalid symbol suggestions
 
 ### Changed
+
 - **Error Handling**
   - Improved error messages for validation failures
   - Detailed 422 error responses with field-level errors
   - Graceful fallback for missing financial metrics
 
 ### Infrastructure
+
 - **Deployment**
   - Local Docker Compose (single-host)
 
@@ -1460,6 +1596,7 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
   - CORS configuration for cross-origin requests
 
 ### Dependencies
+
 - Python 3.12
 - FastAPI 0.115.6
 - Motor (async MongoDB) 3.6.0
@@ -1470,16 +1607,20 @@ ETF holdings, news sentiment scores. 这些都是低频 agent 工具调用，配
 - Pydantic 2.10.6
 
 ### Breaking Changes
+
 None - Initial release
 
 ### Migration Guide
+
 No migration required - fresh installation.
 
 ### Known Issues
+
 - Health check endpoint returns 400 (probes disabled temporarily)
 - Manual deployment process (single-host docker compose by design for the personal-local fork)
 
 ### Security
+
 - CORS configured for development (`["*"]`)
 - TrustedHostMiddleware disabled in development
 - Local-only secrets via `.env` (gitignored)

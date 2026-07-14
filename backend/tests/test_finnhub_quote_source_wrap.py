@@ -34,7 +34,6 @@ from src.agent.tools.finnhub.quotes import (
     create_finnhub_quote_tool,
 )
 
-
 # ---------------------------------------------------------------------------
 # _quote_source_id helper
 # ---------------------------------------------------------------------------
@@ -111,9 +110,7 @@ def _make_tool(qd: SimpleNamespace) -> object:
 
 @pytest.mark.asyncio
 async def test_finnhub_quote_emits_finnhub_token() -> None:
-    qd = _make_quote(
-        source="finnhub", asof=datetime(2026, 5, 9, 14, 30, tzinfo=UTC)
-    )
+    qd = _make_quote(source="finnhub", asof=datetime(2026, 5, 9, 14, 30, tzinfo=UTC))
     tool = _make_tool(qd)
     out = await tool.ainvoke({"symbol": "NVDA"})
     assert "Source: finnhub [FH-Q-NVDA-2026-05-09] asof 2026-05-09T14:30Z" in out
@@ -124,9 +121,7 @@ async def test_finnhub_quote_emits_yfinance_token_after_fallback() -> None:
     """When DataManager falls back to yfinance the QuoteData.source flips,
     and the footnote prefix MUST follow — otherwise the W3.7 frontend chip
     will resolve to the wrong provider label."""
-    qd = _make_quote(
-        source="yfinance", asof=datetime(2026, 5, 9, 18, 35, tzinfo=UTC)
-    )
+    qd = _make_quote(source="yfinance", asof=datetime(2026, 5, 9, 18, 35, tzinfo=UTC))
     tool = _make_tool(qd)
     out = await tool.ainvoke({"symbol": "NVDA"})
     assert "Source: yfinance [YF-Q-NVDA-2026-05-09] asof 2026-05-09T18:35Z" in out

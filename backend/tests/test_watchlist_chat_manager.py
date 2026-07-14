@@ -10,7 +10,6 @@ import pytest
 
 from src.services.watchlist.chat_manager import ChatManager
 
-
 # ===== Fixtures =====
 
 

@@ -14,9 +14,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from ...database.mongodb import MongoDB
 from ...services.chat_service import ChatService
-from ..dependencies.auth import get_mongodb, require_admin
 from ..dependencies.chat_deps import get_chat_service
 from ..dependencies.rate_limit import limiter
+from ..dependencies.storage import get_mongodb
 
 logger = structlog.get_logger()
 
@@ -333,7 +333,6 @@ async def get_portfolio_chat_detail(
 async def delete_portfolio_chat(
     request: Request,
     chat_id: str,
-    _: None = Depends(require_admin),  # Admin only
     chat_service: ChatService = Depends(get_chat_service),
     mongodb: MongoDB = Depends(get_mongodb),
 ) -> None:

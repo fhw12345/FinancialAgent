@@ -4,7 +4,7 @@
  * Tests date range calculation logic for different intervals.
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { afterEach, describe, it, expect, beforeEach, vi } from "vitest";
 import {
   calculateDateRange,
   getPeriodForInterval,
@@ -168,8 +168,8 @@ describe("dateRangeCalculator", () => {
     });
 
     it("should return 6mo as default", () => {
-      // @ts-ignore - Testing invalid input
-      expect(getPeriodForInterval("invalid" as any)).toBe("6mo");
+      // @ts-expect-error - Testing invalid input
+      expect(getPeriodForInterval("invalid")).toBe("6mo");
     });
   });
 

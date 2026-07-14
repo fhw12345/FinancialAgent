@@ -105,10 +105,7 @@ def test_prompt_explains_reasoning_citation_motivation() -> None:
     # Either explicit "HOLD" mention or "thesis null" / "thesis is
     # null" / "without a thesis" framing — any of these makes the
     # carve-out legible to the LLM.
-    has_hold_framing = (
-        "HOLD" in collapsed
-        and ("reasoning_summary" in collapsed)
-    )
+    has_hold_framing = "HOLD" in collapsed and ("reasoning_summary" in collapsed)
     assert has_hold_framing, (
         "Reasoning-citation rule must explain that HOLD decisions "
         "without a thesis route narrative into reasoning_summary, "

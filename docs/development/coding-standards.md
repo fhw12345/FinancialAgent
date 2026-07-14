@@ -15,13 +15,16 @@ related_paths:
 ## General Principles
 
 ### Code Quality
+
 - **File Size Limit**: Maximum 500 lines per file - split into modules when exceeded
 - **Documentation**: Descriptive docstrings at top of every file explaining purpose and context
 - **Comments**: Rich comments required for all key business logic - explain "why", not "what"
 - **No Duplication**: DRY principle - centralize shared logic in utils modules, avoid duplicate code
 
 ### Quality Gates
+
 Before every commit, run:
+
 ```bash
 make fmt && make test && make lint
 ```
@@ -31,12 +34,14 @@ All checks must pass before code can be committed.
 ## Python Standards
 
 ### Modern Syntax
+
 - Use `|` for type unions: `str | None` instead of `Optional[str]`
 - Use `match/case` for pattern matching
 - Use f-strings for string formatting
 - Use `@dataclass` for data classes
 
 ### Type Hints
+
 Type hints are required for all functions and methods:
 
 ```python
@@ -50,6 +55,7 @@ def analyze_fibonacci(symbol: str, timeframe: str = "6mo") -> dict[str, Any]:
 **Strict Type Checking**: All code must pass `mypy` with zero errors.
 
 **Required Patterns**:
+
 ```python
 # 1. Explicit return types for all functions
 async def get_user(user_id: str) -> User | None:
@@ -88,6 +94,7 @@ else:
 for the v0.5.3 type-safety pass and subsequent enforcement bumps.
 
 ### Code Organization
+
 ```python
 """
 Module description goes here.
@@ -128,6 +135,7 @@ def process_data(data: pd.DataFrame) -> dict[str, Any]:
 ```
 
 ### Error Handling
+
 ```python
 # Use specific exceptions
 try:
@@ -141,6 +149,7 @@ except ConnectionError as e:
 ```
 
 ### Logging
+
 ```python
 import structlog
 
@@ -152,6 +161,7 @@ logger.error("Analysis failed", symbol=symbol, error=str(e))
 ```
 
 ### Async/Await
+
 Prefer async/await for I/O operations:
 
 ```python
@@ -165,12 +175,14 @@ async def get_market_data(symbol: str) -> dict[str, Any]:
 ## TypeScript Standards
 
 ### Modern Syntax
+
 - Use ES modules
 - Use optional chaining: `data?.fibonacci?.levels`
 - Use nullish coalescing: `value ?? defaultValue`
 - Use `satisfies` operator for type checking
 
 ### Type Definitions
+
 Types are required for all functions and components:
 
 ```typescript
@@ -188,13 +200,14 @@ interface AnalysisResult {
 
 async function analyzeFibonacci(
   symbol: string,
-  timeframe: string = '6mo'
+  timeframe: string = "6mo",
 ): Promise<AnalysisResult> {
   // Implementation
 }
 ```
 
 ### React Components
+
 ```typescript
 /**
  * FibonacciChart component displays Fibonacci retracement levels.
@@ -222,6 +235,7 @@ export function FibonacciChart({
 ```
 
 ### Error Handling
+
 ```typescript
 try {
   const result = await api.analyzeFibonacci(symbol, timeframe);
@@ -230,15 +244,16 @@ try {
   if (error instanceof ApiError) {
     toast.error(`API Error: ${error.message}`);
   } else {
-    toast.error('An unexpected error occurred');
+    toast.error("An unexpected error occurred");
   }
-  console.error('Analysis failed:', error);
+  console.error("Analysis failed:", error);
 }
 ```
 
 ## API Validation Patterns
 
 ### Symbol Validation
+
 Always validate symbols before suggesting them to users:
 
 ```python
@@ -258,6 +273,7 @@ def validate_symbol(symbol: str) -> bool:
 ```
 
 ### Root Cause Fix Principle
+
 Fix validation at the source (search endpoint), not downstream (UI):
 
 ```python
@@ -280,6 +296,7 @@ async def search_symbols(q: str) -> list[str]:
 React Query mutations capture state at creation time, not execution time.
 
 **Solutions:**
+
 - Pass state via message parameters, not closures
 - Use direct parameter passing in mutationFn
 - Log both user messages AND parsed parameters
@@ -291,16 +308,19 @@ React Query mutations capture state at creation time, not execution time.
 **Critical Rule:** When modifying frontend or backend logic, verify data contract alignment across all layers.
 
 ### 4-Layer Contract Checklist
+
 1. **Backend Pydantic Models** - `Literal["value1", "value2"]`
 2. **Frontend TypeScript** - `'value1' | 'value2'` (must mirror backend)
 3. **User Input Parsing** - Handle new patterns
 4. **Business Logic** - Process new values
 
 ### Common Failures
+
 - **422 Errors**: TypeScript types don't match Pydantic Literals
 - **Silent Fallbacks**: Parsing fails but uses default instead of error
 
 ### Debug
+
 Check Pydantic errors in logs, verify types match, test all valid values.
 
 ## Development Hot Reload
@@ -315,6 +335,7 @@ See [Getting Started](getting-started.md) for detailed hot reload guidelines.
 ## Testing Standards
 
 ### Backend Tests
+
 ```python
 """
 tests/test_fibonacci_analysis.py
@@ -345,6 +366,7 @@ class TestFibonacciAnalyzer:
 ```
 
 ### Frontend Tests
+
 ```typescript
 /**
  * FibonacciChart.test.tsx
@@ -373,6 +395,7 @@ describe('FibonacciChart', () => {
 ## Commit Standards
 
 ### Commit Message Format
+
 ```
 type(scope): brief description
 
@@ -383,6 +406,7 @@ Longer description if needed.
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -391,6 +415,7 @@ Longer description if needed.
 - `chore`: Maintenance tasks
 
 **Examples:**
+
 ```
 feat(analysis): Add stochastic oscillator indicator
 
@@ -411,11 +436,13 @@ Now returns empty array with appropriate message.
 ## Security Standards
 
 ### Secrets Management
+
 - ❌ Never commit secrets to git
 - ✅ Use environment variables (`.env`, gitignored)
 - ✅ Use `.env.example` for documentation
 
 ### Input Validation
+
 ```python
 from pydantic import BaseModel, validator
 
@@ -431,25 +458,10 @@ class AnalysisRequest(BaseModel):
         return v
 ```
 
-### Authentication
-```python
-from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBearer
-
-security = HTTPBearer()
-
-async def verify_token(token: str = Depends(security)) -> str:
-    """Verify JWT token and return user ID."""
-    try:
-        payload = jwt.decode(token.credentials, SECRET_KEY)
-        return payload['user_id']
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-```
-
 ## Performance Standards
 
 ### Database Queries
+
 ```python
 # ✅ Good: Use indexes and limit results
 async def get_recent_analyses(user_id: str, limit: int = 10):
@@ -464,6 +476,7 @@ async def get_recent_analyses(user_id: str):
 ```
 
 ### Caching
+
 ```python
 # Use Redis for expensive operations
 async def get_market_data(symbol: str) -> dict:
@@ -484,13 +497,17 @@ async def get_market_data(symbol: str) -> dict:
 ## Documentation Standards
 
 ### File Documentation
+
 Every module should have a docstring with:
+
 - **Purpose**: What the module does
 - **Key Features**: Main capabilities (bullet list)
 - **Dependencies**: External packages used
 
 ### Function Documentation
+
 Use Google-style docstrings:
+
 ```python
 def calculate_levels(high: float, low: float) -> dict[str, float]:
     """

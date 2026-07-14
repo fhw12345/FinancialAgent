@@ -1,7 +1,7 @@
 # Financial Agent Development Makefile
 # Following the coding guide requirements for fmt, test, lint commands
 
-.PHONY: help dev build test lint fmt clean up down logs
+.PHONY: help dev build test lint fmt clean up down logs copilot-reverse
 
 # Default target
 help:
@@ -12,6 +12,7 @@ help:
 	@echo "  up           Start all services with Docker Compose"
 	@echo "  down         Stop all services"
 	@echo "  logs         View logs from all services"
+	@echo "  copilot-reverse  Start ../copilot-bridge on port 8765"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  fmt          Format code (backend: black+ruff, frontend: prettier)"
@@ -40,6 +41,9 @@ down:
 
 logs:
 	docker-compose logs -f
+
+copilot-reverse:
+	cd ../copilot-bridge && dotnet run --project src/CopilotBridge.Cli -- serve --port 8765
 
 # Code Quality - Backend
 fmt-backend:
@@ -92,11 +96,6 @@ build:
 	docker-compose build
 	@echo "✅ Build complete"
 
-build-prod:
-	@echo "🏗️ Building production images..."
-	docker-compose -f docker-compose.yml -f docker-compose.prod.yml build
-	@echo "✅ Production build complete"
-
 # Cleanup
 clean:
 	@echo "🧹 Cleaning up Docker resources..."
@@ -128,12 +127,6 @@ install-frontend:
 
 install: install-backend install-frontend
 	@echo "📦 All dependencies installed!"
-
-# Reconciliation worker
-reconcile:
-	@echo "🔄 Running transaction reconciliation..."
-	docker-compose exec backend python -m src.workers.reconcile_transactions
-	@echo "✅ Reconciliation complete"
 
 # Git hooks setup
 setup-hooks:

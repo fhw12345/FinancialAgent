@@ -1,55 +1,123 @@
-"""
-Centralized LLM client factory - all calls route through Agent Maestro.
-
-Agent Maestro is an Anthropic-API-compatible LLM gateway exposing Claude,
-GPT, and Gemini families. Roles are assigned across vendors for diversity
-(notably: debater uses a non-Claude model so adversarial debate isn't
-self-correlated).
-
-All model assignments can be overridden via env vars (see .env.example).
-"""
+"""Centralized role-based LLM factory."""
 
 from __future__ import annotations
 
-import os
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Literal
 
 from langchain_anthropic import ChatAnthropic
 
-# ---------------------------------------------------------------------------
-# Maestro endpoint configuration
-# ---------------------------------------------------------------------------
-MAESTRO_BASE_URL = os.getenv("MAESTRO_BASE_URL", "http://localhost:23333/api/anthropic")
-MAESTRO_AUTH_TOKEN = os.getenv("MAESTRO_AUTH_TOKEN", "Powered by Agent Maestro")
+from ..core.config import Settings, get_settings
+from ..core.exceptions import ConfigurationError
 
+LLMProvider = Literal["maestro", "anthropic", "copilot_reverse"]
 
-# ---------------------------------------------------------------------------
-# Per-role model assignments
-# ---------------------------------------------------------------------------
-MODELS: dict[str, str] = {
-    # — Anthropic Opus 4.7 family — long-context for tool-heavy + deep reasoning
-    # 1m-internal: 935k context window (best for ReAct + 24 tools + history)
-    "deep_planner": os.getenv("MODEL_DEEP_PLANNER", "claude-opus-4.7-xhigh"),
-    "react_agent": os.getenv("MODEL_REACT_AGENT", "claude-opus-4.7-1m-internal"),
-    "portfolio_decisions": os.getenv(
-        "MODEL_PORTFOLIO_DECISIONS", "claude-opus-4.7-xhigh"
-    ),
-    "verdict": os.getenv("MODEL_VERDICT", "claude-opus-4.7-xhigh"),
-    "sub_technical": os.getenv("MODEL_SUB_TECHNICAL", "claude-opus-4.7"),
-    "simple_chat": os.getenv("MODEL_SIMPLE_CHAT", "claude-haiku-4.5"),
-    # — GPT-5.5 — best OpenAI flagship for structured extraction
-    "sub_financial": os.getenv("MODEL_SUB_FINANCIAL", "gpt-5.5"),
-    "portfolio_research": os.getenv("MODEL_PORTFOLIO_RESEARCH", "gpt-5.5"),
-    # — Gemini 3.1 Pro — cross-vendor diversity for adversarial debate
-    "sub_debater": os.getenv("MODEL_SUB_DEBATER", "gemini-3.1-pro-preview"),
-    "sub_news": os.getenv("MODEL_SUB_NEWS", "gemini-3.1-pro-preview"),
-    "summary": os.getenv("MODEL_SUMMARY", "gemini-3.1-pro-preview"),
+ROLE_MODEL_FIELDS: dict[str, str] = {
+    "deep_planner": "model_deep_planner",
+    "react_agent": "model_react_agent",
+    "portfolio_decisions": "model_portfolio_decisions",
+    "verdict": "model_verdict",
+    "sub_technical": "model_sub_technical",
+    "simple_chat": "model_simple_chat",
+    "sub_financial": "model_sub_financial",
+    "portfolio_research": "model_portfolio_research",
+    "sub_debater": "model_sub_debater",
+    "sub_news": "model_sub_news",
+    "summary": "model_summary",
+}
+
+COPILOT_REVERSE_MODELS: dict[str, str] = {
+    "deep_planner": "claude-opus-4.8",
+    "react_agent": "claude-sonnet-5",
+    "portfolio_decisions": "claude-opus-4.8",
+    "verdict": "claude-opus-4.8",
+    "sub_technical": "claude-sonnet-5",
+    "simple_chat": "claude-haiku-4.5",
+    "sub_financial": "gpt-5.5",
+    "portfolio_research": "gpt-5.5",
+    "sub_debater": "gpt-5.5",
+    "sub_news": "claude-sonnet-5",
+    "summary": "gpt-5.4-mini",
 }
 
 
-def resolve_model(role: str) -> str:
-    """Return the configured model name for a role (falls back to simple_chat)."""
-    return MODELS.get(role, MODELS["simple_chat"])
+@dataclass(frozen=True)
+class LLMRoute:
+    """Resolved endpoint and model for one LLM request."""
+
+    provider: LLMProvider
+    base_url: str
+    api_key: str
+    model: str
+
+
+def _role_field(role: str) -> str:
+    return ROLE_MODEL_FIELDS.get(role, ROLE_MODEL_FIELDS["simple_chat"])
+
+
+def resolve_model(role: str, settings: Settings | None = None) -> str:
+    """Resolve a role to a model for the selected provider."""
+    settings = settings or get_settings()
+
+    if settings.llm_provider == "maestro":
+        return str(getattr(settings, _role_field(role)))
+
+    if settings.llm_provider == "anthropic":
+        if not settings.anthropic_model:
+            raise ConfigurationError(
+                "ANTHROPIC_MODEL is required when LLM_PROVIDER=anthropic"
+            )
+        return settings.anthropic_model
+
+    if settings.copilot_reverse_model:
+        return settings.copilot_reverse_model
+    return COPILOT_REVERSE_MODELS.get(
+        role,
+        COPILOT_REVERSE_MODELS["simple_chat"],
+    )
+
+
+def resolve_route(
+    role: str,
+    settings: Settings | None = None,
+) -> LLMRoute:
+    """Resolve provider, endpoint, credentials, and model."""
+    settings = settings or get_settings()
+    provider = settings.llm_provider
+    model = resolve_model(role, settings)
+
+    if provider == "maestro":
+        return LLMRoute(
+            provider=provider,
+            base_url=settings.maestro_base_url,
+            api_key=settings.maestro_auth_token,
+            model=model,
+        )
+
+    if provider == "anthropic":
+        if not settings.anthropic_api_key:
+            raise ConfigurationError(
+                "ANTHROPIC_API_KEY is required when LLM_PROVIDER=anthropic"
+            )
+        return LLMRoute(
+            provider=provider,
+            base_url=settings.anthropic_base_url,
+            api_key=settings.anthropic_api_key,
+            model=model,
+        )
+
+    return LLMRoute(
+        provider=provider,
+        base_url=settings.copilot_reverse_base_url,
+        api_key=settings.copilot_reverse_auth_token,
+        model=model,
+    )
+
+
+def get_role_models(settings: Settings | None = None) -> dict[str, str]:
+    """Return the active model assignment for every role."""
+    settings = settings or get_settings()
+    return {role: resolve_model(role, settings) for role in ROLE_MODEL_FIELDS}
 
 
 def get_llm(
@@ -60,26 +128,14 @@ def get_llm(
     streaming: bool = False,
     **kwargs: Any,
 ) -> ChatAnthropic:
-    """
-    Get a LangChain ChatAnthropic instance routed through Agent Maestro.
-
-    Maestro accepts non-Anthropic model IDs (gpt-*, gemini-*) over the
-    Anthropic-compatible endpoint and proxies to the underlying vendor.
-
-    Args:
-        role: Key from MODELS dict. Falls back to "simple_chat" if unknown.
-        temperature: Sampling temperature.
-        max_tokens: Max output tokens.
-        streaming: Enable streaming responses.
-        **kwargs: Additional ChatAnthropic args (callbacks, timeout, etc.)
-    """
-    model = resolve_model(role)
+    """Create an Anthropic-compatible client for the selected provider."""
+    route = resolve_route(role)
     return ChatAnthropic(
-        model_name=model,
+        model_name=route.model,
         temperature=temperature,
         max_tokens_to_sample=max_tokens,
         streaming=streaming,
-        anthropic_api_url=MAESTRO_BASE_URL,
-        anthropic_api_key=MAESTRO_AUTH_TOKEN,
+        anthropic_api_url=route.base_url.rstrip("/"),
+        anthropic_api_key=route.api_key,
         **kwargs,
     )

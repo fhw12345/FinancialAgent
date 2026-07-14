@@ -40,7 +40,6 @@ from src.agent.tools.alpha_vantage.fundamentals import (
     create_fundamental_tools,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers — direct unit coverage
 # ---------------------------------------------------------------------------
@@ -107,7 +106,9 @@ def test_statement_asof_returns_none_on_empty() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _make_tool(name: str, *, service: MagicMock, formatter: MagicMock) -> Any:  # noqa: ANN401
+def _make_tool(
+    name: str, *, service: MagicMock, formatter: MagicMock
+) -> Any:  # noqa: ANN401
     tools = create_fundamental_tools(service, formatter)
     return next(t for t in tools if t.name == name)
 
@@ -173,9 +174,7 @@ async def test_cash_flow_av_path_uses_fiscal_date_ending() -> None:
     formatter = MagicMock()
     formatter.format_cash_flow = MagicMock(return_value="CASH FLOW BODY")
 
-    tool = _make_tool(
-        "get_financial_statements", service=service, formatter=formatter
-    )
+    tool = _make_tool("get_financial_statements", service=service, formatter=formatter)
     out = await tool.ainvoke(
         {
             "symbol": "MRVL",
@@ -195,9 +194,7 @@ async def test_balance_sheet_yf_fallback_emits_yfinance_footnote() -> None:
     service.get_balance_sheet = AsyncMock(return_value=None)
     formatter = MagicMock()
 
-    tool = _make_tool(
-        "get_financial_statements", service=service, formatter=formatter
-    )
+    tool = _make_tool("get_financial_statements", service=service, formatter=formatter)
     with patch(
         "src.agent.tools.alpha_vantage.fundamentals.fetch_balance_sheet_yf",
         new=AsyncMock(return_value="YF BS BODY"),
@@ -279,9 +276,7 @@ async def test_insider_av_path_emits_footnote_with_latest_tx_date() -> None:
     formatter = MagicMock()
     formatter.format_insider_transactions = MagicMock(return_value="INSIDER BODY")
 
-    tool = _make_tool(
-        "get_insider_activity", service=service, formatter=formatter
-    )
+    tool = _make_tool("get_insider_activity", service=service, formatter=formatter)
     out = await tool.ainvoke({"symbol": "AAPL", "limit": 50})
 
     assert "INSIDER BODY" in out
@@ -294,9 +289,7 @@ async def test_insider_yf_fallback_emits_yfinance_footnote() -> None:
     service.get_insider_transactions = AsyncMock(return_value={"data": []})
     formatter = MagicMock()
 
-    tool = _make_tool(
-        "get_insider_activity", service=service, formatter=formatter
-    )
+    tool = _make_tool("get_insider_activity", service=service, formatter=formatter)
     with patch(
         "src.agent.tools.alpha_vantage.fundamentals.fetch_insider_yf",
         new=AsyncMock(return_value="YF INSIDER BODY"),

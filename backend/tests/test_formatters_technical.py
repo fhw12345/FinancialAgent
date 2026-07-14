@@ -9,7 +9,6 @@ import pytest
 
 from src.services.formatters.technical import TechnicalFormatter
 
-
 # ===== Fixtures =====
 
 
@@ -19,8 +18,21 @@ def commodity_df():
     dates = pd.date_range(start="2024-01-01", periods=15, freq="MS")
     data = {
         "value": [
-            4.0, 4.1, 4.2, 4.15, 4.3, 4.4, 4.35, 4.5,
-            4.6, 4.55, 4.7, 4.8, 4.75, 4.9, 5.0,
+            4.0,
+            4.1,
+            4.2,
+            4.15,
+            4.3,
+            4.4,
+            4.35,
+            4.5,
+            4.6,
+            4.55,
+            4.7,
+            4.8,
+            4.75,
+            4.9,
+            5.0,
         ]
     }
     return pd.DataFrame(data, index=dates)

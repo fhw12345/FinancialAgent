@@ -1,7 +1,7 @@
 """Insights Snapshot Service.
 
 Handles automated daily collection of insight metrics with MongoDB persistence
-and Redis cache updates. Designed to be triggered by K8s CronJob via HTTP.
+and Redis cache updates. Triggered by local refresh/admin endpoints.
 
 Architecture:
 - Phase 1: Pre-fetch all shared data (parallel via DML)

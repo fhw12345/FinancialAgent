@@ -1,51 +1,85 @@
 # Financial Agent
 
-Personal AI-powered financial analysis tool. Runs locally via Docker Compose.
+Personal AI-assisted financial research and portfolio tracking tool. It runs
+locally with Docker Compose and never submits broker orders.
 
-## Quick Start
+## Start
+
+1. Copy `backend/.env.example` to `backend/.env.development`.
+2. Configure the Agent Maestro endpoint and any optional market-data keys.
+3. Start the stack:
 
 ```bash
-cp .env.example .env          # then fill in your API keys
-docker compose up
+docker compose up -d
 ```
 
-Open http://localhost:3000.
+Open <http://localhost:3000>. The backend API and OpenAPI docs are available at
+<http://localhost:8000> and <http://localhost:8000/docs>.
 
-Required keys in `.env`:
+## LLM Provider
 
-- `QWEN_API_KEY` — Alibaba DashScope (Qwen) for the LLM agent
-- `ALPACA_API_KEY` / `ALPACA_SECRET_KEY` — market data
-- `FRED_API_KEY` — macro / liquidity metrics (free)
-- `EXA_API_KEY` — web search for the debater agent
-- `POLYGON_API_KEY` — extended-hours data (optional)
+Set `LLM_PROVIDER` in `backend/.env.development`:
 
-## Features
+| Value             | Backend                                                              |
+| ----------------- | -------------------------------------------------------------------- |
+| `maestro`         | Agent Maestro at `MAESTRO_BASE_URL`                                  |
+| `anthropic`       | Direct Anthropic API using `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` |
+| `copilot_reverse` | GitHub Copilot through the sibling `../copilot-bridge` repository    |
 
-- **Chat** — conversational financial analysis with streaming LLM responses and tool use
-- **Market Insights** — daily snapshots of price anomaly, sentiment, smart money flow,
-  put/call ratio, IPO heat, liquidity, Fed expectations; with sparklines and trend charts
-- **Technical Analysis** — Fibonacci retracement, stochastic oscillator, market structure
-- **Portfolio** — watchlist + AI-generated trade suggestions (no auto-trading)
+For the Copilot reverse mode, start the bridge first:
+
+```powershell
+make copilot-reverse
+```
+
+Then configure:
+
+```env
+LLM_PROVIDER=copilot_reverse
+COPILOT_REVERSE_BASE_URL=http://localhost:8765/cc
+COPILOT_REVERSE_AUTH_TOKEN=dummy
+```
+
+When the Financial Agent backend itself runs in Docker, use
+`http://host.docker.internal:8765/cc`; Compose already supplies this URL.
+
+## What It Provides
+
+- Streaming chat with simple, ReAct, and deep multi-agent modes
+- Deterministic Fibonacci, stochastic, fundamentals, macro, and news analysis
+- Local holdings, watchlist, transactions, decisions, and order suggestions
+- Portfolio-wide research and structured decision generation
+- AI-sector risk insights with historical trends
+- English and Simplified Chinese UI/output support
+
+## Stack
+
+| Layer    | Technology                                              |
+| -------- | ------------------------------------------------------- |
+| Frontend | React 18, TypeScript, Vite, TailwindCSS, TanStack Query |
+| Backend  | Python 3.12, FastAPI, Motor, redis-py                   |
+| Agents   | LangChain, LangGraph, DeepAgents, Agent Maestro         |
+| Storage  | MongoDB and Redis                                       |
+| Runtime  | Docker Compose                                          |
+
+Market data uses yfinance by default, with optional Finnhub, Alpha Vantage,
+FRED, Exa, and SEC EDGAR integrations.
 
 ## Development
 
 ```bash
-make dev          # start docker compose
-make test         # run backend + frontend tests
-make fmt && make lint
+make dev
+make test
+make fmt
+make lint
 docker compose logs -f backend
 ```
 
 Frontend commands run inside the container:
-`docker compose exec frontend npm <cmd>`.
 
-See `CONTRIBUTING.md` and `CLAUDE.md` for the development workflow.
+```bash
+docker compose exec frontend npm <command>
+```
 
-## Documentation
-
-- [Architecture Overview](docs/architecture/overview.md) — system in one paragraph + Mermaid diagrams
-- [Getting Started](docs/development/getting-started.md) — local install + first request
-- [API Reference](docs/architecture/api-reference.md) — endpoints grouped by router
-- [FAQ](docs/FAQ.md) — common gotchas (docker exec, .env reload, yfinance 429, …)
-- [Case Studies](docs/case-studies/README.md) — bilingual debugging walkthroughs
-- [Docs Index](docs/README.md) — full table of contents
+See [docs/README.md](docs/README.md) for architecture, API, development, and
+feature documentation.

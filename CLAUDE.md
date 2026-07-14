@@ -10,7 +10,7 @@
 | -------- | ------------------------------------------------ |
 | Backend  | Python 3.12 + FastAPI + MongoDB + Redis          |
 | Frontend | React 18 + TypeScript 5 + Vite + TailwindCSS     |
-| AI / LLM | LangChain + LangGraph + Alibaba DashScope (Qwen) |
+| AI / LLM | LangChain + LangGraph + selectable Anthropic API |
 | Runtime  | Docker Compose (local only)                      |
 
 ## Local Development
@@ -41,7 +41,7 @@ After changing any `.env*` file:
 
 NEVER commit secrets (API keys, tokens, passwords, connection strings).
 
-- Use `.env` (gitignored) for local secrets
+- Use `backend/.env.development` (gitignored) for local secrets
 - Placeholders in committed files: `YOUR_KEY_HERE`, `<REDACTED>`
 - Run `git diff --staged` before committing and scan for keys
 

@@ -2,7 +2,7 @@
  * looksTranslated — defensive guard for server-precomputed translations.
  *
  * The backend stores write-time translations in fields like `full_research_zh`
- * and `reasoning_zh`. A DashScope reverse-translation bug previously caused
+ * and `reasoning_zh`. A translation regression previously caused
  * English text to land in those `_zh` fields, and the UI rendered the English
  * verbatim under a zh-CN locale because `useTranslated` short-circuits when a
  * non-empty `precomputed` value is supplied.

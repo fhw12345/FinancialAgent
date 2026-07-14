@@ -10,7 +10,6 @@ import pytest
 
 from src.services.market_data.quotes import QuotesMixin
 
-
 # ===== Fixtures =====
 
 
@@ -177,9 +176,7 @@ class TestSearchSymbols:
     @pytest.mark.asyncio
     async def test_search_symbols_exception(self, quotes_service):
         """Test symbol search with network exception"""
-        quotes_service.client.get = AsyncMock(
-            side_effect=Exception("Connection error")
-        )
+        quotes_service.client.get = AsyncMock(side_effect=Exception("Connection error"))
 
         with pytest.raises(Exception) as exc_info:
             await quotes_service.search_symbols("AAPL")
@@ -275,9 +272,7 @@ class TestGetQuote:
         """Test quote when no data available"""
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "Global Quote": {}  # Empty quote
-        }
+        mock_response.json.return_value = {"Global Quote": {}}  # Empty quote
         quotes_service.client.get = AsyncMock(return_value=mock_response)
 
         with pytest.raises(ValueError) as exc_info:
@@ -425,9 +420,7 @@ class TestGetMarketStatus:
     @pytest.mark.asyncio
     async def test_get_market_status_exception(self, quotes_service):
         """Test market status with network exception"""
-        quotes_service.client.get = AsyncMock(
-            side_effect=Exception("Network error")
-        )
+        quotes_service.client.get = AsyncMock(side_effect=Exception("Network error"))
 
         with pytest.raises(Exception) as exc_info:
             await quotes_service.get_market_status()
@@ -435,9 +428,7 @@ class TestGetMarketStatus:
         assert "Network error" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_get_market_status_unknown_timezone(
-        self, quotes_service
-    ):
+    async def test_get_market_status_unknown_timezone(self, quotes_service):
         """Test market status with region not in timezone map"""
         mock_response = Mock()
         mock_response.status_code = 200

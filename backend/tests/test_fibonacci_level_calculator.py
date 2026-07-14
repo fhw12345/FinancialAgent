@@ -72,7 +72,7 @@ class TestCalculateFibonacciLevels:
         levels = calculator.calculate_fibonacci_levels(uptrend_data)
 
         # Assert
-        level_0 = next(l for l in levels if l.level == 0.0)
+        level_0 = next(level for level in levels if level.level == 0.0)
         assert level_0.price == 150.0  # Should be at the high
 
     def test_uptrend_100_level_at_low(self, calculator, uptrend_data):
@@ -81,7 +81,7 @@ class TestCalculateFibonacciLevels:
         levels = calculator.calculate_fibonacci_levels(uptrend_data)
 
         # Assert
-        level_100 = next(l for l in levels if l.level == 1.0)
+        level_100 = next(level for level in levels if level.level == 1.0)
         assert level_100.price == 100.0  # Should be at the low
 
     def test_uptrend_618_golden_ratio(self, calculator, uptrend_data):
@@ -92,7 +92,7 @@ class TestCalculateFibonacciLevels:
         # Assert
         # High = 150, Low = 100, Range = 50
         # 61.8% retracement = 150 - (50 * 0.618) = 150 - 30.9 = 119.1
-        level_618 = next(l for l in levels if l.level == 0.618)
+        level_618 = next(level for level in levels if level.level == 0.618)
         assert level_618.price == pytest.approx(119.1, abs=0.1)
         assert level_618.is_key_level is True
 
@@ -103,7 +103,7 @@ class TestCalculateFibonacciLevels:
 
         # Assert
         # 50% = 150 - (50 * 0.5) = 125
-        level_50 = next(l for l in levels if l.level == 0.5)
+        level_50 = next(level for level in levels if level.level == 0.5)
         assert level_50.price == 125.0
         assert level_50.is_key_level is True
 
@@ -114,7 +114,7 @@ class TestCalculateFibonacciLevels:
 
         # Assert
         # 38.2% = 150 - (50 * 0.382) = 150 - 19.1 = 130.9
-        level_382 = next(l for l in levels if l.level == 0.382)
+        level_382 = next(level for level in levels if level.level == 0.382)
         assert level_382.price == pytest.approx(130.9, abs=0.1)
         assert level_382.is_key_level is True
 
@@ -124,7 +124,7 @@ class TestCalculateFibonacciLevels:
         levels = calculator.calculate_fibonacci_levels(downtrend_data)
 
         # Assert
-        level_0 = next(l for l in levels if l.level == 0.0)
+        level_0 = next(level for level in levels if level.level == 0.0)
         assert level_0.price == 150.0  # Should be at the low
 
     def test_downtrend_100_level_at_high(self, calculator, downtrend_data):
@@ -133,7 +133,7 @@ class TestCalculateFibonacciLevels:
         levels = calculator.calculate_fibonacci_levels(downtrend_data)
 
         # Assert
-        level_100 = next(l for l in levels if l.level == 1.0)
+        level_100 = next(level for level in levels if level.level == 1.0)
         assert level_100.price == 200.0  # Should be at the high
 
     def test_downtrend_618_golden_ratio(self, calculator, downtrend_data):
@@ -144,7 +144,7 @@ class TestCalculateFibonacciLevels:
         # Assert
         # High = 200, Low = 150, Range = 50
         # 61.8% retracement = 150 + (50 * 0.618) = 150 + 30.9 = 180.9
-        level_618 = next(l for l in levels if l.level == 0.618)
+        level_618 = next(level for level in levels if level.level == 0.618)
         assert level_618.price == pytest.approx(180.9, abs=0.1)
 
     def test_key_levels_marked_correctly(self, calculator, uptrend_data):
@@ -153,9 +153,9 @@ class TestCalculateFibonacciLevels:
         levels = calculator.calculate_fibonacci_levels(uptrend_data)
 
         # Assert
-        key_levels = [l for l in levels if l.is_key_level]
+        key_levels = [level for level in levels if level.is_key_level]
         assert len(key_levels) == 3
-        key_level_values = [l.level for l in key_levels]
+        key_level_values = [level.level for level in key_levels]
         assert 0.382 in key_level_values
         assert 0.5 in key_level_values
         assert 0.618 in key_level_values
@@ -166,10 +166,10 @@ class TestCalculateFibonacciLevels:
         levels = calculator.calculate_fibonacci_levels(uptrend_data)
 
         # Assert
-        level_618 = next(l for l in levels if l.level == 0.618)
+        level_618 = next(level for level in levels if level.level == 0.618)
         assert level_618.percentage == "61.8%"
 
-        level_50 = next(l for l in levels if l.level == 0.5)
+        level_50 = next(level for level in levels if level.level == 0.5)
         assert level_50.percentage == "50.0%"
 
     def test_get_fibonacci_levels_for_trend_dict_format(self, calculator, uptrend_data):

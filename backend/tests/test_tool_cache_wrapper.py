@@ -5,13 +5,12 @@ Tests caching, execution tracking, timeout handling, and circuit breaker integra
 """
 
 import asyncio
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, Mock, patch
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from src.services.tool_cache_wrapper import ToolCacheWrapper
-
 
 # ===== Fixtures =====
 
@@ -157,7 +156,9 @@ class TestWrapToolCacheHit:
         ) as mock_breaker:
             mock_breaker.can_execute.return_value = True
 
-            with patch("src.services.tool_cache_wrapper.generate_tool_cache_key") as mock_key:
+            with patch(
+                "src.services.tool_cache_wrapper.generate_tool_cache_key"
+            ) as mock_key:
                 mock_key.return_value = "cache_key_123"
 
                 tool_called = False
@@ -204,13 +205,17 @@ class TestWrapToolCacheMiss:
         ) as mock_breaker:
             mock_breaker.can_execute.return_value = True
 
-            with patch("src.services.tool_cache_wrapper.generate_tool_cache_key") as mock_key:
+            with patch(
+                "src.services.tool_cache_wrapper.generate_tool_cache_key"
+            ) as mock_key:
                 mock_key.return_value = "cache_key_456"
 
                 with patch("src.services.tool_cache_wrapper.get_api_cost") as mock_cost:
                     mock_cost.return_value = 0.0001
 
-                    with patch("src.services.tool_cache_wrapper.get_tool_ttl") as mock_ttl:
+                    with patch(
+                        "src.services.tool_cache_wrapper.get_tool_ttl"
+                    ) as mock_ttl:
                         mock_ttl.return_value = 3600
 
                         async def mock_tool(**kwargs):
@@ -230,7 +235,9 @@ class TestWrapToolCacheMiss:
                         assert result["result"] == tool_result
                         assert result["api_cost"] == 0.0001
                         mock_redis_cache.set.assert_called_once()
-                        mock_breaker.record_success.assert_called_once_with("GLOBAL_QUOTE")
+                        mock_breaker.record_success.assert_called_once_with(
+                            "GLOBAL_QUOTE"
+                        )
 
     @pytest.mark.asyncio
     async def test_sync_tool_execution(
@@ -249,8 +256,13 @@ class TestWrapToolCacheMiss:
                 "src.services.tool_cache_wrapper.generate_tool_cache_key",
                 return_value="sync_tool_cache_key",
             ):
-                with patch("src.services.tool_cache_wrapper.get_api_cost", return_value=0.0):
-                    with patch("src.services.tool_cache_wrapper.get_tool_ttl", return_value=3600):
+                with patch(
+                    "src.services.tool_cache_wrapper.get_api_cost", return_value=0.0
+                ):
+                    with patch(
+                        "src.services.tool_cache_wrapper.get_tool_ttl",
+                        return_value=3600,
+                    ):
                         # Create a sync function (not async)
                         def sync_tool(**kwargs):
                             return tool_result
@@ -337,6 +349,7 @@ class TestWrapToolError:
                 "src.services.tool_cache_wrapper.generate_tool_cache_key",
                 return_value="test_cache_key",
             ):
+
                 async def failing_tool(**kwargs):
                     raise ValueError("API Error")
 
@@ -377,6 +390,7 @@ class TestWrapToolExecutionId:
                 "src.services.tool_cache_wrapper.generate_tool_cache_key",
                 return_value="exec_id_cache_key",
             ):
+
                 async def mock_tool(**kwargs):
                     return {}
 
@@ -416,6 +430,7 @@ class TestWrapToolPaidApiDetection:
                 "src.services.tool_cache_wrapper.generate_tool_cache_key",
                 return_value="paid_api_cache_key",
             ):
+
                 async def mock_tool(**kwargs):
                     return {}
 
@@ -450,6 +465,7 @@ class TestWrapToolPaidApiDetection:
                 "src.services.tool_cache_wrapper.generate_tool_cache_key",
                 return_value="local_cache_key",
             ):
+
                 async def mock_tool(**kwargs):
                     return {}
 
@@ -479,7 +495,7 @@ class TestStoreExecution:
         self, wrapper, mock_tool_execution_repo
     ):
         """Test _store_execution creates execution record."""
-        start_time = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        start_time = datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC)
 
         await wrapper._store_execution(
             execution_id="exec_abc123",
@@ -508,11 +524,9 @@ class TestStoreExecution:
         assert execution.duration_ms == 1234
 
     @pytest.mark.asyncio
-    async def test_store_execution_with_error(
-        self, wrapper, mock_tool_execution_repo
-    ):
+    async def test_store_execution_with_error(self, wrapper, mock_tool_execution_repo):
         """Test _store_execution stores error message."""
-        start_time = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        start_time = datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC)
 
         await wrapper._store_execution(
             execution_id="exec_error123",
@@ -545,7 +559,7 @@ class TestStoreExecution:
     ):
         """Test _store_execution handles storage failure gracefully."""
         mock_tool_execution_repo.create.side_effect = Exception("Database error")
-        start_time = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        start_time = datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC)
 
         # Should not raise - storage failure is logged but doesn't break execution
         await wrapper._store_execution(
@@ -590,11 +604,18 @@ class TestToolCacheWrapperIntegration:
         ) as mock_breaker:
             mock_breaker.can_execute.return_value = True
 
-            with patch("src.services.tool_cache_wrapper.generate_tool_cache_key") as mock_key:
+            with patch(
+                "src.services.tool_cache_wrapper.generate_tool_cache_key"
+            ) as mock_key:
                 mock_key.return_value = "tsla_quote_key"
 
-                with patch("src.services.tool_cache_wrapper.get_api_cost", return_value=0.00005):
-                    with patch("src.services.tool_cache_wrapper.get_tool_ttl", return_value=300):
+                with patch(
+                    "src.services.tool_cache_wrapper.get_api_cost", return_value=0.00005
+                ):
+                    with patch(
+                        "src.services.tool_cache_wrapper.get_tool_ttl", return_value=300
+                    ):
+
                         async def quote_tool(**kwargs):
                             return tool_result
 
@@ -615,7 +636,9 @@ class TestToolCacheWrapperIntegration:
                         mock_redis_cache.set.assert_called_once_with(
                             "tsla_quote_key", tool_result, ttl_seconds=300
                         )
-                        mock_breaker.record_success.assert_called_once_with("GLOBAL_QUOTE")
+                        mock_breaker.record_success.assert_called_once_with(
+                            "GLOBAL_QUOTE"
+                        )
                         mock_tool_execution_repo.create.assert_called_once()
 
                         # Verify result
@@ -640,6 +663,7 @@ class TestToolCacheWrapperIntegration:
                 "src.services.tool_cache_wrapper.generate_tool_cache_key",
                 return_value="optional_msg_key",
             ):
+
                 async def mock_tool(**kwargs):
                     return {}
 

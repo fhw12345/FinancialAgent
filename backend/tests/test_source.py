@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
 
 from src.models.source import Source
-
 
 # ---------------------------------------------------------------------------
 # Construction + field shapes
@@ -19,7 +18,7 @@ def test_source_accepts_float_value() -> None:
     s = Source(
         value=24.5,
         source="alphavantage",
-        asof=datetime(2026, 5, 9, tzinfo=timezone.utc),
+        asof=datetime(2026, 5, 9, tzinfo=UTC),
         url="https://www.alphavantage.co/query?function=OVERVIEW&symbol=AAPL",
     )
     assert s.value == 24.5
@@ -32,7 +31,7 @@ def test_source_accepts_string_value() -> None:
     s = Source(
         value="10b5-1",
         source="sec_edgar_form4",
-        asof=datetime(2026, 1, 15, tzinfo=timezone.utc),
+        asof=datetime(2026, 1, 15, tzinfo=UTC),
     )
     assert s.value == "10b5-1"
     assert s.url is None
@@ -45,7 +44,7 @@ def test_source_accepts_dict_value() -> None:
     s = Source(
         value=payload,
         source="sec_edgar_form4",
-        asof=datetime(2026, 5, 1, tzinfo=timezone.utc),
+        asof=datetime(2026, 5, 1, tzinfo=UTC),
         url="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany",
     )
     assert s.value == payload
@@ -55,7 +54,7 @@ def test_source_id_optional() -> None:
     s = Source(
         value=100.0,
         source="yfinance",
-        asof=datetime(2026, 5, 9, tzinfo=timezone.utc),
+        asof=datetime(2026, 5, 9, tzinfo=UTC),
     )
     assert s.id is None
     # Falls back to source name in the label.
@@ -66,7 +65,7 @@ def test_source_id_used_in_short_label() -> None:
     s = Source(
         value=24.5,
         source="alphavantage",
-        asof=datetime(2026, 5, 9, tzinfo=timezone.utc),
+        asof=datetime(2026, 5, 9, tzinfo=UTC),
         id="AV-PE-AAPL-2026-05-09",
     )
     assert s.short_label() == "AV-PE-AAPL-2026-05-09"
@@ -81,7 +80,7 @@ def test_source_name_normalized_to_lower_stripped() -> None:
     s = Source(
         value=1.0,
         source="  AlphaVantage  ",
-        asof=datetime(2026, 5, 9, tzinfo=timezone.utc),
+        asof=datetime(2026, 5, 9, tzinfo=UTC),
     )
     assert s.source == "alphavantage"
 
@@ -92,7 +91,7 @@ def test_source_name_required() -> None:
         Source(
             value=1.0,
             source="",
-            asof=datetime(2026, 5, 9, tzinfo=timezone.utc),
+            asof=datetime(2026, 5, 9, tzinfo=UTC),
         )
 
 
@@ -106,7 +105,7 @@ def test_url_must_be_http_or_https() -> None:
         Source(
             value=1.0,
             source="custom",
-            asof=datetime(2026, 5, 9, tzinfo=timezone.utc),
+            asof=datetime(2026, 5, 9, tzinfo=UTC),
             url="ftp://example.com/data",
         )
 
@@ -118,7 +117,7 @@ def test_url_blank_string_normalizes_to_none() -> None:
     s = Source(
         value=1.0,
         source="yfinance",
-        asof=datetime(2026, 5, 9, tzinfo=timezone.utc),
+        asof=datetime(2026, 5, 9, tzinfo=UTC),
         url="   ",
     )
     assert s.url is None
@@ -128,7 +127,7 @@ def test_url_optional_with_none() -> None:
     s = Source(
         value=1.0,
         source="yfinance",
-        asof=datetime(2026, 5, 9, tzinfo=timezone.utc),
+        asof=datetime(2026, 5, 9, tzinfo=UTC),
         url=None,
     )
     assert s.url is None
@@ -142,7 +141,7 @@ def test_url_optional_with_none() -> None:
 def test_model_dump_json_mode_roundtrips() -> None:
     # The decision-persistence path calls model_dump(mode="json") so
     # asof must serialize cleanly without losing tz info.
-    asof = datetime(2026, 5, 9, 14, 30, tzinfo=timezone.utc)
+    asof = datetime(2026, 5, 9, 14, 30, tzinfo=UTC)
     s = Source(
         value=24.5,
         source="alphavantage",

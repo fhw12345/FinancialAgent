@@ -229,11 +229,6 @@ export interface ChartGenerationResponse {
   error_message?: string;
 }
 
-export interface AnalysisHistoryResponse {
-  analysis_type: string;
-  results: Array<Record<string, any>>;
-}
-
 /**
  * Financial Analysis API Service
  */
@@ -317,22 +312,6 @@ export const analysisService = {
   /**
    * Get analysis history
    */
-  async getAnalysisHistory(
-    analysisType: "fibonacci" | "macro" | "fundamentals" | "charts",
-    symbol?: string,
-    limit: number = 10,
-  ): Promise<AnalysisHistoryResponse> {
-    const params = new URLSearchParams({
-      limit: limit.toString(),
-      ...(symbol && { symbol }),
-    });
-
-    const response = await apiClient.get<AnalysisHistoryResponse>(
-      `/api/analysis/history/${analysisType}?${params}`,
-    );
-    return response.data;
-  },
-
   /**
    * Get cash flow statement
    */

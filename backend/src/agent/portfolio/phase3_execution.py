@@ -63,7 +63,6 @@ class Phase3ExecutionMixin:
                 chat_id=chat_id,
                 user_id=user_id,
                 message_id=message_id,
-                alpaca_order_id=None,
                 analysis_id=analysis_id,
                 symbol=d.symbol,
                 order_type="market",

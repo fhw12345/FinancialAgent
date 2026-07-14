@@ -34,7 +34,7 @@ export function parseBackendMessage(msg: BackendMessage): ChatMessage {
   let analysis_data: Record<string, unknown> | undefined = undefined;
 
   if (msg.metadata?.raw_data && Object.keys(msg.metadata.raw_data).length > 0) {
-    const rawData = msg.metadata.raw_data as Record<string, unknown>;
+    const rawData = msg.metadata.raw_data;
     const filtered = Object.fromEntries(
       Object.entries(rawData).filter(([key]) => key !== "deep_events"),
     );
@@ -59,10 +59,10 @@ export function parseBackendMessage(msg: BackendMessage): ChatMessage {
  * Iterates backward to find the most recent message with deep_events,
  * replays all events, and returns true if any actions were dispatched.
  */
-export function replayDeepEvents(
+export function replayDeepEvents<T>(
   messages: ChatMessage[],
-  mapEventToAction: (event: DeepStreamEvent) => unknown | null,
-  dispatch: (action: unknown) => void,
+  mapEventToAction: (event: DeepStreamEvent) => T | null,
+  dispatch: (action: T) => void,
 ): boolean {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];

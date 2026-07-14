@@ -9,8 +9,8 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from ...database.mongodb import MongoDB
-from ..dependencies.auth import get_mongodb
 from ..dependencies.rate_limit import limiter
+from ..dependencies.storage import get_mongodb
 
 logger = structlog.get_logger()
 
@@ -29,8 +29,7 @@ async def get_portfolio_transactions(
     """
     Get portfolio transactions from MongoDB (includes failed orders).
 
-    Unlike /orders (Alpaca API), this endpoint returns transactions from our
-    database which includes both successful and failed orders with error messages.
+    Returns locally persisted suggestions and user-marked executions.
 
     Args:
         limit: Maximum number of transactions to return (default: 10)
@@ -50,24 +49,13 @@ async def get_portfolio_transactions(
         query: dict = {"decision_type": {"$ne": "signal"}}
 
         if status == "success":
-            # Success = filled, new, partially_filled, accepted (anything that went to Alpaca)
-            # Note: Status may include "OrderStatus." prefix from Alpaca SDK enum
             query["status"] = {
                 "$in": [
                     "filled",
-                    "new",
-                    "partially_filled",
-                    "accepted",
-                    "pending_new",
-                    "OrderStatus.FILLED",
-                    "OrderStatus.NEW",
-                    "OrderStatus.PARTIALLY_FILLED",
-                    "OrderStatus.ACCEPTED",
-                    "OrderStatus.PENDING_NEW",
+                    "suggested",
                 ]
             }
         elif status == "failed":
-            # Failed = orders that failed before reaching Alpaca
             query["status"] = "failed"
         # else: no filter, return all
 
@@ -88,7 +76,6 @@ async def get_portfolio_transactions(
             transactions.append(
                 {
                     "order_id": order_dict.get("order_id"),
-                    "alpaca_order_id": order_dict.get("alpaca_order_id"),
                     "symbol": order_dict.get("symbol"),
                     "side": order_dict.get("side"),
                     "quantity": order_dict.get("quantity"),

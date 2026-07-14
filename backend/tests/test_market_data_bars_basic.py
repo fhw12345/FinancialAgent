@@ -11,7 +11,6 @@ import pytest
 
 from src.services.market_data.bars_basic import BarsBasicMixin
 
-
 # ===== Fixtures =====
 
 
@@ -179,7 +178,9 @@ class TestGetIntradayBars:
         assert df.index.tz is not None
 
     @pytest.mark.asyncio
-    async def test_intraday_bars_with_interval(self, bars_service, mock_intraday_response):
+    async def test_intraday_bars_with_interval(
+        self, bars_service, mock_intraday_response
+    ):
         """Test intraday bars with different intervals"""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -215,9 +216,7 @@ class TestGetIntradayBars:
         """Test intraday bars when no data available"""
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "Error Message": "Invalid API call"
-        }
+        mock_response.json.return_value = {"Error Message": "Invalid API call"}
         bars_service.client.get = AsyncMock(return_value=mock_response)
 
         with pytest.raises(ValueError) as exc_info:
@@ -226,7 +225,9 @@ class TestGetIntradayBars:
         assert "No intraday data for symbol" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_intraday_bars_outputsize_parameter(self, bars_service, mock_intraday_response):
+    async def test_intraday_bars_outputsize_parameter(
+        self, bars_service, mock_intraday_response
+    ):
         """Test intraday bars with outputsize parameter"""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -310,9 +311,7 @@ class TestGetDailyBars:
         """Test daily bars when no data available"""
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "Information": "Invalid symbol"
-        }
+        mock_response.json.return_value = {"Information": "Invalid symbol"}
         bars_service.client.get = AsyncMock(return_value=mock_response)
 
         with pytest.raises(ValueError) as exc_info:
@@ -527,9 +526,7 @@ class TestBarsEdgeCases:
     @pytest.mark.asyncio
     async def test_exception_handling(self, bars_service):
         """Test exception handling for network errors"""
-        bars_service.client.get = AsyncMock(
-            side_effect=Exception("Connection timeout")
-        )
+        bars_service.client.get = AsyncMock(side_effect=Exception("Connection timeout"))
 
         with pytest.raises(Exception) as exc_info:
             await bars_service.get_daily_bars("AAPL")

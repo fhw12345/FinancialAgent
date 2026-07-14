@@ -52,7 +52,7 @@ def _build_mixin_with_response(response: object) -> Phase1ResearchMixin:
     mixin = Phase1ResearchMixin.__new__(Phase1ResearchMixin)
     mixin.react_agent = SimpleNamespace(ainvoke=AsyncMock(return_value=response))
     mixin.context_manager = SimpleNamespace()
-    mixin.settings = SimpleNamespace(dashscope_model="qwen-plus")
+    mixin.settings = SimpleNamespace()
     mixin.message_repo = SimpleNamespace()
     mixin.chat_repo = SimpleNamespace()
     return mixin
@@ -195,4 +195,3 @@ async def test_phase1_handles_none_token_value(
     kw = _completion_kwargs(captured_logs)
     assert kw.get("input_tokens") == 0
     assert kw.get("output_tokens") == 0
-

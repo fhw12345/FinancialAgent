@@ -55,7 +55,6 @@ interface PortfolioChatHistoryResponse {
 }
 
 async function fetchPortfolioChats(date?: string, analysisType?: string): Promise<ChatsResponse> {
-  // Use apiClient (axios) for automatic auth token injection
   const params: Record<string, string> = {};
   if (date) {
     params.date = date;
@@ -112,7 +111,6 @@ export function usePortfolioChats(date?: string, analysisType?: string) {
  * Uses /api/portfolio/chats/{chatId} endpoint.
  */
 async function deletePortfolioChat(chatId: string): Promise<void> {
-  // Use apiClient (axios) for automatic auth token injection
   await apiClient.delete(`/api/portfolio/chats/${chatId}`);
 }
 

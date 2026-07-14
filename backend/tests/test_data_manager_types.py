@@ -4,9 +4,7 @@ Unit tests for Data Manager types.
 Tests all dataclasses and their serialization methods.
 """
 
-from datetime import datetime, timezone
-
-import pytest
+from datetime import UTC, datetime
 
 from src.services.data_manager.types import (
     DataFetchError,
@@ -22,7 +20,6 @@ from src.services.data_manager.types import (
     TreasuryData,
     TrendPoint,
 )
-
 
 # ===== MetricStatus Tests =====
 
@@ -74,7 +71,7 @@ class TestOHLCVData:
 
     def test_create(self):
         """Test creating OHLCV data."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         data = OHLCVData(
             date=now,
             open=100.0,
@@ -90,7 +87,7 @@ class TestOHLCVData:
 
     def test_to_dict(self):
         """Test to_dict serialization."""
-        now = datetime(2025, 1, 10, 12, 0, 0, tzinfo=timezone.utc)
+        now = datetime(2025, 1, 10, 12, 0, 0, tzinfo=UTC)
         data = OHLCVData(
             date=now,
             open=100.0,
@@ -131,7 +128,7 @@ class TestTreasuryData:
 
     def test_create(self):
         """Test creating treasury data."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         data = TreasuryData(date=now, yield_value=4.25, maturity="10y")
 
         assert data.yield_value == 4.25
@@ -139,7 +136,7 @@ class TestTreasuryData:
 
     def test_to_dict(self):
         """Test to_dict serialization."""
-        now = datetime(2025, 1, 10, tzinfo=timezone.utc)
+        now = datetime(2025, 1, 10, tzinfo=UTC)
         data = TreasuryData(date=now, yield_value=4.25, maturity="10y")
 
         d = data.to_dict()
@@ -169,7 +166,7 @@ class TestNewsData:
 
     def test_create_with_defaults(self):
         """Test creating news data with defaults."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         data = NewsData(date=now, sentiment_score=0.5, ticker_relevance=0.8)
 
         assert data.sentiment_score == 0.5
@@ -178,7 +175,7 @@ class TestNewsData:
 
     def test_create_full(self):
         """Test creating news data with all fields."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         data = NewsData(
             date=now,
             sentiment_score=0.75,
@@ -192,7 +189,7 @@ class TestNewsData:
 
     def test_to_dict(self):
         """Test to_dict serialization."""
-        now = datetime(2025, 1, 10, tzinfo=timezone.utc)
+        now = datetime(2025, 1, 10, tzinfo=UTC)
         data = NewsData(date=now, sentiment_score=0.5, ticker_relevance=0.8)
 
         d = data.to_dict()
@@ -224,7 +221,7 @@ class TestIPOData:
 
     def test_create_minimal(self):
         """Test creating IPO data with required fields only."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         data = IPOData(date=now, name="Test Company", exchange="NASDAQ")
 
         assert data.name == "Test Company"
@@ -232,7 +229,7 @@ class TestIPOData:
 
     def test_create_full(self):
         """Test creating IPO data with all fields."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         data = IPOData(
             date=now,
             name="Test Company",
@@ -247,7 +244,7 @@ class TestIPOData:
 
     def test_to_dict(self):
         """Test to_dict serialization."""
-        now = datetime(2025, 1, 10, tzinfo=timezone.utc)
+        now = datetime(2025, 1, 10, tzinfo=UTC)
         data = IPOData(date=now, name="Test Co", exchange="NYSE")
 
         d = data.to_dict()
@@ -343,7 +340,7 @@ class TestOptionContract:
 
     def test_create(self):
         """Test creating option contract."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         data = OptionContract(
             contract_id="AAPL250117C00150000",
             symbol="AAPL",
@@ -363,7 +360,7 @@ class TestOptionContract:
 
     def test_to_dict(self):
         """Test to_dict serialization."""
-        now = datetime(2025, 1, 17, tzinfo=timezone.utc)
+        now = datetime(2025, 1, 17, tzinfo=UTC)
         data = OptionContract(
             contract_id="AAPL250117C00150000",
             symbol="AAPL",
@@ -415,7 +412,7 @@ class TestTrendPoint:
 
     def test_create(self):
         """Test creating trend point."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         data = TrendPoint(date=now, score=65.0, status=MetricStatus.ELEVATED)
 
         assert data.score == 65.0
@@ -423,7 +420,7 @@ class TestTrendPoint:
 
     def test_to_dict(self):
         """Test to_dict serialization."""
-        now = datetime(2025, 1, 10, tzinfo=timezone.utc)
+        now = datetime(2025, 1, 10, tzinfo=UTC)
         data = TrendPoint(date=now, score=45.0, status=MetricStatus.NORMAL)
 
         d = data.to_dict()
@@ -453,7 +450,7 @@ class TestSymbolPCRData:
 
     def test_create(self):
         """Test creating PCR data."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         data = SymbolPCRData(
             symbol="SPY",
             current_price=500.0,
@@ -472,7 +469,7 @@ class TestSymbolPCRData:
 
     def test_to_dict(self):
         """Test to_dict serialization."""
-        now = datetime(2025, 1, 10, tzinfo=timezone.utc)
+        now = datetime(2025, 1, 10, tzinfo=UTC)
         data = SymbolPCRData(
             symbol="SPY",
             current_price=500.0,
@@ -529,7 +526,7 @@ class TestSharedDataContext:
     def test_get_ohlcv(self):
         """Test get_ohlcv method."""
         ctx = SharedDataContext()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         data = OHLCVData(date=now, open=100, high=105, low=98, close=103, volume=1000)
         ctx.ohlcv["AAPL"] = [data]
 
@@ -548,7 +545,7 @@ class TestSharedDataContext:
     def test_get_treasury(self):
         """Test get_treasury method."""
         ctx = SharedDataContext()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         data = TreasuryData(date=now, yield_value=4.25, maturity="10y")
         ctx.treasury["10y"] = [data]
 
@@ -578,7 +575,7 @@ class TestSharedDataContext:
     def test_get_options(self):
         """Test get_options method."""
         ctx = SharedDataContext()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         contract = OptionContract(
             contract_id="test",
             symbol="AAPL",

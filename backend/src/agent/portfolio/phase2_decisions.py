@@ -699,7 +699,7 @@ Include short reasoning (1-2 sentences) for each decision.
 
         if not portfolio_context:
             await self._store_phase2_failure_message(
-                reason="Portfolio context unavailable. Failed to retrieve account information from Alpaca.",
+                reason="Portfolio context unavailable from local holdings.",
             )
             return None, []
 

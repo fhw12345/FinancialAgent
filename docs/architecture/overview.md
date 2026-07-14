@@ -1,8 +1,8 @@
 ---
 title: Architecture Overview
 status: shipped
-version: backend@0.29.x, frontend@0.22.x
-last_updated: 2026-05-16
+version: backend@0.30.x, frontend@0.23.x
+last_updated: 2026-07-13
 owner: maintainer
 related_paths:
   - backend/src/main.py
@@ -14,142 +14,105 @@ related_paths:
 
 # Architecture Overview
 
-Financial Agent is a single-user, locally-run financial analysis tool. A React
-SPA in the browser talks to a FastAPI backend over HTTP / SSE; the backend
-delegates LLM-driven analysis to LangGraph ReAct agents, persists chats and
-portfolio data to MongoDB, and caches market data and translations in Redis.
-External data (yfinance, Alpha Vantage, Finnhub, FRED, Polygon, SEC EDGAR,
-Exa) is normalized through a `DataManager` fallback chain. Everything runs
-under `docker compose` on a single host.
-
-## 1. High-Level Data Flow
+Financial Agent is a local single-user modular monolith. A React SPA calls one
+FastAPI process over HTTP and SSE. The backend owns agent orchestration,
+financial analysis, external data access, MongoDB persistence, and Redis
+caching. Docker Compose starts the frontend, backend, MongoDB, and Redis.
 
 ```mermaid
 flowchart LR
-    user[User<br/>browser]
-    fe[Frontend<br/>React + Vite + TS]
-    be[Backend<br/>FastAPI]
-    agent[LangGraph<br/>ReAct Agent]
-    mongo[(MongoDB<br/>chats, decisions,<br/>holdings, ...)]
-    redis[(Redis<br/>market data +<br/>translation cache)]
-    ext{{External APIs<br/>yfinance / Alpha Vantage /<br/>Finnhub / FRED / Polygon /<br/>SEC EDGAR / Exa / DashScope}}
+    browser[React SPA]
+    api[FastAPI]
+    agents[LangGraph Agents]
+    services[Services and DataManager]
+    mongo[(MongoDB)]
+    redis[(Redis)]
+    llm[LLM backend<br/>Maestro / Anthropic / Copilot reverse]
+    providers[yfinance / Finnhub / Alpha Vantage / FRED / Exa / SEC]
 
-    user -- HTTP / SSE --> fe
-    fe -- /api/* --> be
-    be -- chat stream --> agent
-    agent -- tool calls --> be
-    be -- queries / writes --> mongo
-    be -- get / set --> redis
-    be -- HTTP --> ext
-    agent -- LLM completion --> ext
+    browser -- HTTP / SSE --> api
+    api --> agents
+    api --> services
+    agents --> llm
+    agents --> services
+    services --> providers
+    api --> mongo
+    api --> redis
 ```
 
-The browser never talks to MongoDB, Redis, or external providers directly.
-Authentication has been removed for the personal-local fork; the frontend
-attaches a fixed `Authorization: Bearer local` header that the backend's
-`require_admin` dependency accepts as a no-op.
+## Frontend
 
-## 2. Agent Graph
+`frontend/src/App.tsx` renders four local tabs: Health, Chat, Portfolio, and
+Insights. TanStack Query manages server state. Chat responses and tool events
+arrive through an SSE `POST /api/chat/stream` request.
 
-```mermaid
-flowchart TD
-    chat[Chat endpoint<br/>/api/chat/...]
-    router{Agent<br/>selector}
-    react[LangGraph ReAct Agent<br/>create_react_agent]
-    deep[Deep ReAct<br/>multi-skill sub-agents]
-    portfolio[Portfolio Agent<br/>Phase 1 → 2 → 3]
+Quick-analysis buttons call deterministic `/api/analysis/*` routes directly,
+while free-form chat uses one of three agent modes:
 
-    skills_tech[technical skills<br/>fibonacci / trend / momentum]
-    skills_fin[financial skills<br/>cashflow / earnings / valuation]
-    skills_news[news skills<br/>sentiment / mood / catalysts]
-    skills_debate[debater skills<br/>fact-check / counter-evidence / risk]
+- `v2`: simple Maestro chat
+- `v3`: LangGraph ReAct agent
+- `v4-deep`: technical, news, and financial sub-agents plus adversarial debate
 
-    tools_market[Market data tools<br/>yfinance / AV / Finnhub / FRED / Polygon]
-    tools_sec[Insider tools<br/>SEC EDGAR Form 4]
-    tools_search[Web search<br/>Exa]
+## Backend
 
-    chat --> router
-    router --> react
-    router --> deep
-    portfolio -.-> deep
+`backend/src/main.py` is the composition root. During startup it connects to
+MongoDB and Redis, creates indexes, initializes DataManager, builds the ReAct
+and portfolio agents, registers insights, and starts cache warming.
 
-    react --> skills_tech
-    react --> skills_fin
-    react --> skills_news
+The backend is divided into:
 
-    deep --> skills_tech
-    deep --> skills_fin
-    deep --> skills_news
-    deep --> skills_debate
+- `api/`: FastAPI routers and request/response schemas
+- `agent/`: ReAct, deep-agent, and portfolio decision pipelines
+- `services/`: business logic, data providers, translation, and caching
+- `database/`: MongoDB/Redis clients and repositories
+- `models/`: Pydantic persistence and domain models
+- `core/`: configuration, analysis primitives, and shared utilities
 
-    skills_tech --> tools_market
-    skills_fin --> tools_market
-    skills_news --> tools_market
-    skills_news --> tools_search
-    skills_debate --> tools_sec
-    skills_debate --> tools_search
-```
+## Agent Architecture
 
-### Portfolio agent (Phase 1 → Phase 2 → Phase 3)
+The standard ReAct agent uses LangGraph `create_react_agent` with local
+LangChain tools. A full initialization currently registers approximately 24
+tools covering technical analysis, fundamentals, quotes, news, market
+insights, options PCR, and insider data.
 
-```mermaid
-flowchart LR
-    cron[Cron trigger<br/>or manual button]
-    p1[Phase 1<br/>Per-symbol research<br/>independent, no portfolio context]
-    p2[Phase 2<br/>Holistic decision<br/>single LLM call,<br/>full portfolio view]
-    p3[Phase 3<br/>Order execution<br/>SELLs before BUYs]
+`llm_factory.py` selects an Anthropic-compatible endpoint with
+`LLM_PROVIDER=maestro|anthropic|copilot_reverse`. Agent Maestro keeps the
+cross-vendor role mapping. Direct Anthropic uses one configured Anthropic model.
+Copilot reverse mode targets the sibling `copilot-bridge` at `/cc` and uses
+Claude models for the main/tool-heavy roles and GPT Responses models for
+financial research, adversarial review, and summarization. Gemini routing is
+not enabled because the bridge's OpenAI Chat strategy is not implemented yet.
 
-    cron --> p1 --> p2 --> p3
-```
+The deep agent runs specialist research, challenges it with independent
+yfinance/web-search evidence, and synthesizes a final verdict.
 
-- **Phase 1** runs one Deep ReAct research pass per symbol, independent of the
-  portfolio (so research is reusable across rebalances).
-- **Phase 2** consumes all Phase 1 outputs in a single structured LLM call and
-  emits a `List[TradingDecision]` with full portfolio visibility.
-- **Phase 3** sorts decisions so SELLs execute first (releasing liquidity)
-  before BUYs.
+## Portfolio Pipeline
 
-This refactor is documented in
-[`features/portfolio-agent-architecture-refactor.md`](../features/portfolio-agent-architecture-refactor.md).
+The dashboard exposes two main flows:
 
-## 3. Layered View
+1. Analyze existing holdings.
+2. Filter a sector universe and generate today's candidate picks.
 
-```
-┌────────────────────────────────────────────────────────────────┐
-│ frontend/                                                       │
-│   src/components/   React UI                                    │
-│   src/services/     axios clients ↔ /api/*                      │
-│   src/hooks/        useTranslated, useChat, ...                 │
-│   src/i18n/         English + zh-CN; write-time translation     │
-└────────────────────────────────────────────────────────────────┘
-                              │ HTTP / SSE
-┌────────────────────────────────────────────────────────────────┐
-│ backend/src/                                                    │
-│   api/               FastAPI routers (see api-reference.md)     │
-│   agent/             LangGraph ReAct agent + skills/*           │
-│   services/          DataManager, portfolio, watchlist,         │
-│                      translation, persistence_translator        │
-│   core/              config, exceptions, analyzers              │
-│   database/          MongoDB / Redis clients + repositories     │
-│   models/            Pydantic data models                       │
-│   main.py            app factory + middleware + router mount    │
-└────────────────────────────────────────────────────────────────┘
-```
+Both flows run independent Phase 1 research, a consistency gate, and a
+portfolio-aware Phase 2 structured decision. Actionable results are persisted
+as local suggestions. No broker API is called.
 
-## 4. Tech Stack
+## Data and Storage
 
-| Layer | Stack |
-|---|---|
-| Frontend | React 18, TypeScript 5, Vite, TailwindCSS, TanStack Query, react-i18next |
-| Backend | Python 3.12, FastAPI, Uvicorn, structlog, Motor (async Mongo), redis-py |
-| AI / LLM | LangChain, LangGraph (`create_react_agent`), Alibaba DashScope (Qwen) as the default provider |
-| Storage | MongoDB (chats, messages, decisions, holdings, insights), Redis (market quotes + translation cache) |
-| Runtime | Docker Compose (single host, local only) |
+DataManager centralizes provider fallback and Redis caching:
 
-## 5. Cross-References
+- quotes: Finnhub when configured, then yfinance, then Alpha Vantage
+- OHLCV: yfinance, then Alpha Vantage
+- Treasury data: FRED, then Alpha Vantage
+- news and insider data: provider-specific fallback chains
 
-- 12-factor design rationale: [`agent-12-factors.md`](agent-12-factors.md)
-- ReAct agent implementation details: [`react-agent-integration.md`](react-agent-integration.md), [`react-agent-debugging.md`](react-agent-debugging.md)
-- Skill catalog: [`../../backend/src/agent/skills/README.md`](../../backend/src/agent/skills/README.md)
-- API reference: [`api-reference.md`](api-reference.md)
-- Original architecture proposal (kept for context): [`agent-architecture.md`](agent-architecture.md)
+MongoDB stores chats, messages, holdings, watchlists, transactions, decisions,
+tool executions, settings, and insight snapshots. Redis stores short-lived
+market data, insight caches, translations, and request-deduplication locks.
+
+## Localization
+
+Static UI strings use i18next. Analysis output is generated in English,
+translated before persistence when possible, and stored in `_zh` companion
+fields. The frontend falls back to the cached `/api/translate` endpoint when a
+precomputed translation is unavailable.

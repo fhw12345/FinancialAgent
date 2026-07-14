@@ -4,7 +4,6 @@ Unit tests for chat title generation utilities.
 Tests symbol extraction, action detection, and title generation.
 """
 
-
 from src.core.utils.title_utils import (
     MAX_TITLE_LENGTH,
     detect_action,

@@ -4,8 +4,8 @@ Unit tests for InsightsSnapshotService.
 Tests snapshot creation, persistence, and retrieval.
 """
 
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
@@ -16,11 +16,9 @@ from src.services.insights.models import (
     MetricStatus,
 )
 from src.services.insights.snapshot_service import (
-    SNAPSHOT_REDIS_TTL,
     InsightsSnapshotService,
     _get_status_from_score,
 )
-
 
 # ===== Helper Function Tests =====
 
@@ -142,7 +140,9 @@ def mock_registry():
 
 
 @pytest.fixture
-def snapshot_service(mock_mongodb, mock_redis_cache, mock_data_manager, mock_settings, mock_registry):
+def snapshot_service(
+    mock_mongodb, mock_redis_cache, mock_data_manager, mock_settings, mock_registry
+):
     """Create InsightsSnapshotService instance."""
     service = InsightsSnapshotService(
         mongodb=mock_mongodb,
@@ -160,7 +160,14 @@ def snapshot_service(mock_mongodb, mock_redis_cache, mock_data_manager, mock_set
 class TestSnapshotServiceInit:
     """Test InsightsSnapshotService initialization."""
 
-    def test_init_with_registry(self, mock_mongodb, mock_redis_cache, mock_data_manager, mock_settings, mock_registry):
+    def test_init_with_registry(
+        self,
+        mock_mongodb,
+        mock_redis_cache,
+        mock_data_manager,
+        mock_settings,
+        mock_registry,
+    ):
         """Test initialization with provided registry."""
         service = InsightsSnapshotService(
             mongodb=mock_mongodb,
@@ -224,7 +231,9 @@ class TestCreateSnapshot:
         assert "timing" in result
 
     @pytest.mark.asyncio
-    async def test_create_snapshot_category_not_found(self, snapshot_service, mock_registry):
+    async def test_create_snapshot_category_not_found(
+        self, snapshot_service, mock_registry
+    ):
         """Test snapshot with non-existent category."""
         mock_registry.get_category_instance.return_value = None
 
@@ -243,7 +252,9 @@ class TestCreateSnapshot:
         assert result["run_id"].startswith("snapshot_")
 
     @pytest.mark.asyncio
-    async def test_create_snapshot_handles_exception(self, snapshot_service, mock_registry):
+    async def test_create_snapshot_handles_exception(
+        self, snapshot_service, mock_registry
+    ):
         """Test snapshot handles exceptions."""
         mock_category = mock_registry.get_category_instance.return_value
         mock_category.get_category_data.side_effect = Exception("API Error")
@@ -289,7 +300,9 @@ class TestPersistSnapshot:
     """Test _persist_snapshot method."""
 
     @pytest.mark.asyncio
-    async def test_persist_to_mongodb_and_redis(self, snapshot_service, mock_mongodb, mock_redis_cache):
+    async def test_persist_to_mongodb_and_redis(
+        self, snapshot_service, mock_mongodb, mock_redis_cache
+    ):
         """Test snapshot is persisted to both MongoDB and Redis."""
         metrics = [
             InsightMetric(
@@ -353,14 +366,16 @@ class TestGetLatestSnapshot:
         mock_redis_cache.get.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_cache_miss_mongodb_hit(self, snapshot_service, mock_redis_cache, mock_mongodb):
+    async def test_cache_miss_mongodb_hit(
+        self, snapshot_service, mock_redis_cache, mock_mongodb
+    ):
         """Test falls back to MongoDB on cache miss."""
         mock_redis_cache.get.return_value = None
 
         mongo_doc = {
             "_id": "mongo_id",
             "category_id": "ai_sector_risk",
-            "date": datetime.now(timezone.utc),
+            "date": datetime.now(UTC),
             "composite_score": 65.0,
         }
         collection = mock_mongodb.get_collection.return_value
@@ -372,7 +387,9 @@ class TestGetLatestSnapshot:
         assert "_id" not in result  # Should be removed
 
     @pytest.mark.asyncio
-    async def test_cache_miss_mongodb_miss(self, snapshot_service, mock_redis_cache, mock_mongodb):
+    async def test_cache_miss_mongodb_miss(
+        self, snapshot_service, mock_redis_cache, mock_mongodb
+    ):
         """Test returns None when no data exists."""
         mock_redis_cache.get.return_value = None
         collection = mock_mongodb.get_collection.return_value
@@ -397,13 +414,13 @@ class TestGetTrend:
             {
                 "_id": "id1",
                 "category_id": "ai_sector_risk",
-                "date": datetime.now(timezone.utc),
+                "date": datetime.now(UTC),
                 "composite_score": 65.0,
             },
             {
                 "_id": "id2",
                 "category_id": "ai_sector_risk",
-                "date": datetime.now(timezone.utc),
+                "date": datetime.now(UTC),
                 "composite_score": 60.0,
             },
         ]
@@ -436,6 +453,7 @@ class TestGetTrend:
     @pytest.mark.asyncio
     async def test_get_trend_empty(self, snapshot_service, mock_mongodb):
         """Test getting trend with no data."""
+
         class MockCursor:
             def __aiter__(self):
                 return self

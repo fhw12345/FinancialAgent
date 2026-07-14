@@ -20,7 +20,7 @@ from langchain_core.tools import tool
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.agent.llm_factory import MODELS, get_llm  # noqa: E402
+from src.agent.llm_factory import get_llm, get_role_models  # noqa: E402
 
 
 @tool
@@ -68,7 +68,7 @@ async def main():
     print(f"{'role':<22} {'model':<28} {'chat':<8} {'tools':<14} err")
     print("-" * 110)
     seen = {}
-    for role, model in MODELS.items():
+    for role, model in get_role_models().items():
         if model in seen:
             print(f"{role:<22} {model:<28} (dup of {seen[model]})")
             continue

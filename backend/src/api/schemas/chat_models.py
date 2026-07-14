@@ -23,12 +23,7 @@ class ChatRequest(BaseModel):
         max_length=10000,
         description="User message or analysis results",
     )
-    session_id: str | None = Field(
-        None, description="Session ID for continuing conversation (legacy)"
-    )
-    chat_id: str | None = Field(
-        None, description="Chat ID for persistent conversation (new MongoDB-based)"
-    )
+    chat_id: str | None = Field(None, description="Chat ID for persistent conversation")
     title: str | None = Field(
         None,
         min_length=1,
@@ -55,21 +50,6 @@ class ChatRequest(BaseModel):
     agent_version: Literal["v2", "v3", "v4-deep"] = Field(
         "v3",
         description="Agent version: 'v2' (simple ChatAgent), 'v3' (SDK ReAct Agent), 'v4-deep' (Deep hierarchical agent with sub-agents + debate)",
-    )
-    # LLM Configuration
-    model: str = Field(
-        "qwen-plus",
-        description="Model ID: qwen-plus, qwen3-max, deepseek-v3, deepseek-v3.2-exp",
-    )
-    thinking_enabled: bool = Field(
-        False,
-        description="Enable thinking mode (4x cost for qwen-plus, not supported on qwen3-max/deepseek-v3)",
-    )
-    max_tokens: int = Field(
-        3000,
-        ge=500,
-        le=32768,
-        description="Maximum output tokens (500-32768)",
     )
     # Language Configuration
     language: SupportedLanguage = Field(

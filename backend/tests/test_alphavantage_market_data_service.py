@@ -479,10 +479,11 @@ class TestAlphaVantageMarketDataService:
         mock_response = Mock()
         mock_response.status_code = 500
         mock_response.json.return_value = {"Error Message": "API limit reached"}
+        mock_response.text = "API limit reached"
         mock_get.return_value = mock_response
 
         # Should raise exception or return error dict
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             await service.get_quote("AAPL")
 
     @pytest.mark.asyncio

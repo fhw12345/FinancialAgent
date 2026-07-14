@@ -119,9 +119,7 @@ async def test_av_get_stock_quote_renders_after_hours_line() -> None:
     tools = create_quote_tools(av_service, data_manager=dm)
     # The factory may return multiple tools — pick the one named like a
     # quote tool to keep this resilient if siblings get added later.
-    quote_tool = next(
-        (t for t in tools if "quote" in (t.name or "").lower()), tools[0]
-    )
+    quote_tool = next((t for t in tools if "quote" in (t.name or "").lower()), tools[0])
 
     out = await quote_tool.ainvoke({"symbol": "NVDA"})
 

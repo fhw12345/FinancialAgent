@@ -4,7 +4,7 @@ Unit tests for Insights models.
 Tests Pydantic models and business logic.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -17,7 +17,6 @@ from src.services.insights.models import (
     MetricStatus,
     ThresholdConfig,
 )
-
 
 # ===== ThresholdConfig Tests =====
 
@@ -313,7 +312,7 @@ class TestCategoryMetadata:
 
     def test_metadata_with_timestamp(self):
         """Test metadata with last_updated"""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         metadata = CategoryMetadata(
             id="test",
             name="Test",

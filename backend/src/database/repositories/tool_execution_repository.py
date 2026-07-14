@@ -1,7 +1,7 @@
 """
 Tool execution repository for tracking all tool calls.
 
-Stores execution records for both 1st-party and 3rd-party (MCP) tools.
+Stores execution records for registered agent tools.
 """
 
 from datetime import datetime

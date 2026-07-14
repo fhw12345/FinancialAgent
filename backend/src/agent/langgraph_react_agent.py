@@ -47,7 +47,6 @@ from langgraph.prebuilt import create_react_agent
 from ..core.analysis.fibonacci.analyzer import FibonacciAnalyzer
 from ..core.analysis.stochastic_analyzer import StochasticAnalyzer
 from ..core.config import Settings
-from ..core.data.ticker_data_service import TickerDataService
 from ..core.localization import (
     DEFAULT_LANGUAGE,
     SupportedLanguage,
@@ -112,7 +111,6 @@ class FinancialAnalysisReActAgent:
     def __init__(
         self,
         settings: Settings,
-        ticker_data_service: TickerDataService,
         market_service,  # AlphaVantageMarketDataService for market data
         tool_cache_wrapper: ToolCacheWrapper | None = None,
         redis_cache=None,  # RedisCache for insights caching
@@ -124,11 +122,10 @@ class FinancialAnalysisReActAgent:
         ) = None,  # Singleton DataManager for cached OHLCV
     ):
         """
-        Initialize ReAct agent with SDK and MCP tools.
+        Initialize the ReAct agent with local LangChain tools.
 
         Args:
             settings: Application settings with API keys
-            ticker_data_service: Service for fetching ticker data
             market_service: Hybrid market data service for stock data
             tool_cache_wrapper: Optional wrapper for tool caching + tracking
             redis_cache: Optional Redis cache for insights caching (30min TTL)
@@ -137,7 +134,6 @@ class FinancialAnalysisReActAgent:
         """
         self.settings = settings
         self.market_service = market_service
-        self.ticker_data_service = ticker_data_service
         self.tool_cache_wrapper = tool_cache_wrapper
         self.redis_cache = redis_cache
 
@@ -848,7 +844,7 @@ Summary: {result.analysis_summary}"""
 
         try:
             # ===== RETRY CONFIGURATION (Story 1.4: Retry Logic Optimization) =====
-            # Exponential backoff with jitter for DashScope API (SSL errors, timeouts)
+            # Exponential backoff with jitter for transient gateway failures.
             max_retries = 3
             base_delay = 2.0  # seconds
             max_delay = 30.0  # seconds
@@ -946,7 +942,7 @@ Summary: {result.analysis_summary}"""
             ]
 
             # ===== ZERO-TOOL GUARD: Retry with nudge if no tools called =====
-            # DashScope/Qwen can echo system prompt instructions instead of
+            # Some models can echo system prompt instructions instead of
             # calling tools for short queries. Detect and retry once.
             if len(tool_messages) == 0 and self._query_likely_needs_tools(user_message):
                 logger.warning(

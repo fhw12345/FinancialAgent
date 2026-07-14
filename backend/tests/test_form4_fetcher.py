@@ -20,7 +20,6 @@ Tests use ``httpx.MockTransport`` so we never hit the real SEC.
 from __future__ import annotations
 
 import time
-from typing import Any
 
 import httpx
 import pytest
@@ -28,18 +27,19 @@ import pytest
 from src.agent.tools.sec_edgar.form4 import (
     ATOM_FEED_URL,
     DEFAULT_USER_AGENT,
-    Form4Client,
     TICKER_MAP_URL,
+    Form4Client,
     get_user_agent,
 )
-
 
 # ---------------------------------------------------------------------------
 # get_user_agent
 # ---------------------------------------------------------------------------
 
 
-def test_get_user_agent_defaults_to_d4_ffffhhhww(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_user_agent_defaults_to_d4_ffffhhhww(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delenv("SEC_EDGAR_USER_AGENT", raising=False)
     assert get_user_agent() == DEFAULT_USER_AGENT
     assert DEFAULT_USER_AGENT == "ffffhhhww@qq.com"
@@ -50,7 +50,9 @@ def test_get_user_agent_honours_env_override(monkeypatch: pytest.MonkeyPatch) ->
     assert get_user_agent() == "research@example.com"
 
 
-def test_get_user_agent_falls_back_when_env_blank(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_user_agent_falls_back_when_env_blank(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """D4: 'If env missing, fall back to default (do NOT fail fast).'
     Treat a whitespace-only env value the same as missing."""
     monkeypatch.setenv("SEC_EDGAR_USER_AGENT", "   ")
@@ -78,8 +80,10 @@ _AAPL_FORM4_ATOM = """<?xml version="1.0" encoding="UTF-8"?>
 """
 
 
-def _make_handler(captured_headers: list[dict[str, str]] | None = None,
-                  request_log: list[str] | None = None):
+def _make_handler(
+    captured_headers: list[dict[str, str]] | None = None,
+    request_log: list[str] | None = None,
+):
     def _handler(request: httpx.Request) -> httpx.Response:
         if captured_headers is not None:
             captured_headers.append(dict(request.headers))
@@ -167,7 +171,9 @@ async def test_form4_client_sends_default_user_agent_header(
 async def test_form4_client_honours_explicit_user_agent_arg() -> None:
     captured: list[dict[str, str]] = []
     transport = httpx.MockTransport(_make_handler(captured_headers=captured))
-    async with Form4Client(user_agent="explicit@example.com", transport=transport) as client:
+    async with Form4Client(
+        user_agent="explicit@example.com", transport=transport
+    ) as client:
         await client.lookup_cik("AAPL")
     assert captured[0].get("user-agent") == "explicit@example.com"
 
@@ -258,9 +264,9 @@ async def test_rate_limiter_holds_50_sequential_requests_under_10_per_sec() -> N
             assert out is not None
         elapsed = time.monotonic() - start
     rps = 50 / elapsed
-    assert rps < 10.0, (
-        f"rate limiter let through {rps:.2f} req/s, AC #5 ceiling is 10/s"
-    )
+    assert (
+        rps < 10.0
+    ), f"rate limiter let through {rps:.2f} req/s, AC #5 ceiling is 10/s"
 
 
 @pytest.mark.asyncio

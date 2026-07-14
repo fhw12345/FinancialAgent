@@ -32,7 +32,7 @@ export type ToolName = keyof typeof TOOL_REGISTRY;
 export function createToolCall(
   toolName: ToolName,
   symbol?: string,
-  metadata?: Record<string, unknown>,
+  metadata?: unknown,
 ): ToolCall {
   const toolInfo = TOOL_REGISTRY[toolName] || {
     title: toolName,

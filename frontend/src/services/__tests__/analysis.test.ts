@@ -604,58 +604,6 @@ describe("analysisService", () => {
     });
   });
 
-  // ===== getAnalysisHistory Tests =====
-
-  describe("getAnalysisHistory", () => {
-    it("should fetch analysis history successfully", async () => {
-      // Arrange
-      const mockResponse = {
-        data: {
-          analysis_type: "fibonacci",
-          results: [
-            { symbol: "AAPL", date: "2025-01-30", score: 0.85 },
-            { symbol: "AAPL", date: "2025-01-29", score: 0.78 },
-          ],
-        },
-      };
-      vi.mocked(apiClient.get).mockResolvedValueOnce(mockResponse);
-
-      // Act
-      const result = await analysisService.getAnalysisHistory(
-        "fibonacci",
-        "AAPL",
-        5,
-      );
-
-      // Assert
-      expect(apiClient.get).toHaveBeenCalledWith(
-        "/api/analysis/history/fibonacci?limit=5&symbol=AAPL",
-      );
-      expect(result.analysis_type).toBe("fibonacci");
-      expect(result.results).toHaveLength(2);
-    });
-
-    it("should fetch history without symbol filter", async () => {
-      // Arrange
-      const mockResponse = {
-        data: {
-          analysis_type: "stochastic",
-          results: [{ symbol: "TSLA", date: "2025-01-30", score: 0.65 }],
-        },
-      };
-      vi.mocked(apiClient.get).mockResolvedValueOnce(mockResponse);
-
-      // Act
-      const result = await analysisService.getAnalysisHistory("stochastic");
-
-      // Assert
-      expect(apiClient.get).toHaveBeenCalledWith(
-        "/api/analysis/history/stochastic?limit=10",
-      );
-      expect(result.results).toHaveLength(1);
-    });
-  });
-
   // ===== parseAnalysisIntent Tests =====
 
   describe("parseAnalysisIntent", () => {

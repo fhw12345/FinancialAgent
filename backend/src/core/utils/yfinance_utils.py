@@ -1,29 +1,4 @@
-"""
-Interval mapping utilities for multi-API support.
-
-Centralizes interval format conversion across:
-- Frontend/API (clean format: '1w', '1M')
-- yfinance (legacy: '1wk', '1mo')
-- Alpha Vantage MCP ('1min', 'daily', 'weekly')
-- Alpaca ('1Min', '1Hour', '1Day')
-
-MIGRATION NOTE: Consolidates interval_mapping.py into this file.
-"""
-
-try:
-    from alpaca.data.timeframe import TimeFrame
-
-    ALPACA_AVAILABLE = True
-except ImportError:
-    ALPACA_AVAILABLE = False
-
-    # Create mock TimeFrame for type hints when Alpaca not installed
-    class TimeFrame:
-        Minute = "1Min"
-        Hour = "1Hour"
-        Day = "1Day"
-        Week = "1Week"
-        Month = "1Month"
+"""Interval mapping utilities for yfinance and Alpha Vantage."""
 
 
 def map_timeframe_to_yfinance_interval(frontend_interval: str) -> str:
@@ -85,13 +60,13 @@ def get_valid_frontend_intervals() -> list[str]:
 
 
 # ============================================================
-# Multi-API Interval Mapping (Alpha Vantage, Alpaca)
+# Alpha Vantage interval mapping
 # ============================================================
 
 
 def map_frontend_to_alphavantage(frontend_interval: str) -> str:
     """
-    Map frontend interval to Alpha Vantage MCP format.
+    Map frontend interval to Alpha Vantage format.
 
     Alpha Vantage uses:
     - Intraday: '1min', '5min', '15min', '30min', '60min'
@@ -123,36 +98,6 @@ def map_frontend_to_alphavantage(frontend_interval: str) -> str:
     return mapping.get(frontend_interval, "daily")
 
 
-def map_frontend_to_alpaca(frontend_interval: str) -> "TimeFrame":
-    """
-    Map frontend interval to Alpaca TimeFrame enum.
-
-    Args:
-        frontend_interval: Frontend interval format
-
-    Returns:
-        Alpaca TimeFrame enum
-
-    Examples:
-        >>> map_frontend_to_alpaca('1m')
-        TimeFrame.Minute
-        >>> map_frontend_to_alpaca('1d')
-        TimeFrame.Day
-    """
-    mapping = {
-        "1m": TimeFrame.Minute,
-        "5m": TimeFrame.Minute,
-        "15m": TimeFrame.Minute,
-        "30m": TimeFrame.Minute,
-        "1h": TimeFrame.Hour,
-        "1d": TimeFrame.Day,
-        "1w": TimeFrame.Week,
-        "1M": TimeFrame.Month,
-        "1mo": TimeFrame.Month,
-    }
-    return mapping.get(frontend_interval, TimeFrame.Day)
-
-
 def get_valid_alphavantage_intervals() -> list[str]:
     """Get list of valid Alpha Vantage interval formats."""
     return [
@@ -164,15 +109,4 @@ def get_valid_alphavantage_intervals() -> list[str]:
         "daily",
         "weekly",
         "monthly",
-    ]
-
-
-def get_valid_alpaca_timeframes() -> list["TimeFrame"]:
-    """Get list of valid Alpaca TimeFrame values."""
-    return [
-        TimeFrame.Minute,
-        TimeFrame.Hour,
-        TimeFrame.Day,
-        TimeFrame.Week,
-        TimeFrame.Month,
     ]

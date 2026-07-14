@@ -12,8 +12,8 @@ from ...database.repositories.holding_repository import HoldingRepository
 from ...database.repositories.portfolio_order_repository import PortfolioOrderRepository
 from ...services.alphavantage_market_data import AlphaVantageMarketDataService
 from ...services.portfolio_service import PortfolioService
-from .auth import get_mongodb  # Import shared auth
 from .chat_deps import get_redis
+from .storage import get_mongodb
 
 
 def get_holding_repository(

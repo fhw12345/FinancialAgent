@@ -25,9 +25,7 @@ def _prompt_source() -> str:
     """Snapshot the live ``_analyze_symbol`` source so we lock the wording
     that the running LLM actually sees, not a top-level constant that
     might or might not be referenced."""
-    return inspect.getsource(
-        phase1_research.Phase1ResearchMixin._analyze_symbol
-    )
+    return inspect.getsource(phase1_research.Phase1ResearchMixin._analyze_symbol)
 
 
 def _collapsed() -> str:

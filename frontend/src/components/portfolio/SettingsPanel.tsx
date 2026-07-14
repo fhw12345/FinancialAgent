@@ -172,7 +172,7 @@ export function SettingsPanel({ onSaved }: Props) {
             {mut.error && (
               <p className="mt-1 text-xs text-red-600 inline-flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
-                {(mut.error as Error).message}
+                {(mut.error).message}
               </p>
             )}
           </div>

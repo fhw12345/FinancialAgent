@@ -138,7 +138,6 @@ async def compact_context_if_needed(
     chat_id: str,
     context_manager: ContextWindowManager,
     message_repo: MessageRepository,
-    model: str = "qwen-plus-latest",
 ) -> list[dict[str, str]]:
     """
     Check if context compaction is needed and perform it if so.
@@ -152,8 +151,6 @@ async def compact_context_if_needed(
         chat_id: Chat identifier for persisting summary
         context_manager: ContextWindowManager instance
         message_repo: MessageRepository for persisting summary and deleting old messages
-        model: LLM model name to determine context limit
-
     Returns:
         List of messages in conversation_history format (role/content dicts)
     """
@@ -164,7 +161,7 @@ async def compact_context_if_needed(
     total_tokens = context_manager.calculate_context_tokens(messages)
 
     # Check if compaction is needed (> 75% of context limit)
-    should_compact = context_manager.should_compact(total_tokens, model=model)
+    should_compact = context_manager.should_compact(total_tokens)
 
     if not should_compact:
         # No compaction needed - return messages as conversation_history format

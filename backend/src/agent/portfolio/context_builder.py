@@ -1,7 +1,7 @@
 """
 Build a portfolio_context dict from Mongo holdings + user-set cash settings.
 
-Replaces the Alpaca path in agent.py:266 when trading_service is None.
+Builds portfolio context directly from local holdings and market data.
 Schema-compatible with what Phase 2 expects:
     {
         "total_equity": float,

@@ -1,8 +1,7 @@
 """
 Portfolio orders endpoint.
 
-W5a: Alpaca live trading removed. Orders are now sourced from the local
-``portfolio_orders`` MongoDB collection (status="suggested" by default).
+Orders are sourced from the local ``portfolio_orders`` collection.
 """
 
 from datetime import datetime
@@ -26,12 +25,12 @@ from ...services.order_execution_service import (
     OrderNotFoundError,
     mark_order_executed,
 )
-from ..dependencies.auth import get_mongodb
 from ..dependencies.portfolio_deps import (
     get_holding_repository,
     get_portfolio_order_repository,
 )
 from ..dependencies.rate_limit import limiter
+from ..dependencies.storage import get_mongodb
 from .user_transactions import get_user_tx_repo
 
 logger = structlog.get_logger()

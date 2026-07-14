@@ -1,6 +1,5 @@
 /**
- * Hook for fetching portfolio order execution records from Alpaca.
- * Shows actual BUY/SELL orders placed by the portfolio analysis agent.
+ * Hook for fetching local AI order suggestions and tracked decisions.
  */
 
 import { useQuery } from "@tanstack/react-query";
@@ -38,12 +37,7 @@ async function fetchPortfolioOrders(
     params.append("status", status);
   }
 
-  const response = await fetch(
-    `${API_BASE_URL}/api/portfolio/orders?${params}`,
-    {
-      credentials: "include",
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/api/portfolio/orders?${params}`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch portfolio orders: ${response.statusText}`);

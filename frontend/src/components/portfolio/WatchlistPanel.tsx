@@ -29,27 +29,6 @@ function formatTimeAgo(date: Date): string {
   return `${days}d ago`;
 }
 
-// Calculate next analysis time (next 5-minute mark)
-function getNextAnalysisTime(): Date {
-  const now = new Date();
-  const minutes = now.getMinutes();
-  const nextMinute = Math.ceil((minutes + 1) / 5) * 5;
-  const next = new Date(now);
-  next.setMinutes(nextMinute, 0, 0);
-  return next;
-}
-
-// Format countdown to next analysis
-function formatCountdown(targetDate: Date): string {
-  const seconds = Math.floor(
-    (targetDate.getTime() - new Date().getTime()) / 1000,
-  );
-  if (seconds <= 0) return "Analyzing now...";
-  const minutes = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${minutes}:${secs.toString().padStart(2, "0")}`;
-}
-
 export function WatchlistPanel() {
   const { t, i18n } = useTranslation(["portfolio", "common"]);
   const [newSymbol, setNewSymbol] = useState("");

@@ -69,7 +69,7 @@ def fetch_sp500_symbols() -> list[str]:
     if not rows:
         # Fallback: any 1-5 cap-letter token in <td>
         rows = re.findall(r"<td>([A-Z]{1,5}(?:\.[A-Z])?)</td>", html)
-    out = sorted(set(s.replace(".", "-") for s in rows if 1 <= len(s) <= 6))
+    out = sorted({s.replace(".", "-") for s in rows if 1 <= len(s) <= 6})
     return out
 
 
@@ -79,7 +79,7 @@ def fetch_nasdaq100_symbols() -> list[str]:
 
     html = _get_html("https://en.wikipedia.org/wiki/Nasdaq-100")
     rows = re.findall(r"<td>([A-Z]{1,5}(?:\.[A-Z])?)</td>", html)
-    out = sorted(set(s.replace(".", "-") for s in rows if 1 <= len(s) <= 6))
+    out = sorted({s.replace(".", "-") for s in rows if 1 <= len(s) <= 6})
     return out
 
 

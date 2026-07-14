@@ -33,7 +33,7 @@ interface Props {
 export function Translated({ text, precomputed, as: Tag = "span", className, render }: Props) {
   const { i18n } = useTranslation();
   // Defensive guard against a backend bug that occasionally writes English
-  // into `_zh` fields (DashScope reverse-translation regression). If the
+  // into `_zh` fields after a translation regression. If the
   // precomputed value doesn't look like the active target language, drop it
   // and fall through to lazy translation rather than render the inverted
   // string. See feedback_translation_no_english_flash.md.

@@ -147,18 +147,7 @@ class AlphaVantageMarketDataService(
     AlphaVantageBase,
 ):
     """
-    Market data service using Alpha Vantage API exclusively.
-
-    .. deprecated::
-        This class is being deprecated in favor of the Data Manager Layer (DML).
-        Use `services.data_manager.DataManager` instead for all data access.
-        The DML provides unified caching, consistent key naming, and no duplicate
-        API calls across the application.
-
-        Migration guide:
-        - Replace `market_service.get_daily_bars(symbol)` with `dm.get_ohlcv(symbol, "daily")`
-        - Replace `market_service.get_treasury_yield(maturity)` with `dm.get_treasury(maturity)`
-        - See `backend/src/services/data_manager/` for full API reference.
+    Alpha Vantage/yfinance provider adapter used by DataManager and direct APIs.
 
     Features:
     - Symbol search (SYMBOL_SEARCH)
@@ -174,31 +163,7 @@ class AlphaVantageMarketDataService(
     - Pre-compiled regex patterns for API key sanitization
     """
 
-    _deprecation_warning_shown = False
 
-    def __init__(self, *args, **kwargs):
-        """Initialize with deprecation warning."""
-        import warnings
-
-        import structlog
-
-        if not AlphaVantageMarketDataService._deprecation_warning_shown:
-            AlphaVantageMarketDataService._deprecation_warning_shown = True
-            logger = structlog.get_logger(__name__)
-            logger.warning(
-                "DEPRECATED: AlphaVantageMarketDataService is deprecated. "
-                "Use DataManager from services.data_manager instead."
-            )
-            warnings.warn(
-                "AlphaVantageMarketDataService is deprecated. "
-                "Use DataManager from services.data_manager instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-        super().__init__(*args, **kwargs)
-
-
-# Export all public APIs for backward compatibility
 __all__ = [
     "AlphaVantageMarketDataService",
     "FREDService",

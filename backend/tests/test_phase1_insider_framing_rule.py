@@ -46,7 +46,9 @@ class TestW311PromptRule:
 
     def test_material_size_threshold_5pct(self) -> None:
         c = _collapsed()
-        assert "pct_of_holdings_after` > 0.05" in c or "pct_of_holdings_after > 0.05" in c
+        assert (
+            "pct_of_holdings_after` > 0.05" in c or "pct_of_holdings_after > 0.05" in c
+        )
 
     def test_breaks_12mo_pattern_clause(self) -> None:
         c = _collapsed()

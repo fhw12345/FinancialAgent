@@ -5,6 +5,7 @@ This directory contains detailed specifications for all new features before impl
 ## Purpose
 
 Feature specs ensure:
+
 - Clear understanding of requirements before coding
 - Alignment between stakeholders and developers
 - Design decisions are documented
@@ -14,6 +15,7 @@ Feature specs ensure:
 ## When to Create a Feature Spec
 
 Create a feature spec for:
+
 - ✅ New user-facing features
 - ✅ Significant architectural changes
 - ✅ New API endpoints or data models
@@ -21,6 +23,7 @@ Create a feature spec for:
 - ✅ Third-party integrations
 
 Skip feature specs for:
+
 - ❌ Bug fixes (use troubleshooting docs instead)
 - ❌ Minor refactoring
 - ❌ Documentation updates
@@ -28,7 +31,7 @@ Skip feature specs for:
 
 ## Feature Spec Template
 
-```markdown
+````markdown
 # Feature: [Feature Name]
 
 > **Status**: [Draft | Under Review | Approved | Implemented]
@@ -44,6 +47,7 @@ Why is this feature needed? What user problem does it solve?
 As a [user type], I want to [action], so that [benefit].
 
 **Background**:
+
 - Current situation and limitations
 - Business/user impact
 - Related features or dependencies
@@ -53,10 +57,12 @@ As a [user type], I want to [action], so that [benefit].
 Clear, concise description of the problem to solve.
 
 **Current Pain Points**:
+
 1. [Pain point 1]
 2. [Pain point 2]
 
 **Success Metrics**:
+
 - How will we measure success?
 - What KPIs or user metrics should improve?
 
@@ -69,13 +75,16 @@ Describe the technical approach at a conceptual level.
 ### Architecture Changes
 
 **New Components**:
+
 - Component 1: Purpose and responsibilities
 - Component 2: Purpose and responsibilities
 
 **Modified Components**:
+
 - Existing component: What changes and why
 
 **Data Models**:
+
 ```python
 # Example Pydantic model
 class NewFeature(BaseModel):
@@ -83,8 +92,10 @@ class NewFeature(BaseModel):
     name: str
     created_at: datetime
 ```
+````
 
 **API Endpoints**:
+
 ```
 POST   /api/feature          Create new feature
 GET    /api/feature/{id}     Get feature by ID
@@ -95,10 +106,12 @@ DELETE /api/feature/{id}     Delete feature
 ### UI/UX Changes
 
 **New Screens/Components**:
+
 - Screen 1: Description, mockup or wireframe
 - Component 1: Purpose and behavior
 
 **User Flow**:
+
 1. User navigates to...
 2. User clicks...
 3. System responds with...
@@ -106,16 +119,19 @@ DELETE /api/feature/{id}     Delete feature
 ### Technical Implementation Details
 
 **Frontend**:
+
 - React components to create/modify
 - State management approach
 - API integration points
 
 **Backend**:
+
 - New routes/endpoints
 - Database schema changes
 - External API integrations
 
 **Database**:
+
 - New collections/tables
 - Indexes required
 - Migration strategy
@@ -123,14 +139,17 @@ DELETE /api/feature/{id}     Delete feature
 ## Implementation Plan
 
 ### Phase 1: Foundation
+
 - [ ] Task 1: Description
 - [ ] Task 2: Description
 
 ### Phase 2: Core Feature
+
 - [ ] Task 3: Description
 - [ ] Task 4: Description
 
 ### Phase 3: Polish & Testing
+
 - [ ] Task 5: Description
 - [ ] Task 6: Description
 
@@ -157,14 +176,17 @@ Feature is complete when:
 ## Testing Strategy
 
 **Unit Tests**:
+
 - Test A: What it validates
 - Test B: What it validates
 
 **Integration Tests**:
+
 - Test C: End-to-end flow
 - Test D: External API integration
 
 **Manual Testing**:
+
 1. Test scenario 1
 2. Test scenario 2
 
@@ -185,10 +207,12 @@ Feature is complete when:
 ## Rollout Strategy
 
 **Development**:
+
 - Feature flag: `enable_feature_x`
 - Test with internal users first
 
 **Production**:
+
 - Phased rollout (10% → 50% → 100%)
 - Monitoring metrics during rollout
 - Rollback plan if issues detected
@@ -210,10 +234,10 @@ Feature is complete when:
 
 ## Risks and Mitigations
 
-| Risk | Impact | Probability | Mitigation |
-|------|--------|-------------|------------|
-| Risk 1 | High | Medium | Mitigation strategy |
-| Risk 2 | Low | High | Mitigation strategy |
+| Risk   | Impact | Probability | Mitigation          |
+| ------ | ------ | ----------- | ------------------- |
+| Risk 1 | High   | Medium      | Mitigation strategy |
+| Risk 2 | Low    | High        | Mitigation strategy |
 
 ## References
 
@@ -229,6 +253,7 @@ Feature is complete when:
 - **YYYY-MM-DD**: Initial draft
 - **YYYY-MM-DD**: Updated based on review feedback
 - **YYYY-MM-DD**: Approved and implementation started
+
 ```
 
 ## Completed Feature Specs
@@ -236,11 +261,9 @@ Feature is complete when:
 Browse existing feature specs in this directory for examples:
 
 ### Architecture & Refactoring
-- **[Backend API Module Restructure](backend-api-module-restructure.md)** — v0.8.8 modular package structure for API, agent, and services layers
 - **[Portfolio Agent Architecture](portfolio-agent-architecture-refactor.md)** — 3-phase analysis (research → decisions → execution)
 
 ### AI & Agent System
-- **[LangGraph SDK ReAct Agent](langgraph-sdk-react-agent.md)** — SDK-based ReAct agent implementation with autonomous tool selection
 - **[Chat Symbol Context](chat-symbol-context.md)** — inject the active UI symbol into chat context so the agent does not have to re-ask
 - **[Write-Time Translation](write-time-translation.md)** — translate LLM output to `zh-CN` on the write path so the read path skips `/api/translate`
 
@@ -270,3 +293,4 @@ Browse existing feature specs in this directory for examples:
 - **Think through edge cases**: What happens when...?
 - **Consider non-functional requirements**: Performance, security, scalability
 - **Link to related docs**: Don't duplicate, reference existing documentation
+```

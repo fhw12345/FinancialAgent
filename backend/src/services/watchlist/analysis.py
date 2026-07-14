@@ -14,6 +14,7 @@ import structlog
 from src.core.utils.date_utils import utcnow
 
 from ...core.financial_analysis import FibonacciAnalyzer
+from ...core.local_user import LOCAL_USER_ID
 from ...database.repositories.message_repository import MessageRepository
 from ...database.repositories.watchlist_repository import WatchlistRepository
 from ...models.message import MessageCreate, MessageMetadata
@@ -38,7 +39,6 @@ class AnalysisEngine:
         settings,
         data_manager=None,
         agent=None,
-        trading_service=None,
         order_repository=None,
     ):
         """
@@ -53,7 +53,6 @@ class AnalysisEngine:
             settings: Application settings
             data_manager: Singleton DataManager for cached OHLCV access
             agent: Optional LLM agent for analysis
-            trading_service: Optional trading service for order placement
             order_repository: Optional repository for persisting orders
         """
         self.watchlist_repo = watchlist_repo
@@ -64,7 +63,6 @@ class AnalysisEngine:
         self.settings = settings
         self.data_manager = data_manager
         self.agent = agent
-        self.trading_service = trading_service
         self.order_repository = order_repository
 
         # Initialize helper components
@@ -76,15 +74,14 @@ class AnalysisEngine:
         )
         self.order_handler = OrderHandler(
             message_repo=message_repo,
-            trading_service=trading_service,
             order_repository=order_repository,
         )
 
     async def analyze_symbol(
-        self, symbol: str, user_id: str = "default_user", analysis_id: str | None = None
+        self, symbol: str, user_id: str = LOCAL_USER_ID, analysis_id: str | None = None
     ) -> bool:
         """
-        Run LLM agent analysis on a single symbol with MCP tools.
+        Run LLM agent analysis on a single symbol with local tools.
 
         Args:
             symbol: Stock symbol to analyze
@@ -179,8 +176,7 @@ class AnalysisEngine:
                 analysis_id=analysis_id,
             )
 
-            # Place order if decision is BUY or SELL
-            if decision in ["BUY", "SELL"] and position_size and self.trading_service:
+            if decision in ["BUY", "SELL"] and position_size:
                 await self.order_handler.place_order(
                     symbol,
                     decision,
@@ -221,7 +217,7 @@ class AnalysisEngine:
         return f"""Analyze the stock symbol {symbol} and provide:
 
 1. Technical Analysis: Use Fibonacci retracement, trend analysis, and any other technical indicators
-2. Fundamental Data: Use AlphaVantage MCP tools to get company fundamentals, earnings, news sentiment
+2. Fundamental Data: Use the registered tools to get company fundamentals, earnings, and news sentiment
 3. Trading Decision: Based on the analysis, recommend one of:
    - BUY (if strong bullish signals)
    - SELL (if strong bearish signals)
@@ -410,7 +406,7 @@ REASONING: [your analysis]
 
             if force:
                 # Get ALL watchlist items (manual trigger)
-                items = await self.watchlist_repo.get_by_user("default_user")
+                items = await self.watchlist_repo.get_by_user(LOCAL_USER_ID)
             else:
                 # Get stale items (not analyzed in last 5 minutes)
                 items = await self.watchlist_repo.get_stale_items(minutes=5)

@@ -3,7 +3,7 @@ Order execution service — turns an LLM-suggested PortfolioOrder into an
 actual UserTransaction + holdings update + cash_balance delta.
 
 This is the "Mark Executed" workflow used by the DecisionTracker UI. We do
-NOT talk to Alpaca; this is the personal-fork local path where the user
+This local service does not contact a broker; the user
 manually confirms which suggestions they actually filled.
 
 Atomicity: MongoDB single-doc writes are atomic but we touch four documents

@@ -1,8 +1,7 @@
 """
 Order Suggestion Engine.
 
-W5a: Alpaca live trading removed. This executor no longer submits orders to a
-broker. Instead, every actionable order from the optimizer is persisted to the
+Every actionable order from the optimizer is persisted to the
 ``portfolio_orders`` MongoDB collection with ``status="suggested"`` so the user
 can review and execute them manually.
 """
@@ -36,12 +35,9 @@ class OrderExecutor:
 
     def __init__(
         self,
-        trading_service: Any,  # kept for signature compat; ignored
         order_repo: PortfolioOrderRepository,
         message_repo: MessageRepository,
     ):
-        # trading_service is intentionally ignored after W5a.
-        self.trading_service = None
         self.order_repo = order_repo
         self.message_repo = message_repo
 
@@ -91,7 +87,6 @@ class OrderExecutor:
                 chat_id=chat_id,
                 user_id=user_id,
                 message_id=message_id,
-                alpaca_order_id=None,  # never sent to a broker
                 analysis_id=analysis_id,
                 symbol=order.symbol,
                 order_type="market",

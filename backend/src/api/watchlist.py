@@ -13,9 +13,9 @@ from ..database.mongodb import MongoDB
 from ..database.repositories.watchlist_repository import WatchlistRepository
 from ..models.watchlist import WatchlistItem, WatchlistItemCreate
 from ..services.alphavantage_market_data import AlphaVantageMarketDataService
-from .dependencies.auth import get_mongodb, require_admin
 from .dependencies.portfolio_deps import get_market_service
 from .dependencies.rate_limit import limiter
+from .dependencies.storage import get_mongodb
 
 logger = structlog.get_logger()
 
@@ -154,7 +154,6 @@ async def _enrich_with_live_quote(
 async def add_to_watchlist(
     request: Request,
     item: WatchlistItemCreate,
-    _: None = Depends(require_admin),
     mongodb: MongoDB = Depends(get_mongodb),
     market_service: AlphaVantageMarketDataService = Depends(get_market_service),
 ) -> WatchlistItem:
@@ -354,7 +353,6 @@ async def get_watchlist(
 async def remove_from_watchlist(
     request: Request,
     watchlist_id: str,
-    _: None = Depends(require_admin),
     mongodb: MongoDB = Depends(get_mongodb),
 ) -> None:
     """Remove a symbol from watchlist."""
@@ -389,7 +387,6 @@ async def remove_from_watchlist(
 async def trigger_watchlist_analysis(
     request: Request,
     symbol: str | None = None,
-    _: None = Depends(require_admin),
 ) -> dict:
     """Trigger analysis. Without `symbol`, analyzes the whole watchlist
     (force=True, skips already-held symbols). With `?symbol=BE`, runs the

@@ -2,180 +2,158 @@
 title: Getting Started
 status: shipped
 version: n/a
-last_updated: 2026-05-16
+last_updated: 2026-07-13
 owner: maintainer
 related_paths:
   - docker-compose.yml
   - Makefile
+  - backend/.env.example
   - backend/src/main.py
   - frontend/package.json
 ---
 
-# Getting Started - Financial Agent Development
-
-> Personal single-user local fork. Cloud / K8s / multi-user auth have been
-> removed. Everything runs in `docker compose`.
+# Getting Started
 
 ## Prerequisites
 
-- **Docker & Docker Compose**
-- **Git**
-- (Optional, only if you run services outside Docker) Python 3.12+, Node 20+
+- Docker Compose
+- Git
+- Agent Maestro running on the host
 
-## 1. Clone & Start
+Python 3.12 and Node 20 are only required when running services outside
+containers.
+
+## Configure
 
 ```bash
 git clone <repository>
-cd financial_agent
-make dev                       # docker compose up — backend, frontend, mongo, redis
+cd FinancialAgent
+cp backend/.env.example backend/.env.development
 ```
 
-Access:
+Select one LLM backend with `LLM_PROVIDER`.
+
+### Agent Maestro
+
+```env
+MAESTRO_BASE_URL=http://host.docker.internal:23333/api/anthropic
+MAESTRO_AUTH_TOKEN=Powered by Agent Maestro
+```
+
+### Direct Anthropic
+
+```env
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=<YOUR_KEY>
+ANTHROPIC_MODEL=<VALID_ANTHROPIC_MODEL_ID>
+```
+
+### GitHub Copilot Reverse Proxy
+
+The sibling repository is named `copilot-bridge`, while the Financial Agent
+flag is `copilot_reverse`.
+
+```powershell
+make copilot-reverse
+```
+
+For a locally running backend:
+
+```env
+LLM_PROVIDER=copilot_reverse
+COPILOT_REVERSE_BASE_URL=http://localhost:8765/cc
+COPILOT_REVERSE_AUTH_TOKEN=dummy
+```
+
+For a Docker backend, use `host.docker.internal` instead of `localhost`.
+
+yfinance works without a key. Optional integrations include Finnhub, Alpha
+Vantage, FRED, and Exa.
+
+## Start
+
+```bash
+docker compose up -d
+```
 
 - Frontend: <http://localhost:3000>
-- Backend API: <http://localhost:8000>
-- API Docs: <http://localhost:8000/docs>
+- Backend: <http://localhost:8000>
+- OpenAPI: <http://localhost:8000/docs>
 
-Verify:
-
-```bash
-curl http://localhost:8000/api/health | python3 -m json.tool
-```
-
-Expected:
-
-```json
-{
-  "status": "ok",
-  "dependencies": {
-    "mongodb": {"connected": true},
-    "redis": {"connected": true}
-  }
-}
-```
-
-After changing any `.env*` file:
+Check health:
 
 ```bash
-docker compose up -d --force-recreate <service>   # restart does NOT reload env
+curl http://localhost:8000/api/health
 ```
 
-## 2. Optional: Run Services Outside Docker
-
-Only needed if you want hot reload outside the container.
-
-**Backend**:
+After changing an environment file, recreate the affected service:
 
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate          # Windows: venv\Scripts\activate
-pip install -e ".[dev]"
-uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+docker compose up -d --force-recreate backend
 ```
 
-**Frontend**:
+`docker compose restart` does not reload environment variables.
+
+## Development Commands
 
 ```bash
-cd frontend
-npm install
-npm run dev                       # http://localhost:5173
+make dev
+make fmt
+make test
+make lint
+docker compose logs -f backend
+docker compose exec frontend npm <command>
 ```
 
-Manual setup still needs Mongo + Redis:
+## Run Outside Docker
+
+Start MongoDB and Redis first:
 
 ```bash
 docker compose up -d mongodb redis
 ```
 
-## Common Commands
+Backend:
 
 ```bash
-make fmt        # Format
-make lint       # Lint
-make test       # Run all tests
-docker compose logs -f backend
-docker compose exec frontend npm <cmd>
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e ".[dev]"
+uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Bump version (required by pre-commit hook):
+Frontend:
 
 ```bash
-./scripts/bump-version.sh backend  patch     # 0.1.0 → 0.1.1
-./scripts/bump-version.sh frontend minor
+cd frontend
+npm install
+npm run dev
 ```
+
+When switching providers or endpoints, fully restart the backend so the cached
+settings and compiled agents are rebuilt.
 
 ## Project Structure
 
+```text
+backend/src/
+  api/          FastAPI routes and schemas
+  agent/        ReAct, deep-agent, and portfolio pipelines
+  services/     Business logic and data providers
+  database/     MongoDB and Redis access
+  models/       Domain models
+
+frontend/src/
+  components/   UI and feature components
+  hooks/        TanStack Query and UI hooks
+  services/     HTTP/SSE clients
+  pages/        Main application tabs
 ```
-financial_agent/
-├── backend/                 # FastAPI backend
-│   └── src/
-│       ├── api/             # REST API endpoints
-│       ├── core/            # Configuration, utilities, analysis
-│       ├── database/        # MongoDB / Redis
-│       ├── services/        # Business logic
-│       └── main.py
-├── frontend/                # React + Vite + TS
-│   └── src/
-│       ├── components/
-│       ├── services/        # API clients
-│       └── ...
-├── docs/
-├── scripts/
-├── docker-compose.yml
-├── Makefile
-└── README.md
-```
-
-## Tech Stack
-
-| Layer    | Stack                                            |
-| -------- | ------------------------------------------------ |
-| Backend  | Python 3.12 + FastAPI + MongoDB + Redis          |
-| Frontend | React 18 + TypeScript 5 + Vite + TailwindCSS     |
-| AI / LLM | LangChain + LangGraph + Alibaba DashScope (Qwen) |
-| Runtime  | Docker Compose (local only)                      |
-
-## Common Tasks
-
-**Add a backend endpoint**: create in `backend/src/api/`, add tests in
-`backend/tests/api/`, update the matching client in `frontend/src/services/`,
-then `make fmt && make test && make lint`.
-
-**Add a React component**: create in `frontend/src/components/`, add types in
-`frontend/src/types/`, write a Vitest test, run quality gates.
-
-**Add a database model**: Pydantic model in `backend/src/models/`, ops in
-`backend/src/database/repositories/`, mirror types in the frontend if it
-crosses the API boundary.
-
-## Environment
-
-Backend env vars live in `.env` (gitignored). Frontend dev URL can be set in
-`frontend/.env.local`:
-
-```env
-VITE_API_BASE_URL=http://localhost:8000
-```
-
-## Troubleshooting
-
-**Port conflicts**:
-
-```bash
-lsof -i :3000  :8000  :27017  :6379
-```
-
-**Backend not reloading**: function/route edits hot-reload; new deps or
-module-level changes require restart.
-
-**Env vars not taking effect**: `docker compose restart` does NOT reload env —
-use `up -d --force-recreate <service>`.
 
 ## Next Steps
 
+- [Architecture Overview](../architecture/overview.md)
 - [Coding Standards](coding-standards.md)
-- [Agent Architecture](../architecture/agent-architecture.md)
-- [12-Factor Agent Guide](../architecture/agent-12-factors.md)
-- [Feature Specifications](../features/README.md)
+- [Agent 12-Factors](../architecture/agent-12-factors.md)
+- [Feature Index](../features/README.md)

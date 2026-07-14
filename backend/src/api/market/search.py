@@ -252,34 +252,25 @@ async def get_symbol_info(
     service: AlphaVantageMarketDataService = Depends(get_market_service),
 ) -> dict[str, str]:
     """
-    Get basic symbol information from Alpaca.
-
-    Returns symbol, name, exchange for autocomplete enhancement.
-    Note: Alpaca provides limited fundamental data compared to yfinance.
+    Get basic symbol information from the local market-data service.
     """
     try:
         symbol = symbol.upper().strip()
 
-        # Get assets and find matching symbol
-        assets = await service._get_alpaca_assets()  # type: ignore[attr-defined]
-        matching_asset = next((a for a in assets if a.symbol == symbol), None)
+        matches = await service.search_symbols(symbol, limit=10)
+        matching_asset = next(
+            (item for item in matches if item.get("symbol", "").upper() == symbol),
+            None,
+        )
 
         if not matching_asset:
             raise ValueError(f"Symbol {symbol} not found")
 
         return {
-            "symbol": matching_asset.symbol,
-            "name": matching_asset.name,
-            "exchange": (
-                matching_asset.exchange.value
-                if hasattr(matching_asset.exchange, "value")
-                else str(matching_asset.exchange)
-            ),
-            "type": (
-                matching_asset.asset_class.value
-                if hasattr(matching_asset.asset_class, "value")
-                else "EQUITY"
-            ),
+            "symbol": matching_asset["symbol"],
+            "name": matching_asset.get("name", ""),
+            "exchange": matching_asset.get("exchange", ""),
+            "type": matching_asset.get("type", "Equity"),
         }
 
     except ValueError as e:

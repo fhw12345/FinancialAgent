@@ -73,7 +73,7 @@ class AISectorRiskCategory(InsightCategoryBase):
         "Higher scores indicate elevated euphoria and potential correction risk."
     )
 
-    # Cache for 24 hours (synced with daily CronJob)
+    # Cache for 24 hours.
     CACHE_TTL_SECONDS = 86400
 
     def get_metric_definitions(self) -> list[dict[str, Any]]:

@@ -687,7 +687,6 @@ Be decisive. Use the evidence from both sides. Do not hedge excessively."""
                 chat_id=cfg.get("chat_id", "deep_react"),
                 user_id=user_id,
                 message_id=cfg.get("message_id"),
-                alpaca_order_id=None,
                 analysis_id=f"deep_react_{symbol}_{session_id}",
                 symbol=symbol.upper(),
                 order_type="market",

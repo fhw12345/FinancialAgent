@@ -4,14 +4,13 @@ Unit tests for PortfolioService.
 Tests portfolio management with holdings CRUD and real-time pricing.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 
 from src.models.holding import Holding, HoldingCreate, HoldingUpdate
 from src.services.portfolio_service import PortfolioService
-
 
 # ===== Fixtures =====
 
@@ -68,8 +67,8 @@ def sample_holding():
         market_value=1750.0,
         unrealized_pl=250.0,
         unrealized_pl_pct=16.67,
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
 
 
@@ -321,8 +320,8 @@ class TestGetPortfolioSummary:
                 market_value=1750.0,
                 unrealized_pl=250.0,
                 unrealized_pl_pct=16.67,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             ),
             Holding(
                 holding_id="hold_2",
@@ -335,8 +334,8 @@ class TestGetPortfolioSummary:
                 market_value=600.0,
                 unrealized_pl=100.0,
                 unrealized_pl_pct=20.0,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             ),
         ]
         mock_holding_repo.list_by_user.return_value = holdings

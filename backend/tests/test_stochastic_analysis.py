@@ -71,9 +71,9 @@ class TestStochasticCalculations:
             k_std = valid_k.std()
             d_std = valid_d.std()
             if not np.isnan(k_std) and not np.isnan(d_std):
-                assert d_std <= k_std + 1, (
-                    "D% should generally be smoother than K%"
-                )  # Allow small tolerance
+                assert (
+                    d_std <= k_std + 1
+                ), "D% should generally be smoother than K%"  # Allow small tolerance
 
     def test_stochastic_edge_case_all_same_prices(self, mock_ticker_data_service):
         """Test stochastic calculation when all prices are the same (edge case)."""
@@ -113,9 +113,9 @@ class TestStochasticCalculations:
         assert isinstance(result, pd.DataFrame)
         # With insufficient data, should have no or very few valid calculations
         valid_rows = result.dropna()
-        assert len(valid_rows) == 0, (
-            "Should have no valid calculations with insufficient data"
-        )
+        assert (
+            len(valid_rows) == 0
+        ), "Should have no valid calculations with insufficient data"
 
 
 class TestStochasticSignalDetection:

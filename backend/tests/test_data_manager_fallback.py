@@ -1,11 +1,10 @@
-"""DataManager fallback chain tests for Finnhub → AV → yfinance.
+"""DataManager fallback chain tests for Finnhub → yfinance → Alpha Vantage.
 
 Critical correctness tests:
-- Finnhub success → AV/yfinance not called
-- Finnhub fails → AV called → success
-- Both fail → yfinance called → success
+- Finnhub success → other providers not called
+- Finnhub fails → yfinance is tried before Alpha Vantage
 - All three fail → DataFetchError("all_providers")
-- finnhub_service=None → AV tried first (skip Finnhub silently)
+- finnhub_service=None → yfinance is tried first
 """
 
 from __future__ import annotations
@@ -71,7 +70,11 @@ class TestQuoteFallback:
         av.get_quote = AsyncMock()  # Should NOT be called
         dm = _make_dm(finnhub, av)
 
-        q = await dm.get_quote("AAPL")
+        with patch(
+            "src.services.market_data.get_market_session",
+            return_value="regular",
+        ):
+            q = await dm.get_quote("AAPL")
 
         assert q.price == 280.0
         finnhub.fetch_quote.assert_awaited_once_with("AAPL")

@@ -19,7 +19,7 @@ DEFAULT_LANGUAGE: SupportedLanguage = "zh-CN"
 # Invariant for the analysis pipeline (Phase 1 research, Phase 2 decisions,
 # history summarization). Always English. Output is later translated by
 # `translation_service.translate_batch` for zh-CN display. Locked to "en" so
-# the English -> zh-CN translation direction is unambiguous and DashScope
+# the English -> zh-CN translation direction is unambiguous and the translator
 # cannot reverse it.
 ANALYSIS_OUTPUT_LANG: SupportedLanguage = "en"
 

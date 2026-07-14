@@ -10,7 +10,7 @@ Direction handling:
 - SELL → pnl_pct = (decision - mark) / decision * 100   (short/exit thesis was right if positive)
 - HOLD/SIGNAL → same as BUY (positive means "by holding/signaling, you'd have gained")
 
-Horizon checkpoints in days. Run hourly from the portfolio-cron container.
+Horizon checkpoints in days. Run the snapshot script when marks are needed.
 """
 
 from __future__ import annotations

@@ -1,28 +1,19 @@
-"""
-LLM client wrapper - all calls now route through Agent Maestro (W8).
-
-Historically this wrapped ChatTongyi/DashScope. After W8, all LLM traffic
-goes through the Maestro gateway via langchain_anthropic.ChatAnthropic.
-The class names (DashScopeClient, VisionClient) are preserved so existing
-callers keep working without churn; internally they use llm_factory.get_llm.
-"""
+"""Streaming LLM client routed through Agent Maestro."""
 
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from typing import Any
 
 import structlog
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from ..core.config import Settings
 from ..core.localization import (
     DEFAULT_LANGUAGE,
     SupportedLanguage,
     get_language_instruction,
 )
-from .llm_factory import get_llm, resolve_model
+from .llm_factory import get_llm, resolve_route
 
 logger = structlog.get_logger()
 
@@ -36,46 +27,19 @@ class TokenUsage:
     total_tokens: int
 
 
-# Map legacy/qwen model strings -> Maestro role keys. Anything unknown
-# falls back to "simple_chat".
-_LEGACY_MODEL_TO_ROLE: dict[str, str] = {
-    "qwen-plus": "simple_chat",
-    "qwen-plus-latest": "simple_chat",
-    "qwen-max": "react_agent",
-    "qwen-max-latest": "react_agent",
-    "qwen-turbo": "summary",
-    "qwen-turbo-latest": "summary",
-    "qwen-flash": "summary",
-    "qwen-vl-max": "simple_chat",
-    "deepseek-v3": "react_agent",
-    "deepseek-v3.2-exp": "react_agent",
-    "deepseek-chat": "react_agent",
-}
+class StreamingLLMClient:
+    """Streaming client for the configured ``simple_chat`` provider."""
 
-
-def _model_to_role(model: str) -> str:
-    return _LEGACY_MODEL_TO_ROLE.get(model, "simple_chat")
-
-
-class DashScopeClient:
-    """
-    Backward-compatible LLM client - now routes through Agent Maestro.
-
-    The legacy `model` argument is mapped to a Maestro role key so existing
-    call sites (chat_agent, context_window_manager) keep working unchanged.
-    """
-
-    def __init__(self, settings: Settings, model: str = "qwen-plus"):
-        self.model = model
-        self.settings = settings
-        self._role = _model_to_role(model)
-        # streaming=True for astream_chat path
+    def __init__(self) -> None:
+        self._role = "simple_chat"
+        route = resolve_route(self._role)
         self.chat = get_llm(self._role, streaming=True)
         logger.info(
-            "Maestro LLM client initialized",
-            legacy_model=model,
+            "Streaming LLM client initialized",
+            provider=route.provider,
             role=self._role,
-            resolved_model=resolve_model(self._role),
+            resolved_model=route.model,
+            base_url=route.base_url,
         )
         self.last_token_usage: TokenUsage | None = None
 
@@ -101,12 +65,11 @@ class DashScopeClient:
         messages: list[dict[str, str]],
         temperature: float = 0.7,
         max_tokens: int = 3000,
-        thinking_enabled: bool = False,  # noqa: ARG002 - kept for API compat
     ) -> AsyncGenerator[str, None]:
-        """Stream chat completion through Maestro."""
+        """Stream chat completion through the configured provider."""
         lc_messages = self._convert_to_langchain_messages(messages)
         logger.info(
-            "Streaming chat via Maestro",
+            "Streaming chat",
             role=self._role,
             message_count=len(messages),
             temperature=temperature,
@@ -136,7 +99,7 @@ class DashScopeClient:
             )
         except Exception as e:
             logger.error(
-                "Maestro streaming chat failed",
+                "Streaming chat failed",
                 error=str(e),
                 role=self._role,
                 error_type=type(e).__name__,
@@ -145,40 +108,6 @@ class DashScopeClient:
 
     def get_last_token_usage(self) -> TokenUsage | None:
         return self.last_token_usage
-
-
-class VisionClient:
-    """Vision-capable LLM client routed through Maestro (Claude vision)."""
-
-    def __init__(self, settings: Settings, model: str = "qwen-vl-max"):
-        self.model = model
-        self.settings = settings
-        # Use simple_chat role for vision (Claude haiku/sonnet support vision natively)
-        self.chat = get_llm("simple_chat")
-        logger.info("VisionClient initialized via Maestro", legacy_model=model)
-
-    async def analyze_image(self, image_base64: str, prompt: str) -> str:
-        """Analyze image with Claude vision via Maestro."""
-        content: list[dict[str, Any]] = [
-            {"type": "text", "text": prompt},
-            {
-                "type": "image",
-                "source": {
-                    "type": "base64",
-                    "media_type": "image/png",
-                    "data": image_base64,
-                },
-            },
-        ]
-        messages = [HumanMessage(content=content)]
-        try:
-            response = await self.chat.ainvoke(messages)
-            return str(response.content) if response.content else ""
-        except Exception as e:
-            logger.error(
-                "Vision analysis failed", error=str(e), error_type=type(e).__name__
-            )
-            raise
 
 
 # Default system prompt for financial analysis

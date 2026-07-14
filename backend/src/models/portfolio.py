@@ -1,9 +1,4 @@
-"""
-Portfolio models for tracking orders and positions.
-
-Integrates with Alpaca Paper Trading API for order execution
-and provides audit trail linking orders to AI analysis.
-"""
+"""Portfolio models for local decisions, suggestions, and positions."""
 
 from datetime import datetime
 from enum import StrEnum
@@ -32,12 +27,12 @@ class TimeInForce(StrEnum):
 
 class PortfolioOrder(BaseModel):
     """
-    Portfolio order with native Alpaca ID and audit trail.
+    Portfolio order suggestion with an analysis audit trail.
 
     Links every order to:
-    1. Alpaca's native order ID (for status tracking)
-    2. Our analysis ID (for audit trail: analysis → order → decision)
-    3. Chat message ID (for UI display: "I placed this order because...")
+    1. Our analysis ID
+    2. The originating chat message
+    3. Optional user-entered execution details
     """
 
     # Our database ID
@@ -49,16 +44,9 @@ class PortfolioOrder(BaseModel):
         None, description="Message ID with analysis reasoning"
     )
 
-    # Alpaca native ID (CRITICAL for status tracking)
-    # None for failed orders that never reached Alpaca
-    alpaca_order_id: str | None = Field(
-        None, description="Alpaca's native order ID (UUID), None if order failed"
-    )
-
-    # Audit trail (CRITICAL - links order to analysis)
     analysis_id: str = Field(
         ...,
-        description="Custom analysis ID used as client_order_id in Alpaca API",
+        description="Analysis run that produced the suggestion",
     )
 
     # Order details
@@ -143,7 +131,6 @@ class PortfolioOrder(BaseModel):
                 "order_id": "order_abc123",
                 "chat_id": "chat_xyz789",
                 "message_id": "msg_456",
-                "alpaca_order_id": "f8e1b8c3-7d4a-4e2f-9b1c-5a6d7e8f9a0b",
                 "analysis_id": "analysis-20251101-AAPL-bullish-momentum",
                 "symbol": "AAPL",
                 "order_type": "market",

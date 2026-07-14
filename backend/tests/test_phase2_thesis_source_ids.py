@@ -33,9 +33,9 @@ def test_prompt_requires_thesis_bullets_to_cite_source_ids() -> None:
     # Whitespace-collapsed match — the rule wraps across multiple
     # source lines so a literal substring won't match.
     collapsed = " ".join(src.split())
-    assert "MUST end with the matching source-ID token" in collapsed, (
-        "prompt must require source-ID citation on each thesis bullet"
-    )
+    assert (
+        "MUST end with the matching source-ID token" in collapsed
+    ), "prompt must require source-ID citation on each thesis bullet"
 
 
 def test_prompt_shows_concrete_id_token_examples() -> None:
@@ -82,7 +82,11 @@ def test_worked_example_thesis_bullets_carry_source_ids() -> None:
     thesis_block = src[example_start:example_end]
     # Three bullets, three closing-bracket tokens. Tolerate
     # whitespace / quote-escaping.
-    bracket_tokens = thesis_block.count("[FH-") + thesis_block.count("[AV-") + thesis_block.count("[YF-")
+    bracket_tokens = (
+        thesis_block.count("[FH-")
+        + thesis_block.count("[AV-")
+        + thesis_block.count("[YF-")
+    )
     assert bracket_tokens >= 3, (
         f"worked example must show source-ID tokens on all 3 thesis "
         f"bullets — found {bracket_tokens}"

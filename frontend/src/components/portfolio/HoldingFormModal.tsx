@@ -5,8 +5,7 @@
  * Escape + click-outside to close. Light theme matching the rest of
  * PortfolioSummaryTable (bg-white, gray-200 borders, blue-600 primary).
  *
- * Validation via react-hook-form + zod (first usage in this codebase;
- * deps were installed but unused).
+ * Validation uses react-hook-form + zod.
  */
 
 import { useEffect, useRef } from "react";

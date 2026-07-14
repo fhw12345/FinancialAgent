@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "financial-agent-backend"
-version = "0.29.6"
+version = "0.30.0"
 description = "AI-Enhanced Financial Analysis Platform Backend"
 authors = []
 # readme = "README.md"
@@ -19,7 +19,6 @@ dependencies = [
     "langchain>=0.3.0",
     "langchain-core>=0.3.0",
     "langchain-community>=0.3.0",
-    "langchain-mcp-adapters>=0.1.0",
     "langchain-anthropic>=0.3.0",      # Anthropic-API client for Agent Maestro gateway (W8)
     "langgraph>=0.2.0",
     "langsmith>=0.2.0",
@@ -31,7 +30,6 @@ dependencies = [
     "python-multipart>=0.0.6",         # File uploads
     "httpx>=0.25.0",                    # Async HTTP client
     "tenacity>=8.2.0",                  # Retry logic
-    "kubernetes>=30.0.0",               # Kubernetes client for metrics
     "slowapi>=0.1.9",                   # Rate limiting for FastAPI
     "tiktoken>=0.7.0",                  # Token counting for context window management
     "deepagents>=0.3.12",                # Deep hierarchical agent framework
@@ -119,7 +117,6 @@ module = [
     "matplotlib.*",
     "redis.*",
     "scipy.*",
-    "kubernetes.*",
     "motor.*",
     "fastapi.*",
     "pydantic_settings.*",

@@ -89,7 +89,7 @@ def create_deep_subagent(
 
     Args:
         config: SubAgentConfig with name, description, system prompt
-        model: LangChain chat model (ChatTongyi)
+        model: LangChain chat model routed through Agent Maestro
         tools: List of domain-specific tool functions
         skills_dir: Path to the skills directory for this domain
 

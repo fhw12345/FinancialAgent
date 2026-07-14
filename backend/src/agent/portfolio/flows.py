@@ -1,7 +1,7 @@
 """
 Two new top-level analysis flows for the dashboard buttons:
 
-- run_analyze_holdings: full Phase 1 (ReAct + 118 MCP tools per symbol) on
+- run_analyze_holdings: full Phase 1 ReAct research per symbol on
   every holding, then Phase 2 holistic decisions. Persists decisions to
   portfolio_orders with recommendation_source="holdings" + full per-symbol
   research embedded in metadata.full_research.
@@ -781,7 +781,6 @@ async def _persist_decisions(
             chat_id=f"{source}_flow",
             user_id="local",
             message_id=None,
-            alpaca_order_id=None,
             analysis_id=run_id,
             symbol=sym,
             order_type="market",

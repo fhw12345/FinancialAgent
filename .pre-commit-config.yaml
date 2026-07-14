@@ -69,7 +69,7 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-        args: [--unsafe]  # Allow custom tags in k8s yaml
+        args: [--unsafe] # Allow custom tags in k8s yaml
       - id: check-added-large-files
         args: [--maxkb=1000]
       - id: check-merge-conflict
@@ -89,23 +89,6 @@ repos:
     rev: v8.28.0
     hooks:
       - id: gitleaks
-
-  # Kubernetes Linting (run via Docker on built manifests)
-  - repo: local
-    hooks:
-      - id: kube-linter
-        name: Kubernetes Linter (kube-linter)
-        entry: bash -c 'kubectl kustomize .pipeline/k8s/base > /tmp/k8s-manifests.yaml && docker run --rm -v "/tmp:/tmp" stackrox/kube-linter:latest lint /tmp/k8s-manifests.yaml'
-        language: system
-        files: ^\.pipeline/k8s/.*\.yaml$
-        pass_filenames: false
-
-      - id: kubeconform
-        name: Kubernetes Validator (kubeconform)
-        entry: bash -c 'kubectl kustomize .pipeline/k8s/base > /tmp/k8s-manifests.yaml && docker run --rm -v "/tmp:/tmp" ghcr.io/yannh/kubeconform:latest -strict -summary -skip ClusterIssuer /tmp/k8s-manifests.yaml'
-        language: system
-        files: ^\.pipeline/k8s/.*\.yaml$
-        pass_filenames: false
 
   # Dockerfile linting
   - repo: https://github.com/hadolint/hadolint

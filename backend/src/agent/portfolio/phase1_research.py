@@ -25,7 +25,7 @@ def _phase1_language_directive() -> str:
 
     Default is English (sourced from `ANALYSIS_OUTPUT_LANG`) so that the
     persistence translator has an unambiguous English -> zh-CN direction
-    to feed DashScope. `PHASE1_PROMPT_LANG=zh` remains as an emergency
+    to feed the persistence translator. `PHASE1_PROMPT_LANG=zh` remains as an emergency
     override; any other value falls back to the English default.
     """
     lang = os.getenv("PHASE1_PROMPT_LANG", ANALYSIS_OUTPUT_LANG).lower()
@@ -225,9 +225,7 @@ prose. You MUST:
                 total_tokens = self.context_manager.calculate_context_tokens(
                     historical_messages
                 )
-                model = getattr(self.settings, "dashscope_model", "qwen-plus")
-
-                if self.context_manager.should_compact(total_tokens, model=model):
+                if self.context_manager.should_compact(total_tokens):
                     logger.info(
                         "Context compaction triggered",
                         symbol=symbol,

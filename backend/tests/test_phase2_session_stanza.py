@@ -72,14 +72,14 @@ def test_stanza_appears_between_holdings_and_research() -> None:
     assert pos_table != -1
     assert stanza != -1
     assert research != -1
-    assert pos_table < stanza < research, (
-        "session_stanza must be between positions_table and Symbol Research"
-    )
+    assert (
+        pos_table < stanza < research
+    ), "session_stanza must be between positions_table and Symbol Research"
 
 
 def test_warning_does_not_block_decision() -> None:
     """Per design: warn-not-block. Source must say so explicitly."""
     src = _source_of_make_decisions()
-    assert re.search(r"不强制阻断决策|不阻断", src), (
-        "stanza must explicitly say it does not block the decision"
-    )
+    assert re.search(
+        r"不强制阻断决策|不阻断", src
+    ), "stanza must explicitly say it does not block the decision"

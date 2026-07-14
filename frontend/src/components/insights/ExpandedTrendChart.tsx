@@ -110,7 +110,7 @@ export function ExpandedTrendChart({
   };
 
   // Get X axis labels (first, middle, last)
-  const xLabels = useMemo(() => {
+  const xLabels = (() => {
     if (chartData.length < 2) return [];
     const labels = [];
     labels.push({ x: points[0].x, label: formatDate(chartData[0].date) });
@@ -126,7 +126,7 @@ export function ExpandedTrendChart({
       label: formatDate(chartData[chartData.length - 1].date),
     });
     return labels;
-  }, [chartData, points]);
+  })();
 
   return (
     <div className="w-full">

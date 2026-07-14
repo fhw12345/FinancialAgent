@@ -33,7 +33,6 @@ from src.agent.tools.alpha_vantage.quotes import (
     create_quote_tools,
 )
 
-
 # ---------------------------------------------------------------------------
 # _quote_source_id helper — direct unit coverage
 # ---------------------------------------------------------------------------
@@ -74,7 +73,7 @@ def test_quote_source_id_handles_missing_source_and_asof() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _make_tools(qd: SimpleNamespace) -> Any:  # noqa: ANN401
+def _make_tools(qd: SimpleNamespace) -> list:
     """Build the get_stock_quote tool with a stub DataManager + AV service."""
     av_service = MagicMock()
     av_service.get_market_status = AsyncMock(

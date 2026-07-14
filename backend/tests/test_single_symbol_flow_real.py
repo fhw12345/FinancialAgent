@@ -113,9 +113,9 @@ def test_phase1_full_research_contains_source_id_token(mongo_db) -> None:  # typ
     zero tokens — which is exactly what this assertion catches."""
     order = _latest_single_symbol_order(mongo_db)
     full_research = (order.get("metadata") or {}).get("full_research", "")
-    assert isinstance(full_research, str), (
-        f"full_research field has unexpected shape: {type(full_research)!r}"
-    )
+    assert isinstance(
+        full_research, str
+    ), f"full_research field has unexpected shape: {type(full_research)!r}"
     assert full_research.strip(), (
         f"order {order.get('order_id')} has empty full_research — Phase 1 "
         "either failed or stored research somewhere else."
@@ -192,4 +192,3 @@ def test_phase1_full_research_nontrivial_length(mongo_db) -> None:  # type: igno
         f"order {order.get('order_id')} has suspiciously short or missing "
         f"full_research ({len(fr)} chars) — Phase 1 may have errored."
     )
-

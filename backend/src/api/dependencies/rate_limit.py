@@ -1,23 +1,15 @@
 """
 Rate limiting dependencies for API endpoints.
 
-Uses slowapi with Redis backend for distributed rate limiting.
+Uses SlowAPI's in-process storage for the local single-user service.
 """
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from ...core.config import get_settings
-
-# Get Redis URL from settings
-settings = get_settings()
-
-# Initialize rate limiter
-# Uses Redis for distributed rate limiting (shared across multiple backend instances)
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=["200/minute"],  # Global default: 200 requests per minute
-    storage_uri=settings.redis_url,  # Redis backend from settings
+    default_limits=["200/minute"],
 )
 
 

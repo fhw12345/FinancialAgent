@@ -8,17 +8,12 @@ import PortfolioDashboard from "./pages/PortfolioDashboard";
 import HelpModal from "./components/HelpModal";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 
-// W3b: Auth removed. App always renders as a local single-user shell.
-const LOCAL_IS_ADMIN = true;
-
 function App() {
-  const { t } = useTranslation(["common", "auth"]);
+  const { t } = useTranslation("common");
   const [activeTab, setActiveTab] = useState<
     "health" | "chat" | "portfolio" | "insights"
   >("portfolio");
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
-
-  const isAdmin = LOCAL_IS_ADMIN;
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -38,7 +33,7 @@ function App() {
                     Financial Agent
                   </h1>
                   <span className="text-xs font-medium text-gray-500 hidden sm:inline">
-                    {t("common:app.subtitle")}
+                    {t("app.subtitle")}
                   </span>
                 </div>
               </div>
@@ -48,18 +43,16 @@ function App() {
 
             {/* Navigation - stacks vertically on mobile */}
             <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              {isAdmin && (
-                <button
-                  onClick={() => setActiveTab("health")}
-                  className={`px-3 sm:px-5 py-1.5 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl transition-all duration-200 ${
-                    activeTab === "health"
-                      ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/30"
-                      : "text-gray-700 hover:bg-gray-100/80"
-                  }`}
-                >
-                  {t("common:navigation.health")}
-                </button>
-              )}
+              <button
+                onClick={() => setActiveTab("health")}
+                className={`px-3 sm:px-5 py-1.5 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl transition-all duration-200 ${
+                  activeTab === "health"
+                    ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/30"
+                    : "text-gray-700 hover:bg-gray-100/80"
+                }`}
+              >
+                {t("navigation.health")}
+              </button>
               <button
                 onClick={() => setActiveTab("chat")}
                 className={`px-3 sm:px-5 py-1.5 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl transition-all duration-200 ${
@@ -68,7 +61,7 @@ function App() {
                     : "text-gray-700 hover:bg-gray-100/80"
                 }`}
               >
-                {t("common:navigation.platform")}
+                {t("navigation.platform")}
               </button>
               <button
                 onClick={() => setActiveTab("portfolio")}
@@ -78,7 +71,7 @@ function App() {
                     : "text-gray-700 hover:bg-gray-100/80"
                 }`}
               >
-                {t("common:navigation.portfolio")}
+                {t("navigation.portfolio")}
               </button>
               <button
                 onClick={() => setActiveTab("insights")}
@@ -88,7 +81,7 @@ function App() {
                     : "text-gray-700 hover:bg-gray-100/80"
                 }`}
               >
-                {t("common:navigation.insights")}
+                {t("navigation.insights")}
               </button>
               {/* Desktop user info */}
               <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-gray-200">
@@ -101,7 +94,7 @@ function App() {
       </header>
 
       <main className="flex-1 mx-auto w-full">
-        {activeTab === "health" && isAdmin && <HealthPage />}
+        {activeTab === "health" && <HealthPage />}
 
         {activeTab === "chat" && <EnhancedChatInterface />}
 
@@ -113,7 +106,7 @@ function App() {
       <footer className="bg-white border-t" data-testid="app-footer">
         <div className="mx-auto py-3 px-6 lg:px-8">
           <p className="text-center text-sm text-gray-500">
-            Financial Agent - {t("common:app.subtitle")}
+            Financial Agent - {t("app.subtitle")}
           </p>
           <p
             className="text-center text-xs text-gray-400 mt-1"

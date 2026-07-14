@@ -52,7 +52,7 @@ def create_done_event(chat_id: str, **extra_data: Any) -> str:
 
     Args:
         chat_id: Chat identifier
-        **extra_data: Additional data to include in the event (e.g., credits_used)
+        **extra_data: Additional data to include in the event
 
     Returns:
         SSE-formatted completion event string

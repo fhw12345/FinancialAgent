@@ -77,9 +77,7 @@ async def test_enrich_populates_ext_fields_when_companion_fresh() -> None:
 
     fresh_info = {
         "postMarketPrice": 215.05,
-        "postMarketTime": int(
-            (datetime.now(UTC) - timedelta(hours=2)).timestamp()
-        ),
+        "postMarketTime": int((datetime.now(UTC) - timedelta(hours=2)).timestamp()),
         "preMarketPrice": None,
         "preMarketTime": None,
     }
@@ -142,9 +140,7 @@ async def test_enrich_silent_when_info_stale() -> None:
     quote = _make_quote(session="closed")
     stale_info = {
         "postMarketPrice": 215.05,
-        "postMarketTime": int(
-            (datetime.now(UTC) - timedelta(hours=25)).timestamp()
-        ),
+        "postMarketTime": int((datetime.now(UTC) - timedelta(hours=25)).timestamp()),
     }
     dm._cache.get_with_fetch = AsyncMock(return_value=stale_info)  # type: ignore[attr-defined]
 
@@ -222,9 +218,7 @@ async def test_fetch_yfinance_info_returns_none_on_exception() -> None:
     """yfinance.info routinely raises (rate-limit, network, malformed
     response). The fetcher must convert to None so the cache layer
     treats it as 'don't cache' rather than caching a corrupt blob."""
-    with patch(
-        "yfinance.Ticker", side_effect=RuntimeError("rate limit")
-    ):
+    with patch("yfinance.Ticker", side_effect=RuntimeError("rate limit")):
         result = await DataManager._fetch_yfinance_info("NVDA")
 
     assert result is None

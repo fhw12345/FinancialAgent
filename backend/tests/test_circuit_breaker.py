@@ -8,9 +8,6 @@ Tests circuit breaker state transitions:
 """
 
 import time
-from unittest.mock import patch
-
-import pytest
 
 from src.core.utils.circuit_breaker import (
     CircuitBreaker,
@@ -18,7 +15,6 @@ from src.core.utils.circuit_breaker import (
     CircuitState,
     CircuitStats,
 )
-
 
 # ===== CircuitStats Tests =====
 

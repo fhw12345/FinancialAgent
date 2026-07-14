@@ -4,21 +4,18 @@ Unit tests for InsightCategoryBase.
 Tests abstract base class functionality using a concrete test implementation.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
 from src.services.insights.base import InsightCategoryBase
 from src.services.insights.models import (
-    InsightCategory,
     InsightMetric,
     MetricExplanation,
     MetricStatus,
-    ThresholdConfig,
 )
-
 
 # ===== Concrete Test Implementation =====
 
@@ -138,7 +135,7 @@ class TestGetCategoryData:
             "description": "A test category",
             "metrics": [],
             "composite": None,
-            "last_updated": datetime.now(timezone.utc).isoformat(),
+            "last_updated": datetime.now(UTC).isoformat(),
         }
         mock_redis_cache.get.return_value = cached_data
 
@@ -305,28 +302,36 @@ class TestGenerateCompositeInterpretation:
 
     def test_low_interpretation(self, test_category):
         """Test LOW status interpretation."""
-        result = test_category._generate_composite_interpretation(20.0, MetricStatus.LOW)
+        result = test_category._generate_composite_interpretation(
+            20.0, MetricStatus.LOW
+        )
 
         assert "low risk" in result.lower()
         assert "20.0" in result
 
     def test_normal_interpretation(self, test_category):
         """Test NORMAL status interpretation."""
-        result = test_category._generate_composite_interpretation(45.0, MetricStatus.NORMAL)
+        result = test_category._generate_composite_interpretation(
+            45.0, MetricStatus.NORMAL
+        )
 
         assert "normal" in result.lower()
         assert "45.0" in result
 
     def test_elevated_interpretation(self, test_category):
         """Test ELEVATED status interpretation."""
-        result = test_category._generate_composite_interpretation(65.0, MetricStatus.ELEVATED)
+        result = test_category._generate_composite_interpretation(
+            65.0, MetricStatus.ELEVATED
+        )
 
         assert "elevated" in result.lower()
         assert "65.0" in result
 
     def test_high_interpretation(self, test_category):
         """Test HIGH status interpretation."""
-        result = test_category._generate_composite_interpretation(85.0, MetricStatus.HIGH)
+        result = test_category._generate_composite_interpretation(
+            85.0, MetricStatus.HIGH
+        )
 
         assert "high risk" in result.lower()
         assert "85.0" in result

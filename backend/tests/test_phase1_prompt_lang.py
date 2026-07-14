@@ -2,7 +2,7 @@
 
 Default flipped from zh-CN to English so the analysis pipeline emits English
 and the persistence translator has an unambiguous English -> zh-CN direction
-to feed DashScope. `PHASE1_PROMPT_LANG=zh` remains as an emergency override.
+to feed the persistence translator. `PHASE1_PROMPT_LANG=zh` remains as an emergency override.
 """
 
 from __future__ import annotations

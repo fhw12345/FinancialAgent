@@ -12,7 +12,6 @@ from src.models.derivations import (
 )
 from src.models.trading_decision import TradingDecision
 
-
 # ---------------------------------------------------------------------------
 # atr_stop
 # ---------------------------------------------------------------------------

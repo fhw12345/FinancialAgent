@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -28,7 +28,6 @@ from src.agent.debate_types import (
 )
 from src.agent.subagents.debater import TERMINATION_SIGNAL
 
-
 # ===== Fixtures =====
 
 
@@ -36,7 +35,6 @@ from src.agent.subagents.debater import TERMINATION_SIGNAL
 def mock_settings() -> MagicMock:
     """Create mock application settings."""
     settings = MagicMock()
-    settings.default_llm_model = "qwen-plus-latest"
     settings.dashscope_api_key = "test-key"
     settings.default_llm_temperature = 0.7
     settings.exa_api_key = "test-exa-key"
@@ -455,7 +453,6 @@ class TestAnalysisStateSchema:
 
     def test_initial_state_shape(self) -> None:
         """Verify the initial state dict matches expected shape."""
-        from src.agent.deep_react_agent import AnalysisState
 
         # Simulate initial state creation (TypedDict is a dict at runtime)
         state: dict[str, Any] = {

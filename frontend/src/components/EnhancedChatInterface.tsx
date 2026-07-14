@@ -15,7 +15,6 @@ import {
   getPeriodForInterval,
   calculateDateRange,
 } from "../utils/dateRangeCalculator";
-import type { ModelSettings } from "../types/models";
 import type { DeepStreamEvent } from "../types/api";
 import {
   useDeepAccordionState,
@@ -38,14 +37,6 @@ export function EnhancedChatInterface() {
   // Mobile panel visibility (overlays on mobile)
   const [isMobileSidebarVisible, setIsMobileSidebarVisible] = useState(false);
   const [isMobileChartVisible, setIsMobileChartVisible] = useState(false);
-
-  // LLM Model settings
-  const [modelSettings, setModelSettings] = useState<ModelSettings>({
-    model: "qwen-plus",
-    thinking_enabled: false,
-    max_tokens: 3000,
-    debug_enabled: false,
-  });
 
   // Agent mode: v3 = Agent (auto tools), v2 = Copilot (manual tools), v4-deep = Deep analysis
   const [agentMode, setAgentMode] = useState<"v2" | "v3" | "v4-deep">("v3");
@@ -147,7 +138,6 @@ export function EnhancedChatInterface() {
     selectedInterval,
     chatId,
     setChatId,
-    modelSettings,
     agentMode, // Pass agent mode (v2/v3/v4-deep)
     agentMode === "v4-deep" ? handleDeepEvent : undefined,
   );
@@ -544,9 +534,6 @@ export function EnhancedChatInterface() {
                   onSendMessage={handleSendMessage}
                   isPending={chatMutation.isPending || buttonMutation.isPending}
                   currentSymbol={currentSymbol}
-                  messages={messages}
-                  modelSettings={modelSettings}
-                  onModelSettingsChange={setModelSettings}
                 />
               </div>
             </div>

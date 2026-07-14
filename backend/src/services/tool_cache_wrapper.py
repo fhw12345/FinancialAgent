@@ -1,7 +1,7 @@
 """
-Tool Cache Wrapper for MCP tools with execution tracking.
+Tool cache wrapper with execution tracking.
 
-Wraps MCP tools to provide:
+Wraps agent tools to provide:
 1. Redis caching with TTL strategies
 2. Execution metrics tracking (duration, cost, cache hit rate)
 3. Database persistence (tool_executions collection)
@@ -32,9 +32,9 @@ logger = structlog.get_logger()
 
 class ToolCacheWrapper:
     """
-    Wrapper for MCP tools with caching and execution tracking.
+    Wrapper for tools with caching and execution tracking.
 
-    Provides transparent caching layer for ANY tool (1st-party or 3rd-party MCP).
+    Provides a transparent caching layer for registered tools.
     """
 
     # Default timeout in seconds (Story 1.4: Tool Execution Optimization)

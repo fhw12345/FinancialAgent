@@ -4,15 +4,12 @@ Unit tests for title_utils module.
 Tests chat title generation utilities.
 """
 
-import pytest
-
 from src.core.utils.title_utils import (
     detect_action,
     extract_symbols,
     extract_title_from_response,
     generate_chat_title,
 )
-
 
 # ===== extract_symbols Tests =====
 
@@ -163,7 +160,9 @@ class TestGenerateChatTitle:
     def test_title_max_length(self):
         """Test that title is truncated to max length"""
         # Create a very long message that would generate a long title
-        long_message = "Compare AAPL, MSFT, GOOGL, META, NVDA, TSLA and many more stocks"
+        long_message = (
+            "Compare AAPL, MSFT, GOOGL, META, NVDA, TSLA and many more stocks"
+        )
         title = generate_chat_title(long_message)
         assert len(title) <= 50
 

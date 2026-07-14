@@ -1,11 +1,9 @@
 """
 Portfolio holdings and summary endpoints.
 
-W5a: Alpaca live trading removed. Holdings & summary are now derived from the
-local ``holdings`` MongoDB collection (or empty when none exist) instead of
-querying a broker account.
+Holdings and summary are derived from the local ``holdings`` collection.
 
-W6 (decision-tracking): added POST/PATCH/DELETE for direct holdings management.
+Includes direct holdings management and price refresh endpoints.
 """
 
 import asyncio

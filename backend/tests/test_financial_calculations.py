@@ -56,9 +56,9 @@ class TestFibonacciCalculations:
 
         # Test that we get all expected levels
         expected_level_count = len(FibonacciConstants.FIBONACCI_LEVELS)
-        assert len(levels) == expected_level_count, (
-            f"Expected {expected_level_count} Fibonacci levels, got {len(levels)}"
-        )
+        assert (
+            len(levels) == expected_level_count
+        ), f"Expected {expected_level_count} Fibonacci levels, got {len(levels)}"
 
         # Test specific calculations for uptrend
         high_price = 200.0
@@ -80,9 +80,9 @@ class TestFibonacciCalculations:
                 (level for level in levels if level.level == expected_level), None
             )
 
-            assert matching_level is not None, (
-                f"Missing Fibonacci level {expected_level}"
-            )
+            assert (
+                matching_level is not None
+            ), f"Missing Fibonacci level {expected_level}"
             assert abs(matching_level.price - expected_price) < 0.01, (
                 f"Fibonacci {expected_level} level calculation error: "
                 f"expected {expected_price}, got {matching_level.price}"
@@ -117,9 +117,9 @@ class TestFibonacciCalculations:
                 (level for level in levels if level.level == expected_level), None
             )
 
-            assert matching_level is not None, (
-                f"Missing downtrend Fibonacci level {expected_level}"
-            )
+            assert (
+                matching_level is not None
+            ), f"Missing downtrend Fibonacci level {expected_level}"
             assert abs(matching_level.price - expected_price) < 0.01, (
                 f"Downtrend Fibonacci {expected_level} calculation error: "
                 f"expected {expected_price}, got {matching_level.price}"
@@ -133,15 +133,15 @@ class TestFibonacciCalculations:
         key_levels = [level for level in levels if level.is_key_level]
         expected_key_levels = FibonacciConstants.KEY_LEVELS  # [0.382, 0.5, 0.618]
 
-        assert len(key_levels) == len(expected_key_levels), (
-            f"Expected {len(expected_key_levels)} key levels, got {len(key_levels)}"
-        )
+        assert len(key_levels) == len(
+            expected_key_levels
+        ), f"Expected {len(expected_key_levels)} key levels, got {len(key_levels)}"
 
         key_level_values = [level.level for level in key_levels]
         for expected_key in expected_key_levels:
-            assert expected_key in key_level_values, (
-                f"Key level {expected_key} not marked as key level"
-            )
+            assert (
+                expected_key in key_level_values
+            ), f"Key level {expected_key} not marked as key level"
 
 
 class TestPressureZoneCalculations:
@@ -197,9 +197,9 @@ class TestPressureZoneCalculations:
         required_numeric_fields = ["upper_bound", "lower_bound", "strength"]
         for field in required_numeric_fields:
             assert field in pressure_zone, f"Missing required field: {field}"
-            assert isinstance(pressure_zone[field], int | float), (
-                f"Field '{field}' must be numeric, got {type(pressure_zone[field])}"
-            )
+            assert isinstance(
+                pressure_zone[field], int | float
+            ), f"Field '{field}' must be numeric, got {type(pressure_zone[field])}"
 
     def test_golden_pressure_zone_calculation_accuracy(
         self, level_calculator, uptrend_data
@@ -227,9 +227,9 @@ class TestPressureZoneCalculations:
         )
 
         # Test logical constraints
-        assert pressure_zone["upper_bound"] > pressure_zone["lower_bound"], (
-            "Golden zone upper bound must be greater than lower bound"
-        )
+        assert (
+            pressure_zone["upper_bound"] > pressure_zone["lower_bound"]
+        ), "Golden zone upper bound must be greater than lower bound"
 
     def test_pressure_zone_downtrend_calculations(
         self, level_calculator, downtrend_data
@@ -244,17 +244,17 @@ class TestPressureZoneCalculations:
         # For downtrend, golden zone is above the low (61.5%-61.8% retracement)
 
         # Test that bounds are correctly ordered (upper > lower)
-        assert pressure_zone["upper_bound"] > pressure_zone["lower_bound"], (
-            "Pressure zone upper bound must be greater than lower bound"
-        )
+        assert (
+            pressure_zone["upper_bound"] > pressure_zone["lower_bound"]
+        ), "Pressure zone upper bound must be greater than lower bound"
 
         # Test that values are in reasonable range
-        assert low_price <= pressure_zone["lower_bound"] <= high_price, (
-            "Pressure zone lower bound must be within price range"
-        )
-        assert low_price <= pressure_zone["upper_bound"] <= high_price, (
-            "Pressure zone upper bound must be within price range"
-        )
+        assert (
+            low_price <= pressure_zone["lower_bound"] <= high_price
+        ), "Pressure zone lower bound must be within price range"
+        assert (
+            low_price <= pressure_zone["upper_bound"] <= high_price
+        ), "Pressure zone upper bound must be within price range"
 
     def test_pressure_zone_strength_validation(self, level_calculator, uptrend_data):
         """Test that pressure zone strength is properly validated."""
@@ -298,14 +298,14 @@ class TestConfidenceScoreCalculation:
             )
 
             # Test valid range
-            assert 0 <= confidence <= 1, (
-                f"Confidence score must be 0-1, got {confidence} for {description}"
-            )
+            assert (
+                0 <= confidence <= 1
+            ), f"Confidence score must be 0-1, got {confidence} for {description}"
 
             # Test minimum confidence
-            assert confidence >= 0.1, (
-                f"Confidence should have minimum 0.1, got {confidence} for {description}"
-            )
+            assert (
+                confidence >= 0.1
+            ), f"Confidence should have minimum 0.1, got {confidence} for {description}"
 
     def test_confidence_score_magnitude_correlation(self, level_calculator):
         """Test that higher magnitude trends result in higher confidence."""
