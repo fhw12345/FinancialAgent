@@ -36,7 +36,7 @@ class CacheWarmingService:
         "TSLA",
         "SPY",
         "QQQ",
-        "BRK.B",
+        "BRK-B",
     ]
 
     def __init__(

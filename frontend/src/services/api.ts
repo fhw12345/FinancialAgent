@@ -2,16 +2,17 @@ import axios from "axios";
 import type {
   HealthResponse,
   ChatListResponse,
+  ClarificationRequiredEvent,
   ChatDetailResponse,
   UpdateUIStateRequest,
   Chat,
   StreamEvent,
   DeepStreamEvent,
+  RouteSelectedEvent,
   MarketStatus,
 } from "../types/api";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 // Configure the local backend client.
 const api = axios.create({
@@ -177,7 +178,9 @@ export const chatService = {
       metadata?: any; // Analysis metadata for overlays
       tool_call?: any; // Tool invocation metadata for collapsible UI wrapper
       // Agent Configuration
-      agent_version?: "v2" | "v3" | "v4-deep"; // v2: simple chat, v3: ReAct agent, v4-deep: deep analysis
+      agent_version?: "auto" | "v2" | "v3" | "v4-deep";
+      onRouteSelected?: (event: RouteSelectedEvent) => void;
+      onClarificationRequired?: (event: ClarificationRequiredEvent) => void;
       debug_enabled?: boolean; // Enable debug logging in backend
       // Language Configuration
       language?: "zh-CN" | "en"; // Response language (default: zh-CN)
@@ -204,7 +207,7 @@ export const chatService = {
           metadata: options?.metadata,
           tool_call: options?.tool_call,
           // Agent Configuration
-          agent_version: options?.agent_version ?? "v3", // Default to v3 (ReAct agent)
+          agent_version: options?.agent_version ?? "auto",
           // Language Configuration
           language: options?.language ?? "zh-CN",
           // Symbol Context (priority over DB ui_state)
@@ -239,7 +242,11 @@ export const chatService = {
           if (message.startsWith("data: ")) {
             const data: StreamEvent = JSON.parse(message.slice(6));
 
-            if (
+            if (data.type === "route_selected") {
+              options?.onRouteSelected?.(data);
+            } else if (data.type === "clarification_required") {
+              options?.onClarificationRequired?.(data);
+            } else if (
               data.type === "chat_created" &&
               onChatCreated &&
               data.chat_id
@@ -283,10 +290,7 @@ export const chatService = {
                 run_id: data.run_id,
                 status: "error",
               });
-            } else if (
-              data.type?.startsWith("deep_") &&
-              onDeepEvent
-            ) {
+            } else if (data.type?.startsWith("deep_") && onDeepEvent) {
               onDeepEvent(data as DeepStreamEvent);
             }
           }
@@ -304,11 +308,7 @@ export const chatService = {
 
         await processStream(response);
       } catch (error) {
-        if (
-          error instanceof Error &&
-          error.name !== "AbortError" &&
-          onError
-        ) {
+        if (error instanceof Error && error.name !== "AbortError" && onError) {
           onError(error.message);
         }
       }

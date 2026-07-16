@@ -5,7 +5,12 @@
  * duplication between useChatRestoration and EnhancedChatInterface.
  */
 
-import type { ChatMessage, DeepStreamEvent } from "../types/api";
+import type {
+  ChatMessage,
+  ClarificationRequiredEvent,
+  DeepStreamEvent,
+  RouteSelectedEvent,
+} from "../types/api";
 
 /** Raw backend message shape (subset of fields used during parsing) */
 interface BackendMessage {
@@ -30,13 +35,23 @@ export function parseBackendMessage(msg: BackendMessage): ChatMessage {
   const deep_events = msg.metadata?.raw_data?.deep_events as
     | DeepStreamEvent[]
     | undefined;
+  const route_selected = msg.metadata?.raw_data?.route_selected as
+    | RouteSelectedEvent
+    | undefined;
+  const clarification_required = msg.metadata?.raw_data
+    ?.clarification_required as ClarificationRequiredEvent | undefined;
 
   let analysis_data: Record<string, unknown> | undefined = undefined;
 
   if (msg.metadata?.raw_data && Object.keys(msg.metadata.raw_data).length > 0) {
     const rawData = msg.metadata.raw_data;
     const filtered = Object.fromEntries(
-      Object.entries(rawData).filter(([key]) => key !== "deep_events"),
+      Object.entries(rawData).filter(
+        ([key]) =>
+          key !== "deep_events" &&
+          key !== "route_selected" &&
+          key !== "clarification_required",
+      ),
     );
     analysis_data = Object.keys(filtered).length > 0 ? filtered : undefined;
   } else if (msg.metadata && Object.keys(msg.metadata).length > 0) {
@@ -49,6 +64,8 @@ export function parseBackendMessage(msg: BackendMessage): ChatMessage {
     timestamp: msg.timestamp,
     analysis_data,
     deep_events,
+    route_selected,
+    clarification_required,
     tool_call: msg.tool_call,
   };
 }

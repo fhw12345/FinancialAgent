@@ -49,7 +49,8 @@ export const SymbolSearch: React.FC<SymbolSearchProps> = ({
   // Sync internal query state with external value prop
   useEffect(() => {
     // Format display value: "SYMBOL - Company Name" or just "SYMBOL" if no company name
-    const displayValue = value && companyName ? `${value} - ${companyName}` : value;
+    const displayValue =
+      value && companyName ? `${value} - ${companyName}` : value;
     setQuery(displayValue);
   }, [value, companyName]);
 
@@ -195,6 +196,7 @@ export const SymbolSearch: React.FC<SymbolSearchProps> = ({
           <Search className="h-5 w-5 text-gray-400" />
         </div>
         <input
+          data-testid="symbol-search-input"
           ref={inputRef}
           type="text"
           value={query}
@@ -221,11 +223,13 @@ export const SymbolSearch: React.FC<SymbolSearchProps> = ({
             className="absolute inset-y-0 right-0 pr-2 flex items-center group"
             title={t("market:search.enterToSearch")}
           >
-            <div className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
-              query.trim().length >= 1
-                ? "bg-blue-500 text-white hover:bg-blue-600 cursor-pointer"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
-            }`}>
+            <div
+              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
+                query.trim().length >= 1
+                  ? "bg-blue-500 text-white hover:bg-blue-600 cursor-pointer"
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+              }`}
+            >
               <CornerDownLeft className="h-3 w-3" />
               <span className="text-xs font-medium">Enter</span>
             </div>
@@ -307,7 +311,10 @@ export const SymbolSearch: React.FC<SymbolSearchProps> = ({
       {query.length === 0 && (
         <div className="mt-2 text-xs text-gray-500">
           <p>
-            {t("market:search.searchTip")} <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono">Enter</kbd>
+            {t("market:search.searchTip")}{" "}
+            <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono">
+              Enter
+            </kbd>
           </p>
           <p className="mt-1 text-gray-400">
             {t("market:search.searchExamples")}

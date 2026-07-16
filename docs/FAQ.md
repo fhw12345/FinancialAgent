@@ -1,8 +1,8 @@
 ---
 title: FAQ
 status: shipped
-version: backend@0.30.x, frontend@0.23.x
-last_updated: 2026-07-13
+version: backend@0.31.x, frontend@0.24.x
+last_updated: 2026-07-15
 owner: maintainer
 related_paths:
   - docs/development/getting-started.md
@@ -50,11 +50,16 @@ Translations also use Agent Maestro. If translation fails, English is stored
 and rendered rather than blocking the write. Redis caches successful
 translations, and the frontend can request a missing translation lazily.
 
-## What are the chat modes?
+## How is the chat flow selected?
 
-- **Copilot (`v2`)**: direct simple-chat completion
-- **Agent (`v3`)**: ReAct agent that selects financial tools
-- **Deep (`v4-deep`)**: specialist research, adversarial review, and verdict
+Users do not choose or lock a mode. Each message is automatically routed:
+
+- **Assistant (`v2`)**: concept explanations and summaries
+- **Agent (`v3`)**: current market data and financial tool calls
+- **Deep (`v4-deep`)**: explicit comprehensive research or adversarial review
+
+Clear requests use deterministic rules. Ambiguous requests use a lightweight
+router model. The frontend displays the selected flow and reason.
 
 ## What does the portfolio pipeline do?
 

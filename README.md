@@ -45,7 +45,8 @@ When the Financial Agent backend itself runs in Docker, use
 
 ## What It Provides
 
-- Streaming chat with simple, ReAct, and deep multi-agent modes
+- Streaming chat with automatic routing across simple, ReAct, and deep
+  multi-agent flows
 - Deterministic Fibonacci, stochastic, fundamentals, macro, and news analysis
 - Local holdings, watchlist, transactions, decisions, and order suggestions
 - Portfolio-wide research and structured decision generation

@@ -46,6 +46,7 @@ async def stream_with_react_agent(
     context_manager: ContextWindowManager,
     message_repo: MessageRepository,
     debug: bool = False,
+    route_metadata: dict[str, str] | None = None,
 ) -> StreamingResponse:
     """Stream using SDK ReAct Agent (v3) with real-time tool execution visibility."""
 
@@ -319,6 +320,11 @@ async def stream_with_react_agent(
                     "agent_type": "react_sdk",
                     "input_tokens": input_tokens,
                     "output_tokens": output_tokens,
+                    "raw_data": (
+                        {"route_selected": route_metadata}
+                        if route_metadata is not None
+                        else None
+                    ),
                 },
             )
 

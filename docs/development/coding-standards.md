@@ -2,7 +2,7 @@
 title: Coding Standards and Best Practices
 status: shipped
 version: n/a
-last_updated: 2026-05-16
+last_updated: 2026-07-15
 owner: maintainer
 related_paths:
   - backend/pyproject.toml
@@ -391,6 +391,42 @@ describe('FibonacciChart', () => {
   });
 });
 ```
+
+### Playwright End-to-End Tests
+
+Every user-facing workflow change must include Playwright browser coverage.
+Unit, component, and API tests do not replace the browser acceptance path.
+
+Required coverage:
+
+- exercise the workflow through the visible frontend;
+- assert the user-visible result and important intermediate state;
+- include at least one real frontend-to-backend scenario when the workflow
+  crosses the API boundary;
+- use deterministic network fixtures for UI-only edge cases that cannot be
+  reproduced reliably with live providers;
+- use stable `data-testid` selectors for workflow state rather than styling
+  classes or translated text alone;
+- run with a fixed viewport and disabled animations.
+
+Raw Playwright reports, traces, videos, and failure screenshots are generated
+under the frontend test-output directories and remain uncommitted.
+
+Each completed workflow task must also save curated screenshot evidence under:
+
+```text
+docs/features/assets/<task-id>/
+```
+
+The task specification must link every committed screenshot to:
+
+- the scenario it proves;
+- the assertion that passed before capture;
+- the tested commit;
+- whether the test used deterministic mocks or the real local stack.
+
+Screenshots are acceptance evidence, not a replacement for assertions. Capture
+them only after the expected state has been verified.
 
 ## Commit Standards
 

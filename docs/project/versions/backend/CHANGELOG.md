@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-07-15
+
+### Safe Deep Agent symbol clarification
+
+- Removed the Deep Agent's silent AAPL fallback.
+- Added typed `resolved`, `ambiguous`, and `unresolved` symbol-resolution
+  contracts.
+- Extracted reusable local-directory, Alpha Vantage, and yfinance symbol
+  search behind `SymbolSearchService`.
+- Added rules-first resolution for UI context and explicit tickers, followed
+  by structured lightweight-LLM candidate generation with mandatory market
+  validation.
+- Added persisted `clarification_required` SSE events; unresolved requests
+  finish normally without starting specialist agents or tools.
+- Added backend resolver, search-service, and Deep streaming regression tests.
+- Added `SYMBOL_RESOLUTION_LLM_ENABLED` for deterministic offline E2E runs.
+
+## [0.31.0] - 2026-07-15
+
+### Automatic per-message chat flow routing
+
+- Added a hybrid `AgentFlowRouter`: deterministic rules route clear concept,
+  live-data/tool, selected-symbol, and deep-research requests; ambiguous
+  requests use a temperature-zero Haiku classifier.
+- Changed the chat API default to `agent_version=auto`; explicit v2/v3/v4-deep
+  values remain available as debugging overrides.
+- Added `route_selected` SSE events with stable reason codes and persisted the
+  same route metadata on assistant messages for restoration.
+- Tool-result/non-user persistence traffic bypasses routing entirely.
+- Removed the backend symbol-context write that replaced the full chat UI state.
+- Fixed v2 streaming by replacing invalid `asyncio.wait_for(async_generator)`
+  usage with `asyncio.timeout`.
+- Configured Windows backend stdio as UTF-8 and removed raw user text snippets
+  from persistence logs.
+- Updated copilot_reverse financial, portfolio-research, and debater roles to
+  the newly supported `gpt-5.6-sol`.
+- Corrected the cache-warming Berkshire symbol from `BRK.B` to `BRK-B`.
+
 ## [0.30.0] - 2026-07-13
 
 ### Pure-local architecture cleanup
@@ -26,8 +64,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refreshed defaults: Opus 4.8 for deep decisions, Sonnet 5 for ReAct and
   technical work, GPT-5.6 Sol for financial extraction, Gemini 3.1 Pro for
   adversarial debate, and Gemini 3.5 Flash for news/summary. Copilot reverse
-  uses Opus 4.8/Sonnet 5/Haiku 4.5 plus confirmed Responses models GPT-5.5 and
-  GPT-5.4 Mini.
+  uses Opus 4.8/Sonnet 5/Haiku 4.5 plus confirmed Responses models GPT-5.6 Sol
+  and GPT-5.4 Mini.
 - Deleted one-off migration scripts, manual E2E probes, compatibility modules,
   and superseded architecture documents.
 - Simplified ticker pricing, rate limiting, admin health, portfolio-agent

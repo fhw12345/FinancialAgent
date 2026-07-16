@@ -6,20 +6,20 @@
  * Pure rendering component - no SSE awareness.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback } from "react";
 import {
   ChevronRight,
   Loader2,
   CheckCircle2,
   XCircle,
   Sparkles,
-} from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import type { DeepAccordionState, DeepAccordionAction } from './types';
-import { SubAgentSection } from './SubAgentSection';
-import { DebateSection } from './DebateSection';
-import { VerdictSummaryCard } from './VerdictSummaryCard';
-import { formatDuration } from './utils';
+} from "lucide-react";
+import { useTranslation } from "react-i18next";
+import type { DeepAccordionState, DeepAccordionAction } from "./types";
+import { SubAgentSection } from "./SubAgentSection";
+import { DebateSection } from "./DebateSection";
+import { VerdictSummaryCard } from "./VerdictSummaryCard";
+import { formatDuration } from "./utils";
 
 interface DeepAgentAccordionProps {
   state: DeepAccordionState;
@@ -27,56 +27,59 @@ interface DeepAgentAccordionProps {
 }
 
 function DeepAgentAccordionInner({ state, dispatch }: DeepAgentAccordionProps) {
-  const { t } = useTranslation(['chat']);
+  const { t } = useTranslation(["chat"]);
 
   const toggleMain = useCallback(() => {
-    dispatch({ type: 'TOGGLE_EXPAND', level: 'main' });
+    dispatch({ type: "TOGGLE_EXPAND", level: "main" });
   }, [dispatch]);
 
   const toggleSubagent = useCallback(
     (key: string) => {
-      dispatch({ type: 'TOGGLE_EXPAND', level: 'subagent', key });
+      dispatch({ type: "TOGGLE_EXPAND", level: "subagent", key });
     },
     [dispatch],
   );
 
   // Don't render if no analysis started
-  if (state.status === 'pending' && !state.symbol) {
+  if (state.status === "pending" && !state.symbol) {
     return null;
   }
 
   const statusIcon =
-    state.status === 'running' ? (
+    state.status === "running" ? (
       <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
-    ) : state.status === 'completed' ? (
+    ) : state.status === "completed" ? (
       <CheckCircle2 className="w-4 h-4 text-green-500" />
-    ) : state.status === 'failed' ? (
+    ) : state.status === "failed" ? (
       <XCircle className="w-4 h-4 text-red-500" />
     ) : null;
 
   const totalDuration = state.verdict
     ? formatDuration(state.verdict.totalDurationMs)
-    : '';
+    : "";
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm mb-3 overflow-hidden">
+    <div
+      data-testid="deep-agent-accordion"
+      className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm mb-3 overflow-hidden"
+    >
       {/* Main header */}
       <button
         onClick={toggleMain}
         className="w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 hover:from-purple-100 hover:to-blue-100 dark:hover:from-purple-900/30 dark:hover:to-blue-900/30 transition-colors"
         aria-expanded={state.expanded.main}
-        aria-label={t('chat:deepAgent.toggleAnalysis')}
+        aria-label={t("chat:deepAgent.toggleAnalysis")}
       >
         <ChevronRight
           className={`w-4 h-4 text-gray-500 flex-shrink-0 transition-transform duration-200 ${
-            state.expanded.main ? 'rotate-90' : ''
+            state.expanded.main ? "rotate-90" : ""
           }`}
         />
 
         <Sparkles className="w-5 h-5 text-purple-500 flex-shrink-0" />
 
         <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">
-          {t('chat:deepAgent.deepAnalysis')}
+          {t("chat:deepAgent.deepAnalysis")}
         </span>
 
         {state.symbol && (
@@ -97,7 +100,9 @@ function DeepAgentAccordionInner({ state, dispatch }: DeepAgentAccordionProps) {
       {/* Expandable content */}
       <div
         className={`overflow-hidden transition-all duration-200 ${
-          state.expanded.main ? 'max-h-[10000px] opacity-100' : 'max-h-0 opacity-0'
+          state.expanded.main
+            ? "max-h-[10000px] opacity-100"
+            : "max-h-0 opacity-0"
         }`}
       >
         <div className="px-3 py-2 space-y-2">
@@ -120,7 +125,7 @@ function DeepAgentAccordionInner({ state, dispatch }: DeepAgentAccordionProps) {
           {state.synthesisStarted && !state.verdict && (
             <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>{t('chat:deepAgent.synthesizing')}</span>
+              <span>{t("chat:deepAgent.synthesizing")}</span>
             </div>
           )}
 

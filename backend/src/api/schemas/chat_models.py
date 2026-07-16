@@ -47,9 +47,9 @@ class ChatRequest(BaseModel):
         description="Tool invocation metadata for collapsible UI wrapper (when source='tool')",
     )
     # Agent Configuration
-    agent_version: Literal["v2", "v3", "v4-deep"] = Field(
-        "v3",
-        description="Agent version: 'v2' (simple ChatAgent), 'v3' (SDK ReAct Agent), 'v4-deep' (Deep hierarchical agent with sub-agents + debate)",
+    agent_version: Literal["auto", "v2", "v3", "v4-deep"] = Field(
+        "auto",
+        description="Execution flow. 'auto' uses the hybrid router; explicit versions are retained for debugging.",
     )
     # Language Configuration
     language: SupportedLanguage = Field(

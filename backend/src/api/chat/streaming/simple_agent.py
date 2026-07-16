@@ -39,6 +39,7 @@ async def stream_with_simple_agent(
     agent: ChatAgent,
     context_manager: ContextWindowManager,
     message_repo: MessageRepository,
+    route_metadata: dict[str, str] | None = None,
 ) -> StreamingResponse:
     """Stream using simple ChatAgent (v2) with context compaction."""
 
@@ -116,20 +117,12 @@ async def stream_with_simple_agent(
             # Stream LLM response with timeout protection
             full_response = ""
             try:
-
-                async def stream_with_timeout():
-                    nonlocal full_response
+                async with asyncio.timeout(120.0):
                     async for chunk in agent.stream_chat(
                         messages=conversation_history,
                     ):
                         full_response += chunk
                         yield create_chunk_event(chunk)
-
-                async for chunk_data in asyncio.wait_for(
-                    stream_with_timeout(),
-                    timeout=120.0,
-                ):
-                    yield chunk_data
 
             except TimeoutError:
                 logger.error(
@@ -172,6 +165,11 @@ async def stream_with_simple_agent(
                     tokens=token_usage.total_tokens if token_usage else 0,
                     input_tokens=token_usage.input_tokens if token_usage else 0,
                     output_tokens=token_usage.output_tokens if token_usage else 0,
+                    raw_data=(
+                        {"route_selected": route_metadata}
+                        if route_metadata is not None
+                        else None
+                    ),
                 ),
             )
 

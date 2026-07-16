@@ -69,8 +69,8 @@ def test_copilot_reverse_uses_bridge_defaults_and_optional_override():
 
     assert resolve_model("react_agent", settings) == "claude-sonnet-5"
     assert resolve_model("simple_chat", settings) == "claude-haiku-4.5"
-    assert resolve_model("sub_financial", settings) == "gpt-5.5"
-    assert resolve_model("sub_debater", settings) == "gpt-5.5"
+    assert resolve_model("sub_financial", settings) == "gpt-5.6-sol"
+    assert resolve_model("sub_debater", settings) == "gpt-5.6-sol"
     assert resolve_model("summary", settings) == "gpt-5.4-mini"
 
     overridden = _settings(
@@ -111,3 +111,4 @@ def test_latest_maestro_defaults():
     assert resolve_model("sub_financial", settings) == "gpt-5.6-sol"
     assert resolve_model("sub_debater", settings) == "gemini-3.1-pro-preview"
     assert resolve_model("summary", settings) == "gemini-3.5-flash"
+    assert resolve_model("router", settings) == "claude-haiku-4.5"

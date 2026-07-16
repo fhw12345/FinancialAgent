@@ -11,7 +11,6 @@ from typing import Any
 import structlog
 
 from ...database.repositories.message_repository import MessageRepository
-from ...models.chat import UIState
 from ...models.message import Message, MessageMetadata
 from ...services.chat_service import ChatService
 from ...services.context_window_manager import ContextWindowManager
@@ -109,10 +108,6 @@ async def get_active_symbol_instruction(
             "Using symbol from request (priority)",
             chat_id=chat_id,
             symbol=request_symbol,
-        )
-        # Also update DB ui_state for future restoration
-        await chat_service.update_ui_state(
-            chat_id, user_id, UIState(current_symbol=request_symbol)
         )
         return build_symbol_context_instruction(request_symbol)
 

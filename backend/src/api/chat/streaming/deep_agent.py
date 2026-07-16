@@ -26,6 +26,7 @@ from ..helpers import (
 )
 from .helpers import (
     create_chunk_event,
+    create_clarification_event,
     create_done_event,
     create_error_event,
     create_latency_event,
@@ -50,6 +51,7 @@ async def stream_with_deep_agent(
     context_manager: ContextWindowManager,
     message_repo: MessageRepository,
     debug: bool = False,
+    route_metadata: dict[str, str] | None = None,
 ) -> StreamingResponse:
     """Stream using Deep ReAct Agent (v4-deep) with hierarchical sub-agents."""
 
@@ -103,6 +105,54 @@ async def stream_with_deep_agent(
             yield create_latency_event("context_prepared", get_elapsed_ms())
             yield create_thinking_event("deep_analysis", chat_id)
 
+            resolution = await agent.resolve_symbol(
+                user_message=request.message,
+                current_symbol=request.current_symbol,
+            )
+            if resolution.status != "resolved" or resolution.symbol is None:
+                has_candidates = bool(resolution.candidates)
+                if request.language == "zh-CN":
+                    clarification_message = (
+                        "请选择要分析的公司。"
+                        if has_candidates
+                        else "我无法确定你要分析的股票。"
+                    )
+                else:
+                    clarification_message = (
+                        "Please select the company you want to analyze."
+                        if has_candidates
+                        else "I could not identify the stock you want to analyze."
+                    )
+                clarification = {
+                    "clarification_type": "symbol",
+                    "reason_code": resolution.reason_code,
+                    "message": clarification_message,
+                    "original_request": request.message,
+                    "candidates": [
+                        candidate.model_dump() for candidate in resolution.candidates
+                    ],
+                }
+                await chat_service.add_message(
+                    chat_id=chat_id,
+                    user_id=user_id,
+                    role="assistant",
+                    content=clarification_message,
+                    source="llm",
+                    metadata={
+                        "agent_type": "deep_react",
+                        "raw_data": {
+                            "clarification_required": {
+                                "type": "clarification_required",
+                                **clarification,
+                            },
+                            "route_selected": route_metadata,
+                        },
+                    },
+                )
+                yield create_clarification_event(clarification)
+                yield create_done_event(chat_id, clarification_required=True)
+                return
+
             logger.info(
                 "Starting deep agent invocation",
                 chat_id=chat_id,
@@ -143,6 +193,7 @@ async def stream_with_deep_agent(
                                 user_id=user_id,
                                 on_event=on_event,
                                 current_symbol=request.current_symbol,
+                                resolved_symbol=resolution.symbol,
                             ),
                             timeout=600.0,
                         )
@@ -172,6 +223,7 @@ async def stream_with_deep_agent(
                         language=request.language,
                         user_id=user_id,
                         current_symbol=request.current_symbol,
+                        resolved_symbol=resolution.symbol,
                     ),
                     timeout=600.0,
                 )
@@ -189,7 +241,10 @@ async def stream_with_deep_agent(
                         source="llm",
                         metadata={
                             "agent_type": "deep_react",
-                            "raw_data": {"deep_events": collected_events},
+                            "raw_data": {
+                                "deep_events": collected_events,
+                                "route_selected": route_metadata,
+                            },
                         },
                     )
                 except Exception:
@@ -216,7 +271,10 @@ async def stream_with_deep_agent(
                         source="llm",
                         metadata={
                             "agent_type": "deep_react",
-                            "raw_data": {"deep_events": collected_events},
+                            "raw_data": {
+                                "deep_events": collected_events,
+                                "route_selected": route_metadata,
+                            },
                         },
                     )
                 except Exception:
@@ -276,7 +334,10 @@ async def stream_with_deep_agent(
                     "agent_type": "deep_react",
                     "input_tokens": input_tokens,
                     "output_tokens": output_tokens,
-                    "raw_data": {"deep_events": collected_events},
+                    "raw_data": {
+                        "deep_events": collected_events,
+                        "route_selected": route_metadata,
+                    },
                 },
             )
 

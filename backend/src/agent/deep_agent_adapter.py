@@ -12,120 +12,19 @@ The adapter handles:
 - Timing and trace ID generation
 """
 
-import re
 import time
 import uuid
 from collections.abc import Callable
 from typing import Any
 
 import structlog
-from langchain_core.messages import HumanMessage
 
 from ..core.localization import DEFAULT_LANGUAGE, SupportedLanguage
+from ..models.symbol_resolution import SymbolResolution
 from .deep_react_agent import DeepReActAgent
+from .symbol_resolver import SymbolResolver
 
 logger = structlog.get_logger()
-
-# Regex: explicit all-caps ticker (1-5 chars, word boundary)
-_TICKER_PATTERN = re.compile(r"\b([A-Z]{1,5})\b")
-
-# Minimal set for instant regex match — only tickers that are also
-# common English words (V, F, MA) or have dots (BRK.B) where regex alone
-# might miss. The LLM fallback handles everything else.
-_FAST_TICKERS: set[str] = {
-    "AAPL",
-    "MSFT",
-    "GOOGL",
-    "GOOG",
-    "AMZN",
-    "NVDA",
-    "META",
-    "TSLA",
-    "NFLX",
-    "AMD",
-    "INTC",
-    "COIN",
-    "PLTR",
-    "UBER",
-    "SHOP",
-    "SPOT",
-    "BABA",
-    "PDD",
-    "NIO",
-    "XPEV",
-    "RIVN",
-    "LCID",
-    "SMCI",
-    "ARM",
-    "SOFI",
-    "HOOD",
-    "PYPL",
-    "ABNB",
-    "SNAP",
-    "RBLX",
-    "MSTR",
-}
-
-# Words to NEVER treat as tickers (common English/Chinese false positives)
-_STOP_WORDS: set[str] = {
-    "FOR",
-    "AND",
-    "NOT",
-    "THE",
-    "BUT",
-    "ALL",
-    "ARE",
-    "CAN",
-    "HAS",
-    "HER",
-    "HIS",
-    "HOW",
-    "ITS",
-    "LET",
-    "MAY",
-    "NEW",
-    "NOW",
-    "OLD",
-    "OUR",
-    "OUT",
-    "OWN",
-    "SAY",
-    "SHE",
-    "TOO",
-    "USE",
-    "WAY",
-    "WHO",
-    "BOY",
-    "DID",
-    "GET",
-    "HIM",
-    "HIT",
-    "LOW",
-    "MAN",
-    "RUN",
-    "SET",
-    "TOP",
-    "TWO",
-    "WHY",
-    "BIG",
-    "TRY",
-    "ASK",
-    "BUY",
-    "CEO",
-}
-
-_SYMBOL_EXTRACTION_PROMPT = """Extract the stock ticker symbol from this user message.
-
-Rules:
-- Return ONLY the US stock ticker symbol (e.g., AAPL, TSLA, COIN)
-- If the message mentions a company name (in any language), return its ticker
-- If the message mentions multiple companies, return the PRIMARY one being discussed
-- If you cannot identify any stock/company, return "UNKNOWN"
-- Do NOT return anything else — just the ticker or UNKNOWN
-
-Message: {message}
-
-Ticker:"""
 
 
 class DeepAgentAdapter:
@@ -135,8 +34,25 @@ class DeepAgentAdapter:
     handler pipeline as the standard ReAct agent.
     """
 
-    def __init__(self, deep_agent: DeepReActAgent) -> None:
+    def __init__(
+        self,
+        deep_agent: DeepReActAgent,
+        symbol_resolver: SymbolResolver,
+    ) -> None:
         self.deep_agent = deep_agent
+        self.symbol_resolver = symbol_resolver
+
+    async def resolve_symbol(
+        self,
+        *,
+        user_message: str,
+        current_symbol: str | None,
+    ) -> SymbolResolution:
+        """Resolve and validate the requested symbol before research starts."""
+        return await self.symbol_resolver.resolve(
+            message=user_message,
+            current_symbol=current_symbol,
+        )
 
     async def ainvoke(
         self,
@@ -148,6 +64,7 @@ class DeepAgentAdapter:
         user_id: str = "anonymous",
         on_event: Callable[[dict[str, Any]], None] | None = None,
         current_symbol: str | None = None,
+        resolved_symbol: str | None = None,
     ) -> dict[str, Any]:
         """Invoke deep agent with ainvoke-compatible interface.
 
@@ -172,10 +89,15 @@ class DeepAgentAdapter:
         trace_id = f"deep_{uuid.uuid4().hex[:12]}"
         start_time = time.perf_counter()
 
-        # Symbol resolution: frontend state → regex → LLM
-        symbol = current_symbol or self._extract_symbol_fast(user_message)
-        if not symbol:
-            symbol = await self._extract_symbol_llm(user_message)
+        symbol = resolved_symbol
+        if symbol is None:
+            resolution = await self.resolve_symbol(
+                user_message=user_message,
+                current_symbol=current_symbol,
+            )
+            if resolution.status != "resolved" or resolution.symbol is None:
+                raise ValueError("Deep Agent requires a resolved symbol")
+            symbol = resolution.symbol
 
         if conversation_history:
             logger.info(
@@ -261,62 +183,3 @@ class DeepAgentAdapter:
                 "total_tokens": 0,
                 "agent_duration_ms": duration_ms,
             }
-
-    @staticmethod
-    def _extract_symbol_fast(message: str) -> str | None:
-        """Fast regex extraction for explicit ticker symbols.
-
-        Returns None if no recognized ticker found — caller should
-        fall back to LLM extraction.
-        """
-        candidates = _TICKER_PATTERN.findall(message)
-        for candidate in candidates:
-            if candidate in _STOP_WORDS:
-                continue
-            if candidate in _FAST_TICKERS:
-                return candidate
-            # Accept any 2-5 char all-caps word that's not a stop word
-            # (likely a ticker the user typed explicitly)
-            if len(candidate) >= 2:
-                return candidate
-        return None
-
-    async def _extract_symbol_llm(self, message: str) -> str:
-        """Use LLM to extract ticker from company names in any language.
-
-        Single lightweight call (~1s). Falls back to AAPL only if LLM
-        returns UNKNOWN or fails entirely.
-        """
-        try:
-            prompt = _SYMBOL_EXTRACTION_PROMPT.format(message=message[:200])
-            response = await self.deep_agent.llm.ainvoke(
-                [HumanMessage(content=prompt)],
-            )
-            content = response.content
-            raw = (
-                (content if isinstance(content, str) else str(content)).strip().upper()
-            )
-            # Extract just the ticker — LLM may return extra text
-            match = re.match(r"^([A-Z]{1,5})$", raw)
-            if match and match.group(1) != "UNKNOWN":
-                symbol = match.group(1)
-                logger.info(
-                    "LLM extracted symbol from message",
-                    symbol=symbol,
-                    message_preview=message[:80],
-                )
-                return symbol
-
-            logger.warning(
-                "LLM could not extract symbol, defaulting to AAPL",
-                llm_response=raw[:50],
-                message_preview=message[:80],
-            )
-            return "AAPL"
-        except Exception:
-            logger.warning(
-                "LLM symbol extraction failed, defaulting to AAPL",
-                message_preview=message[:80],
-                exc_info=True,
-            )
-            return "AAPL"

@@ -264,7 +264,9 @@ Browse existing feature specs in this directory for examples:
 - **[Portfolio Agent Architecture](portfolio-agent-architecture-refactor.md)** — 3-phase analysis (research → decisions → execution)
 
 ### AI & Agent System
+- **[Automatic Chat Flow Routing](automatic-chat-flow-routing.md)** — rule-first routing with a lightweight classifier fallback
 - **[Chat Symbol Context](chat-symbol-context.md)** — inject the active UI symbol into chat context so the agent does not have to re-ask
+- **[Deep Agent Symbol Clarification](deep-agent-symbol-clarification.md)** — remove silent ticker fallback and require confirmation for ambiguous research requests
 - **[Write-Time Translation](write-time-translation.md)** — translate LLM output to `zh-CN` on the write path so the read path skips `/api/translate`
 
 ### Market Data & Visualization

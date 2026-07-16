@@ -117,6 +117,8 @@ dump.rdb
 
 # Testing artifacts
 .playwright-mcp/
+frontend/test-results/
+frontend/playwright-report/
 
 .bmad-core/
 # HarshJudge E2E test scenarios (local)

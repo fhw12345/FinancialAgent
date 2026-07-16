@@ -170,55 +170,73 @@
     "statusCompleted": "Completed",
     "statusFailed": "Failed"
   },
+  "clarification": {
+    "title": "Confirm the stock",
+    "select": "Select",
+    "searchGuidance": "Select a stock from the chart panel or enter a ticker in your next message.",
+    "searchAnother": "You can also search for another company in the chart panel.",
+    "followUp": "Continue the deep analysis above using {{symbol}}."
+  },
+  "routing": {
+    "label": "Automatic routing",
+    "waiting": "The best flow will be selected after you send a message",
+    "flows": {
+      "v2": "Assistant",
+      "v3": "Agent",
+      "v4Deep": "Deep Analysis"
+    },
+    "reasons": {
+      "deepFinancialRequest": "Detected a comprehensive or multi-angle investment research request",
+      "liveDataOrToolRequest": "Current data or financial tools are required",
+      "selectedSymbolAnalysis": "Analysis uses the currently selected stock",
+      "explicitSymbolAnalysis": "The request names a stock and asks for analysis",
+      "conceptExplanation": "This is a conceptual question that does not require live data",
+      "classifier": "Selected by the lightweight routing model",
+      "classifierFallback": "Routing classification failed; using the safe Agent flow",
+      "explicitOverride": "A debugging request explicitly selected the flow",
+      "restoredDeep": "Restored from a previous deep-analysis result",
+      "default": "Selected automatically from the request"
+    }
+  },
   "welcome": {
-    "title": "🎯 Welcome to Financial Agent!",
-    "firstTime": "✨ **First Time Here?**",
-    "firstTimeHint": "Click the **❓** button in the bottom-right corner for a quick interactive guide!",
-    "modesTitle": "🚀 **Three Powerful Modes to Explore:**",
-    "agentMode": "🤖 **Agent Mode** — Let AI automatically analyze and provide insights",
-    "copilotMode": "💬 **Copilot Mode** — You control, AI guides",
-    "portfolioMode": "📊 **Portfolio Tracking** — Monitor your investment performance",
-    "proTip": "💡 **Pro Tip:** Start by asking a question or searching for a stock symbol to see the magic happen!"
+    "title": "🎯 Welcome to Financial Agent",
+    "firstTime": "**You do not need to choose a mode.** The system selects a flow from your question, stock context, and data requirements.",
+    "firstTimeHint": "Click the **❓** button in the bottom-left corner for an explanation of automatic routing.",
+    "agentMode": "🤖 **Agent** — Uses market, fundamentals, news, or technical tools when data is required",
+    "assistantMode": "💬 **Assistant** — Answers explanations, summaries, and general discussion directly",
+    "deepMode": "🔬 **Deep Analysis** — Starts multi-agent research for explicit comprehensive, multi-angle, or adversarial requests",
+    "proTip": "**Tip:** Select a stock on the right so references such as “this stock” carry the correct context."
   },
   "help": {
-    "title": "How to Use Financial Agent",
-    "agentMode": {
-      "title": "🤖 Agent Mode",
-      "subtitle": "Intelligent automated analysis",
-      "description": "The agent autonomously analyzes your query, automatically selects the right tools, and provides comprehensive insights with actionable suggestions.",
-      "step1": "1. Ask Question",
-      "step1Desc": "Type your query",
-      "step2": "2. Agent Analyzes",
-      "step2Desc": "AI processes",
-      "step3": "3. Auto-select Tools",
-      "step3Desc": "Market data, news, etc.",
-      "step4": "4. Get Insights",
-      "step4Desc": "Suggestions & summary"
+    "title": "How automatic routing works",
+    "subtitle": "Ask normally; the system chooses the appropriate flow for every message",
+    "close": "Close help",
+    "autoRouting": {
+      "title": "No mode selection or locking required",
+      "description": "Clear live-data, concept, and deep-research requests use deterministic rules. Ambiguous requests are classified by a lightweight model. The selected flow is shown above the input."
     },
-    "copilotMode": {
-      "title": "💬 Copilot Mode",
-      "subtitle": "Manual exploration with AI guidance",
-      "description": "You control the analysis by clicking buttons to trigger specific analyses and view charts. The AI helps you understand the results and provides context.",
-      "step1": "1. Click Analysis",
-      "step1Desc": "Choose tool button",
-      "step2": "2. View Chart",
-      "step2Desc": "Visual data display",
-      "step3": "3. AI Explains",
-      "step3Desc": "Context & insights"
+    "flows": {
+      "assistant": {
+        "title": "💬 Assistant",
+        "when": "Concept explanations, summaries, general discussion",
+        "description": "Answers directly without automatically requesting current market data or financial tools."
+      },
+      "agent": {
+        "title": "🤖 Agent",
+        "when": "Current prices, news, fundamentals, technical analysis",
+        "description": "Selects financial tools, observes their results, and produces a data-grounded answer."
+      },
+      "deep": {
+        "title": "🔬 Deep Analysis",
+        "when": "Complete investment research, multiple perspectives, adversarial review",
+        "description": "Technical, financial, and news specialists research independently before debate and final judgment."
+      }
     },
-    "portfolioAgent": {
-      "title": "📊 Portfolio Agent",
-      "subtitle": "Track simulated trading performance",
-      "description": "Navigate to the Portfolio page to view your simulated holdings, transaction history, and profit/loss performance. The agent mimics real trading scenarios.",
-      "step1": "Go to Portfolio Tab",
-      "step1Desc": "Click \"Portfolio\" in the top navigation",
-      "step2": "View Holdings Dashboard",
-      "step2Desc": "See current positions and allocations",
-      "step3": "Check Transaction History",
-      "step3Desc": "Review buy/sell transactions",
-      "step4": "Analyze P&L Performance",
-      "step4Desc": "Track earnings and losses over time"
-    },
-    "footer": "Need more help? Contact support or check our documentation"
+    "tips": {
+      "title": "Tips",
+      "symbol": "Select a stock on the right to give phrases such as “this stock” clear context.",
+      "quickTools": "Quick-analysis buttons still call deterministic APIs directly and bypass automatic routing.",
+      "transparency": "The selected flow and routing reason appear above the input."
+    }
   }
 }

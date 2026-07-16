@@ -23,6 +23,37 @@ export interface HealthResponse {
   };
 }
 
+export type AgentFlow = "v2" | "v3" | "v4-deep";
+
+export interface RouteSelectedEvent {
+  type: "route_selected";
+  flow: AgentFlow;
+  source: "explicit" | "rule" | "classifier" | "fallback";
+  reason_code: string;
+}
+
+export interface SymbolCandidate {
+  symbol: string;
+  name: string;
+  exchange?: string;
+  type?: string;
+  match_type?: string;
+  confidence: number;
+}
+
+export interface ClarificationRequiredEvent {
+  type: "clarification_required";
+  clarification_type: "symbol";
+  reason_code:
+    | "ambiguous_symbol"
+    | "symbol_not_found"
+    | "symbol_missing"
+    | "symbol_resolution_invalid";
+  message: string;
+  original_request: string;
+  candidates: SymbolCandidate[];
+}
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -45,6 +76,8 @@ export interface ChatMessage {
     durationMs?: number;
   };
   deep_events?: DeepStreamEvent[]; // Persisted accordion events for restore
+  route_selected?: RouteSelectedEvent;
+  clarification_required?: ClarificationRequiredEvent;
 }
 
 export interface ChatRequest {
@@ -181,6 +214,8 @@ export interface UpdateUIStateRequest {
 // ===== Stream Event Types =====
 
 export type StreamEvent =
+  | RouteSelectedEvent
+  | ClarificationRequiredEvent
   | {
       type: "chat_created";
       chat_id: string;

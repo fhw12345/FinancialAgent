@@ -1,219 +1,129 @@
-import type { KeyboardEvent } from 'react'
-import { useTranslation } from 'react-i18next'
-import { X, Bot, MessageSquare, TrendingUp, ArrowRight, ChevronDown } from 'lucide-react'
+import type { KeyboardEvent } from "react";
+import { Bot, MessageSquare, Microscope, Route, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface HelpModalProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
-  const { t } = useTranslation('chat')
+  const { t } = useTranslation("chat");
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose()
-    }
-  }
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Escape") onClose();
+  };
+
+  const flows = [
+    {
+      key: "assistant",
+      icon: MessageSquare,
+      cardClass: "border-purple-200 bg-purple-50",
+      iconClass: "text-purple-600",
+      titleClass: "text-purple-900",
+      subtitleClass: "text-purple-700",
+    },
+    {
+      key: "agent",
+      icon: Bot,
+      cardClass: "border-blue-200 bg-blue-50",
+      iconClass: "text-blue-600",
+      titleClass: "text-blue-900",
+      subtitleClass: "text-blue-700",
+    },
+    {
+      key: "deep",
+      icon: Microscope,
+      cardClass: "border-amber-200 bg-amber-50",
+      iconClass: "text-amber-600",
+      titleClass: "text-amber-900",
+      subtitleClass: "text-amber-700",
+    },
+  ] as const;
 
   return (
-    /* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="help-modal-title"
       tabIndex={-1}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
       onClick={onClose}
       onKeyDown={handleKeyDown}
     >
-      {/* eslint-disable jsx-a11y/no-static-element-interactions */}
       <div
-        className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
+        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+        role="document"
       >
-        {/* eslint-enable jsx-a11y/no-static-element-interactions */}
-        {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-blue-500 to-indigo-500 text-white p-6 rounded-t-2xl flex justify-between items-center">
-          <h2 id="help-modal-title" className="text-2xl font-bold">{t('help.title')}</h2>
+        <div className="sticky top-0 flex items-center justify-between rounded-t-2xl bg-gradient-to-r from-blue-500 to-indigo-500 p-6 text-white">
+          <div>
+            <h2 id="help-modal-title" className="text-2xl font-bold">
+              {t("help.title")}
+            </h2>
+            <p className="mt-1 text-sm text-blue-100">{t("help.subtitle")}</p>
+          </div>
           <button
             onClick={onClose}
-            className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
-            aria-label="Close modal"
+            className="rounded-lg p-2 text-white transition-colors hover:bg-white/20"
+            aria-label={t("help.close")}
           >
-            <X className="w-6 h-6" />
+            <X className="h-6 w-6" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* Agent Mode Section */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border-l-4 border-blue-500 shadow-lg">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="bg-blue-500 text-white p-3 rounded-lg">
-                <Bot className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-blue-900">{t('help.agentMode.title')}</h3>
-                <p className="text-sm text-blue-700">{t('help.agentMode.subtitle')}</p>
-              </div>
-            </div>
-
-            <p className="text-gray-700 mb-4">
-              {t('help.agentMode.description')}
-            </p>
-
-            {/* Flow Diagram */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-blue-200">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex-1 text-center">
-                  <div className="bg-blue-500 text-white rounded-lg py-2 px-3 mb-1 font-medium">
-                    {t('help.agentMode.step1')}
-                  </div>
-                  <p className="text-xs text-gray-600">{t('help.agentMode.step1Desc')}</p>
-                </div>
-                <ArrowRight className="w-5 h-5 text-blue-500 mx-2 flex-shrink-0" />
-                <div className="flex-1 text-center">
-                  <div className="bg-blue-500 text-white rounded-lg py-2 px-3 mb-1 font-medium">
-                    {t('help.agentMode.step2')}
-                  </div>
-                  <p className="text-xs text-gray-600">{t('help.agentMode.step2Desc')}</p>
-                </div>
-                <ArrowRight className="w-5 h-5 text-blue-500 mx-2 flex-shrink-0" />
-                <div className="flex-1 text-center">
-                  <div className="bg-blue-500 text-white rounded-lg py-2 px-3 mb-1 font-medium">
-                    {t('help.agentMode.step3')}
-                  </div>
-                  <p className="text-xs text-gray-600">{t('help.agentMode.step3Desc')}</p>
-                </div>
-                <ArrowRight className="w-5 h-5 text-blue-500 mx-2 flex-shrink-0" />
-                <div className="flex-1 text-center">
-                  <div className="bg-blue-500 text-white rounded-lg py-2 px-3 mb-1 font-medium">
-                    {t('help.agentMode.step4')}
-                  </div>
-                  <p className="text-xs text-gray-600">{t('help.agentMode.step4Desc')}</p>
-                </div>
-              </div>
+        <div className="space-y-5 p-6">
+          <div className="flex items-start gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+            <Route className="mt-0.5 h-5 w-5 flex-shrink-0 text-indigo-600" />
+            <div>
+              <p className="font-semibold text-indigo-900">
+                {t("help.autoRouting.title")}
+              </p>
+              <p className="mt-1 text-sm text-indigo-800">
+                {t("help.autoRouting.description")}
+              </p>
             </div>
           </div>
 
-          {/* Copilot Mode Section */}
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border-l-4 border-purple-500 shadow-lg">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="bg-purple-500 text-white p-3 rounded-lg">
-                <MessageSquare className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-purple-900">{t('help.copilotMode.title')}</h3>
-                <p className="text-sm text-purple-700">{t('help.copilotMode.subtitle')}</p>
-              </div>
-            </div>
-
-            <p className="text-gray-700 mb-4">
-              {t('help.copilotMode.description')}
-            </p>
-
-            {/* Flow Diagram */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-purple-200">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex-1 text-center">
-                  <div className="bg-purple-500 text-white rounded-lg py-2 px-3 mb-1 font-medium">
-                    {t('help.copilotMode.step1')}
-                  </div>
-                  <p className="text-xs text-gray-600">{t('help.copilotMode.step1Desc')}</p>
+          <div className="grid gap-4 md:grid-cols-3">
+            {flows.map(
+              ({
+                key,
+                icon: Icon,
+                cardClass,
+                iconClass,
+                titleClass,
+                subtitleClass,
+              }) => (
+                <div key={key} className={`rounded-xl border p-4 ${cardClass}`}>
+                  <Icon className={`h-6 w-6 ${iconClass}`} />
+                  <h3 className={`mt-3 font-bold ${titleClass}`}>
+                    {t(`help.flows.${key}.title`)}
+                  </h3>
+                  <p className={`mt-1 text-xs font-medium ${subtitleClass}`}>
+                    {t(`help.flows.${key}.when`)}
+                  </p>
+                  <p className="mt-3 text-sm text-gray-700">
+                    {t(`help.flows.${key}.description`)}
+                  </p>
                 </div>
-                <ArrowRight className="w-5 h-5 text-purple-500 mx-2 flex-shrink-0" />
-                <div className="flex-1 text-center">
-                  <div className="bg-purple-500 text-white rounded-lg py-2 px-3 mb-1 font-medium">
-                    {t('help.copilotMode.step2')}
-                  </div>
-                  <p className="text-xs text-gray-600">{t('help.copilotMode.step2Desc')}</p>
-                </div>
-                <ArrowRight className="w-5 h-5 text-purple-500 mx-2 flex-shrink-0" />
-                <div className="flex-1 text-center">
-                  <div className="bg-purple-500 text-white rounded-lg py-2 px-3 mb-1 font-medium">
-                    {t('help.copilotMode.step3')}
-                  </div>
-                  <p className="text-xs text-gray-600">{t('help.copilotMode.step3Desc')}</p>
-                </div>
-              </div>
-            </div>
+              ),
+            )}
           </div>
 
-          {/* Portfolio Agent Section */}
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border-l-4 border-green-500 shadow-lg">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="bg-green-500 text-white p-3 rounded-lg">
-                <TrendingUp className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-green-900">{t('help.portfolioAgent.title')}</h3>
-                <p className="text-sm text-green-700">{t('help.portfolioAgent.subtitle')}</p>
-              </div>
-            </div>
-
-            <p className="text-gray-700 mb-4">
-              {t('help.portfolioAgent.description')}
-            </p>
-
-            {/* Flow Diagram */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-green-200">
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">
-                    1
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-800">{t('help.portfolioAgent.step1')}</p>
-                    <p className="text-xs text-gray-600">{t('help.portfolioAgent.step1Desc')}</p>
-                  </div>
-                </div>
-                <ChevronDown className="w-5 h-5 text-green-500 mx-auto" />
-                <div className="flex items-start gap-3">
-                  <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">
-                    2
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-800">{t('help.portfolioAgent.step2')}</p>
-                    <p className="text-xs text-gray-600">{t('help.portfolioAgent.step2Desc')}</p>
-                  </div>
-                </div>
-                <ChevronDown className="w-5 h-5 text-green-500 mx-auto" />
-                <div className="flex items-start gap-3">
-                  <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">
-                    3
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-800">{t('help.portfolioAgent.step3')}</p>
-                    <p className="text-xs text-gray-600">{t('help.portfolioAgent.step3Desc')}</p>
-                  </div>
-                </div>
-                <ChevronDown className="w-5 h-5 text-green-500 mx-auto" />
-                <div className="flex items-start gap-3">
-                  <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">
-                    4
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-800">{t('help.portfolioAgent.step4')}</p>
-                    <p className="text-xs text-gray-600">{t('help.portfolioAgent.step4Desc')}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-700">
+            <p className="font-semibold">{t("help.tips.title")}</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>{t("help.tips.symbol")}</li>
+              <li>{t("help.tips.quickTools")}</li>
+              <li>{t("help.tips.transparency")}</li>
+            </ul>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="bg-gray-50 p-4 rounded-b-2xl text-center">
-          <p className="text-sm text-gray-600">
-            {t('help.footer')}
-          </p>
         </div>
       </div>
-      {/* eslint-enable jsx-a11y/no-noninteractive-element-interactions */}
     </div>
-  )
+  );
 }

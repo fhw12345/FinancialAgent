@@ -26,8 +26,16 @@ import {
   extractFibonacciMetadata,
   extractStochasticMetadata,
 } from "../../utils/analysisMetadataExtractor";
-import { createToolCall, TOOL_REGISTRY, type ToolName } from "../../constants/toolRegistry";
-import type { DeepStreamEvent } from "../../types/api";
+import {
+  createToolCall,
+  TOOL_REGISTRY,
+  type ToolName,
+} from "../../constants/toolRegistry";
+import type {
+  ClarificationRequiredEvent,
+  DeepStreamEvent,
+  RouteSelectedEvent,
+} from "../../types/api";
 import i18n from "../../i18n";
 
 // Formatting functions moved to analysisFormatters.ts
@@ -41,8 +49,8 @@ export const useAnalysis = (
   _selectedInterval?: string,
   chatId?: string | null,
   setChatId?: (id: string) => void,
-  agentMode?: "v2" | "v3" | "v4-deep",
   onDeepEvent?: (event: DeepStreamEvent) => void,
+  onRouteSelected?: (event: RouteSelectedEvent) => void,
 ) => {
   const queryClient = useQueryClient();
 
@@ -158,11 +166,19 @@ export const useAnalysis = (
 
             setMessages((prev) => {
               // Find and preserve assistant placeholder (may have accumulated content)
-              const placeholder = prev.find(msg => msg._id === assistantMessageId);
-              const withoutPlaceholder = prev.filter(msg => msg._id !== assistantMessageId);
+              const placeholder = prev.find(
+                (msg) => msg._id === assistantMessageId,
+              );
+              const withoutPlaceholder = prev.filter(
+                (msg) => msg._id !== assistantMessageId,
+              );
 
               // Insert tool message, then re-add placeholder at end (preserves streamed content)
-              return [...withoutPlaceholder, toolProgressMessage, placeholder || assistantMessageObj];
+              return [
+                ...withoutPlaceholder,
+                toolProgressMessage,
+                placeholder || assistantMessageObj,
+              ];
             });
           },
           (event) => {
@@ -205,9 +221,26 @@ export const useAnalysis = (
           onDeepEvent,
           // LLM Configuration options
           {
-            agent_version: agentMode, // Pass agent mode (v2/v3/v4-deep)
+            agent_version: "auto",
+            onRouteSelected,
+            onClarificationRequired: (event: ClarificationRequiredEvent) => {
+              accumulatedContent = event.message;
+              setMessages((prev) =>
+                prev.map((msg: any) =>
+                  msg._id === assistantMessageId
+                    ? {
+                        ...msg,
+                        content: event.message,
+                        clarification_required: event,
+                      }
+                    : msg,
+                ),
+              );
+            },
             // Language configuration - get from i18n
-            language: (i18n.language === "zh-CN" || i18n.language === "en" ? i18n.language : "zh-CN") as "zh-CN" | "en",
+            language: (i18n.language === "zh-CN" || i18n.language === "en"
+              ? i18n.language
+              : "zh-CN") as "zh-CN" | "en",
             // Symbol context - takes priority over DB ui_state, eliminates race condition
             current_symbol: currentSymbol || undefined,
           },
@@ -501,7 +534,7 @@ export const useButtonAnalysis = (
             {
               title: chatTitle,
               role: "user",
-              source: "tool",  // Prevent agent invocation for button clicks
+              source: "tool", // Prevent agent invocation for button clicks
             },
           );
         });

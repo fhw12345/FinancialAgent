@@ -1,8 +1,8 @@
 ---
 title: Architecture Overview
 status: shipped
-version: backend@0.30.x, frontend@0.23.x
-last_updated: 2026-07-13
+version: backend@0.32.x, frontend@0.25.x
+last_updated: 2026-07-15
 owner: maintainer
 related_paths:
   - backend/src/main.py
@@ -46,12 +46,18 @@ flowchart LR
 Insights. TanStack Query manages server state. Chat responses and tool events
 arrive through an SSE `POST /api/chat/stream` request.
 
-Quick-analysis buttons call deterministic `/api/analysis/*` routes directly,
-while free-form chat uses one of three agent modes:
+Quick-analysis buttons call deterministic `/api/analysis/*` routes directly.
+Free-form chat sends `agent_version=auto` and the backend selects one of three
+flows for each user turn:
 
-- `v2`: simple Maestro chat
-- `v3`: LangGraph ReAct agent
-- `v4-deep`: technical, news, and financial sub-agents plus adversarial debate
+- `v2`: direct conversational answer for concepts and summaries
+- `v3`: LangGraph ReAct agent for current data and tool-backed analysis
+- `v4-deep`: specialist research plus adversarial debate for explicit deep dives
+
+The router applies deterministic rules first and calls a Haiku-class classifier
+only for ambiguous requests. It emits and persists a `route_selected` event so
+the frontend can explain which flow was chosen and restore that choice later.
+Explicit flow values remain available only as debugging/API overrides.
 
 ## Backend
 
@@ -84,7 +90,10 @@ financial research, adversarial review, and summarization. Gemini routing is
 not enabled because the bridge's OpenAI Chat strategy is not implemented yet.
 
 The deep agent runs specialist research, challenges it with independent
-yfinance/web-search evidence, and synthesizes a final verdict.
+yfinance/web-search evidence, and synthesizes a final verdict. Research starts
+only after the requested symbol has been validated. Ambiguous or missing
+symbols pause at a persisted clarification card instead of silently selecting a
+default company.
 
 ## Portfolio Pipeline
 

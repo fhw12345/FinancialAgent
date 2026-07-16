@@ -14,7 +14,12 @@ from pydantic import BaseModel, Field
 from ...core.config import Settings
 from ...core.utils.cache_utils import get_tool_ttl
 from ...database.redis import RedisCache
+from ...models.symbol_resolution import SymbolCandidate
 from ...services.alphavantage_market_data import AlphaVantageMarketDataService
+from ...services.symbol_search_service import (
+    SymbolSearchService,
+    search_local_symbols,
+)
 from ..dependencies.chat_deps import get_redis
 
 router = APIRouter()
@@ -30,6 +35,13 @@ def get_settings() -> Settings:
 def get_market_service() -> AlphaVantageMarketDataService:
     """Dependency to get market data service."""
     return AlphaVantageMarketDataService(get_settings())
+
+
+def get_symbol_search_service(
+    service: AlphaVantageMarketDataService = Depends(get_market_service),
+) -> SymbolSearchService:
+    """Create the shared symbol-search service for the API request."""
+    return SymbolSearchService(service)
 
 
 class SymbolSearchResult(BaseModel):
@@ -63,7 +75,7 @@ async def search_symbols(
         max_length=50,
         description="Search query (company name or partial symbol)",
     ),
-    service: AlphaVantageMarketDataService = Depends(get_market_service),
+    search_service: SymbolSearchService = Depends(get_symbol_search_service),
 ) -> SymbolSearchResponse:
     """
     Search for stock symbols.
@@ -78,8 +90,6 @@ async def search_symbols(
     its richer match metadata. yfinance is the final safety net when AV fails
     or returns nothing — common because the AV free tier is quickly exhausted.
     """
-    from src.services.market_data import yfinance_search
-
     try:
         query = q.strip()
         if len(query) < 1:
@@ -87,52 +97,8 @@ async def search_symbols(
 
         logger.info("Symbol search started", query=query)
 
-        # Provider 1: local CSVs (instant) — sector_universe (curated 515 large-caps
-        # with sector data) UNION tickers_directory (~6800 actively listed tickers,
-        # symbol+name+exchange only). The directory ensures coverage for tickers
-        # outside the curated set (e.g. BE / Bloom Energy, recent IPOs, mid-caps).
-        local_results = _search_local_universe(query, limit=10)
-        if local_results:
-            logger.info(
-                "Symbol search served from local universe",
-                query=query,
-                result_count=len(local_results),
-            )
-            return SymbolSearchResponse(query=query, results=local_results)
-
-        # Provider 2: Alpha Vantage (slower, rate-limited, but broader)
-        results: list[SymbolSearchResult] = []
-        try:
-            raw_results = await service.search_symbols(query, limit=10)
-            results = [
-                SymbolSearchResult(
-                    symbol=r["symbol"],
-                    name=r["name"],
-                    exchange=r["exchange"],
-                    type=r["type"],
-                    match_type=r["match_type"],
-                    confidence=r["confidence"],
-                )
-                for r in raw_results
-            ]
-        except Exception as e:
-            logger.warning(
-                "Alpha Vantage symbol search failed, will try yfinance",
-                query=query,
-                error=str(e),
-            )
-
-        # Provider 3: yfinance (free, no cap) — kicks in when AV failed OR
-        # returned nothing (e.g. recent IPOs not yet in AV's index).
-        if not results:
-            yf_raw = await yfinance_search.search_symbols(query, limit=10)
-            results = [SymbolSearchResult(**r) for r in yf_raw]
-            if results:
-                logger.info(
-                    "Symbol search served from yfinance fallback",
-                    query=query,
-                    result_count=len(results),
-                )
+        candidates = await search_service.search(query, limit=10)
+        results = [_to_api_result(candidate) for candidate in candidates]
 
         logger.info(
             "Symbol search completed",
@@ -174,76 +140,13 @@ def _search_local_universe(query: str, limit: int) -> list[SymbolSearchResult]:
     Same symbol appearing in both sources is de-duped (sector_universe wins
     because it has type + sector data the directory lacks).
     """
-    from ...data.sector_universe import load_universe
-    from ...data.tickers_directory import load_directory
+    return [
+        _to_api_result(candidate) for candidate in search_local_symbols(query, limit)
+    ]
 
-    q_upper = query.upper()
-    q_lower = query.lower()
 
-    def _score(sym_u: str, name_l: str) -> tuple[str, float] | None:
-        if sym_u == q_upper:
-            return "exact_symbol", 1.0
-        if sym_u.startswith(q_upper):
-            return "symbol_prefix", 0.9
-        if name_l.startswith(q_lower):
-            return "name_prefix", 0.8
-        if q_upper in sym_u or q_lower in name_l:
-            return "fuzzy", 0.6
-        return None
-
-    scored: list[tuple[float, str, SymbolSearchResult]] = []
-    seen_symbols: set[str] = set()
-
-    # Pass 1: curated universe (richer, wins ties)
-    for r in load_universe():
-        sym_u = r.symbol.upper()
-        match = _score(sym_u, r.name.lower())
-        if match is None:
-            continue
-        match_type, confidence = match
-        seen_symbols.add(sym_u)
-        scored.append(
-            (
-                confidence,
-                sym_u,
-                SymbolSearchResult(
-                    symbol=r.symbol,
-                    name=r.name,
-                    exchange="",  # sector_universe.csv has no exchange field
-                    type="Equity",
-                    match_type=match_type,
-                    confidence=confidence,
-                ),
-            )
-        )
-
-    # Pass 2: full directory (skip symbols already covered by curated universe)
-    for r in load_directory():
-        sym_u = r.symbol.upper()
-        if sym_u in seen_symbols:
-            continue
-        match = _score(sym_u, r.name.lower())
-        if match is None:
-            continue
-        match_type, confidence = match
-        scored.append(
-            (
-                confidence,
-                sym_u,
-                SymbolSearchResult(
-                    symbol=r.symbol,
-                    name=r.name,
-                    exchange=r.exchange,
-                    type="Equity",
-                    match_type=match_type,
-                    confidence=confidence,
-                ),
-            )
-        )
-
-    # Sort: confidence desc, then symbol asc (deterministic tiebreak)
-    scored.sort(key=lambda t: (-t[0], t[1]))
-    return [s[2] for s in scored[:limit]]
+def _to_api_result(candidate: SymbolCandidate) -> SymbolSearchResult:
+    return SymbolSearchResult(**candidate.model_dump())
 
 
 @router.get("/info/{symbol}")

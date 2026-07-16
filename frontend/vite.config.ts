@@ -1,11 +1,13 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { configDefaults } from "vitest/config";
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
     host: "0.0.0.0",
+    allowedHosts: ["host.docker.internal"],
     port: 3000,
     strictPort: true,
     // Docker on Windows: bind-mounted file changes don't fire inotify events,
@@ -29,6 +31,12 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",
+    exclude: [
+      ...configDefaults.exclude,
+      "e2e/**",
+      "playwright-report/**",
+      "test-results/**",
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],

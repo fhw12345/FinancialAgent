@@ -170,55 +170,73 @@
     "statusCompleted": "已完成",
     "statusFailed": "失败"
   },
+  "clarification": {
+    "title": "确认要分析的股票",
+    "select": "选择",
+    "searchGuidance": "请在右侧图表面板选择股票，或在下一条消息中输入 ticker。",
+    "searchAnother": "也可以在右侧图表面板搜索其他公司。",
+    "followUp": "请使用 {{symbol}} 继续进行上述深度分析。"
+  },
+  "routing": {
+    "label": "自动路由",
+    "waiting": "发送消息后，系统会自动选择最合适的处理流程",
+    "flows": {
+      "v2": "助手",
+      "v3": "代理",
+      "v4Deep": "深度分析"
+    },
+    "reasons": {
+      "deepFinancialRequest": "检测到完整或多角度投资研究需求",
+      "liveDataOrToolRequest": "需要实时数据或金融分析工具",
+      "selectedSymbolAnalysis": "结合当前选中的股票进行分析",
+      "explicitSymbolAnalysis": "问题中明确指定了股票并要求分析",
+      "conceptExplanation": "属于无需实时数据的概念解释",
+      "classifier": "由轻量路由模型判断",
+      "classifierFallback": "路由判断失败，使用安全的代理流程",
+      "explicitOverride": "调试请求指定了处理流程",
+      "restoredDeep": "从历史记录恢复深度分析",
+      "default": "根据问题内容自动选择"
+    }
+  },
   "welcome": {
-    "title": "🎯 欢迎使用金融智能助手！",
-    "firstTime": "✨ **首次使用？**",
-    "firstTimeHint": "点击左下角的 **❓** 按钮查看快速交互指南！",
-    "modesTitle": "🚀 **三种强大模式供您探索：**",
-    "agentMode": "🤖 **代理模式** — 让AI自动分析并提供洞察",
-    "copilotMode": "💬 **助手模式** — 您来控制，AI来指导",
-    "portfolioMode": "📊 **投资组合追踪** — 监控您的投资表现",
-    "proTip": "💡 **小贴士：** 输入问题或搜索股票代码，即可体验神奇效果！"
+    "title": "🎯 欢迎使用 Financial Agent",
+    "firstTime": "**无需手动选择模式。** 系统会根据问题、股票上下文和数据需求自动选择处理流程。",
+    "firstTimeHint": "需要帮助时，可点击左下角的 **❓** 查看自动路由说明。",
+    "agentMode": "🤖 **代理** — 当问题需要行情、基本面、新闻或技术指标时自动调用工具",
+    "assistantMode": "💬 **助手** — 当问题属于概念解释、总结或一般讨论时直接回答",
+    "deepMode": "🔬 **深度分析** — 当问题明确要求完整研究、多角度论证或反方质疑时启动多智能体流程",
+    "proTip": "**使用建议：** 可先在右侧选择股票代码，让系统更准确地理解“这只股票”等上下文。"
   },
   "help": {
-    "title": "如何使用金融智能助手",
-    "agentMode": {
-      "title": "🤖 代理模式",
-      "subtitle": "智能自动分析",
-      "description": "代理会自动分析您的查询，自动选择合适的工具，并提供全面的洞察和可操作的建议。",
-      "step1": "1. 提问",
-      "step1Desc": "输入您的问题",
-      "step2": "2. 代理分析",
-      "step2Desc": "AI处理中",
-      "step3": "3. 自动选择工具",
-      "step3Desc": "市场数据、新闻等",
-      "step4": "4. 获取洞察",
-      "step4Desc": "建议和总结"
+    "title": "自动路由如何工作",
+    "subtitle": "您只需提问，系统会为每条消息选择合适的处理流程",
+    "close": "关闭帮助",
+    "autoRouting": {
+      "title": "无需提前选择或锁定模式",
+      "description": "明确的实时数据、概念解释和深度研究请求会由规则直接路由；模糊请求由轻量模型分类。每次选择都会显示在输入框上方。"
     },
-    "copilotMode": {
-      "title": "💬 助手模式",
-      "subtitle": "AI指导下的手动探索",
-      "description": "您通过点击按钮触发特定分析和查看图表来控制分析过程。AI帮助您理解结果并提供上下文。",
-      "step1": "1. 点击分析",
-      "step1Desc": "选择工具按钮",
-      "step2": "2. 查看图表",
-      "step2Desc": "可视化数据展示",
-      "step3": "3. AI解释",
-      "step3Desc": "上下文和洞察"
+    "flows": {
+      "assistant": {
+        "title": "💬 助手",
+        "when": "概念解释、总结、一般讨论",
+        "description": "直接使用对话模型回答，不主动请求实时行情或金融工具。"
+      },
+      "agent": {
+        "title": "🤖 代理",
+        "when": "实时价格、新闻、基本面、技术分析",
+        "description": "自动选择并调用金融工具，观察结果后生成有数据依据的回答。"
+      },
+      "deep": {
+        "title": "🔬 深度分析",
+        "when": "完整投资研究、多角度分析、反方质疑",
+        "description": "技术、财务和新闻子代理分别研究，再经过辩论和最终裁决。"
+      }
     },
-    "portfolioAgent": {
-      "title": "📊 投资组合代理",
-      "subtitle": "追踪模拟交易表现",
-      "description": "前往投资组合页面查看您的模拟持仓、交易历史和盈亏表现。代理模拟真实交易场景。",
-      "step1": "前往投资组合标签",
-      "step1Desc": "点击顶部导航中的「投资组合」",
-      "step2": "查看持仓仪表板",
-      "step2Desc": "查看当前持仓和配置",
-      "step3": "检查交易历史",
-      "step3Desc": "查看买卖交易记录",
-      "step4": "分析盈亏表现",
-      "step4Desc": "追踪一段时间内的收益和损失"
-    },
-    "footer": "需要更多帮助？请联系支持或查看我们的文档"
+    "tips": {
+      "title": "使用提示",
+      "symbol": "在右侧选择股票后，可以直接使用“这只股票”作为上下文。",
+      "quickTools": "右侧快捷分析按钮仍直接调用确定性 API，不经过自动路由。",
+      "transparency": "输入框上方会显示本次选择的流程及选择原因。"
+    }
   }
 }

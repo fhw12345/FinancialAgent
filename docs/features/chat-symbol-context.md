@@ -1,8 +1,8 @@
 ---
 title: Chat Symbol Context
 status: shipped
-version: backend@0.30.x, frontend@0.23.x
-last_updated: 2026-07-13
+version: backend@0.32.0, frontend@0.25.0
+last_updated: 2026-07-15
 owner: maintainer
 related_paths:
   - backend/src/api/chat/helpers.py
@@ -31,7 +31,12 @@ The explicit request value takes priority over stored UI state. If it is
 missing, the backend falls back to the chat's persisted symbol.
 
 The deep agent receives the same value through `DeepAgentAdapter`, using it
-before regex or LLM-based symbol extraction.
+before message-based symbol extraction. The value is validated against the
+shared symbol search service. Invalid, ambiguous, or missing symbols produce a
+persisted clarification request instead of a default ticker.
+
+See
+[Deep Agent Symbol Clarification](deep-agent-symbol-clarification.md).
 
 ## Relevant Tests
 

@@ -54,6 +54,7 @@ function App() {
                 {t("navigation.health")}
               </button>
               <button
+                data-testid="nav-chat"
                 onClick={() => setActiveTab("chat")}
                 className={`px-3 sm:px-5 py-1.5 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl transition-all duration-200 ${
                   activeTab === "chat"
@@ -112,8 +113,8 @@ function App() {
             className="text-center text-xs text-gray-400 mt-1"
             data-testid="ai-disclaimer"
           >
-            🤖 AI-generated · Not investment advice. Verify all data and
-            consult a licensed advisor before executing any trade.
+            🤖 AI-generated · Not investment advice. Verify all data and consult
+            a licensed advisor before executing any trade.
           </p>
         </div>
       </footer>

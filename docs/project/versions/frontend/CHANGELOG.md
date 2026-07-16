@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-07-15
+
+### Deep-research symbol clarification
+
+- Added a structured clarification card for ambiguous or missing stock
+  symbols.
+- Candidate selection updates chart context and prepares an explicit follow-up
+  without automatically submitting a duplicate research request.
+- Persisted clarification metadata is restored with chat history.
+- Added stable browser selectors for chat, symbol selection, errors, and the
+  Deep Agent accordion.
+- Added an official Playwright harness, Docker Compose E2E profile, mocked SSE
+  browser tests, and a real frontend-to-backend safety scenario.
+- Added four curated Playwright screenshots under
+  `docs/features/assets/uaw-001/`.
+
+## [0.24.0] - 2026-07-15
+
+### Automatic chat flow selection
+
+- Removed the Assistant/Agent/Deep picker and per-chat mode lock.
+- Stopped creating empty chats when a stock symbol is selected; chats are now
+  created by the first persisted message.
+- Added an automatic-routing badge showing the selected flow and localized
+  reason for every user turn.
+- Always subscribes to deep-agent lifecycle events so an automatically selected
+  deep flow renders its accordion correctly.
+- Persists and restores `route_selected` metadata alongside deep events.
+- Rewrote the welcome message and Help modal around automatic flow selection.
+
 ## [0.23.0] - 2026-07-13
 
 ### Pure-local UI and runtime cleanup

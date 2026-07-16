@@ -104,7 +104,6 @@ async def translate_for_persistence(
                 field=key,
                 text_len=len(text),
                 cjk_ratio=round(ratio, 4),
-                text_head=text[:80],
             )
             continue
         payload_indices.append(i)

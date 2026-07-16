@@ -24,6 +24,7 @@ ROLE_MODEL_FIELDS: dict[str, str] = {
     "sub_debater": "model_sub_debater",
     "sub_news": "model_sub_news",
     "summary": "model_summary",
+    "router": "model_router",
 }
 
 COPILOT_REVERSE_MODELS: dict[str, str] = {
@@ -33,11 +34,12 @@ COPILOT_REVERSE_MODELS: dict[str, str] = {
     "verdict": "claude-opus-4.8",
     "sub_technical": "claude-sonnet-5",
     "simple_chat": "claude-haiku-4.5",
-    "sub_financial": "gpt-5.5",
-    "portfolio_research": "gpt-5.5",
-    "sub_debater": "gpt-5.5",
+    "sub_financial": "gpt-5.6-sol",
+    "portfolio_research": "gpt-5.6-sol",
+    "sub_debater": "gpt-5.6-sol",
     "sub_news": "claude-sonnet-5",
     "summary": "gpt-5.4-mini",
+    "router": "claude-haiku-4.5",
 }
 
 

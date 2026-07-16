@@ -15,13 +15,47 @@ import {
   getPeriodForInterval,
   calculateDateRange,
 } from "../utils/dateRangeCalculator";
-import type { DeepStreamEvent } from "../types/api";
+import type {
+  AgentFlow,
+  DeepStreamEvent,
+  RouteSelectedEvent,
+  SymbolCandidate,
+} from "../types/api";
 import {
   useDeepAccordionState,
   DeepAgentAccordion,
   mapDeepEventToAction,
 } from "./chat/deep";
 import { parseBackendMessage, replayDeepEvents } from "../utils/messageParser";
+
+function routeLabelKey(flow: AgentFlow): string {
+  if (flow === "v2") return "chat:routing.flows.v2";
+  if (flow === "v4-deep") return "chat:routing.flows.v4Deep";
+  return "chat:routing.flows.v3";
+}
+
+function routeBadgeClass(flow: AgentFlow): string {
+  if (flow === "v2") return "bg-purple-100 text-purple-800";
+  if (flow === "v4-deep") return "bg-amber-100 text-amber-800";
+  return "bg-blue-100 text-blue-800";
+}
+
+function routeReasonKey(reasonCode: string): string {
+  const keys: Record<string, string> = {
+    deep_financial_request: "chat:routing.reasons.deepFinancialRequest",
+    live_data_or_tool_request: "chat:routing.reasons.liveDataOrToolRequest",
+    selected_symbol_analysis: "chat:routing.reasons.selectedSymbolAnalysis",
+    explicit_symbol_analysis: "chat:routing.reasons.explicitSymbolAnalysis",
+    concept_explanation: "chat:routing.reasons.conceptExplanation",
+    classifier_v2: "chat:routing.reasons.classifier",
+    classifier_v3: "chat:routing.reasons.classifier",
+    classifier_v4_deep: "chat:routing.reasons.classifier",
+    classifier_error_fallback: "chat:routing.reasons.classifierFallback",
+    explicit_override: "chat:routing.reasons.explicitOverride",
+    restored_deep: "chat:routing.reasons.restoredDeep",
+  };
+  return keys[reasonCode] ?? "chat:routing.reasons.default";
+}
 
 export function EnhancedChatInterface() {
   const { t } = useTranslation(["chat", "common"]);
@@ -38,10 +72,8 @@ export function EnhancedChatInterface() {
   const [isMobileSidebarVisible, setIsMobileSidebarVisible] = useState(false);
   const [isMobileChartVisible, setIsMobileChartVisible] = useState(false);
 
-  // Agent mode: v3 = Agent (auto tools), v2 = Copilot (manual tools), v4-deep = Deep analysis
-  const [agentMode, setAgentMode] = useState<"v2" | "v3" | "v4-deep">("v3");
+  const [routeInfo, setRouteInfo] = useState<RouteSelectedEvent | null>(null);
 
-  // Deep agent accordion state (active when agentMode === "v4-deep")
   const { state: deepState, dispatch: deepDispatch } = useDeepAccordionState();
 
   const handleDeepEvent = useCallback(
@@ -56,11 +88,15 @@ export function EnhancedChatInterface() {
 
   const deepAccordionElement = useMemo(
     () =>
-      agentMode === "v4-deep" && deepState.status !== "pending" ? (
+      deepState.status !== "pending" ? (
         <DeepAgentAccordion state={deepState} dispatch={deepDispatch} />
       ) : undefined,
-    [agentMode, deepState, deepDispatch],
+    [deepState, deepDispatch],
   );
+
+  const handleRouteSelected = useCallback((event: RouteSelectedEvent) => {
+    setRouteInfo(event);
+  }, []);
 
   // Pagination state for loading older messages
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
@@ -138,8 +174,8 @@ export function EnhancedChatInterface() {
     selectedInterval,
     chatId,
     setChatId,
-    agentMode, // Pass agent mode (v2/v3/v4-deep)
-    agentMode === "v4-deep" ? handleDeepEvent : undefined,
+    handleDeepEvent,
+    handleRouteSelected,
   );
 
   // Button analysis mutation for quick analysis buttons
@@ -179,7 +215,7 @@ export function EnhancedChatInterface() {
   });
 
   const handleSymbolSelect = useCallback(
-    async (symbol: string, name: string) => {
+    (symbol: string, name: string) => {
       setCurrentSymbol(symbol);
       setCurrentCompanyName(name);
 
@@ -190,23 +226,20 @@ export function EnhancedChatInterface() {
       );
       setDateRangeStart(dateRange.start);
       setDateRangeEnd(dateRange.end);
-
-      // Auto-create chat if this is a new chat (no chatId yet)
-      if (!chatId) {
-        try {
-          const { chatService } = await import("../services/api");
-          const result = await chatService.createChat();
-          setChatId(result.chat_id);
-          console.log(
-            "✅ Chat auto-created on symbol selection:",
-            result.chat_id,
-          );
-        } catch (error) {
-          console.error("❌ Failed to auto-create chat:", error);
-        }
-      }
     },
-    [selectedInterval, chatId, setChatId],
+    [selectedInterval],
+  );
+
+  const handleSymbolCandidateSelect = useCallback(
+    (candidate: SymbolCandidate) => {
+      handleSymbolSelect(candidate.symbol, candidate.name);
+      setMessage(
+        t("chat:clarification.followUp", {
+          symbol: candidate.symbol,
+        }),
+      );
+    },
+    [handleSymbolSelect, t],
   );
 
   const handleIntervalChange = useCallback((interval: TimeInterval) => {
@@ -254,11 +287,11 @@ export function EnhancedChatInterface() {
       return;
     }
 
-    // Symbol is now passed directly in chat request (current_symbol field)
-    // No need to flush UI state - eliminates race condition
-    chatMutation.mutate(message); // All user messages go to LLM
+    setRouteInfo(null);
+    deepDispatch({ type: "RESET" });
+    chatMutation.mutate(message);
     setMessage("");
-  }, [message, chatMutation]);
+  }, [message, chatMutation, deepDispatch]);
 
   const isRestoringRef = useRef(false);
 
@@ -284,7 +317,20 @@ export function EnhancedChatInterface() {
             mapDeepEventToAction,
             deepDispatch,
           );
-          if (hasDeep) setAgentMode("v4-deep");
+          const latestRoute = [...restoredMessages]
+            .reverse()
+            .find((msg) => msg.route_selected)?.route_selected;
+          setRouteInfo(
+            latestRoute ??
+              (hasDeep
+                ? {
+                    type: "route_selected",
+                    flow: "v4-deep",
+                    source: "rule",
+                    reason_code: "restored_deep",
+                  }
+                : null),
+          );
         }
       } finally {
         isRestoringRef.current = false;
@@ -302,7 +348,7 @@ export function EnhancedChatInterface() {
     setDateRangeEnd("");
     setHasMoreMessages(false); // Reset pagination
     deepDispatch({ type: "RESET" }); // Reset deep accordion state
-    setAgentMode("v3"); // Reset to default agent mode
+    setRouteInfo(null);
   }, [setMessages, setChatId, deepDispatch]);
 
   const handleLoadMore = useCallback(async () => {
@@ -335,12 +381,7 @@ export function EnhancedChatInterface() {
       // must NOT overwrite it with events from older paginated messages —
       // that would replace the most-recent analysis with a stale one.
       if (deepState.status === "pending") {
-        const hasDeep = replayDeepEvents(
-          olderMessages,
-          mapDeepEventToAction,
-          deepDispatch,
-        );
-        if (hasDeep) setAgentMode("v4-deep");
+        replayDeepEvents(olderMessages, mapDeepEventToAction, deepDispatch);
       }
 
       setMessages((prev) => [...olderMessages, ...prev]);
@@ -452,77 +493,29 @@ export function EnhancedChatInterface() {
                   hasMore={hasMoreMessages}
                   isLoadingMore={isLoadingMore}
                   deepAccordion={deepAccordionElement}
+                  onSymbolCandidateSelect={handleSymbolCandidateSelect}
                 />
 
-                {/* Agent Mode Toggle - Only enabled when starting new chat */}
+                {/* Automatic flow routing status */}
                 <div className="flex-shrink-0 px-4 py-2 border-t border-gray-100 bg-gray-50/50">
-                  <div className="flex items-center gap-3 text-sm">
+                  <div className="flex items-center gap-2 text-sm">
                     <span className="text-gray-600 font-medium">
-                      {t("chat:mode.label")}:
+                      {t("chat:routing.label")}:
                     </span>
-                    <button
-                      onClick={() => setAgentMode("v3")}
-                      disabled={!!chatId}
-                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-                        agentMode === "v3"
-                          ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md"
-                          : "bg-white text-gray-700 hover:bg-gray-100"
-                      } ${
-                        chatId
-                          ? "opacity-50 cursor-not-allowed"
-                          : "cursor-pointer"
-                      }`}
-                      title={
-                        chatId
-                          ? t("chat:mode.locked")
-                          : t("chat:mode.agentDescription")
-                      }
-                    >
-                      🤖 {t("chat:mode.agent")}
-                    </button>
-                    <button
-                      onClick={() => setAgentMode("v2")}
-                      disabled={!!chatId}
-                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-                        agentMode === "v2"
-                          ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md"
-                          : "bg-white text-gray-700 hover:bg-gray-100"
-                      } ${
-                        chatId
-                          ? "opacity-50 cursor-not-allowed"
-                          : "cursor-pointer"
-                      }`}
-                      title={
-                        chatId
-                          ? t("chat:mode.locked")
-                          : t("chat:mode.copilotDescription")
-                      }
-                    >
-                      👤 {t("chat:mode.copilot")}
-                    </button>
-                    <button
-                      onClick={() => setAgentMode("v4-deep")}
-                      disabled={!!chatId}
-                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-                        agentMode === "v4-deep"
-                          ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md"
-                          : "bg-white text-gray-700 hover:bg-gray-100"
-                      } ${
-                        chatId
-                          ? "opacity-50 cursor-not-allowed"
-                          : "cursor-pointer"
-                      }`}
-                      title={
-                        chatId
-                          ? t("chat:mode.locked")
-                          : t("chat:mode.deepDescription")
-                      }
-                    >
-                      🔬 {t("chat:mode.deep")}
-                    </button>
-                    {chatId && (
-                      <span className="ml-auto text-xs text-gray-500 italic">
-                        {t("chat:mode.locked")}
+                    {routeInfo ? (
+                      <>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${routeBadgeClass(routeInfo.flow)}`}
+                        >
+                          {t(routeLabelKey(routeInfo.flow))}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {t(routeReasonKey(routeInfo.reason_code))}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-gray-500">
+                        {t("chat:routing.waiting")}
                       </span>
                     )}
                   </div>

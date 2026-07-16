@@ -7,8 +7,14 @@ CI/CD: GitHub Actions automated deployment enabled.
 
 import asyncio
 import logging
+import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+
+for stream in (sys.stdout, sys.stderr):
+    reconfigure = getattr(stream, "reconfigure", None)
+    if callable(reconfigure):
+        reconfigure(encoding="utf-8", errors="backslashreplace")
 
 import structlog
 from fastapi import FastAPI, Request

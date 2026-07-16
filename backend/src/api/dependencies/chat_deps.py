@@ -7,7 +7,9 @@ from typing import Any
 from fastapi import Depends
 
 from ...agent.chat_agent import ChatAgent
+from ...agent.flow_router import AgentFlowRouter
 from ...agent.langgraph_react_agent import FinancialAnalysisReActAgent
+from ...agent.symbol_resolver import SymbolResolver
 from ...core.config import Settings, get_settings
 from ...database.mongodb import MongoDB
 from ...database.redis import RedisCache
@@ -16,6 +18,7 @@ from ...database.repositories.message_repository import MessageRepository
 from ...services.alphavantage_market_data import AlphaVantageMarketDataService
 from ...services.chat_service import ChatService
 from ...services.context_window_manager import ContextWindowManager
+from ...services.symbol_search_service import SymbolSearchService
 from .storage import get_mongodb
 
 # ===== Agent Singleton (Per-Worker Process) =====
@@ -24,6 +27,7 @@ from .storage import get_mongodb
 
 _react_agent_singleton: FinancialAnalysisReActAgent | None = None
 _deep_agent_singleton = None  # DeepAgentAdapter | None — lazy import
+_flow_router_singleton: AgentFlowRouter | None = None
 
 # ===== MongoDB and Repository Dependencies =====
 
@@ -82,6 +86,14 @@ def get_chat_agent(
     Lightweight LLM wrapper, no session management needed.
     """
     return ChatAgent(settings=settings)
+
+
+def get_flow_router() -> AgentFlowRouter:
+    """Get the shared hybrid chat-flow router."""
+    global _flow_router_singleton
+    if _flow_router_singleton is None:
+        _flow_router_singleton = AgentFlowRouter()
+    return _flow_router_singleton
 
 
 def get_market_service() -> AlphaVantageMarketDataService:
@@ -151,6 +163,7 @@ def get_deep_agent(
     settings: Settings = Depends(get_settings),
     react_agent: FinancialAnalysisReActAgent = Depends(get_react_agent),
     mongodb: MongoDB = Depends(get_mongodb),
+    market_service: AlphaVantageMarketDataService = Depends(get_market_service),
 ) -> Any:  # Returns DeepAgentAdapter — lazy import to avoid startup crash
     """
     Get Deep ReAct agent wrapped in the adapter for ainvoke() compatibility.
@@ -197,7 +210,11 @@ def get_deep_agent(
         data_manager=data_manager,
     )
 
-    _deep_agent_singleton = DeepAgentAdapter(deep_agent)
+    symbol_resolver = SymbolResolver(
+        SymbolSearchService(market_service),
+        settings=settings,
+    )
+    _deep_agent_singleton = DeepAgentAdapter(deep_agent, symbol_resolver)
     _logger.info(
         "DeepAgentAdapter initialized",
         tool_count=len(tools),
@@ -209,6 +226,7 @@ def get_deep_agent(
 __all__ = [
     "get_chat_service",
     "get_chat_agent",
+    "get_flow_router",
     "get_react_agent",
     "get_deep_agent",
     "get_context_manager",

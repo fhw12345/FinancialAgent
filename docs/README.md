@@ -18,10 +18,13 @@ All current documentation describes the local single-user application.
 ## Agent and Features
 
 - [Agent 12-Factors](architecture/agent-12-factors.md)
+- [Unified Agent Workflow Improvement Roadmap](architecture/unified-agent-workflow-roadmap.md)
+- [Deep Agent Symbol Clarification](features/deep-agent-symbol-clarification.md)
 - [Portfolio Agent Architecture](features/portfolio-agent-architecture-refactor.md)
 - [Write-time Translation](features/write-time-translation.md)
 - [Market Insights Trends](features/market-insights-trend-visualization.md)
 - [Chat Symbol Context](features/chat-symbol-context.md)
+- [Automatic Chat Flow Routing](features/automatic-chat-flow-routing.md)
 - [Symbol Search and Charts](features/symbol-search-and-chart-improvements.md)
 - [Fibonacci Trend Detection](features/fibonacci-trend-detection-improvements.md)
 - [Extended-Hours Data](features/extended-hours-trading-data.md)
@@ -30,6 +33,8 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [Deep Agent Silent Symbol Fallback Case Study](case-studies/2026-07-15-deep-agent-silent-symbol-fallback.md)
+- [Automatic Routing Windows UTF-8 Case Study](case-studies/2026-07-15-auto-routing-windows-utf8.md)
 - [Versioning](project/versions/README.md)
 - [Backend Changelog](project/versions/backend/CHANGELOG.md)
 - [Frontend Changelog](project/versions/frontend/CHANGELOG.md)

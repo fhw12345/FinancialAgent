@@ -75,6 +75,11 @@ def create_chunk_event(content: str) -> str:
     return format_sse_event(chunk_data)
 
 
+def create_clarification_event(event_data: dict[str, Any]) -> str:
+    """Create a non-error SSE event requesting structured user clarification."""
+    return format_sse_event({"type": "clarification_required", **event_data})
+
+
 def create_thinking_event(stage: str, chat_id: str | None = None) -> str:
     """
     Create a formatted SSE thinking event for eager streaming (Story 1.4).
