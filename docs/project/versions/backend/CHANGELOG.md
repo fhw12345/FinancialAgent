@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.32.1] - 2026-07-16
+
+### Structured LLM content-block compatibility
+
+- Fixed ReAct responses failing after successful tool execution with
+  `expected string or bytes-like object, got 'list'`.
+- Added `message_content_to_text()` to normalize LangChain string content and
+  structured text blocks at the agent boundary.
+- Applied the shared normalization to the flow router, ReAct final response,
+  Deep Agent adapter, debate verdict, and title extraction.
+- Added regression tests for mixed text/thinking/tool-use blocks and titles
+  split across multiple content blocks.
+- Verified the original SKHY request through the live Copilot Bridge: v3
+  completed with seven streamed tool lifecycle events, a final answer, and no
+  error event.
+
+### Contextual and unique chat titles
+
+- Replaced repeated `Chat Analysis` fallbacks with deterministic titles derived
+  from the user's actual topic.
+- Added Chinese intent detection for price and deep-research requests.
+- Uses the selected UI symbol when the user refers to a company indirectly,
+  producing titles such as `SKHY Price`.
+- Titles are assigned before agent execution, so clarification and failed model
+  requests no longer remain `New Chat`.
+- Existing generic titles may be replaced, while user-defined titles remain
+  untouched.
+- Exact duplicate titles receive numeric suffixes such as `(2)` and `(3)`.
+- Backfilled 11 existing local generic titles without modifying custom titles.
+
 ## [0.32.0] - 2026-07-15
 
 ### Safe Deep Agent symbol clarification

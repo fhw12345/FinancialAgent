@@ -143,14 +143,14 @@ class TestGenerateChatTitle:
         assert "MSFT" in title
 
     def test_no_symbols_with_action(self):
-        """Generate title from action when no symbols."""
+        """Preserve a specific portfolio question when no symbol exists."""
         title = generate_chat_title("How's my portfolio doing?")
-        assert title == "Portfolio"
+        assert title == "How's my portfolio doing"
 
     def test_no_symbols_fallback(self):
-        """Generate fallback title when nothing detected."""
+        """Use the user's topic instead of a repeated generic fallback."""
         title = generate_chat_title("Hello there")
-        assert title == "Chat Analysis"
+        assert title == "Hello there"
 
     def test_cash_flow_title(self):
         """Generate title for cash flow query."""
@@ -178,7 +178,20 @@ class TestGenerateChatTitle:
             assistant_response="Based on AAPL's performance...",
         )
         # User message doesn't have symbol, but function uses combined text
-        assert "Analysis" in title
+        assert title == "AAPL Analysis"
+
+    def test_selected_symbol_and_chinese_price_request(self):
+        title = generate_chat_title(
+            "海力士现在股价多少，最近表现怎么样？",
+            current_symbol="SKHY",
+        )
+
+        assert title == "SKHY Price"
+
+    def test_chinese_concept_question_uses_distinct_topic(self):
+        title = generate_chat_title("什么是市盈率？请用一句话解释。")
+
+        assert title == "什么是市盈率？请用一句话解释"
 
 
 class TestEdgeCases:
@@ -187,7 +200,7 @@ class TestEdgeCases:
     def test_empty_message(self):
         """Empty message returns fallback title."""
         title = generate_chat_title("")
-        assert title == "Chat Analysis"
+        assert title == "New Chat"
 
     def test_none_response(self):
         """None assistant response is handled gracefully."""

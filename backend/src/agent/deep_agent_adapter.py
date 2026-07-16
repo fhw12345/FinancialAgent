@@ -20,6 +20,7 @@ from typing import Any
 import structlog
 
 from ..core.localization import DEFAULT_LANGUAGE, SupportedLanguage
+from ..core.utils import message_content_to_text
 from ..models.symbol_resolution import SymbolResolution
 from .deep_react_agent import DeepReActAgent
 from .symbol_resolver import SymbolResolver
@@ -124,15 +125,13 @@ class DeepAgentAdapter:
             )
 
             # Extract final answer from research report or last message
-            final_answer = result.get("research_report", "")
+            final_answer = message_content_to_text(result.get("research_report", ""))
             if not final_answer:
                 messages = result.get("messages", [])
                 if messages:
                     last_msg = messages[-1]
-                    final_answer = (
-                        last_msg.content
-                        if hasattr(last_msg, "content")
-                        else str(last_msg)
+                    final_answer = message_content_to_text(
+                        last_msg.content if hasattr(last_msg, "content") else last_msg
                     )
 
             # Token usage already populated by analyze() — use directly

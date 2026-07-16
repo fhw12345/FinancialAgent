@@ -33,6 +33,7 @@ def mock_chat_repo():
     repo.update_ui_state = AsyncMock()
     repo.update_last_message_at = AsyncMock()
     repo.find_by_symbol = AsyncMock()
+    repo.title_exists = AsyncMock(return_value=False)
     repo.delete = AsyncMock()
     return repo
 
@@ -392,6 +393,58 @@ class TestUpdateTitleIfNew:
             )
 
             assert result == "Generated Title"
+
+    @pytest.mark.asyncio
+    async def test_update_replaces_existing_generic_title(
+        self, chat_service, mock_chat_repo, sample_chat
+    ):
+        sample_chat.title = "Chat Analysis"
+        mock_chat_repo.get.return_value = sample_chat
+        mock_chat_repo.update.return_value = sample_chat
+
+        result = await chat_service.update_title_if_new(
+            "chat_123",
+            None,
+            "海力士现在股价多少？",
+            current_symbol="SKHY",
+        )
+
+        assert result == "SKHY Price"
+
+    @pytest.mark.asyncio
+    async def test_generic_llm_title_uses_specific_heuristic(
+        self, chat_service, mock_chat_repo, sample_chat
+    ):
+        sample_chat.title = "New Chat"
+        mock_chat_repo.get.return_value = sample_chat
+        mock_chat_repo.update.return_value = sample_chat
+
+        result = await chat_service.update_title_if_new(
+            "chat_123",
+            "Chat Analysis",
+            "什么是市盈率？",
+        )
+
+        assert result == "什么是市盈率"
+
+    @pytest.mark.asyncio
+    async def test_duplicate_title_gets_numeric_suffix(
+        self, chat_service, mock_chat_repo, sample_chat
+    ):
+        sample_chat.title = "New Chat"
+        mock_chat_repo.get.return_value = sample_chat
+        mock_chat_repo.update.return_value = sample_chat
+        mock_chat_repo.title_exists.side_effect = [True, False]
+
+        result = await chat_service.update_title_if_new(
+            "chat_123",
+            None,
+            "海力士现在股价多少？",
+            current_symbol="SKHY",
+        )
+
+        assert result == "SKHY Price (2)"
+        assert mock_chat_repo.title_exists.await_count == 2
 
 
 # ===== find_chat_by_symbol Tests =====

@@ -12,6 +12,7 @@ from .date_utils import (
     utcfromtimestamp,
     utcnow,
 )
+from .message_content import message_content_to_text
 from .token_utils import (
     extract_token_usage_from_agent_result,
     extract_token_usage_from_messages,
@@ -37,6 +38,8 @@ __all__ = [
     # Token utilities
     "extract_token_usage_from_messages",
     "extract_token_usage_from_agent_result",
+    # LangChain message content
+    "message_content_to_text",
     # Date utilities (replacements for deprecated datetime methods)
     "utcnow",
     "utcfromtimestamp",

@@ -206,6 +206,24 @@ class ChatRepository:
         logger.info("Chat updated", chat_id=chat_id, fields=list(update_dict.keys()))
         return Chat(**result)
 
+    async def title_exists(
+        self,
+        title: str,
+        *,
+        exclude_chat_id: str | None = None,
+    ) -> bool:
+        """Return whether another chat already uses the exact title."""
+        query: dict[str, Any] = {"title": title}
+        if exclude_chat_id:
+            query["chat_id"] = {"$ne": exclude_chat_id}
+        return (
+            await self.collection.find_one(
+                query,
+                projection={"_id": 1},
+            )
+            is not None
+        )
+
     async def update_ui_state(self, chat_id: str, ui_state: UIState) -> Chat | None:
         result = await self.collection.find_one_and_update(
             {"chat_id": chat_id},

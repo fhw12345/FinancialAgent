@@ -10,6 +10,7 @@ from typing import Any, Literal
 import structlog
 from langchain_core.messages import HumanMessage
 
+from ..core.utils import message_content_to_text
 from .llm_factory import get_llm
 
 logger = structlog.get_logger()
@@ -301,7 +302,7 @@ Return JSON only: {{"flow":"v2"|"v3"|"v4-deep"}}"""
 
         try:
             response = await llm.ainvoke([HumanMessage(content=prompt)])
-            text = self._extract_text(response.content)
+            text = message_content_to_text(response.content)
             payload = self._extract_json(text)
             flow = payload.get("flow")
             if flow not in ("v2", "v3", "v4-deep"):
@@ -323,20 +324,6 @@ Return JSON only: {{"flow":"v2"|"v3"|"v4-deep"}}"""
                 source="fallback",
                 reason_code="classifier_error_fallback",
             )
-
-    @staticmethod
-    def _extract_text(content: Any) -> str:
-        if isinstance(content, str):
-            return content
-        if isinstance(content, list):
-            parts = []
-            for block in content:
-                if isinstance(block, dict) and isinstance(block.get("text"), str):
-                    parts.append(block["text"])
-                elif hasattr(block, "text"):
-                    parts.append(str(block.text))
-            return "".join(parts)
-        return str(content)
 
     @staticmethod
     def _extract_json(text: str) -> dict[str, Any]:

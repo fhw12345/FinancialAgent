@@ -55,3 +55,9 @@ async def test_async_generator_streams_without_wait_for_type_error():
     assert '"content": "OK"' in output
     assert '"type": "done"' in output
     assert "STREAM_ERROR" not in output
+    chat_service.update_title_if_new.assert_awaited_once_with(
+        chat_id="chat_1",
+        llm_title=None,
+        user_message="Explain P/E",
+        current_symbol=None,
+    )

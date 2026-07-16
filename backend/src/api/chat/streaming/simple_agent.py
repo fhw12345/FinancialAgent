@@ -76,6 +76,13 @@ async def stream_with_simple_agent(
                 )
                 return
 
+            await chat_service.update_title_if_new(
+                chat_id=chat_id,
+                llm_title=None,
+                user_message=request.message,
+                current_symbol=request.current_symbol,
+            )
+
             # Get conversation history for context
             messages_list = await chat_service.get_chat_messages(
                 chat_id=chat_id, user_id=user_id

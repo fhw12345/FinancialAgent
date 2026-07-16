@@ -148,14 +148,14 @@ class TestGenerateChatTitle:
         assert "MSFT" in title
 
     def test_no_symbols_with_action(self):
-        """Test title with no symbols but detected action"""
+        """Test title preserves the user's specific topic without a symbol"""
         title = generate_chat_title("Show me the latest news")
-        assert title == "News"
+        assert title == "the latest news"
 
     def test_no_symbols_no_action(self):
         """Test fallback title"""
         title = generate_chat_title("Hello there")
-        assert title == "Chat Analysis"
+        assert title == "Hello there"
 
     def test_title_max_length(self):
         """Test that title is truncated to max length"""
@@ -236,3 +236,14 @@ class TestExtractTitleFromResponse:
         assert title == "Title"
         assert cleaned == "Line 1\nLine 2"
         assert cleaned.strip() == "Line 1\nLine 2"
+
+    def test_structured_content_blocks_are_normalized_before_title_extraction(self):
+        response = [
+            {"type": "text", "text": "SK hynix is trading at $176.46."},
+            {"type": "text", "text": "[chat_title: SKHY Price]"},
+        ]
+
+        title, cleaned = extract_title_from_response(response)
+
+        assert title == "SKHY Price"
+        assert cleaned == "SK hynix is trading at $176.46."

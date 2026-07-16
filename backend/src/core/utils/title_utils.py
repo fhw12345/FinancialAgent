@@ -6,8 +6,11 @@ Used to replace default "New Chat" titles with context-aware titles like "AAPL A
 """
 
 import re
+from typing import Any
 
 import structlog
+
+from .message_content import message_content_to_text
 
 logger = structlog.get_logger()
 
@@ -157,6 +160,20 @@ ACTION_KEYWORDS: dict[str, list[str]] = {
 
 # Maximum title length
 MAX_TITLE_LENGTH = 50
+GENERIC_CHAT_TITLES = frozenset(
+    {
+        "new chat",
+        "chat analysis",
+        "analysis",
+        "stock analysis",
+        "general chat",
+    }
+)
+
+
+def is_generic_chat_title(title: str | None) -> bool:
+    """Return whether a title is a placeholder that may be safely replaced."""
+    return not title or title.strip().casefold() in GENERIC_CHAT_TITLES
 
 
 def extract_symbols(text: str) -> list[str]:
@@ -206,6 +223,36 @@ def detect_action(text: str) -> str:
     """
     text_lower = text.lower()
 
+    if any(
+        keyword in text_lower
+        for keyword in (
+            "deep analysis",
+            "deep dive",
+            "comprehensive analysis",
+            "深度分析",
+            "完整分析",
+            "投资分析",
+            "反方质疑",
+            "多角度",
+        )
+    ):
+        return "Deep Research"
+
+    if any(
+        keyword in text_lower
+        for keyword in (
+            "stock price",
+            "current price",
+            "how much",
+            "trading at",
+            "股价",
+            "现价",
+            "价格",
+            "多少钱",
+        )
+    ):
+        return "Price"
+
     for action, keywords in ACTION_KEYWORDS.items():
         if any(kw in text_lower for kw in keywords):
             return action
@@ -213,9 +260,29 @@ def detect_action(text: str) -> str:
     return "Analysis"
 
 
+def _topic_excerpt(user_message: str) -> str:
+    """Create a compact title from the user's own wording."""
+    text = re.sub(r"\[Context:.*", "", user_message, flags=re.DOTALL)
+    text = re.sub(r"\s+", " ", text).strip()
+    text = re.sub(
+        r"^(?:please\s+|could you\s+|can you\s+|tell me\s+|show me\s+|"
+        r"请(?:帮我)?|帮我|麻烦(?:帮我)?)",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    ).strip()
+    text = text.strip(" \t\r\n#*_`-—:：,，。!?！？")
+    if not text:
+        return "New Chat"
+    if len(text) > MAX_TITLE_LENGTH:
+        return text[: MAX_TITLE_LENGTH - 3].rstrip() + "..."
+    return text
+
+
 def generate_chat_title(
     user_message: str,
     assistant_response: str | None = None,
+    current_symbol: str | None = None,
 ) -> str:
     """
     Generate a meaningful chat title from conversation content.
@@ -242,13 +309,15 @@ def generate_chat_title(
         >>> generate_chat_title("Compare GOOGL and META")
         'GOOGL vs META'
     """
-    # Combine texts for symbol extraction (user message takes priority)
-    combined_text = user_message
-    if assistant_response:
-        combined_text += " " + assistant_response
-
-    # Extract symbols
+    # Explicit symbols take priority, then selected UI context, then symbols
+    # grounded in the assistant's first response.
     symbols = extract_symbols(user_message)
+    if not symbols and current_symbol:
+        normalized_symbol = current_symbol.strip().upper()
+        if normalized_symbol:
+            symbols = [normalized_symbol]
+    if not symbols and assistant_response:
+        symbols = extract_symbols(assistant_response)
 
     # Detect action from user message
     action = detect_action(user_message)
@@ -269,11 +338,9 @@ def generate_chat_title(
         # Single symbol
         title = f"{symbols[0]} {action}"
     else:
-        # No symbols found - use action or fallback
-        if action != "Analysis":
-            title = action
-        else:
-            title = "Chat Analysis"
+        # Preserve the user's topic instead of collapsing unrelated chats into
+        # generic labels such as "Chat Analysis" or "Fundamental Analysis".
+        title = _topic_excerpt(user_message)
 
     # Truncate if needed
     if len(title) > MAX_TITLE_LENGTH:
@@ -282,7 +349,7 @@ def generate_chat_title(
     return title
 
 
-def extract_title_from_response(response: str | None) -> tuple[str | None, str | None]:
+def extract_title_from_response(response: Any) -> tuple[str | None, str | None]:
     """
     Extract LLM-generated title from response and return cleaned content.
 
@@ -303,11 +370,15 @@ def extract_title_from_response(response: str | None) -> tuple[str | None, str |
         >>> extract_title_from_response("No title here")
         (None, 'No title here')
     """
-    if not response:
-        return None, response
+    if response is None:
+        return None, None
+
+    response_text = message_content_to_text(response)
+    if not response_text:
+        return None, response_text
 
     # Search for title pattern at end of response
-    match = CHAT_TITLE_PATTERN.search(response)
+    match = CHAT_TITLE_PATTERN.search(response_text)
 
     if match:
         title = match.group(1).strip()
@@ -317,16 +388,16 @@ def extract_title_from_response(response: str | None) -> tuple[str | None, str |
             title = title[:27] + "..."
 
         # Remove the title line from response
-        cleaned = response[: match.start()].rstrip()
+        cleaned = response_text[: match.start()].rstrip()
 
         logger.info(
             "Extracted LLM-generated title",
             title=title,
-            original_length=len(response),
+            original_length=len(response_text),
             cleaned_length=len(cleaned),
         )
 
         return title, cleaned
 
     logger.debug("No LLM-generated title found in response")
-    return None, response
+    return None, response_text

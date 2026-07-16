@@ -190,7 +190,13 @@ class ChatService:
 
         return updated_chat
 
-    def _generate_title_heuristic(self, user_message: str) -> str:
+    def _generate_title_heuristic(
+        self,
+        user_message: str,
+        *,
+        current_symbol: str | None = None,
+        assistant_response: str | None = None,
+    ) -> str:
         """
         Generate chat title using heuristic (fallback when LLM doesn't provide title).
 
@@ -204,7 +210,11 @@ class ChatService:
         """
         from ..core.utils.title_utils import generate_chat_title
 
-        return generate_chat_title(user_message)
+        return generate_chat_title(
+            user_message,
+            assistant_response=assistant_response,
+            current_symbol=current_symbol,
+        )
 
     async def update_chat_title(self, chat_id: str, title: str) -> Chat | None:
         """
@@ -222,8 +232,33 @@ class ChatService:
             logger.info("Chat title updated", chat_id=chat_id, title=title)
         return updated_chat
 
+    async def _make_unique_title(self, chat_id: str, title: str) -> str:
+        """Add a numeric suffix when another chat already has the title."""
+        if not await self.chat_repo.title_exists(
+            title,
+            exclude_chat_id=chat_id,
+        ):
+            return title
+
+        for sequence in range(2, 100):
+            suffix = f" ({sequence})"
+            candidate = title[: 50 - len(suffix)].rstrip() + suffix
+            if not await self.chat_repo.title_exists(
+                candidate,
+                exclude_chat_id=chat_id,
+            ):
+                return candidate
+
+        return title[:45].rstrip() + " (99+)"
+
     async def update_title_if_new(
-        self, chat_id: str, llm_title: str | None, user_message: str
+        self,
+        chat_id: str,
+        llm_title: str | None,
+        user_message: str,
+        *,
+        current_symbol: str | None = None,
+        assistant_response: str | None = None,
     ) -> str | None:
         """
         Update chat title if it's still "New Chat".
@@ -245,17 +280,28 @@ class ChatService:
             Title that was set, or None if skipped
         """
         # Check if we should update the title
+        from ..core.utils.title_utils import is_generic_chat_title
+
         chat = await self.chat_repo.get(chat_id)
-        if not chat or chat.title != "New Chat":
+        if not chat or not is_generic_chat_title(chat.title):
             return None
 
-        # Use LLM title if available, otherwise fall back to heuristic
-        if llm_title:
+        heuristic_title = self._generate_title_heuristic(
+            user_message,
+            current_symbol=current_symbol,
+            assistant_response=assistant_response,
+        )
+
+        # Reject generic model titles so they do not recreate the original
+        # duplicate-title problem.
+        if llm_title and not is_generic_chat_title(llm_title):
             title = llm_title
             source = "llm"
         else:
-            title = self._generate_title_heuristic(user_message)
+            title = heuristic_title
             source = "heuristic"
+
+        title = await self._make_unique_title(chat_id, title)
 
         # Update chat title
         await self.update_chat_title(chat_id, title)

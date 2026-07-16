@@ -722,6 +722,25 @@ async def test_create_persists_title_zh(chat_repository, mock_collection):
 
 
 @pytest.mark.asyncio
+async def test_title_exists_excludes_current_chat(repository, mock_collection):
+    mock_collection.find_one.return_value = {"_id": "other"}
+
+    result = await repository.title_exists(
+        "SKHY Price",
+        exclude_chat_id="chat_current",
+    )
+
+    assert result is True
+    mock_collection.find_one.assert_awaited_once_with(
+        {
+            "title": "SKHY Price",
+            "chat_id": {"$ne": "chat_current"},
+        },
+        projection={"_id": 1},
+    )
+
+
+@pytest.mark.asyncio
 async def test_update_translates_title_and_preview_when_provided(
     chat_repository, mock_collection
 ):

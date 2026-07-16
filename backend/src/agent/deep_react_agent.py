@@ -22,6 +22,7 @@ from ..api.schemas.deep_agent_events import (
     DeepEventEmitter,
     extract_risk_level,
 )
+from ..core.utils import message_content_to_text
 from ..core.utils.token_utils import extract_token_usage_from_messages
 from .context import AgentContext
 from .debate_types import (
@@ -586,7 +587,7 @@ Be decisive. Use the evidence from both sides. Do not hedge excessively."""
                 config=config,
             )
 
-            verdict_text = verdict_response.content
+            verdict_text = message_content_to_text(verdict_response.content)
             logger.info(
                 "Verdict phase complete",
                 verdict_length=len(verdict_text),

@@ -52,7 +52,7 @@ from ..core.localization import (
     SupportedLanguage,
     get_brief_language_instruction,
 )
-from ..core.utils import extract_token_usage_from_messages
+from ..core.utils import extract_token_usage_from_messages, message_content_to_text
 from ..services.alphavantage_response_formatter import AlphaVantageResponseFormatter
 from ..services.data_manager import DataManager
 from ..services.insights import InsightsCategoryRegistry
@@ -930,7 +930,7 @@ Summary: {result.analysis_summary}"""
 
             # Extract final answer (last message)
             final_message = result["messages"][-1]
-            final_answer = (
+            final_answer = message_content_to_text(
                 final_message.content if hasattr(final_message, "content") else ""
             )
 
@@ -968,7 +968,7 @@ Summary: {result.analysis_summary}"""
                     # Replace result with retry output
                     result = retry_result
                     final_message = result["messages"][-1]
-                    final_answer = (
+                    final_answer = message_content_to_text(
                         final_message.content
                         if hasattr(final_message, "content")
                         else ""

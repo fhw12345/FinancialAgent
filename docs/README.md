@@ -20,6 +20,7 @@ All current documentation describes the local single-user application.
 - [Agent 12-Factors](architecture/agent-12-factors.md)
 - [Unified Agent Workflow Improvement Roadmap](architecture/unified-agent-workflow-roadmap.md)
 - [Deep Agent Symbol Clarification](features/deep-agent-symbol-clarification.md)
+- [Mongo-Authoritative Conversation State](features/mongo-authoritative-conversation-state.md)
 - [Portfolio Agent Architecture](features/portfolio-agent-architecture-refactor.md)
 - [Write-time Translation](features/write-time-translation.md)
 - [Market Insights Trends](features/market-insights-trend-visualization.md)
@@ -33,6 +34,8 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [Duplicate Chat Titles Case Study](case-studies/2026-07-16-duplicate-chat-titles.md)
+- [Structured LLM Content Blocks Case Study](case-studies/2026-07-16-structured-content-block-list.md)
 - [Deep Agent Silent Symbol Fallback Case Study](case-studies/2026-07-15-deep-agent-silent-symbol-fallback.md)
 - [Automatic Routing Windows UTF-8 Case Study](case-studies/2026-07-15-auto-routing-windows-utf8.md)
 - [Versioning](project/versions/README.md)
