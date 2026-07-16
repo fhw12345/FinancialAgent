@@ -1,6 +1,6 @@
 ---
 title: Mongo-Authoritative Conversation State
-status: in-progress
+status: shipped
 version: backend@0.33.0, frontend@0.25.1
 last_updated: 2026-07-16
 owner: maintainer
@@ -17,8 +17,7 @@ related_paths:
 
 ## Implementation Record
 
-The implementation and validation are complete in the current working tree.
-The feature remains `in-progress` until the change set is committed.
+The implementation shipped in commit `9fe9a8e`.
 
 Delivered:
 
@@ -50,10 +49,10 @@ Playwright backend-restart phase: 1 passed
 
 | Evidence | Scenario | Stack | Commit | Result |
 | --- | --- | --- | --- | --- |
-| [Multi-turn context once](assets/uaw-002/01-multi-turn-context-once.png) | Follow-up receives each prior turn exactly once | Real frontend/backend + deterministic LLM stub | pending | PASS |
-| [Reload restoration](assets/uaw-002/02-chat-restored-after-reload.png) | Browser reload restores persisted conversation | Real frontend/backend + deterministic LLM stub | pending | PASS |
-| [Backend restart](assets/uaw-002/03-context-survives-backend-restart.png) | New backend process recalls Mongo history | Two-phase real stack | pending | PASS |
-| [Identical turns retained](assets/uaw-002/04-identical-user-turns-not-dropped.png) | Repeated identical user text is retained by message ID | Real frontend/backend + deterministic LLM stub | pending | PASS |
+| [Multi-turn context once](assets/uaw-002/01-multi-turn-context-once.png) | Follow-up receives each prior turn exactly once | Real frontend/backend + deterministic LLM stub | `9fe9a8e` | PASS |
+| [Reload restoration](assets/uaw-002/02-chat-restored-after-reload.png) | Browser reload restores persisted conversation | Real frontend/backend + deterministic LLM stub | `9fe9a8e` | PASS |
+| [Backend restart](assets/uaw-002/03-context-survives-backend-restart.png) | New backend process recalls Mongo history | Two-phase real stack | `9fe9a8e` | PASS |
+| [Identical turns retained](assets/uaw-002/04-identical-user-turns-not-dropped.png) | Repeated identical user text is retained by message ID | Real frontend/backend + deterministic LLM stub | `9fe9a8e` | PASS |
 
 ## 1. Task Summary
 

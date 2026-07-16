@@ -256,7 +256,7 @@ invocation while also replaying conversation history from MongoDB.
 Detailed implementation plan:
 [UAW-002: Mongo-Authoritative Conversation State](../features/mongo-authoritative-conversation-state.md).
 
-Implementation status: code and browser validation completed; commit pending.
+Implementation status: shipped in commit `9fe9a8e`.
 
 Changing only the thread ID is unsafe because LangGraph state and manually
 replayed Mongo history could duplicate messages.
