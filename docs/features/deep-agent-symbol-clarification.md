@@ -1,8 +1,8 @@
 ---
 title: Deep Agent Symbol Clarification
-status: in-progress
+status: shipped
 version: backend@0.32.0, frontend@0.25.0
-last_updated: 2026-07-15
+last_updated: 2026-07-16
 owner: maintainer
 related_paths:
   - backend/src/agent/deep_agent_adapter.py
@@ -16,8 +16,7 @@ related_paths:
 
 ## Implementation Record
 
-The implementation and validation are complete in the current working tree.
-The feature remains `in-progress` until the change set is committed.
+The implementation shipped in commit `7c17021`.
 
 Delivered:
 
@@ -45,10 +44,10 @@ Full frontend suite: 212 passed
 
 | Evidence | Scenario | Stack | Commit | Result |
 | --- | --- | --- | --- | --- |
-| [Ambiguous candidates](assets/uaw-001/01-ambiguous-symbol-candidates.png) | Multiple validated candidates render without starting research | Mocked SSE | pending | PASS |
-| [Unresolved request](assets/uaw-001/02-unresolved-symbol-real-stack.png) | Unknown company stops before Deep Agent execution | Real local stack | pending | PASS |
-| [Candidate selected](assets/uaw-001/03-candidate-selected-follow-up-ready.png) | Selection updates chart context and prepares a follow-up without submitting | Mocked SSE | pending | PASS |
-| [Restored clarification](assets/uaw-001/04-restored-clarification.png) | Persisted clarification survives reload and chat restoration | Real local stack | pending | PASS |
+| [Ambiguous candidates](assets/uaw-001/01-ambiguous-symbol-candidates.png) | Multiple validated candidates render without starting research | Mocked SSE | `7c17021` | PASS |
+| [Unresolved request](assets/uaw-001/02-unresolved-symbol-real-stack.png) | Unknown company stops before Deep Agent execution | Real local stack | `7c17021` | PASS |
+| [Candidate selected](assets/uaw-001/03-candidate-selected-follow-up-ready.png) | Selection updates chart context and prepares a follow-up without submitting | Mocked SSE | `7c17021` | PASS |
+| [Restored clarification](assets/uaw-001/04-restored-clarification.png) | Persisted clarification survives reload and chat restoration | Real local stack | `7c17021` | PASS |
 
 ## 1. Task Summary
 

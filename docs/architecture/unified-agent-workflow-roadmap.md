@@ -2,7 +2,7 @@
 title: Unified Agent Workflow Improvement Roadmap
 status: planning
 version: n/a
-last_updated: 2026-07-15
+last_updated: 2026-07-16
 owner: maintainer
 related_paths:
   - backend/src/agent/
@@ -224,7 +224,7 @@ can generate a plausible but completely unrelated financial report.
 Detailed implementation plan:
 [UAW-001: Deep Agent Symbol Clarification](../features/deep-agent-symbol-clarification.md).
 
-Implementation status: code and browser validation completed; commit pending.
+Implementation status: shipped in commit `7c17021`.
 
 **Required behavior**
 
