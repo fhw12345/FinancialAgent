@@ -13,6 +13,7 @@ from ..core.localization import (
     SupportedLanguage,
     get_language_instruction,
 )
+from ..core.utils import message_content_to_text
 from .llm_factory import get_llm, resolve_route
 
 logger = structlog.get_logger()
@@ -81,11 +82,7 @@ class StreamingLLMClient:
             output_tokens = 0
             async for chunk in chat.astream(lc_messages):
                 if chunk.content:
-                    text = (
-                        chunk.content
-                        if isinstance(chunk.content, str)
-                        else str(chunk.content)
-                    )
+                    text = message_content_to_text(chunk.content)
                     yield text
                 # Anthropic usage metadata appears on chunks
                 usage = getattr(chunk, "usage_metadata", None) or {}

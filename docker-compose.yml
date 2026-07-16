@@ -62,32 +62,51 @@ services:
       - REDIS_URL=redis://redis:6379/1
       - SYMBOL_RESOLUTION_LLM_ENABLED=false
       - CORS_ORIGINS=["http://host.docker.internal:3001"]
+      - LLM_PROVIDER=anthropic
+      - ANTHROPIC_BASE_URL=http://llm-e2e:8080
+      - ANTHROPIC_API_KEY=dummy
+      - ANTHROPIC_MODEL=e2e-model
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       - mongodb
       - redis
+      - llm-e2e
     volumes:
       - ./backend:/app
 
+  llm-e2e:
+    profiles: ["e2e"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "18082:8080"
+    volumes:
+      - ./backend:/app
+    command: >
+      python -m uvicorn tests.e2e.anthropic_stub:app
+      --host 0.0.0.0 --port 8080
+
   e2e:
     profiles: ["e2e"]
-    image: mcr.microsoft.com/playwright:v1.52.0-noble
+    image: mcr.microsoft.com/playwright:v1.61.1-noble
     working_dir: /work/frontend
     environment:
       - PLAYWRIGHT_BASE_URL=http://host.docker.internal:3001
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - .:/work
-      - e2e_node_modules:/work/frontend/node_modules
+      - ./frontend:/work/frontend
+      - frontend_e2e_deps:/work/frontend/node_modules
+      - ./docs:/work/docs
     depends_on:
       - frontend-e2e
       - backend-e2e
+      - llm-e2e
     command: >
       sh -c "until curl -fsS http://host.docker.internal:18081/api/health;
       do sleep 2; done;
-      npm ci --no-audit --no-fund &&
       npm run test:e2e"
 
   mongodb:
@@ -113,4 +132,3 @@ volumes:
   redis_data:
   backend_deps: # Persist Python packages across restarts
   frontend_e2e_deps:
-  e2e_node_modules:

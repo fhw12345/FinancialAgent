@@ -7,10 +7,12 @@ import pytest
 
 from src.api.chat.streaming.simple_agent import stream_with_simple_agent
 from src.api.schemas.chat_models import ChatRequest
+from src.core.utils.date_utils import utcnow
+from src.models.message import Message
 
 
 class FakeChatAgent:
-    async def stream_chat(self, messages, max_tokens=3000):
+    async def stream_chat(self, messages, max_tokens=3000, language="zh-CN"):
         yield "OK"
 
     def get_last_token_usage(self):
@@ -24,7 +26,19 @@ async def test_async_generator_streams_without_wait_for_type_error():
         chat_id="chat_1",
         ui_state=None,
     )
+    current_message = Message(
+        message_id="msg_current",
+        chat_id="chat_1",
+        role="user",
+        content="Explain P/E",
+        source="user",
+        timestamp=utcnow(),
+    )
+    chat_service.add_message.return_value = current_message
     chat_service.get_chat_messages.return_value = []
+    context_manager = Mock()
+    context_manager.calculate_context_tokens.return_value = 0
+    context_manager.estimate_tokens.return_value = 1
 
     response = await stream_with_simple_agent(
         request=ChatRequest(
@@ -36,7 +50,7 @@ async def test_async_generator_streams_without_wait_for_type_error():
         user_id="local",
         chat_service=chat_service,
         agent=FakeChatAgent(),  # type: ignore[arg-type]
-        context_manager=Mock(),
+        context_manager=context_manager,
         message_repo=AsyncMock(),
         route_metadata={
             "type": "route_selected",

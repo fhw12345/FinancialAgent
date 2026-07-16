@@ -1,7 +1,7 @@
 # Financial Agent Development Makefile
 # Following the coding guide requirements for fmt, test, lint commands
 
-.PHONY: help dev build test test-e2e test-e2e-real lint fmt clean up down logs copilot-reverse
+.PHONY: help dev build test test-e2e test-e2e-real test-e2e-uaw002 lint fmt clean up down logs copilot-reverse
 
 # Default target
 help:
@@ -20,6 +20,7 @@ help:
 	@echo "  test         Run all tests"
 	@echo "  test-e2e     Run deterministic Playwright browser tests"
 	@echo "  test-e2e-real Run real-stack Playwright browser tests"
+	@echo "  test-e2e-uaw002 Run Mongo-authority restart E2E"
 	@echo ""
 	@echo "Building:"
 	@echo "  build        Build Docker images"
@@ -93,10 +94,19 @@ test: test-backend test-frontend
 	@echo "🧪 All tests completed!"
 
 test-e2e:
-	docker compose --profile e2e run --rm e2e sh -c "until curl -fsS http://host.docker.internal:18081/api/health; do sleep 2; done; npm ci --no-audit --no-fund && npm run test:e2e"
+	docker compose --profile e2e run --rm e2e sh -c "until curl -fsS http://host.docker.internal:18081/api/health; do sleep 2; done; npm run test:e2e"
 
 test-e2e-real:
-	docker compose --profile e2e run --rm e2e sh -c "until curl -fsS http://host.docker.internal:18081/api/health; do sleep 2; done; npm ci --no-audit --no-fund && npm run test:e2e:real"
+	docker compose --profile e2e run --rm e2e sh -c "until curl -fsS http://host.docker.internal:18081/api/health; do sleep 2; done; npm run test:e2e:real"
+
+test-e2e-uaw002:
+	docker compose --profile e2e up -d --build llm-e2e backend-e2e frontend-e2e
+	docker compose exec mongodb mongosh --quiet --eval 'db.getSiblingDB("financial_agent_e2e").dropDatabase()'
+	docker compose exec redis redis-cli -n 1 FLUSHDB
+	docker compose --profile e2e restart backend-e2e
+	docker compose --profile e2e run --rm e2e sh -c "until curl -fsS http://host.docker.internal:18081/api/health; do sleep 2; done; UPDATE_E2E_EVIDENCE=true npm run test:e2e:uaw-002:seed"
+	docker compose --profile e2e restart backend-e2e
+	docker compose --profile e2e run --rm e2e sh -c "until curl -fsS http://host.docker.internal:18081/api/health; do sleep 2; done; UPDATE_E2E_EVIDENCE=true npm run test:e2e:uaw-002:resume"
 
 # Building
 build:

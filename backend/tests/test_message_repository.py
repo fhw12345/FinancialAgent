@@ -1,5 +1,6 @@
 """Tests for MessageRepository.create() write-time translation wiring."""
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -29,12 +30,60 @@ def mock_collection():
     collection = Mock()
     collection.insert_one = AsyncMock()
     collection.find_one = AsyncMock()
+    collection.delete_many = AsyncMock()
     return collection
 
 
 @pytest.fixture
 def message_repository(mock_collection, fake_redis):
     return MessageRepository(mock_collection, fake_redis)
+
+
+@pytest.mark.asyncio
+async def test_delete_messages_by_ids(message_repository, mock_collection):
+    mock_collection.delete_many.return_value = type(
+        "DeleteResult",
+        (),
+        {"deleted_count": 2},
+    )()
+
+    deleted = await message_repository.delete_messages_by_ids(
+        chat_id="chat_1",
+        message_ids=["msg_1", "msg_2"],
+    )
+
+    assert deleted == 2
+    mock_collection.delete_many.assert_awaited_once_with(
+        {
+            "chat_id": "chat_1",
+            "message_id": {"$in": ["msg_1", "msg_2"]},
+        }
+    )
+
+
+@pytest.mark.asyncio
+async def test_create_preserves_explicit_logical_timestamp(
+    message_repository,
+    mock_collection,
+):
+    logical_timestamp = datetime(2026, 7, 16, 8, 0, tzinfo=UTC)
+
+    with patch(
+        "src.database.repositories.message_repository.translate_for_persistence",
+        new=AsyncMock(return_value={"content_zh": None}),
+    ):
+        await message_repository.create(
+            MessageCreate(
+                chat_id="chat_1",
+                role="assistant",
+                content="Summary",
+                source="llm",
+                timestamp=logical_timestamp,
+            )
+        )
+
+    inserted = mock_collection.insert_one.await_args.args[0]
+    assert inserted["timestamp"] == logical_timestamp
 
 
 @pytest.mark.asyncio

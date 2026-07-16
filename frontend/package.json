@@ -1,6 +1,6 @@
 {
   "name": "financial-agent-frontend",
-  "version": "0.25.0",
+  "version": "0.25.1",
   "type": "module",
   "description": "Financial Agent frontend (personal local fork)",
   "scripts": {
@@ -13,9 +13,11 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
-    "test:e2e": "playwright test --grep-invert @real-stack",
+    "test:e2e": "playwright test --grep-invert \"@real-stack|@uaw002\"",
     "test:e2e:real": "playwright test --grep @real-stack",
-    "test:e2e:uaw-001": "playwright test e2e/uaw-001-symbol-clarification.spec.ts"
+    "test:e2e:uaw-001": "playwright test e2e/uaw-001-symbol-clarification.spec.ts",
+    "test:e2e:uaw-002:seed": "playwright test e2e/uaw-002-conversation-state.spec.ts --grep @uaw002-seed",
+    "test:e2e:uaw-002:resume": "playwright test e2e/uaw-002-conversation-state.spec.ts --grep @uaw002-resume"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.0",

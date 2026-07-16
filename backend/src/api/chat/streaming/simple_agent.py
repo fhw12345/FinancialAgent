@@ -16,12 +16,9 @@ from ....database.repositories.message_repository import MessageRepository
 from ....models.message import MessageMetadata
 from ....services.chat_service import ChatService
 from ....services.context_window_manager import ContextWindowManager
+from ....services.conversation_context_service import ConversationContextService
 from ...schemas.chat_models import ChatRequest
-from ..helpers import (
-    compact_context_if_needed,
-    get_active_symbol_instruction,
-    get_or_create_chat,
-)
+from ..helpers import get_active_symbol_instruction, get_or_create_chat
 from .helpers import (
     create_chunk_event,
     create_done_event,
@@ -55,7 +52,7 @@ async def stream_with_simple_agent(
                 yield format_sse_event(chat_created_event)
 
             # Save user message
-            await chat_service.add_message(
+            current_message = await chat_service.add_message(
                 chat_id=chat_id,
                 user_id=user_id,
                 role=request.role,
@@ -83,20 +80,9 @@ async def stream_with_simple_agent(
                 current_symbol=request.current_symbol,
             )
 
-            # Get conversation history for context
             messages_list = await chat_service.get_chat_messages(
                 chat_id=chat_id, user_id=user_id
             )
-
-            # ===== CONTEXT COMPACTION =====
-            conversation_history = await compact_context_if_needed(
-                messages=messages_list,
-                chat_id=chat_id,
-                context_manager=context_manager,
-                message_repo=message_repo,
-            )
-
-            # ===== SYMBOL CONTEXT INJECTION =====
             symbol_instruction = await get_active_symbol_instruction(
                 chat_id=chat_id,
                 user_id=user_id,
@@ -104,16 +90,22 @@ async def stream_with_simple_agent(
                 request_symbol=request.current_symbol,
             )
 
-            if (
-                symbol_instruction
-                and conversation_history
-                and conversation_history[-1]["role"] == "user"
-            ):
-                conversation_history[-1]["content"] += symbol_instruction
-                logger.info(
-                    "Symbol context appended to user message (v2)",
-                    chat_id=chat_id,
-                )
+            context_service = ConversationContextService(
+                context_manager=context_manager,
+                message_repo=message_repo,
+            )
+            prepared_context = await context_service.prepare(
+                chat_id=chat_id,
+                messages=messages_list,
+                current_message=current_message,
+                symbol_instruction=symbol_instruction,
+                symbol_source=(
+                    "request"
+                    if request.current_symbol
+                    else "chat_ui_state" if symbol_instruction else None
+                ),
+            )
+            conversation_history = prepared_context.complete_history()
 
             logger.info(
                 "Prepared conversation history (v2)",
@@ -127,6 +119,7 @@ async def stream_with_simple_agent(
                 async with asyncio.timeout(120.0):
                     async for chunk in agent.stream_chat(
                         messages=conversation_history,
+                        language=request.language,
                     ):
                         full_response += chunk
                         yield create_chunk_event(chunk)

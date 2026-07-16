@@ -34,6 +34,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [Mongo Conversation State Authority Case Study](case-studies/2026-07-16-mongo-conversation-state-authority.md)
 - [Duplicate Chat Titles Case Study](case-studies/2026-07-16-duplicate-chat-titles.md)
 - [Structured LLM Content Blocks Case Study](case-studies/2026-07-16-structured-content-block-list.md)
 - [Deep Agent Silent Symbol Fallback Case Study](case-studies/2026-07-15-deep-agent-silent-symbol-fallback.md)

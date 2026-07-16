@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-07-16
+
+### Mongo-authoritative conversational state
+
+- Removed the conversational ReAct agent's in-memory `MemorySaver` and random
+  per-request `thread_id`.
+- Added a canonical `PreparedConversationContext` built from persisted MongoDB
+  messages.
+- Excludes the current user turn by `message_id`, preserving earlier identical
+  user messages.
+- Shared context preparation across direct chat, ReAct chat, and Deep Agent
+  history input.
+- Context compaction now persists the summary before deleting explicit BODY
+  message IDs instead of deleting by a broad keep-recent operation.
+- Added structured context telemetry for history counts, token estimates,
+  compaction, summaries, and symbol source.
+- Added a deterministic Anthropic-compatible E2E model stub and two-phase
+  browser proof across a backend restart.
+
 ## [0.32.1] - 2026-07-16
 
 ### Structured LLM content-block compatibility

@@ -20,12 +20,9 @@ from ....core.utils.title_utils import extract_title_from_response
 from ....database.repositories.message_repository import MessageRepository
 from ....services.chat_service import ChatService
 from ....services.context_window_manager import ContextWindowManager
+from ....services.conversation_context_service import ConversationContextService
 from ...schemas.chat_models import ChatRequest
-from ..helpers import (
-    compact_context_if_needed,
-    get_active_symbol_instruction,
-    get_or_create_chat,
-)
+from ..helpers import get_active_symbol_instruction, get_or_create_chat
 from .helpers import (
     create_chunk_event,
     create_done_event,
@@ -74,7 +71,7 @@ async def stream_with_react_agent(
                 "Saving message with tool_call",
                 has_tool_call=request.tool_call is not None,
             )
-            await chat_service.add_message(
+            current_message = await chat_service.add_message(
                 chat_id=chat_id,
                 user_id=user_id,
                 role=request.role,
@@ -103,20 +100,6 @@ async def stream_with_react_agent(
 
             messages = await chat_service.get_chat_messages(chat_id, user_id)
 
-            conversation_history = await compact_context_if_needed(
-                messages=messages,
-                chat_id=chat_id,
-                context_manager=context_manager,
-                message_repo=message_repo,
-            )
-
-            if (
-                conversation_history
-                and conversation_history[-1]["role"] == "user"
-                and conversation_history[-1]["content"] == request.message
-            ):
-                conversation_history = conversation_history[:-1]
-
             symbol_instruction = await get_active_symbol_instruction(
                 chat_id=chat_id,
                 user_id=user_id,
@@ -124,21 +107,27 @@ async def stream_with_react_agent(
                 request_symbol=request.current_symbol,
             )
 
-            user_message_with_context = request.message
-            if symbol_instruction:
-                user_message_with_context = request.message + symbol_instruction
-                logger.info(
-                    "Symbol context appended to user message (v3)",
-                    chat_id=chat_id,
-                    original_length=len(request.message),
-                    enriched_length=len(user_message_with_context),
-                )
+            context_service = ConversationContextService(
+                context_manager=context_manager,
+                message_repo=message_repo,
+            )
+            prepared_context = await context_service.prepare(
+                chat_id=chat_id,
+                messages=messages,
+                current_message=current_message,
+                symbol_instruction=symbol_instruction,
+                symbol_source=(
+                    "request"
+                    if request.current_symbol
+                    else "chat_ui_state" if symbol_instruction else None
+                ),
+            )
 
             logger.info(
                 "Conversation history prepared for agent",
                 chat_id=chat_id,
                 total_messages=len(messages),
-                conversation_history_count=len(conversation_history),
+                conversation_history_count=prepared_context.history_message_count,
                 elapsed_ms=get_elapsed_ms(),
             )
 
@@ -198,11 +187,12 @@ async def stream_with_react_agent(
                 agent_task = asyncio.create_task(
                     asyncio.wait_for(
                         agent.ainvoke(
-                            user_message=user_message_with_context,
-                            conversation_history=conversation_history,
+                            user_message=prepared_context.current_message,
+                            conversation_history=prepared_context.history,
                             debug=debug,
                             additional_callbacks=[tool_callback],
                             language=request.language,
+                            chat_id=chat_id,
                         ),
                         timeout=120.0,
                     )

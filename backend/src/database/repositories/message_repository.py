@@ -83,7 +83,7 @@ class MessageRepository:
             content=message_create.content,
             content_zh=translations.get("content_zh"),
             source=message_create.source,
-            timestamp=utcnow(),
+            timestamp=message_create.timestamp or utcnow(),
             metadata=message_create.metadata,
             tool_call=message_create.tool_call,
         )
@@ -207,6 +207,30 @@ class MessageRepository:
             messages.append(Message(**message_dict))
 
         return messages
+
+    async def delete_messages_by_ids(
+        self,
+        *,
+        chat_id: str,
+        message_ids: list[str],
+    ) -> int:
+        """Delete an explicit set of messages after summary persistence."""
+        if not message_ids:
+            return 0
+        result = await self.collection.delete_many(
+            {
+                "chat_id": chat_id,
+                "message_id": {"$in": message_ids},
+            }
+        )
+        deleted_count = int(result.deleted_count)
+        logger.info(
+            "Messages deleted by ID",
+            chat_id=chat_id,
+            requested_count=len(message_ids),
+            deleted_count=deleted_count,
+        )
+        return deleted_count
 
     async def delete_by_chat(self, chat_id: str) -> int:
         """

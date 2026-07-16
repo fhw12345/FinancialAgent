@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.1] - 2026-07-16
+
+### Restored-chat state synchronization
+
+- Binds the selected chat ID before asynchronously restoring messages.
+- Disables the composer during restoration so a follow-up cannot accidentally
+  create a new chat with `chat_id=null`.
+- Ignores Playwright reports and test results in the Vite polling watcher,
+  preventing browser tests from being reloaded by their own artifacts.
+- Added two-phase Playwright coverage for multi-turn context, browser reload,
+  repeated identical turns, and backend restart continuity.
+
 ## [0.25.0] - 2026-07-15
 
 ### Deep-research symbol clarification

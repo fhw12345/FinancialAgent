@@ -16,6 +16,7 @@ import structlog
 import tiktoken
 
 from src.core.localization import ANALYSIS_OUTPUT_LANG
+from src.core.utils import message_content_to_text
 from src.core.utils.date_utils import utcnow
 
 from ..core.config import Settings
@@ -240,8 +241,8 @@ LANGUAGE REQUIREMENT: Respond in {"English" if ANALYSIS_OUTPUT_LANG == "en" else
                     [{"role": "user", "content": summarization_prompt}]
                 )
 
-                summary_text = (
-                    summary.content if hasattr(summary, "content") else str(summary)
+                summary_text = message_content_to_text(
+                    summary.content if hasattr(summary, "content") else summary
                 )
 
                 logger.info(

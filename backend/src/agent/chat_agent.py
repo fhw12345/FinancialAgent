@@ -5,7 +5,8 @@ from collections.abc import AsyncGenerator
 import structlog
 
 from ..core.config import Settings
-from .llm_client import FINANCIAL_AGENT_SYSTEM_PROMPT, StreamingLLMClient, TokenUsage
+from ..core.localization import DEFAULT_LANGUAGE, SupportedLanguage
+from .llm_client import StreamingLLMClient, TokenUsage, get_system_prompt_with_language
 
 logger = structlog.get_logger()
 
@@ -26,7 +27,6 @@ class ChatAgent:
             settings: Application settings
         """
         self.settings = settings
-        self.system_prompt = FINANCIAL_AGENT_SYSTEM_PROMPT
         self.client = StreamingLLMClient()
 
         logger.info("ChatAgent initialized")
@@ -35,6 +35,7 @@ class ChatAgent:
         self,
         messages: list[dict[str, str]],
         max_tokens: int = 3000,
+        language: SupportedLanguage = DEFAULT_LANGUAGE,
     ) -> AsyncGenerator[str, None]:
         """
         Stream LLM response for conversation history.
@@ -49,7 +50,10 @@ class ChatAgent:
         """
         # Prepare messages with system prompt
         conversation_history = [
-            {"role": "system", "content": self.system_prompt}
+            {
+                "role": "system",
+                "content": get_system_prompt_with_language(language),
+            }
         ] + messages
 
         logger.info(

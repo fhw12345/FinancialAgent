@@ -9,6 +9,7 @@ const evidenceDir = path.resolve(
   "assets",
   "uaw-001",
 );
+const updateEvidence = process.env.UPDATE_E2E_EVIDENCE === "true";
 
 const candidates = [
   {
@@ -127,9 +128,11 @@ test("ambiguous symbols render validated candidates", async ({ page }) => {
   await expect(page.getByTestId("deep-agent-accordion")).toHaveCount(0);
   await expect(page.getByTestId("chat-error")).toHaveCount(0);
 
-  await card.screenshot({
-    path: path.join(evidenceDir, "01-ambiguous-symbol-candidates.png"),
-  });
+  if (updateEvidence) {
+    await card.screenshot({
+      path: path.join(evidenceDir, "01-ambiguous-symbol-candidates.png"),
+    });
+  }
 });
 
 test("candidate selection updates context without auto-submitting", async ({
@@ -155,10 +158,12 @@ test("candidate selection updates context without auto-submitting", async ({
   );
   expect(streamRequests).toBe(1);
 
-  await page.screenshot({
-    path: path.join(evidenceDir, "03-candidate-selected-follow-up-ready.png"),
-    fullPage: false,
-  });
+  if (updateEvidence) {
+    await page.screenshot({
+      path: path.join(evidenceDir, "03-candidate-selected-follow-up-ready.png"),
+      fullPage: false,
+    });
+  }
 });
 
 test("unresolved request stops before research and restores @real-stack", async ({
@@ -191,9 +196,11 @@ test("unresolved request stops before research and restores @real-stack", async 
   await expect(page.getByTestId("deep-agent-accordion")).toHaveCount(0);
   await expect(page.getByTestId("chat-error")).toHaveCount(0);
 
-  await card.screenshot({
-    path: path.join(evidenceDir, "02-unresolved-symbol-real-stack.png"),
-  });
+  if (updateEvidence) {
+    await card.screenshot({
+      path: path.join(evidenceDir, "02-unresolved-symbol-real-stack.png"),
+    });
+  }
 
   const chatIdText = await page
     .locator("[data-chat-scroll] .font-mono")
@@ -209,7 +216,9 @@ test("unresolved request stops before research and restores @real-stack", async 
     timeout: 15_000,
   });
 
-  await page.getByTestId("symbol-clarification").screenshot({
-    path: path.join(evidenceDir, "04-restored-clarification.png"),
-  });
+  if (updateEvidence) {
+    await page.getByTestId("symbol-clarification").screenshot({
+      path: path.join(evidenceDir, "04-restored-clarification.png"),
+    });
+  }
 });

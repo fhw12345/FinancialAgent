@@ -115,7 +115,7 @@ def get_react_agent(
     This agent uses LangGraph's create_react_agent SDK for:
     - Autonomous tool chaining (LLM decides sequence)
     - Compressed tool results (2-3 lines vs 20KB dicts)
-    - Built-in message history via MemorySaver
+    - MongoDB-backed conversation history supplied per request
     - Local market-data, analysis, insights, and options tools
 
     Key difference from get_financial_analysis_agent:

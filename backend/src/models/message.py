@@ -133,6 +133,7 @@ class MessageCreate(BaseModel):
     source: Literal["user", "llm", "tool"]
     metadata: MessageMetadata = MessageMetadata()
     tool_call: ToolCall | None = None
+    timestamp: datetime | None = None
 
 
 class Message(BaseModel):

@@ -249,12 +249,14 @@ Implementation status: shipped in commit `7c17021`.
 
 **Problem**
 
-The ReAct agent creates a new LangGraph `thread_id` for each invocation while
-also replaying conversation history from MongoDB. `MemorySaver` therefore does
-not provide cross-turn continuity even though the code describes it as memory.
+Before UAW-002, the ReAct agent created a new LangGraph `thread_id` for each
+invocation while also replaying conversation history from MongoDB.
+`MemorySaver` therefore did not provide cross-turn continuity.
 
 Detailed implementation plan:
 [UAW-002: Mongo-Authoritative Conversation State](../features/mongo-authoritative-conversation-state.md).
+
+Implementation status: code and browser validation completed; commit pending.
 
 Changing only the thread ID is unsafe because LangGraph state and manually
 replayed Mongo history could duplicate messages.

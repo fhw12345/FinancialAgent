@@ -1,8 +1,8 @@
 ---
 title: The 12-Factor Agent Playbook
 status: shipped
-version: n/a
-last_updated: 2026-05-16
+version: backend@0.33.0
+last_updated: 2026-07-16
 owner: maintainer
 related_paths:
   - backend/src/agent/
@@ -10,13 +10,16 @@ related_paths:
 
 # The 12-Factor Agent Playbook
 
-This guide synthesizes the 12-Factor philosophy with modern LangChain tools (LangGraph, LCEL) to create reliable, observable, and scalable AI agents.
+This guide applies 12-Factor principles to the current hybrid system. LangGraph
+is used where a tool loop or explicit research graph adds value; deterministic
+services and direct chat are not forced into graphs.
 
 ## Executive Summary
 
 1. **Adopt the Philosophy**: Start with the 12-Factor Agent principles as your architectural North Star.
 2. **Instrument First**: Use `structlog` structured logs from day one for observability. Don't fly blind.
-3. **Design for Control**: Use **LangGraph** to define an explicit state machine, not a single LLM loop. You own the control flow.
+3. **Design for Control**: Use explicit Python orchestration, deterministic
+   services, or LangGraph according to the workflow lifecycle.
 4. **Build Small, Compose Big**: Create small, specialized tools and agents using **LCEL** and orchestrate them within your LangGraph.
 5. **Deploy as a Stateless Service**: Wrap your agent in a standard API to make it triggerable and scalable.
 
@@ -40,13 +43,20 @@ This is your first and most critical step.
 
 This is where you design the skeleton of your agent using modern LangChain tools.
 
-### 4. Design as a Graph, Not a Loop (Factor 8: Own Your Control Flow)
-- **Action**: Choose **LangGraph** as your core architecture. Sketch out your agent's logic as a state diagram with nodes (steps) and edges (transitions).
-- **Why**: This forces you to define the agent's behavior explicitly. You decide the possible paths of execution, rather than letting the LLM dictate the flow, which is the primary cause of unreliable agent behavior.
+### 4. Choose Explicit Control Flow (Factor 8: Own Your Control Flow)
+- **Action**: Use LangGraph for the ReAct tool loop and Deep Research state
+  graph, and ordinary typed Python for deterministic portfolio and API
+  orchestration.
+- **Why**: The implementation mechanism should match the lifecycle. A graph is
+  useful for iterative or resumable transitions, but unnecessary graph nodes
+  make deterministic logic harder to test.
 
-### 5. Define a Unified State Object (Factor 5: Unify State)
-- **Action**: Create a typed data class (e.g., using Pydantic) that represents the entire state of your graph. This object will be passed between every node.
-- **Why**: This creates a single, predictable source of truth. The state should contain everything: message history, intermediate results, user information, and error counts. Each node's job is to read from and update this state object.
+### 5. Define an Authoritative State Owner (Factor 5: Unify State)
+- **Action**: MongoDB owns conversational messages and compacted summaries.
+  Per-request ReAct graph state is transient. Future Research Job checkpoints
+  will own only resumable research execution state.
+- **Why**: One explicit owner prevents Mongo history from being duplicated with
+  an unrelated graph checkpointer.
 
 ### 6. Build Small, Composable Tools (Factor 10: Small Agents)
 - **Action**: For each node in your graph that performs an action, build a small, self-contained chain using **LCEL (`|`)**. This chain might be a RAG pipeline, a tool-calling function, or a simple prompt-LLM call.

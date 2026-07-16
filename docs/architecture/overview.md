@@ -81,6 +81,11 @@ LangChain tools. A full initialization currently registers approximately 24
 tools covering technical analysis, fundamentals, quotes, news, market
 insights, options PCR, and insider data.
 
+Conversational history is owned by MongoDB. Each request persists its current
+user message, prepares token-bounded prior history by message ID, and invokes a
+stateless per-request ReAct graph. LangGraph manages the tool loop within that
+request; it is not used as the cross-request conversation store.
+
 `llm_factory.py` selects an Anthropic-compatible endpoint with
 `LLM_PROVIDER=maestro|anthropic|copilot_reverse`. Agent Maestro keeps the
 cross-vendor role mapping. Direct Anthropic uses one configured Anthropic model.

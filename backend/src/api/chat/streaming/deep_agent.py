@@ -19,11 +19,9 @@ from ....core.utils.title_utils import extract_title_from_response
 from ....database.repositories.message_repository import MessageRepository
 from ....services.chat_service import ChatService
 from ....services.context_window_manager import ContextWindowManager
+from ....services.conversation_context_service import ConversationContextService
 from ...schemas.chat_models import ChatRequest
-from ..helpers import (
-    compact_context_if_needed,
-    get_or_create_chat,
-)
+from ..helpers import get_or_create_chat
 from .helpers import (
     create_chunk_event,
     create_clarification_event,
@@ -74,7 +72,7 @@ async def stream_with_deep_agent(
 
             yield create_thinking_event("initializing", chat_id)
 
-            await chat_service.add_message(
+            current_message = await chat_service.add_message(
                 chat_id=chat_id,
                 user_id=user_id,
                 role=request.role,
@@ -96,18 +94,16 @@ async def stream_with_deep_agent(
             )
 
             messages = await chat_service.get_chat_messages(chat_id, user_id)
-            conversation_history = await compact_context_if_needed(
-                messages=messages,
-                chat_id=chat_id,
+            context_service = ConversationContextService(
                 context_manager=context_manager,
                 message_repo=message_repo,
             )
-            if (
-                conversation_history
-                and conversation_history[-1]["role"] == "user"
-                and conversation_history[-1]["content"] == request.message
-            ):
-                conversation_history = conversation_history[:-1]
+            prepared_context = await context_service.prepare(
+                chat_id=chat_id,
+                messages=messages,
+                current_message=current_message,
+            )
+            conversation_history = prepared_context.history
 
             yield create_latency_event("context_prepared", get_elapsed_ms())
             yield create_thinking_event("deep_analysis", chat_id)

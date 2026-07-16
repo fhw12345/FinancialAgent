@@ -7,7 +7,7 @@ SDK for autonomous tool chaining without rigid routing logic.
 Key Features:
 - Auto-loop: LLM dynamically decides tool sequence
 - Tool compression: Results limited to 2-3 lines for context efficiency
-- Message history: MemorySaver checkpointer for conversation continuity
+- Message history: MongoDB history supplied explicitly per invocation
 - Langfuse integration: Automatic tracing via callback handler
 
 Architecture:
@@ -21,7 +21,7 @@ Architecture:
 Key Benefits:
 - LLM-driven routing (autonomous tool selection)
 - Automatic tool chaining based on context
-- Built-in message history management (MemorySaver)
+- Stateless cross-request execution with explicit persisted history
 - Compressed tool results (99.5% token reduction)
 - Minimal code footprint (~300 lines)
 
@@ -34,14 +34,12 @@ Design Philosophy:
 import asyncio
 import random
 import time
-import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import structlog
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import tool
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 
 from ..core.analysis.fibonacci.analyzer import FibonacciAnalyzer
@@ -256,7 +254,8 @@ class FinancialAnalysisReActAgent:
         insights_tool_count = len(insights_tools)
         pcr_tool_count = len(pcr_tools)
 
-        # Create ReAct agent with memory.
+        # Create a per-invocation ReAct graph. Cross-request conversation
+        # history is prepared from MongoDB and passed explicitly to ainvoke().
         #
         # Previously used a callable `prompt=_dynamic_system_prompt` to inject
         # fresh date on each invocation. langgraph 0.x's create_react_agent
@@ -267,8 +266,6 @@ class FinancialAnalysisReActAgent:
         # call tools (observed Apr 2026). We now pass a static string built at
         # init; date drift across a 24h cycle is acceptable since the agent
         # restarts at deploy time.
-        self.checkpointer = MemorySaver()
-
         from datetime import timedelta
         from zoneinfo import ZoneInfo
 
@@ -281,7 +278,6 @@ class FinancialAnalysisReActAgent:
         self.agent = create_react_agent(
             self.llm,
             self.tools,
-            checkpointer=self.checkpointer,
             prompt=_system_prompt_str,  # Static string — see comment above
         )
 
@@ -723,6 +719,7 @@ Summary: {result.analysis_summary}"""
         debug: bool = False,
         additional_callbacks: list | None = None,
         language: SupportedLanguage = DEFAULT_LANGUAGE,
+        chat_id: str | None = None,
     ) -> dict[str, Any]:
         """
         Invoke ReAct agent with user message and conversation history.
@@ -744,12 +741,9 @@ Summary: {result.analysis_summary}"""
         Returns:
             Agent response with messages and final answer
         """
-        # Generate trace ID and thread ID with UUID for guaranteed uniqueness
-        # UUID suffix prevents collisions in concurrent execution (e.g., parallel market mover analysis)
+        # Generate a unique execution trace. Conversation identity and history
+        # are owned by MongoDB through chat_id and the supplied history.
         trace_id = f"trace_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
-        thread_id = (
-            f"thread_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
-        )
 
         # ===== LANGFUSE LATENCY TRACKING (Story 1.4) =====
         # Track agent invocation latency with custom trace
@@ -762,7 +756,7 @@ Summary: {result.analysis_summary}"""
                     name="react_agent_invocation",
                     input={"user_message": user_message[:500]},  # Truncate for storage
                     metadata={
-                        "thread_id": thread_id,
+                        "chat_id": chat_id,
                         "language": language,
                         "history_length": (
                             len(conversation_history) if conversation_history else 0
@@ -778,7 +772,7 @@ Summary: {result.analysis_summary}"""
         logger.info(
             "ReAct agent invocation started",
             trace_id=trace_id,
-            thread_id=thread_id,
+            chat_id=chat_id,
             user_message_preview=user_message[:100],
         )
 
@@ -806,7 +800,6 @@ Summary: {result.analysis_summary}"""
 
         # Invoke agent with config
         config = {
-            "configurable": {"thread_id": thread_id},
             "recursion_limit": 50,  # Allow up to 50 tool calls for complex analyses (default: 25)
         }
 

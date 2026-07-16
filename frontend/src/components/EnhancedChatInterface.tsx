@@ -294,9 +294,10 @@ export function EnhancedChatInterface() {
   }, [message, chatMutation, deepDispatch]);
 
   const isRestoringRef = useRef(false);
+  const [isRestoringChat, setIsRestoringChat] = useState(false);
 
   const handleChatSelect = useCallback(
-    async (chatId: string) => {
+    async (selectedChatId: string) => {
       // Prevent concurrent restoration requests
       if (isRestoringRef.current) {
         console.log("Skipping chat select: restoration in progress");
@@ -304,10 +305,12 @@ export function EnhancedChatInterface() {
       }
 
       isRestoringRef.current = true;
+      setIsRestoringChat(true);
+      setChatId(selectedChatId);
       try {
         deepDispatch({ type: "RESET" });
 
-        const restoredMessages = await restoreChat(chatId);
+        const restoredMessages = await restoreChat(selectedChatId);
         setHasMoreMessages(true);
 
         // Replay deep events from the most recent deep analysis message
@@ -331,12 +334,15 @@ export function EnhancedChatInterface() {
                   }
                 : null),
           );
+        } else {
+          setChatId(null);
         }
       } finally {
         isRestoringRef.current = false;
+        setIsRestoringChat(false);
       }
     },
-    [restoreChat, deepDispatch],
+    [restoreChat, deepDispatch, setChatId],
   );
 
   const handleNewChat = useCallback(() => {
@@ -486,7 +492,9 @@ export function EnhancedChatInterface() {
                 <ChatMessages
                   messages={messages}
                   isAnalysisPending={
-                    chatMutation.isPending || buttonMutation.isPending
+                    isRestoringChat ||
+                    chatMutation.isPending ||
+                    buttonMutation.isPending
                   }
                   chatId={chatId}
                   onLoadMore={handleLoadMore}
@@ -525,7 +533,11 @@ export function EnhancedChatInterface() {
                   message={message}
                   setMessage={setMessage}
                   onSendMessage={handleSendMessage}
-                  isPending={chatMutation.isPending || buttonMutation.isPending}
+                  isPending={
+                    isRestoringChat ||
+                    chatMutation.isPending ||
+                    buttonMutation.isPending
+                  }
                   currentSymbol={currentSymbol}
                 />
               </div>

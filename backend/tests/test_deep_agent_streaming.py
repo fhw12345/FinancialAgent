@@ -8,6 +8,8 @@ import pytest
 
 from src.api.chat.streaming.deep_agent import stream_with_deep_agent
 from src.api.schemas.chat_models import ChatRequest
+from src.core.utils.date_utils import utcnow
+from src.models.message import Message
 from src.models.symbol_resolution import SymbolCandidate, SymbolResolution
 
 
@@ -19,10 +21,32 @@ def parse_events(output: str) -> list[dict]:
     return events
 
 
+def current_user_message(chat_id: str, content: str) -> Message:
+    return Message(
+        message_id=f"msg_{chat_id}",
+        chat_id=chat_id,
+        role="user",
+        content=content,
+        source="user",
+        timestamp=utcnow(),
+    )
+
+
+def context_manager() -> Mock:
+    manager = Mock()
+    manager.calculate_context_tokens.return_value = 0
+    manager.estimate_tokens.return_value = 1
+    return manager
+
+
 @pytest.mark.asyncio
 async def test_unresolved_symbol_is_persisted_and_stops_before_research():
     chat_service = AsyncMock()
     chat_service.get_chat.return_value = SimpleNamespace(chat_id="chat_1")
+    chat_service.add_message.return_value = current_user_message(
+        "chat_1",
+        "请完整分析我昨天看到的那家公司",
+    )
     chat_service.get_chat_messages.return_value = []
 
     agent = SimpleNamespace(
@@ -46,7 +70,7 @@ async def test_unresolved_symbol_is_persisted_and_stops_before_research():
         user_id="local",
         chat_service=chat_service,
         agent=agent,
-        context_manager=Mock(),
+        context_manager=context_manager(),
         message_repo=AsyncMock(),
         route_metadata={
             "type": "route_selected",
@@ -85,6 +109,10 @@ async def test_unresolved_symbol_is_persisted_and_stops_before_research():
 async def test_ambiguous_symbol_streams_validated_candidates():
     chat_service = AsyncMock()
     chat_service.get_chat.return_value = SimpleNamespace(chat_id="chat_2")
+    chat_service.add_message.return_value = current_user_message(
+        "chat_2",
+        "Deeply analyze Alpha",
+    )
     chat_service.get_chat_messages.return_value = []
     agent = SimpleNamespace(
         resolve_symbol=AsyncMock(
@@ -119,7 +147,7 @@ async def test_ambiguous_symbol_streams_validated_candidates():
         user_id="local",
         chat_service=chat_service,
         agent=agent,
-        context_manager=Mock(),
+        context_manager=context_manager(),
         message_repo=AsyncMock(),
     )
 
@@ -139,6 +167,10 @@ async def test_ambiguous_symbol_streams_validated_candidates():
 async def test_resolved_symbol_continues_to_deep_agent():
     chat_service = AsyncMock()
     chat_service.get_chat.return_value = SimpleNamespace(chat_id="chat_3")
+    chat_service.add_message.return_value = current_user_message(
+        "chat_3",
+        "Deeply analyze TSLA",
+    )
     chat_service.get_chat_messages.return_value = []
     agent = SimpleNamespace(
         resolve_symbol=AsyncMock(
@@ -179,7 +211,7 @@ async def test_resolved_symbol_continues_to_deep_agent():
         user_id="local",
         chat_service=chat_service,
         agent=agent,
-        context_manager=Mock(),
+        context_manager=context_manager(),
         message_repo=AsyncMock(),
     )
 
