@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-07-17
+
+### Multi-turn Deep Research context
+
+- Added bounded `DeepResearchContext` derived from Mongo-authoritative prior
+  turns.
+- Extracts and preserves validated symbol, prior thesis, investment horizon,
+  risk tolerance, and explicit research constraints.
+- Injects the shared context into technical, news, financial, adversarial
+  debate, rebuttal, and verdict prompts.
+- Allows validated prior-symbol reuse only for deictic follow-ups.
+- Prioritizes explicit current-request tickers over selected UI and historical
+  symbols.
+- Distinguishes ticker intent from financial acronyms while preserving valid
+  word-like tickers such as `LOW`.
+- Preserves the newest turns under context pressure and applies current-turn
+  horizon, risk, and focus constraints before historical values.
+- Clears prior thesis text when the resolved symbol changes, carrying structured
+  settings across symbols only when the user explicitly requests reuse.
+- Skips conflicting specialists for technical-only,
+  valuation/fundamental-only, and exclude-news requests.
+- Persists compact context metadata with Deep assistant messages.
+- Distinguishes review intensity such as “challenge aggressively” from the
+  user's investment risk tolerance.
+- Added unit, adapter, real LangGraph prompt, handler, and real-stack browser
+  coverage.
+
 ## [0.33.0] - 2026-07-16
 
 ### Mongo-authoritative conversational state

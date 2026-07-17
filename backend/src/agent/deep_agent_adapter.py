@@ -22,7 +22,9 @@ import structlog
 from ..core.localization import DEFAULT_LANGUAGE, SupportedLanguage
 from ..core.utils import message_content_to_text
 from ..models.symbol_resolution import SymbolResolution
+from ..services.symbol_search_service import symbol_comparison_key
 from .deep_react_agent import DeepReActAgent
+from .deep_research_context import DeepResearchContext
 from .symbol_resolver import SymbolResolver
 
 logger = structlog.get_logger()
@@ -48,12 +50,46 @@ class DeepAgentAdapter:
         *,
         user_message: str,
         current_symbol: str | None,
+        conversation_history: list[dict[str, str]] | None = None,
     ) -> SymbolResolution:
         """Resolve and validate the requested symbol before research starts."""
-        return await self.symbol_resolver.resolve(
+        resolution = await self.symbol_resolver.resolve(
             message=user_message,
             current_symbol=current_symbol,
         )
+        research_context = DeepResearchContext.from_history(
+            current_request=user_message,
+            conversation_history=conversation_history,
+        )
+        if (
+            resolution.status == "unresolved"
+            and resolution.reason_code == "symbol_missing"
+            and current_symbol is None
+            and research_context.allows_symbol_reuse
+        ):
+            historical_resolutions: list[SymbolResolution] = []
+            for historical_symbol in research_context.symbol_candidates:
+                historical_resolution = await self.symbol_resolver.resolve(
+                    message=historical_symbol,
+                    current_symbol=None,
+                )
+                if historical_resolution.status == "resolved":
+                    historical_resolutions.append(historical_resolution)
+            if len(historical_resolutions) == 1:
+                return historical_resolutions[0]
+            if len(historical_resolutions) > 1:
+                return SymbolResolution(
+                    status="ambiguous",
+                    source="explicit_ticker",
+                    reason_code="ambiguous_historical_symbol",
+                    confidence=max(item.confidence for item in historical_resolutions),
+                    candidates=[
+                        item.candidates[0]
+                        for item in historical_resolutions
+                        if item.candidates
+                    ][:5],
+                )
+        return resolution
 
     async def ainvoke(
         self,
@@ -70,13 +106,13 @@ class DeepAgentAdapter:
         """Invoke deep agent with ainvoke-compatible interface.
 
         Symbol resolution priority:
-        1. current_symbol from frontend UI state (instant)
-        2. Regex match for explicit tickers in message (instant)
+        1. Explicit ticker intent in the current message (instant)
+        2. current_symbol from frontend UI state (instant)
         3. LLM extraction for company names in any language (~1s)
 
         Args:
             user_message: User's query (e.g., "Analyze TSLA")
-            conversation_history: Previous messages (logged, not forwarded to deep agent)
+            conversation_history: Mongo-authoritative prior messages
             debug: Enable debug logging
             additional_callbacks: Extra callbacks (not yet supported)
             language: Response language
@@ -95,16 +131,23 @@ class DeepAgentAdapter:
             resolution = await self.resolve_symbol(
                 user_message=user_message,
                 current_symbol=current_symbol,
+                conversation_history=conversation_history,
             )
             if resolution.status != "resolved" or resolution.symbol is None:
                 raise ValueError("Deep Agent requires a resolved symbol")
             symbol = resolution.symbol
 
-        if conversation_history:
-            logger.info(
-                "DeepAgentAdapter received conversation history (not forwarded to deep agent)",
-                history_length=len(conversation_history),
-            )
+        research_context = DeepResearchContext.from_history(
+            current_request=user_message,
+            conversation_history=conversation_history,
+        )
+        history_target_matches = (
+            research_context.confirmed_symbol is not None
+            and symbol_comparison_key(research_context.confirmed_symbol)
+            == symbol_comparison_key(symbol)
+        )
+        if conversation_history and not history_target_matches:
+            research_context = research_context.for_new_symbol()
 
         logger.info(
             "DeepAgentAdapter invocation started",
@@ -122,6 +165,7 @@ class DeepAgentAdapter:
                 enable_debate=True,
                 on_event=on_event,
                 user_message=user_message,
+                research_context=research_context,
             )
 
             # Extract final answer from research report or last message
@@ -160,6 +204,7 @@ class DeepAgentAdapter:
                 "output_tokens": result.get("output_tokens", 0),
                 "total_tokens": result.get("total_tokens", 0),
                 "agent_duration_ms": duration_ms,
+                "research_context": research_context.metadata(symbol=symbol),
             }
 
         except Exception as e:

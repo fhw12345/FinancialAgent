@@ -111,6 +111,7 @@ async def stream_with_deep_agent(
             resolution = await agent.resolve_symbol(
                 user_message=request.message,
                 current_symbol=request.current_symbol,
+                conversation_history=conversation_history,
             )
             if resolution.status != "resolved" or resolution.symbol is None:
                 has_candidates = bool(resolution.candidates)
@@ -340,6 +341,7 @@ async def stream_with_deep_agent(
                     "raw_data": {
                         "deep_events": collected_events,
                         "route_selected": route_metadata,
+                        "research_context": result.get("research_context"),
                     },
                 },
             )

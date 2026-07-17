@@ -2,7 +2,7 @@
 title: Unified Agent Workflow Improvement Roadmap
 status: planning
 version: n/a
-last_updated: 2026-07-16
+last_updated: 2026-07-17
 owner: maintainer
 related_paths:
   - backend/src/agent/
@@ -293,6 +293,11 @@ for the long-running Research Job, where resume provides clear value.
 The deep adapter accepts `conversation_history` but does not pass it into the
 research graph. Follow-up questions therefore lose prior assumptions,
 constraints, and conclusions.
+
+Detailed implementation plan:
+[UAW-003: Deep Research Conversation Context](../features/deep-research-conversation-context.md).
+
+Implementation status: code and browser validation completed; commit pending.
 
 **Required behavior**
 

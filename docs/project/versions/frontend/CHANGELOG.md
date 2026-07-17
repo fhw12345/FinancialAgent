@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.2] - 2026-07-17
+
+### Deep Research context E2E
+
+- Added a dedicated real frontend/backend Deep-context Playwright profile.
+- Isolates the UAW-003 runner from unrelated E2E services and allows enough
+  test-level time for three streamed turns plus browser reload.
+- Covers prior-thesis challenge, horizon/risk retention, browser reload, and
+  persisted context metadata.
+- Curated four screenshot artifacts under
+  `docs/features/assets/uaw-003/`.
+- Prevents ordinary regression runs from overwriting curated screenshot
+  evidence unless `UPDATE_E2E_EVIDENCE=true`.
+
 ## [0.25.1] - 2026-07-16
 
 ### Restored-chat state synchronization

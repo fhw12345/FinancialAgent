@@ -197,6 +197,10 @@ async def test_resolved_symbol_continues_to_deep_agent():
                 "trace_id": "deep_test",
                 "input_tokens": 10,
                 "output_tokens": 5,
+                "research_context": {
+                    "confirmed_symbol": "TSLA",
+                    "investment_horizon": "6 months",
+                },
             }
         ),
     )
@@ -227,3 +231,16 @@ async def test_resolved_symbol_continues_to_deep_agent():
     assert all(event["type"] != "clarification_required" for event in events)
     agent.ainvoke.assert_awaited_once()
     assert agent.ainvoke.await_args.kwargs["resolved_symbol"] == "TSLA"
+    resolve_kwargs = agent.resolve_symbol.await_args.kwargs
+    assert "conversation_history" in resolve_kwargs
+    assistant_call = next(
+        call
+        for call in chat_service.add_message.await_args_list
+        if call.kwargs["role"] == "assistant"
+    )
+    assert (
+        assistant_call.kwargs["metadata"]["raw_data"]["research_context"][
+            "confirmed_symbol"
+        ]
+        == "TSLA"
+    )

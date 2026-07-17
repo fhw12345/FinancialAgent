@@ -33,6 +33,7 @@ from .debate_types import (
     parse_rebuttal_output,
     render_verified_facts_reminder,
 )
+from .deep_research_context import DeepResearchContext
 from .llm_factory import get_llm
 from .subagent_invoker import invoke_subagent
 from .subagents.debater import TERMINATION_SIGNAL, create_debater_subagent
@@ -68,6 +69,9 @@ class AnalysisState(TypedDict, total=False):
     # Structured debate exchange (auto-accumulated via operator.add reducer)
     all_concerns: Annotated[list, operator.add]  # Concern dicts from debater
     all_rebuttals: Annotated[list, operator.add]  # Rebuttal dicts from defender
+    research_context: str
+    research_context_with_report: str
+    research_constraints: tuple[str, ...]
 
 
 class DeepReActAgent:
@@ -186,6 +190,18 @@ class DeepReActAgent:
         """
         subagents = self._create_subagents(context, cache=cache)
 
+        def _constraint_subagent_key(state: dict, default: str) -> str:
+            constraints = set(state.get("research_constraints", ()))
+            if "technical_focus" in constraints:
+                return "technical"
+            if {
+                "valuation_focus",
+                "fundamental_focus",
+                "exclude_news",
+            } & constraints:
+                return "financial"
+            return default
+
         def _emit(event: dict[str, Any]) -> None:
             """Safely emit an event via callback."""
             if on_event is not None:
@@ -214,22 +230,44 @@ class DeepReActAgent:
                     current_date=configurable.get("current_date"),
                 )
 
+                shared_context = state.get("research_context", "")
+                constraints = set(state.get("research_constraints", ()))
+                allowed_specialists = {"technical", "news", "financial"}
+                if "technical_focus" in constraints:
+                    allowed_specialists = {"technical"}
+                elif {
+                    "valuation_focus",
+                    "fundamental_focus",
+                } & constraints:
+                    allowed_specialists = {"financial"}
+                if "exclude_news" in constraints:
+                    allowed_specialists.discard("news")
+
                 research_tasks = [
                     (
                         "technical",
-                        f"Analyze the technical setup for {symbol}. "
+                        f"{shared_context}\n\n"
+                        f"Analyze the technical setup for {symbol} in direct response "
+                        "to the current request above. "
                         f"Focus on trend, Fibonacci levels, and momentum.",
                     ),
                     (
                         "news",
-                        f"Analyze recent news and sentiment for {symbol}. "
+                        f"{shared_context}\n\n"
+                        f"Analyze recent news and sentiment for {symbol} in direct "
+                        "response to the current request above. "
                         f"Include catalyst assessment and market mood.",
                     ),
                     (
                         "financial",
-                        f"Analyze the fundamentals of {symbol}. "
+                        f"{shared_context}\n\n"
+                        f"Analyze the fundamentals of {symbol} in direct response "
+                        "to the current request above. "
                         f"Focus on valuation, cash flow health, and earnings quality.",
                     ),
+                ]
+                research_tasks = [
+                    task for task in research_tasks if task[0] in allowed_specialists
                 ]
 
                 reports: dict[str, str] = {}
@@ -249,14 +287,18 @@ class DeepReActAgent:
                 if emitter and not self.enable_debate:
                     _emit(emitter.synthesis_start())
 
-                combined_report = f"""## Technical Analysis
-{reports.get("technical", "N/A")}
-
-## News & Sentiment Analysis
-{reports.get("news", "N/A")}
-
-## Fundamental Analysis
-{reports.get("financial", "N/A")}"""
+                report_sections = [
+                    (key, title)
+                    for key, title in (
+                        ("technical", "Technical Analysis"),
+                        ("news", "News & Sentiment Analysis"),
+                        ("financial", "Fundamental Analysis"),
+                    )
+                    if key in reports
+                ]
+                combined_report = "\n\n".join(
+                    f"## {title}\n{reports[key]}" for key, title in report_sections
+                )
 
                 logger.info(
                     "Research phase complete",
@@ -295,7 +337,9 @@ class DeepReActAgent:
                 for c in all_concerns
             )
 
-            rebuttal_prompt = f"""The debater raised concerns about {symbol}:
+            rebuttal_prompt = f"""{state.get("research_context_with_report", "")}
+
+The debater raised concerns about {symbol}:
 
 {concern_lines}
 
@@ -323,24 +367,24 @@ Be concise — focus on DATA, not rhetoric."""
             defense_parts: list[str] = []
             total_tool_count = 0
 
-            for subagent_key in ("financial",):
-                defense, actual_tool_count = await self._invoke_with_events(
-                    subagents[subagent_key],
-                    rebuttal_prompt,
-                    config=config,
-                    emitter=emitter,
-                    on_event=on_event,
-                    emit_fn=_emit,
-                    raise_on_error=False,
+            subagent_key = _constraint_subagent_key(state, "financial")
+            defense, actual_tool_count = await self._invoke_with_events(
+                subagents[subagent_key],
+                rebuttal_prompt,
+                config=config,
+                emitter=emitter,
+                on_event=on_event,
+                emit_fn=_emit,
+                raise_on_error=False,
+            )
+            if defense:
+                defense_parts.append(defense)
+                total_tool_count += actual_tool_count
+            else:
+                logger.warning(
+                    "Rebuttal sub-agent failed",
+                    subagent=subagent_key,
                 )
-                if defense:
-                    defense_parts.append(defense)
-                    total_tool_count += actual_tool_count
-                else:
-                    logger.warning(
-                        "Rebuttal sub-agent failed",
-                        subagent=subagent_key,
-                    )
 
             combined_defense = "\n\n".join(defense_parts)
             rebuttal_duration = int((time.perf_counter() - rebuttal_start_time) * 1000)
@@ -418,7 +462,9 @@ Be concise — focus on DATA, not rhetoric."""
                 if last_period > max_len // 2:
                     truncated_report = truncated_report[: last_period + 1]
 
-            critique_prompt = f"""Review the following investment thesis and challenge it:
+            critique_prompt = f"""{state.get("research_context_with_report", "")}
+
+Review the following investment thesis and challenge it:
 
 {truncated_report}
 
@@ -427,14 +473,31 @@ Your job is to:
 2. Search for counter-evidence and contradicting data
 3. Identify overlooked risks and stress-test assumptions
 
+RESPONSE FORMAT: Include a JSON block in your response:
+```json
+{{
+  "concerns": [
+    {{
+      "id": "C1",
+      "claim": "Claim being challenged",
+      "category": "technical|fundamental|valuation|risk",
+      "challenge": "Specific evidence-based challenge",
+      "severity": "MAJOR|MINOR",
+      "evidence": "Source or data supporting the challenge"
+    }}
+  ]
+}}
+```
+
 Be aggressive but fair. Use real evidence, not speculation.
 
 If after thorough review you genuinely have no concerns, respond with:
 "{TERMINATION_SIGNAL}"
 """
 
+            critique_subagent_key = _constraint_subagent_key(state, "debater")
             critique, _tool_count = await self._invoke_with_events(
-                subagents["debater"],
+                subagents[critique_subagent_key],
                 critique_prompt,
                 config=config,
                 emitter=emitter,
@@ -481,7 +544,7 @@ If after thorough review you genuinely have no concerns, respond with:
                 # Only return NEW concerns — operator.add reducer handles accumulation
                 "all_concerns": new_concerns,
                 "all_rebuttals": [],
-                "debate_active": not debater_output.terminated,
+                "debate_active": has_concerns,
             }
 
         # ── should_continue ──────────────────────────────────────────────
@@ -561,6 +624,8 @@ If after thorough review you genuinely have no concerns, respond with:
             verdict_prompt = f"""You are a Senior Investment Committee Judge delivering a final verdict.
 
 {verified_facts_block}
+
+{state.get("research_context_with_report", "")}
 
 ## Research Report
 {original_research[:6000]}
@@ -818,6 +883,7 @@ Be decisive. Use the evidence from both sides. Do not hedge excessively."""
         enable_debate: bool | None = None,
         on_event: Callable[[dict[str, Any]], None] | None = None,
         user_message: str | None = None,
+        research_context: DeepResearchContext | None = None,
     ) -> dict[str, Any]:
         """Run a full analysis for a symbol with optional event streaming.
 
@@ -827,10 +893,19 @@ Be decisive. Use the evidence from both sides. Do not hedge excessively."""
             enable_debate: Override debate setting (None = use default)
             on_event: Callback for streaming lifecycle events
             user_message: The user's actual question (used as initial state message)
+            research_context: Bounded prior conversation and research constraints
         """
         context = AgentContext(
             symbol=symbol,
             user_id=user_id,
+            risk_tolerance=(
+                research_context.risk_tolerance
+                if research_context and research_context.risk_tolerance
+                else "moderate"
+            ),
+            investment_horizon=(
+                research_context.investment_horizon if research_context else None
+            ),
             enable_debate=(
                 enable_debate if enable_debate is not None else self.enable_debate
             ),
@@ -853,6 +928,15 @@ Be decisive. Use the evidence from both sides. Do not hedge excessively."""
 
         # Use the real user message; fall back to a generic prompt for API-only usage
         initial_content = user_message or f"Analyze {symbol} comprehensively."
+        research_context = research_context or DeepResearchContext.from_history(
+            current_request=initial_content,
+            conversation_history=[],
+        )
+        rendered_context = research_context.render(
+            symbol=symbol,
+            previous_report_char_limit=600,
+        )
+        rendered_context_with_report = research_context.render(symbol=symbol)
 
         initial_state: AnalysisState = {
             "messages": [HumanMessage(content=initial_content)],
@@ -862,6 +946,9 @@ Be decisive. Use the evidence from both sides. Do not hedge excessively."""
             "debate_active": context.enable_debate,
             "all_concerns": [],
             "all_rebuttals": [],
+            "research_context": rendered_context,
+            "research_context_with_report": rendered_context_with_report,
+            "research_constraints": research_context.constraints,
         }
 
         def _safe_emit(event: dict[str, Any]) -> None:

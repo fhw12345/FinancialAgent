@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import re
 import time
 from typing import Any
 
@@ -12,51 +11,20 @@ from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, Field
 
 from ..core.config import Settings, get_settings
-from ..models.symbol_resolution import SymbolCandidate, SymbolResolution
+from ..models.symbol_resolution import (
+    SymbolCandidate,
+    SymbolResolution,
+    SymbolResolutionSource,
+)
 from ..services.symbol_search_service import SymbolSearchService
 from .llm_factory import get_llm
+from .symbol_tokens import (
+    extract_explicit_symbols,
+    has_explicit_symbol_intent,
+    normalize_symbol,
+)
 
 logger = structlog.get_logger()
-
-_SYMBOL_PATTERN = re.compile(r"\b([A-Z]{1,5}(?:[.-][A-Z])?)\b")
-_VALID_SYMBOL_PATTERN = re.compile(r"^[A-Z]{1,5}(?:[.-][A-Z])?$")
-_STOP_WORDS = {
-    "AI",
-    "ALL",
-    "AND",
-    "ARE",
-    "ASK",
-    "BIG",
-    "BUY",
-    "CAN",
-    "CEO",
-    "CFO",
-    "CPI",
-    "DEEP",
-    "DID",
-    "ETF",
-    "FOR",
-    "GDP",
-    "GET",
-    "HAS",
-    "HOW",
-    "IPO",
-    "NEW",
-    "NOT",
-    "NOW",
-    "OUT",
-    "OWN",
-    "RUN",
-    "SAY",
-    "SET",
-    "THE",
-    "TOP",
-    "TRY",
-    "USE",
-    "WAY",
-    "WHO",
-    "WHY",
-}
 
 _LLM_PROMPT = """Identify possible US stock ticker symbols in this request.
 
@@ -104,18 +72,6 @@ class SymbolResolver:
         """Resolve one request without ever selecting an unvalidated default."""
         started = time.perf_counter()
 
-        if current_symbol:
-            selected = self.normalize_symbol(current_symbol)
-            if selected:
-                candidate = await self._search_service.exact(selected)
-                if candidate is not None:
-                    return self._resolved(
-                        candidate,
-                        source="ui_context",
-                        reason_code="resolved_ui_symbol",
-                        started=started,
-                    )
-
         explicit_symbols = self._extract_explicit_symbols(message)
         if explicit_symbols:
             validated = await self._validate_candidates(explicit_symbols)
@@ -133,11 +89,27 @@ class SymbolResolver:
                     reason_code="ambiguous_symbol",
                     started=started,
                 )
-            return self._unresolved(
-                source="explicit_ticker",
-                reason_code="symbol_not_found",
-                started=started,
-            )
+            if current_symbol is None or has_explicit_symbol_intent(
+                message,
+                explicit_symbols,
+            ):
+                return self._unresolved(
+                    source="explicit_ticker",
+                    reason_code="symbol_not_found",
+                    started=started,
+                )
+
+        if current_symbol:
+            selected = self.normalize_symbol(current_symbol)
+            if selected:
+                candidate = await self._search_service.exact(selected)
+                if candidate is not None:
+                    return self._resolved(
+                        candidate,
+                        source="ui_context",
+                        reason_code="resolved_ui_symbol",
+                        started=started,
+                    )
 
         deterministic = await self._search_service.search(message.strip(), limit=5)
         deterministic_decision = self._ranked_decision(
@@ -196,19 +168,10 @@ class SymbolResolver:
     @staticmethod
     def normalize_symbol(value: str) -> str | None:
         """Normalize case and whitespace while rejecting invalid punctuation."""
-        normalized = value.strip().upper()
-        if not _VALID_SYMBOL_PATTERN.fullmatch(normalized):
-            return None
-        return normalized
+        return normalize_symbol(value)
 
     def _extract_explicit_symbols(self, message: str) -> list[str]:
-        symbols: list[str] = []
-        for raw in _SYMBOL_PATTERN.findall(message):
-            symbol = self.normalize_symbol(raw)
-            if symbol is None or symbol in _STOP_WORDS or symbol in symbols:
-                continue
-            symbols.append(symbol)
-        return symbols
+        return extract_explicit_symbols(message)
 
     async def _validate_candidates(
         self,
@@ -250,7 +213,7 @@ class SymbolResolver:
         self,
         candidates: list[SymbolCandidate],
         *,
-        source: str,
+        source: SymbolResolutionSource,
         started: float,
     ) -> SymbolResolution | None:
         if not candidates:
@@ -280,7 +243,7 @@ class SymbolResolver:
         self,
         candidate: SymbolCandidate,
         *,
-        source: str,
+        source: SymbolResolutionSource,
         reason_code: str,
         started: float,
     ) -> SymbolResolution:
@@ -300,7 +263,7 @@ class SymbolResolver:
         self,
         candidates: list[SymbolCandidate],
         *,
-        source: str,
+        source: SymbolResolutionSource,
         reason_code: str,
         started: float,
     ) -> SymbolResolution:
@@ -317,7 +280,7 @@ class SymbolResolver:
     def _unresolved(
         self,
         *,
-        source: str,
+        source: SymbolResolutionSource,
         reason_code: str,
         started: float,
         candidates: list[SymbolCandidate] | None = None,

@@ -58,6 +58,7 @@ class AgentContext:
     # Configuration
     max_debate_rounds: int = 3
     risk_tolerance: str = "moderate"  # conservative, moderate, aggressive
+    investment_horizon: str | None = None
     enable_debate: bool = True  # Enable adversarial verification
 
     def __post_init__(self) -> None:
@@ -79,6 +80,7 @@ class AgentContext:
             "six_months_ago": self.six_months_ago,
             "max_debate_rounds": self.max_debate_rounds,
             "risk_tolerance": self.risk_tolerance,
+            "investment_horizon": self.investment_horizon,
             "enable_debate": self.enable_debate,
         }
 
@@ -99,6 +101,7 @@ class AgentContext:
             ),
             max_debate_rounds=data.get("max_debate_rounds", 3),
             risk_tolerance=data.get("risk_tolerance", "moderate"),
+            investment_horizon=data.get("investment_horizon"),
             enable_debate=data.get("enable_debate", True),
         )
 
@@ -112,4 +115,5 @@ Analysis Type: {self.analysis_type}
 Current Date: {self.current_date}
 Analysis Period: {self.six_months_ago} to {self.current_date}
 Risk Tolerance: {self.risk_tolerance}
+Investment Horizon: {self.investment_horizon or "not specified"}
 ========================"""

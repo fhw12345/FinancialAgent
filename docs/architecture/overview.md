@@ -98,7 +98,10 @@ The deep agent runs specialist research, challenges it with independent
 yfinance/web-search evidence, and synthesizes a final verdict. Research starts
 only after the requested symbol has been validated. Ambiguous or missing
 symbols pause at a persisted clarification card instead of silently selecting a
-default company.
+default company. Follow-up Deep requests receive a bounded structured context
+containing the prior thesis, confirmed symbol, investment horizon, risk
+tolerance, and explicit constraints; the full raw transcript is not copied
+into every specialist prompt.
 
 ## Portfolio Pipeline
 

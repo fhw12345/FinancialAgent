@@ -49,6 +49,21 @@ services:
       - ./frontend:/app
       - frontend_e2e_deps:/app/node_modules
 
+  frontend-deep-e2e:
+    profiles: ["e2e"]
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3000"
+    environment:
+      - VITE_API_URL=http://host.docker.internal:18083
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./frontend:/app
+      - frontend_e2e_deps:/app/node_modules
+
   backend-e2e:
     profiles: ["e2e"]
     build:
@@ -87,6 +102,34 @@ services:
     command: >
       python -m uvicorn tests.e2e.anthropic_stub:app
       --host 0.0.0.0 --port 8080
+
+  backend-deep-e2e:
+    profiles: ["e2e"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "18083:8000"
+    environment:
+      - ENVIRONMENT=test
+      - MONGODB_URL=mongodb://mongodb:27017/financial_agent_deep_e2e
+      - REDIS_URL=redis://redis:6379/2
+      - CORS_ORIGINS=["http://host.docker.internal:3002"]
+      - LLM_PROVIDER=anthropic
+      - ANTHROPIC_BASE_URL=http://llm-e2e:8080
+      - ANTHROPIC_API_KEY=dummy
+      - ANTHROPIC_MODEL=e2e-model
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - mongodb
+      - redis
+      - llm-e2e
+    volumes:
+      - ./backend:/app
+    command: >
+      python -m uvicorn tests.e2e.deep_context_app:app
+      --host 0.0.0.0 --port 8000
 
   e2e:
     profiles: ["e2e"]

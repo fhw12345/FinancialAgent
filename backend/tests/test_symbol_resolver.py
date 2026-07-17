@@ -98,6 +98,112 @@ async def test_invalid_current_symbol_falls_through_to_explicit_ticker():
 
 
 @pytest.mark.asyncio
+async def test_explicit_ticker_overrides_current_symbol():
+    search = FakeSearchService(
+        exact={
+            "AAPL": candidate("AAPL", name="Apple"),
+            "MSFT": candidate("MSFT", name="Microsoft"),
+        }
+    )
+    resolver = SymbolResolver(search, settings=settings(llm_enabled=False))  # type: ignore[arg-type]
+
+    result = await resolver.resolve(
+        message="Continue with MSFT.",
+        current_symbol="AAPL",
+    )
+
+    assert result.status == "resolved"
+    assert result.symbol == "MSFT"
+    assert result.source == "explicit_ticker"
+    assert search.exact_calls == ["MSFT"]
+
+
+@pytest.mark.asyncio
+async def test_invalid_explicit_ticker_does_not_use_current_symbol():
+    search = FakeSearchService(exact={"AAPL": candidate("AAPL", name="Apple")})
+    resolver = SymbolResolver(search, settings=settings(llm_enabled=False))  # type: ignore[arg-type]
+
+    result = await resolver.resolve(
+        message="Continue with ZZZZZ.",
+        current_symbol="AAPL",
+    )
+
+    assert result.status == "unresolved"
+    assert result.reason_code == "symbol_not_found"
+    assert search.exact_calls == ["ZZZZZ"]
+
+
+@pytest.mark.asyncio
+async def test_invalid_ticker_with_trailing_qualifier_does_not_use_ui_symbol():
+    search = FakeSearchService(exact={"AAPL": candidate("AAPL", name="Apple")})
+    resolver = SymbolResolver(search, settings=settings(llm_enabled=False))  # type: ignore[arg-type]
+
+    result = await resolver.resolve(
+        message="Analyze ZZZZZ earnings.",
+        current_symbol="AAPL",
+    )
+
+    assert result.status == "unresolved"
+    assert result.reason_code == "symbol_not_found"
+    assert search.exact_calls == ["ZZZZZ"]
+
+
+@pytest.mark.asyncio
+async def test_valid_generic_word_ticker_overrides_current_symbol():
+    search = FakeSearchService(
+        exact={
+            "AAPL": candidate("AAPL", name="Apple"),
+            "LOW": candidate("LOW", name="Lowe's"),
+        }
+    )
+    resolver = SymbolResolver(search, settings=settings(llm_enabled=False))  # type: ignore[arg-type]
+
+    result = await resolver.resolve(
+        message="Continue with LOW.",
+        current_symbol="AAPL",
+    )
+
+    assert result.status == "resolved"
+    assert result.symbol == "LOW"
+    assert search.exact_calls == ["LOW"]
+
+
+@pytest.mark.asyncio
+async def test_financial_acronym_does_not_override_current_symbol():
+    search = FakeSearchService(exact={"AAPL": candidate("AAPL", name="Apple")})
+    resolver = SymbolResolver(search, settings=settings(llm_enabled=False))  # type: ignore[arg-type]
+
+    result = await resolver.resolve(
+        message="Review SEC filings for this company.",
+        current_symbol="AAPL",
+    )
+
+    assert result.status == "resolved"
+    assert result.symbol == "AAPL"
+    assert search.exact_calls == ["AAPL"]
+
+
+@pytest.mark.asyncio
+async def test_incidental_fund_name_does_not_make_request_ambiguous():
+    search = FakeSearchService(
+        exact={
+            "AAPL": candidate("AAPL", name="Apple"),
+            "USA": candidate("USA", name="Liberty All-Star Equity Fund"),
+        }
+    )
+    resolver = SymbolResolver(search, settings=settings(llm_enabled=False))  # type: ignore[arg-type]
+
+    result = await resolver.resolve(
+        message="Analyze USA exposure for AAPL.",
+        current_symbol="AAPL",
+    )
+
+    assert result.status == "resolved"
+    assert result.symbol == "AAPL"
+    assert search.exact_calls == ["AAPL"]
+
+
+@pytest.mark.asyncio
 async def test_stop_word_is_not_treated_as_ticker():
     search = FakeSearchService()
     resolver = SymbolResolver(search, settings=settings(llm_enabled=False))  # type: ignore[arg-type]
@@ -142,6 +248,25 @@ async def test_two_valid_explicit_tickers_are_ambiguous():
 
     result = await resolver.resolve(
         message="Deeply analyze AAPL and MSFT",
+        current_symbol=None,
+    )
+
+    assert result.status == "ambiguous"
+    assert [item.symbol for item in result.candidates] == ["AAPL", "MSFT"]
+
+
+@pytest.mark.asyncio
+async def test_or_separated_valid_tickers_are_ambiguous():
+    search = FakeSearchService(
+        exact={
+            "AAPL": candidate("AAPL", name="Apple"),
+            "MSFT": candidate("MSFT", name="Microsoft"),
+        }
+    )
+    resolver = SymbolResolver(search, settings=settings())  # type: ignore[arg-type]
+
+    result = await resolver.resolve(
+        message="Analyze AAPL or MSFT.",
         current_symbol=None,
     )
 
