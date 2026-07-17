@@ -1,6 +1,6 @@
 ---
 title: Watchlist Analysis Persistence Wiring
-status: in-progress
+status: shipped
 version: backend@0.35.0, frontend@0.25.3
 last_updated: 2026-07-17
 owner: maintainer
@@ -17,8 +17,7 @@ related_paths:
 
 ## Implementation Record
 
-The implementation and validation are complete in the current working tree.
-The feature remains `in-progress` until the change set is committed.
+Shipped in commit `988b89d`.
 
 Delivered:
 
@@ -51,8 +50,8 @@ Playwright watchlist persistence scenario: 1 passed
 
 | Evidence | Scenario | Stack | Commit | Result |
 | --- | --- | --- | --- | --- |
-| [Immediate timestamp update](assets/uaw-004/01-last-analyzed-updated.png) | Mutation response updates the row while Mongo refetch is blocked | Real frontend/backend/MongoDB + deterministic portfolio flow | pending | PASS |
-| [Timestamp after reload](assets/uaw-004/02-timestamp-persists-after-reload.png) | Reload reads the same timestamp from MongoDB | Real frontend/backend/MongoDB + deterministic portfolio flow | pending | PASS |
+| [Immediate timestamp update](assets/uaw-004/01-last-analyzed-updated.png) | Mutation response updates the row while Mongo refetch is blocked | Real frontend/backend/MongoDB + deterministic portfolio flow | `988b89d` | PASS |
+| [Timestamp after reload](assets/uaw-004/02-timestamp-persists-after-reload.png) | Reload reads the same timestamp from MongoDB | Real frontend/backend/MongoDB + deterministic portfolio flow | `988b89d` | PASS |
 
 ## 1. Task Summary
 

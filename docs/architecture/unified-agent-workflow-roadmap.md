@@ -323,7 +323,7 @@ the collection name.
 Detailed implementation plan:
 [UAW-004: Watchlist Analysis Persistence Wiring](../features/watchlist-persistence-wiring.md).
 
-Implementation status: code and browser validation completed; commit pending.
+Implementation status: shipped in commit `988b89d`.
 
 **Required behavior**
 
