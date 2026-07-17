@@ -14,6 +14,10 @@
     "attachFile": "附加文件",
     "voiceInput": "语音输入"
   },
+  "streaming": {
+    "modelTokens": "模型实时流",
+    "buffered": "缓冲后响应"
+  },
   "message": {
     "you": "你",
     "assistant": "助手",

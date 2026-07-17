@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.1] - 2026-07-17
+
+### Streaming mode transparency
+
+- Displays whether the response is a live model stream or buffered output.
+- Resets the mode for each request, new chat, and selected chat.
+- Preserves live progress indicators independently from final answer delivery.
+- Added browser proof for partial model tokens and buffered ReAct responses.
+
 ## [0.26.0] - 2026-07-17
 
 ### Agent Stop and cancelled state

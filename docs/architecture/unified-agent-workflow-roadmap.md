@@ -371,6 +371,11 @@ The current ReAct and deep handlers generate the full final answer and then
 split it into ten-character chunks. This is a typewriter effect, not model
 token streaming.
 
+Detailed implementation plan:
+[UAW-006: Honest Streaming Semantics](../features/honest-streaming-semantics.md).
+
+Implementation status: code and browser validation completed; commit pending.
+
 **Required behavior**
 
 - Rename metrics and documentation so simulated chunks are not reported as

@@ -75,6 +75,16 @@ def create_chunk_event(content: str) -> str:
     return format_sse_event(chunk_data)
 
 
+def create_stream_mode_event(mode: str) -> str:
+    """Declare whether response chunks are model tokens or buffered output."""
+    return format_sse_event(
+        {
+            "type": "response_stream_mode",
+            "mode": mode,
+        }
+    )
+
+
 def create_clarification_event(event_data: dict[str, Any]) -> str:
     """Create a non-error SSE event requesting structured user clarification."""
     return format_sse_event({"type": "clarification_required", **event_data})
@@ -119,7 +129,9 @@ def create_latency_event(
     - context_prepared: After history/compaction
     - agent_started: When agent invocation begins
     - first_tool: When first tool event is emitted
-    - first_chunk: Time-to-first-token (TTFT)
+    - first_model_token: First chunk from a real provider model stream
+    - first_progress_event: First live tool/sub-agent progress event
+    - first_response_chunk: First delivery of an already-buffered response
     - stream_complete: Total duration
 
     Args:

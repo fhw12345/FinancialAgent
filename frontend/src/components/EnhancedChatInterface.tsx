@@ -18,6 +18,7 @@ import {
 import type {
   AgentFlow,
   DeepStreamEvent,
+  ResponseStreamModeEvent,
   RouteSelectedEvent,
   SymbolCandidate,
 } from "../types/api";
@@ -73,6 +74,9 @@ export function EnhancedChatInterface() {
   const [isMobileChartVisible, setIsMobileChartVisible] = useState(false);
 
   const [routeInfo, setRouteInfo] = useState<RouteSelectedEvent | null>(null);
+  const [responseStreamMode, setResponseStreamMode] = useState<
+    ResponseStreamModeEvent["mode"] | null
+  >(null);
 
   const { state: deepState, dispatch: deepDispatch } = useDeepAccordionState();
 
@@ -96,6 +100,9 @@ export function EnhancedChatInterface() {
 
   const handleRouteSelected = useCallback((event: RouteSelectedEvent) => {
     setRouteInfo(event);
+  }, []);
+  const handleStreamMode = useCallback((event: ResponseStreamModeEvent) => {
+    setResponseStreamMode(event.mode);
   }, []);
 
   // Pagination state for loading older messages
@@ -176,6 +183,7 @@ export function EnhancedChatInterface() {
     setChatId,
     handleDeepEvent,
     handleRouteSelected,
+    handleStreamMode,
   );
 
   // Button analysis mutation for quick analysis buttons
@@ -288,6 +296,7 @@ export function EnhancedChatInterface() {
     }
 
     setRouteInfo(null);
+    setResponseStreamMode(null);
     deepDispatch({ type: "RESET" });
     chatMutation.mutate(message);
     setMessage("");
@@ -312,6 +321,7 @@ export function EnhancedChatInterface() {
       isRestoringRef.current = true;
       setIsRestoringChat(true);
       setChatId(selectedChatId);
+      setResponseStreamMode(null);
       try {
         deepDispatch({ type: "RESET" });
 
@@ -360,6 +370,7 @@ export function EnhancedChatInterface() {
     setHasMoreMessages(false); // Reset pagination
     deepDispatch({ type: "RESET" }); // Reset deep accordion state
     setRouteInfo(null);
+    setResponseStreamMode(null);
   }, [setMessages, setChatId, deepDispatch]);
 
   const handleLoadMore = useCallback(async () => {
@@ -467,7 +478,6 @@ export function EnhancedChatInterface() {
                 aria-label="Close sidebar"
               />
             )}
-
             {/* Chat Panel - Mobile: primary full-width, Desktop: flexible middle column */}
             <div className="flex flex-col h-full w-full lg:w-auto lg:min-w-[500px] border-r border-gray-300 relative bg-gray-50 overflow-hidden">
               {/* Mobile toggle buttons - only show when panels are closed */}
@@ -529,6 +539,21 @@ export function EnhancedChatInterface() {
                     ) : (
                       <span className="text-xs text-gray-500">
                         {t("chat:routing.waiting")}
+                      </span>
+                    )}
+                    {responseStreamMode && (
+                      <span
+                        data-testid="response-stream-mode"
+                        data-stream-mode={responseStreamMode}
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          responseStreamMode === "model_tokens"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {responseStreamMode === "model_tokens"
+                          ? t("chat:streaming.modelTokens")
+                          : t("chat:streaming.buffered")}
                       </span>
                     )}
                   </div>

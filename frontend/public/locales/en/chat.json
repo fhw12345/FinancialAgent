@@ -14,6 +14,10 @@
     "attachFile": "Attach file",
     "voiceInput": "Voice input"
   },
+  "streaming": {
+    "modelTokens": "Live model stream",
+    "buffered": "Buffered response"
+  },
   "message": {
     "you": "You",
     "assistant": "Assistant",

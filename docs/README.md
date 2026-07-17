@@ -24,6 +24,7 @@ All current documentation describes the local single-user application.
 - [Deep Research Conversation Context](features/deep-research-conversation-context.md)
 - [Watchlist Analysis Persistence Wiring](features/watchlist-persistence-wiring.md)
 - [Agent Task Cancellation](features/agent-task-cancellation.md)
+- [Honest Streaming Semantics](features/honest-streaming-semantics.md)
 - [Portfolio Agent Architecture](features/portfolio-agent-architecture-refactor.md)
 - [Write-time Translation](features/write-time-translation.md)
 - [Market Insights Trends](features/market-insights-trend-visualization.md)
@@ -37,6 +38,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [Honest Streaming Semantics Case Study](case-studies/2026-07-17-typewriter-effect-was-not-streaming.md)
 - [Agent Task Cancellation Case Study](case-studies/2026-07-17-stop-button-left-agent-running.md)
 - [Watchlist Analysis Persistence Case Study](case-studies/2026-07-17-watchlist-analysis-wrong-collection.md)
 - [Deep Research Conversation Context Case Study](case-studies/2026-07-16-deep-research-lost-conversation-context.md)

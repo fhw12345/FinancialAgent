@@ -53,4 +53,52 @@ describe("chatService clarification stream", () => {
     expect(onError).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
+
+  it("dispatches the declared response stream mode", async () => {
+    const encoder = new TextEncoder();
+    const body = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            'data: {"type":"response_stream_mode","mode":"buffered"}\n\n',
+          ),
+        );
+        controller.enqueue(
+          encoder.encode('data: {"type":"done","chat_id":"chat_1"}\n\n'),
+        );
+        controller.close();
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(body, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        }),
+      ),
+    );
+
+    const mode = await new Promise<string>((resolve) => {
+      chatService.sendMessageStreamPersistent(
+        "Analyze it",
+        "chat_1",
+        vi.fn(),
+        undefined,
+        undefined,
+        vi.fn(),
+        vi.fn(),
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        {
+          onStreamMode: (event) => resolve(event.mode),
+        },
+      );
+    });
+
+    expect(mode).toBe("buffered");
+    vi.unstubAllGlobals();
+  });
 });

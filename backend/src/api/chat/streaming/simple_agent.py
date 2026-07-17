@@ -15,6 +15,7 @@ from fastapi import Request
 from fastapi.responses import StreamingResponse
 
 from ....agent.chat_agent import ChatAgent
+from ....core.utils.date_utils import utcnow
 from ....database.repositories.message_repository import MessageRepository
 from ....models.message import MessageMetadata
 from ....services.chat_service import ChatService
@@ -34,6 +35,8 @@ from .helpers import (
     create_chunk_event,
     create_done_event,
     create_error_event,
+    create_latency_event,
+    create_stream_mode_event,
     format_sse_event,
 )
 
@@ -58,6 +61,11 @@ async def stream_with_simple_agent(
         terminal_task: asyncio.Task[Any] | None = None
         full_response = ""
         run_id = f"run_{uuid.uuid4().hex}"
+        request_start = utcnow()
+        first_model_token_recorded = False
+
+        def get_elapsed_ms() -> int:
+            return int((utcnow() - request_start).total_seconds() * 1000)
 
         try:
             # Create or get chat
@@ -122,6 +130,7 @@ async def stream_with_simple_agent(
                 ),
             )
             conversation_history = prepared_context.complete_history()
+            yield create_stream_mode_event("model_tokens")
 
             logger.info(
                 "Prepared conversation history (v2)",
@@ -163,6 +172,12 @@ async def stream_with_simple_agent(
                     if chunk is None:
                         break
                     full_response += chunk
+                    if not first_model_token_recorded:
+                        first_model_token_recorded = True
+                        yield create_latency_event(
+                            "first_model_token",
+                            get_elapsed_ms(),
+                        )
                     yield create_chunk_event(chunk)
 
                 await active_task
@@ -224,6 +239,7 @@ async def stream_with_simple_agent(
             )
             await asyncio.shield(terminal_task)
 
+            yield create_latency_event("stream_complete", get_elapsed_ms())
             yield create_done_event(chat_id)
 
         except (asyncio.CancelledError, ClientDisconnected) as exc:

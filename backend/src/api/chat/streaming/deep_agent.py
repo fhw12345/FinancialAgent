@@ -40,6 +40,7 @@ from .helpers import (
     create_done_event,
     create_error_event,
     create_latency_event,
+    create_stream_mode_event,
     create_thinking_event,
     format_sse_event,
 )
@@ -70,7 +71,8 @@ async def stream_with_deep_agent(
         chat_id = None
         collected_events: list[dict[str, Any]] = []
         request_start = utcnow()
-        ttft_recorded = False
+        first_progress_event_recorded = False
+        first_response_chunk_recorded = False
         agent_task: asyncio.Task[Any] | None = None
         terminal_task: asyncio.Task[Any] | None = None
         run_id = f"run_{uuid.uuid4().hex}"
@@ -123,6 +125,7 @@ async def stream_with_deep_agent(
 
             yield create_latency_event("context_prepared", get_elapsed_ms())
             yield create_thinking_event("deep_analysis", chat_id)
+            yield create_stream_mode_event("buffered")
 
             resolution = await agent.resolve_symbol(
                 user_message=request.message,
@@ -234,9 +237,12 @@ async def stream_with_deep_agent(
                         continue
                     if event_str is None:
                         break
-                    if not ttft_recorded:
-                        ttft_recorded = True
-                        yield create_latency_event("first_event", get_elapsed_ms())
+                    if not first_progress_event_recorded:
+                        first_progress_event_recorded = True
+                        yield create_latency_event(
+                            "first_progress_event",
+                            get_elapsed_ms(),
+                        )
                     yield event_str
 
                 await agent_task
@@ -379,15 +385,15 @@ async def stream_with_deep_agent(
                     }
                 )
 
-            CHUNK_SIZE = 10
-            for i in range(0, len(final_answer), CHUNK_SIZE):
-                await raise_if_disconnected(client_request)
-                chunk_text = final_answer[i : i + CHUNK_SIZE]
-                if not ttft_recorded:
-                    ttft_recorded = True
-                    yield create_latency_event("first_chunk", get_elapsed_ms())
-                yield create_chunk_event(chunk_text)
-                await asyncio.sleep(0.03)
+            await raise_if_disconnected(client_request)
+            if final_answer:
+                if not first_response_chunk_recorded:
+                    first_response_chunk_recorded = True
+                    yield create_latency_event(
+                        "first_response_chunk",
+                        get_elapsed_ms(),
+                    )
+                yield create_chunk_event(final_answer)
 
             await await_disconnect_grace(client_request)
             terminal_task = asyncio.create_task(

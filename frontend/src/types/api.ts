@@ -32,6 +32,11 @@ export interface RouteSelectedEvent {
   reason_code: string;
 }
 
+export interface ResponseStreamModeEvent {
+  type: "response_stream_mode";
+  mode: "model_tokens" | "buffered";
+}
+
 export interface SymbolCandidate {
   symbol: string;
   name: string;
@@ -216,6 +221,7 @@ export interface UpdateUIStateRequest {
 
 export type StreamEvent =
   | RouteSelectedEvent
+  | ResponseStreamModeEvent
   | ClarificationRequiredEvent
   | {
       type: "chat_created";

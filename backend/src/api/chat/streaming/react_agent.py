@@ -40,6 +40,7 @@ from .helpers import (
     create_done_event,
     create_error_event,
     create_latency_event,
+    create_stream_mode_event,
     create_thinking_event,
     format_sse_event,
 )
@@ -69,7 +70,7 @@ async def stream_with_react_agent(
         run_id = f"run_{uuid.uuid4().hex}"
 
         request_start = utcnow()
-        ttft_recorded = False
+        first_response_chunk_recorded = False
         first_tool_recorded = False
 
         def get_elapsed_ms() -> int:
@@ -150,6 +151,7 @@ async def stream_with_react_agent(
 
             yield create_latency_event("context_prepared", get_elapsed_ms())
             yield create_thinking_event("reasoning", chat_id)
+            yield create_stream_mode_event("buffered")
 
             tool_event_queue = asyncio.Queue()
             tool_callback = ToolExecutionCallback(tool_event_queue, request.language)
@@ -316,16 +318,15 @@ async def stream_with_react_agent(
                     }
                 )
 
-            CHUNK_SIZE = 10
-            for i in range(0, len(final_answer), CHUNK_SIZE):
-                await raise_if_disconnected(client_request)
-                chunk_text = final_answer[i : i + CHUNK_SIZE]
-                if not ttft_recorded:
-                    ttft_recorded = True
-                    ttft_ms = get_elapsed_ms()
-                    yield create_latency_event("first_chunk", ttft_ms)
-                yield create_chunk_event(chunk_text)
-                await asyncio.sleep(0.03)
+            await raise_if_disconnected(client_request)
+            if final_answer:
+                if not first_response_chunk_recorded:
+                    first_response_chunk_recorded = True
+                    yield create_latency_event(
+                        "first_response_chunk",
+                        get_elapsed_ms(),
+                    )
+                yield create_chunk_event(final_answer)
 
             await await_disconnect_grace(client_request)
             terminal_task = asyncio.create_task(

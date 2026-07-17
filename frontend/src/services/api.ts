@@ -9,6 +9,7 @@ import type {
   StreamEvent,
   DeepStreamEvent,
   RouteSelectedEvent,
+  ResponseStreamModeEvent,
   MarketStatus,
 } from "../types/api";
 
@@ -180,6 +181,7 @@ export const chatService = {
       // Agent Configuration
       agent_version?: "auto" | "v2" | "v3" | "v4-deep";
       onRouteSelected?: (event: RouteSelectedEvent) => void;
+      onStreamMode?: (event: ResponseStreamModeEvent) => void;
       onClarificationRequired?: (event: ClarificationRequiredEvent) => void;
       onCancelled?: () => void;
       debug_enabled?: boolean; // Enable debug logging in backend
@@ -245,6 +247,8 @@ export const chatService = {
 
             if (data.type === "route_selected") {
               options?.onRouteSelected?.(data);
+            } else if (data.type === "response_stream_mode") {
+              options?.onStreamMode?.(data);
             } else if (data.type === "clarification_required") {
               options?.onClarificationRequired?.(data);
             } else if (

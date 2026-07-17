@@ -35,6 +35,7 @@ import {
 import type {
   ClarificationRequiredEvent,
   DeepStreamEvent,
+  ResponseStreamModeEvent,
   RouteSelectedEvent,
 } from "../../types/api";
 import i18n from "../../i18n";
@@ -52,6 +53,7 @@ export const useAnalysis = (
   setChatId?: (id: string) => void,
   onDeepEvent?: (event: DeepStreamEvent) => void,
   onRouteSelected?: (event: RouteSelectedEvent) => void,
+  onStreamMode?: (event: ResponseStreamModeEvent) => void,
 ) => {
   const queryClient = useQueryClient();
   const abortActiveRef = useRef<(() => void) | null>(null);
@@ -227,6 +229,7 @@ export const useAnalysis = (
           {
             agent_version: "auto",
             onRouteSelected,
+            onStreamMode,
             onClarificationRequired: (event: ClarificationRequiredEvent) => {
               accumulatedContent = event.message;
               setMessages((prev) =>

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-07-17
+
+### Honest streaming semantics
+
+- Added explicit `model_tokens` and `buffered` response stream modes.
+- Direct chat records `first_model_token` from real provider chunks.
+- ReAct and Deep now send one buffered final response chunk.
+- Removed ten-character typewriter splitting and artificial response delays.
+- Added `first_progress_event` and `first_response_chunk` latency stages.
+- Preserved live tool, sub-agent, debate, and progress events.
+- Added semantic unit coverage and real browser timing proof.
+
 ## [0.36.0] - 2026-07-17
 
 ### Agent task cancellation

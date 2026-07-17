@@ -225,7 +225,11 @@ async def test_resolved_symbol_continues_to_deep_agent():
 
     events = parse_events(output)
     assert any(
-        event["type"] == "chunk" and event["content"] == "TSLA analy"
+        event["type"] == "chunk" and event["content"] == "TSLA analysis"
+        for event in events
+    )
+    assert any(
+        event["type"] == "response_stream_mode" and event["mode"] == "buffered"
         for event in events
     )
     assert all(event["type"] != "clarification_required" for event in events)
