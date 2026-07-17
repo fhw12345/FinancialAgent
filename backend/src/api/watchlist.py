@@ -9,13 +9,15 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pymongo.errors import DuplicateKeyError
 
-from ..database.mongodb import MongoDB
-from ..database.repositories.watchlist_repository import WatchlistRepository
+from ..database.repositories.watchlist_repository import (
+    WATCHLIST_COLLECTION,
+    WatchlistRepository,
+)
 from ..models.watchlist import WatchlistItem, WatchlistItemCreate
 from ..services.alphavantage_market_data import AlphaVantageMarketDataService
 from .dependencies.portfolio_deps import get_market_service
 from .dependencies.rate_limit import limiter
-from .dependencies.storage import get_mongodb
+from .dependencies.watchlist_deps import get_watchlist_repository
 
 logger = structlog.get_logger()
 
@@ -62,7 +64,7 @@ async def _enrich_with_live_quote(
     repo: WatchlistRepository | None = None
     if mongodb is not None:
         try:
-            repo = WatchlistRepository(mongodb.get_collection("watchlist"))
+            repo = WatchlistRepository(mongodb.get_collection(WATCHLIST_COLLECTION))
         except Exception:
             repo = None
 
@@ -154,8 +156,8 @@ async def _enrich_with_live_quote(
 async def add_to_watchlist(
     request: Request,
     item: WatchlistItemCreate,
-    mongodb: MongoDB = Depends(get_mongodb),
     market_service: AlphaVantageMarketDataService = Depends(get_market_service),
+    watchlist_repo: WatchlistRepository = Depends(get_watchlist_repository),
 ) -> WatchlistItem:
     """Add a symbol to watchlist for automated analysis."""
     try:
@@ -270,9 +272,6 @@ async def add_to_watchlist(
             )
 
         item.symbol = symbol_upper
-        watchlist_collection = mongodb.get_collection("watchlist")
-        watchlist_repo = WatchlistRepository(watchlist_collection)
-
         watchlist_item = await watchlist_repo.create(watchlist_create=item)
 
         logger.info(
@@ -307,7 +306,7 @@ async def add_to_watchlist(
 @limiter.limit("60/minute")
 async def get_watchlist(
     request: Request,
-    mongodb: MongoDB = Depends(get_mongodb),
+    watchlist_repo: WatchlistRepository = Depends(get_watchlist_repository),
     skip: int = 0,
     limit: int = 50,
 ) -> list[WatchlistItem]:
@@ -318,9 +317,6 @@ async def get_watchlist(
         raise HTTPException(status_code=400, detail="limit must be between 1 and 100")
 
     try:
-        watchlist_collection = mongodb.get_collection("watchlist")
-        watchlist_repo = WatchlistRepository(watchlist_collection)
-
         items = await watchlist_repo.get_by_user(skip=skip, limit=limit)
 
         # Best-effort live quote enrichment so the UI shows current price next
@@ -353,13 +349,10 @@ async def get_watchlist(
 async def remove_from_watchlist(
     request: Request,
     watchlist_id: str,
-    mongodb: MongoDB = Depends(get_mongodb),
+    watchlist_repo: WatchlistRepository = Depends(get_watchlist_repository),
 ) -> None:
     """Remove a symbol from watchlist."""
     try:
-        watchlist_collection = mongodb.get_collection("watchlist")
-        watchlist_repo = WatchlistRepository(watchlist_collection)
-
         deleted = await watchlist_repo.delete(watchlist_id)
 
         if not deleted:
@@ -387,7 +380,8 @@ async def remove_from_watchlist(
 async def trigger_watchlist_analysis(
     request: Request,
     symbol: str | None = None,
-) -> dict:
+    watchlist_repo: WatchlistRepository = Depends(get_watchlist_repository),
+) -> dict[str, object]:
     """Trigger analysis. Without `symbol`, analyzes the whole watchlist
     (force=True, skips already-held symbols). With `?symbol=BE`, runs the
     analysis for that single symbol regardless of whether it's in the
@@ -437,36 +431,26 @@ async def trigger_watchlist_analysis(
                     "message": f"{type(e).__name__}: {e}",
                 }
 
-            # Stamp watchlist.last_analyzed_at so the WatchlistPanel row
-            # advances. Symbols not in the watchlist (e.g. ad-hoc analyze
-            # of a held but un-watched ticker) silently skip — there's
-            # no row to update and no error worth surfacing.
-            mongo = getattr(request.app.state, "mongodb", None)
-            if mongo is not None:
-                try:
-                    repo = WatchlistRepository(mongo.get_collection("watchlist_items"))
-                    items = await repo.get_by_user(limit=200)
-                    match = next(
-                        (it for it in items if it.symbol.upper() == sym_upper),
-                        None,
-                    )
-                    if match is not None:
-                        await repo.update_last_analyzed(match.watchlist_id)
-                except Exception as e:
-                    # Decision is already persisted to portfolio_orders;
-                    # a failed timestamp update is cosmetic only.
-                    logger.warning(
-                        "watchlist_stamp_failed",
-                        symbol=sym_upper,
-                        error=str(e),
-                    )
-
             persisted = int(result.get("result_count") or 0)
+            if persisted <= 0:
+                return {
+                    "status": "analysis_failed",
+                    "symbol": sym_upper,
+                    "result_count": persisted,
+                    "run_id": result.get("run_id"),
+                    "message": result.get("message"),
+                    "watchlist_updated": False,
+                    "last_analyzed_at": None,
+                }
+
+            analyzed_at = await watchlist_repo.mark_analyzed_by_symbol(sym_upper)
             return {
-                "status": "analysis_completed" if persisted > 0 else "analysis_failed",
+                "status": "analysis_completed",
                 "symbol": sym_upper,
                 "result_count": persisted,
                 "run_id": result.get("run_id"),
+                "watchlist_updated": analyzed_at is not None,
+                "last_analyzed_at": analyzed_at,
             }
 
         # Batch path (no symbol) keeps using the legacy WatchlistAnalyzer

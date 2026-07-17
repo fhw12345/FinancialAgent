@@ -1,183 +1,220 @@
-"""W2.2 reroute integration test: POST /api/watchlist/analyze?symbol=X
-calls run_single_symbol (the W2.1 unified flow) instead of the legacy
-WatchlistAnalyzer.analyze_symbol path, and stamps watchlist.last_analyzed_at
-when the symbol is in the watchlist.
-
-The legacy path was bug-prone (free-text DECISION:/POSITION_SIZE: parse
-that crashed on format drift) and didn't write to portfolio_orders, so
-the dashboard never saw watchlist results. After W2.2 the per-row
-"Analyze Now" button persists a structured PortfolioOrder via
-run_single_symbol; the dashboard's DecisionTracker picks it up.
-
-This test stubs run_single_symbol + the watchlist repo so we can
-assert the wiring without booting LangGraph / mongo / yfinance.
-"""
+"""Integration tests for single-symbol watchlist analysis persistence."""
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.api.dependencies.storage import get_mongodb
+from src.api.dependencies.watchlist_deps import get_watchlist_repository
 from src.api.watchlist import router
-from src.models.watchlist import WatchlistItem
+from src.database.repositories.watchlist_repository import (
+    WATCHLIST_COLLECTION,
+    WatchlistRepository,
+)
 
 
-def _make_app(*, mongo: MagicMock | None) -> FastAPI:
+def _mock_repository(
+    *,
+    analyzed_at: datetime | None = None,
+) -> MagicMock:
+    repository = MagicMock(spec=WatchlistRepository)
+    repository.mark_analyzed_by_symbol = AsyncMock(return_value=analyzed_at)
+    return repository
+
+
+def _make_app(
+    *,
+    repository: MagicMock | None = None,
+    mongodb: MagicMock | None = None,
+) -> FastAPI:
     app = FastAPI()
     app.include_router(router)
-    app.state.mongodb = mongo
+    app.state.watchlist_analyzer = MagicMock()
+
+    if repository is None and mongodb is None:
+        repository = _mock_repository()
+    if repository is not None:
+        app.dependency_overrides[get_watchlist_repository] = lambda: repository
+    if mongodb is not None:
+        app.dependency_overrides[get_mongodb] = lambda: mongodb
     return app
 
 
 @pytest.fixture
 def patched_run_single_symbol():
     with patch(
-        "src.agent.portfolio.flows.run_single_symbol", new_callable=AsyncMock
-    ) as m:
-        yield m
+        "src.agent.portfolio.flows.run_single_symbol",
+        new_callable=AsyncMock,
+    ) as mocked_flow:
+        yield mocked_flow
 
 
 def test_single_symbol_route_calls_run_single_symbol(patched_run_single_symbol):
-    """Endpoint must invoke W2.1 flow, NOT the legacy WatchlistAnalyzer."""
+    """Endpoint invokes the unified flow and preserves ad-hoc analysis."""
     patched_run_single_symbol.return_value = {
         "result_count": 1,
         "run_id": "single_abcd1234",
         "symbol": "AAPL",
         "message": "ok",
     }
+    repository = _mock_repository()
+    app = _make_app(repository=repository)
 
-    mongo = MagicMock()
-    mongo.get_collection = MagicMock(return_value=MagicMock())
-    app = _make_app(mongo=mongo)
+    response = TestClient(app).post("/api/watchlist/analyze?symbol=AAPL")
 
-    # Stub watchlist repo: AAPL not in watchlist → update path is skipped.
-    with patch("src.api.watchlist.WatchlistRepository") as repo_cls:
-        repo = MagicMock()
-        repo.get_by_user = AsyncMock(return_value=[])
-        repo.update_last_analyzed = AsyncMock(return_value=False)
-        repo_cls.return_value = repo
-
-        client = TestClient(app)
-        r = client.post("/api/watchlist/analyze?symbol=AAPL")
-
-    assert r.status_code == 202, r.text
-    body = r.json()
-    assert body["status"] == "analysis_completed"
-    assert body["symbol"] == "AAPL"
-    assert body["result_count"] == 1
-    assert body["run_id"] == "single_abcd1234"
-
-    # Critical: W2.1 flow was called once with the upper-cased symbol.
+    assert response.status_code == 202, response.text
+    assert response.json() == {
+        "status": "analysis_completed",
+        "symbol": "AAPL",
+        "result_count": 1,
+        "run_id": "single_abcd1234",
+        "watchlist_updated": False,
+        "last_analyzed_at": None,
+    }
     patched_run_single_symbol.assert_awaited_once()
     args, _ = patched_run_single_symbol.call_args
     assert args[1] == "AAPL"
+    repository.mark_analyzed_by_symbol.assert_awaited_once_with("AAPL")
 
 
-def test_single_symbol_stamps_last_analyzed_when_in_watchlist(
+def test_single_symbol_returns_persisted_watchlist_timestamp(
     patched_run_single_symbol,
 ):
-    """If the symbol IS in the watchlist, the row's last_analyzed_at
-    must be updated so the WatchlistPanel shows the fresh timestamp."""
+    """A watched symbol returns the exact timestamp written to MongoDB."""
     patched_run_single_symbol.return_value = {
         "result_count": 1,
         "run_id": "single_xyz",
         "symbol": "MSFT",
     }
+    analyzed_at = datetime(2026, 7, 17, 5, 30, tzinfo=UTC)
+    repository = _mock_repository(analyzed_at=analyzed_at)
+    app = _make_app(repository=repository)
 
-    mongo = MagicMock()
-    mongo.get_collection = MagicMock(return_value=MagicMock())
-    app = _make_app(mongo=mongo)
+    response = TestClient(app).post("/api/watchlist/analyze?symbol=msft")
 
-    msft_item = WatchlistItem(
-        watchlist_id="wl_msft",
-        user_id="local",
-        symbol="MSFT",
-        notes=None,
+    assert response.status_code == 202, response.text
+    body = response.json()
+    assert body["status"] == "analysis_completed"
+    assert body["watchlist_updated"] is True
+    returned_at = datetime.fromisoformat(
+        body["last_analyzed_at"].replace("Z", "+00:00")
     )
+    assert returned_at == analyzed_at
+    repository.mark_analyzed_by_symbol.assert_awaited_once_with("MSFT")
 
-    with patch("src.api.watchlist.WatchlistRepository") as repo_cls:
-        repo = MagicMock()
-        repo.get_by_user = AsyncMock(return_value=[msft_item])
-        repo.update_last_analyzed = AsyncMock(return_value=True)
-        repo_cls.return_value = repo
 
-        client = TestClient(app)
-        r = client.post("/api/watchlist/analyze?symbol=msft")  # lowercase ok
+def test_analyze_endpoint_uses_canonical_watchlist_collection(
+    patched_run_single_symbol,
+):
+    """The real dependency must select the collection used by CRUD."""
+    patched_run_single_symbol.return_value = {
+        "result_count": 1,
+        "run_id": "single_collection",
+        "symbol": "AAPL",
+    }
+    collection = MagicMock()
+    collection.update_one = AsyncMock(
+        return_value=SimpleNamespace(matched_count=1, modified_count=1)
+    )
+    mongodb = MagicMock()
+    mongodb.get_collection.return_value = collection
+    app = _make_app(mongodb=mongodb)
 
-    assert r.status_code == 202, r.text
-    assert r.json()["status"] == "analysis_completed"
-    repo.update_last_analyzed.assert_awaited_once_with("wl_msft")
+    response = TestClient(app).post("/api/watchlist/analyze?symbol=AAPL")
+
+    assert response.status_code == 202, response.text
+    assert response.json()["watchlist_updated"] is True
+    mongodb.get_collection.assert_called_once_with(WATCHLIST_COLLECTION)
+    collection.update_one.assert_awaited_once()
+    query = collection.update_one.await_args.args[0]
+    assert query == {"symbol": "AAPL"}
+
+
+def test_watchlist_persistence_failure_is_not_reported_as_completed(
+    patched_run_single_symbol,
+):
+    """A timestamp write failure must surface as an endpoint failure."""
+    patched_run_single_symbol.return_value = {
+        "result_count": 1,
+        "run_id": "single_failed_stamp",
+        "symbol": "AAPL",
+    }
+    repository = _mock_repository()
+    repository.mark_analyzed_by_symbol.side_effect = RuntimeError(
+        "watchlist write failed"
+    )
+    app = _make_app(repository=repository)
+
+    response = TestClient(app).post("/api/watchlist/analyze?symbol=AAPL")
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == (
+        "Unable to trigger watchlist analysis. Please try again later."
+    )
 
 
 def test_single_symbol_failure_returns_failed_status(patched_run_single_symbol):
-    """If run_single_symbol raises, endpoint returns analysis_failed
-    instead of crashing the request — so the UI can show a toast."""
+    """Flow failures remain explicit and do not stamp the watchlist."""
     patched_run_single_symbol.side_effect = RuntimeError("LLM offline")
+    repository = _mock_repository()
+    app = _make_app(repository=repository)
 
-    mongo = MagicMock()
-    mongo.get_collection = MagicMock(return_value=MagicMock())
-    app = _make_app(mongo=mongo)
+    response = TestClient(app).post("/api/watchlist/analyze?symbol=NVDA")
 
-    client = TestClient(app)
-    r = client.post("/api/watchlist/analyze?symbol=NVDA")
-
-    assert r.status_code == 202
-    body = r.json()
+    assert response.status_code == 202
+    body = response.json()
     assert body["status"] == "analysis_failed"
     assert body["symbol"] == "NVDA"
     assert "RuntimeError" in body["message"]
+    repository.mark_analyzed_by_symbol.assert_not_awaited()
 
 
 def test_single_symbol_zero_persisted_returns_failed(patched_run_single_symbol):
-    """run_single_symbol returns result_count=0 when Phase1 produces
-    no research. Endpoint must surface analysis_failed so the UI
-    doesn't lie about success."""
+    """No persisted decision means the timestamp must remain unchanged."""
     patched_run_single_symbol.return_value = {
         "result_count": 0,
         "run_id": None,
         "symbol": "TSLA",
         "message": "Phase 1 produced no research for TSLA.",
     }
+    repository = _mock_repository()
+    app = _make_app(repository=repository)
 
-    mongo = MagicMock()
-    mongo.get_collection = MagicMock(return_value=MagicMock())
-    app = _make_app(mongo=mongo)
+    response = TestClient(app).post("/api/watchlist/analyze?symbol=TSLA")
 
-    with patch("src.api.watchlist.WatchlistRepository") as repo_cls:
-        repo = MagicMock()
-        repo.get_by_user = AsyncMock(return_value=[])
-        repo.update_last_analyzed = AsyncMock()
-        repo_cls.return_value = repo
-
-        client = TestClient(app)
-        r = client.post("/api/watchlist/analyze?symbol=TSLA")
-
-    assert r.status_code == 202
-    assert r.json()["status"] == "analysis_failed"
+    assert response.status_code == 202
+    body = response.json()
+    assert body["status"] == "analysis_failed"
+    assert body["watchlist_updated"] is False
+    assert body["last_analyzed_at"] is None
+    repository.mark_analyzed_by_symbol.assert_not_awaited()
 
 
 def test_invalid_symbol_returns_400():
-    app = _make_app(mongo=MagicMock())
-    client = TestClient(app)
-    r = client.post("/api/watchlist/analyze?symbol=A!B")
-    assert r.status_code == 400
+    app = _make_app()
+
+    response = TestClient(app).post("/api/watchlist/analyze?symbol=A!B")
+
+    assert response.status_code == 400
 
 
 def test_no_symbol_uses_legacy_batch_path():
-    """All-watchlist path (no `symbol` param) keeps using the legacy
-    WatchlistAnalyzer because the 5-min cron + bulk sweep haven't been
-    ported. UI never hits this branch."""
-    app = _make_app(mongo=MagicMock())
+    """The all-watchlist path remains on the legacy batch analyzer."""
+    repository = _mock_repository()
+    app = _make_app(repository=repository)
     analyzer = MagicMock()
     analyzer.run_analysis_cycle = AsyncMock()
     app.state.watchlist_analyzer = analyzer
 
-    client = TestClient(app)
-    r = client.post("/api/watchlist/analyze")
+    response = TestClient(app).post("/api/watchlist/analyze")
 
-    assert r.status_code == 202
-    assert r.json()["status"] == "analysis_started"
+    assert response.status_code == 202
+    assert response.json()["status"] == "analysis_started"
     analyzer.run_analysis_cycle.assert_awaited_once_with(force=True)
+    repository.mark_analyzed_by_symbol.assert_not_awaited()

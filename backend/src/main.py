@@ -102,9 +102,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("Holding indexes created (portfolio management)")
 
         # Watchlist indexes
-        from .database.repositories.watchlist_repository import WatchlistRepository
+        from .database.repositories.watchlist_repository import (
+            WATCHLIST_COLLECTION,
+            WatchlistRepository,
+        )
 
-        watchlist_repo = WatchlistRepository(mongodb.get_collection("watchlist"))
+        watchlist_repo = WatchlistRepository(
+            mongodb.get_collection(WATCHLIST_COLLECTION)
+        )
         await watchlist_repo.ensure_indexes()
         logger.info("Watchlist indexes created (symbol tracking)")
 
@@ -238,7 +243,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from .services.watchlist_analyzer import WatchlistAnalyzer
 
         watchlist_analyzer = WatchlistAnalyzer(
-            watchlist_collection=mongodb.get_collection("watchlist"),
+            watchlist_collection=mongodb.get_collection(WATCHLIST_COLLECTION),
             messages_collection=mongodb.get_collection("messages"),
             chats_collection=mongodb.get_collection("chats"),
             redis_cache=redis_cache,
@@ -289,7 +294,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         cache_warming_service = CacheWarmingService(
             redis_cache=redis_cache,
             market_service=market_service,
-            watchlist_collection=mongodb.get_collection("watchlist"),
+            watchlist_collection=mongodb.get_collection(WATCHLIST_COLLECTION),
             settings=settings,
         )
         app.state.cache_warming_service = cache_warming_service

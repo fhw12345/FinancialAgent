@@ -23,3 +23,13 @@ export interface WatchlistItemCreate {
   symbol: string;
   notes?: string | null;
 }
+
+export interface WatchlistAnalysisResult {
+  status: string;
+  message?: string | null;
+  symbol?: string;
+  result_count?: number;
+  run_id?: string | null;
+  watchlist_updated?: boolean;
+  last_analyzed_at?: string | null;
+}

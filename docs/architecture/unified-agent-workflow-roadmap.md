@@ -320,6 +320,11 @@ The single-symbol analysis path updates `watchlist_items`, while the repository
 uses the `watchlist` collection elsewhere. Existing mocked tests do not verify
 the collection name.
 
+Detailed implementation plan:
+[UAW-004: Watchlist Analysis Persistence Wiring](../features/watchlist-persistence-wiring.md).
+
+Implementation status: code and browser validation completed; commit pending.
+
 **Required behavior**
 
 - Use one collection constant or repository factory.

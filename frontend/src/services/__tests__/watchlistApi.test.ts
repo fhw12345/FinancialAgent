@@ -158,7 +158,9 @@ describe("watchlistApi", () => {
       expect(apiClient.delete).toHaveBeenCalledWith("/api/watchlist/w123");
 
       await removeFromWatchlist("abc-def-ghi");
-      expect(apiClient.delete).toHaveBeenCalledWith("/api/watchlist/abc-def-ghi");
+      expect(apiClient.delete).toHaveBeenCalledWith(
+        "/api/watchlist/abc-def-ghi",
+      );
     });
   });
 
@@ -204,6 +206,44 @@ describe("watchlistApi", () => {
       // Assert
       expect(result.status).toBe("success");
       expect(result.message).toBe("No symbols in watchlist");
+    });
+
+    it("should return persistence metadata for a single symbol", async () => {
+      const mockResponse = {
+        data: {
+          status: "analysis_completed",
+          symbol: "AAPL",
+          result_count: 1,
+          run_id: "single_aapl",
+          watchlist_updated: true,
+          last_analyzed_at: "2026-07-17T05:30:00Z",
+        },
+      };
+      vi.mocked(apiClient.post).mockResolvedValueOnce(mockResponse);
+
+      const result = await triggerWatchlistAnalysis("AAPL");
+
+      expect(apiClient.post).toHaveBeenCalledWith(
+        "/api/watchlist/analyze?symbol=AAPL",
+        undefined,
+        { timeout: 120000 },
+      );
+      expect(result.watchlist_updated).toBe(true);
+      expect(result.last_analyzed_at).toBe("2026-07-17T05:30:00Z");
+    });
+
+    it("should reject analysis_failed responses", async () => {
+      vi.mocked(apiClient.post).mockResolvedValueOnce({
+        data: {
+          status: "analysis_failed",
+          symbol: "AAPL",
+          message: "Phase 1 produced no research",
+        },
+      });
+
+      await expect(triggerWatchlistAnalysis("AAPL")).rejects.toThrow(
+        "Phase 1 produced no research",
+      );
     });
   });
 

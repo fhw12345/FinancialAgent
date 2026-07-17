@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-07-17
+
+### Watchlist analysis persistence wiring
+
+- Added one canonical `WATCHLIST_COLLECTION` and repository dependency.
+- Replaced the incorrect `watchlist_items` update with an atomic symbol-based
+  update against `watchlist`.
+- Removed the application-side 200-row scan limit.
+- Returns `watchlist_updated` and the exact millisecond-precision timestamp
+  persisted to MongoDB.
+- Surfaces timestamp persistence errors instead of returning
+  `analysis_completed`.
+- Added repository, endpoint integration, and real-Mongo browser coverage.
+
 ## [0.34.0] - 2026-07-17
 
 ### Multi-turn Deep Research context

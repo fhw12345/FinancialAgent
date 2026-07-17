@@ -4,7 +4,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as watchlistApi from "../services/watchlistApi";
-import type { WatchlistItemCreate } from "../types/watchlist";
+import type { WatchlistItem, WatchlistItemCreate } from "../types/watchlist";
 
 /**
  * Query keys for watchlist data.
@@ -32,7 +32,8 @@ export function useAddToWatchlist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (item: WatchlistItemCreate) => watchlistApi.addToWatchlist(item),
+    mutationFn: (item: WatchlistItemCreate) =>
+      watchlistApi.addToWatchlist(item),
     onSuccess: () => {
       // Invalidate and refetch watchlist
       queryClient.invalidateQueries({ queryKey: watchlistKeys.list() });
@@ -47,7 +48,8 @@ export function useRemoveFromWatchlist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (watchlistId: string) => watchlistApi.removeFromWatchlist(watchlistId),
+    mutationFn: (watchlistId: string) =>
+      watchlistApi.removeFromWatchlist(watchlistId),
     onSuccess: () => {
       // Invalidate and refetch watchlist
       queryClient.invalidateQueries({ queryKey: watchlistKeys.list() });
@@ -65,10 +67,28 @@ export function useTriggerWatchlistAnalysis() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (symbol?: string) => watchlistApi.triggerWatchlistAnalysis(symbol),
-    onSuccess: () => {
-      // Invalidate watchlist to refresh "last_analyzed_at" timestamps
-      queryClient.invalidateQueries({ queryKey: watchlistKeys.list() });
+    mutationFn: (symbol?: string) =>
+      watchlistApi.triggerWatchlistAnalysis(symbol),
+    onSuccess: async (result) => {
+      if (
+        result.watchlist_updated &&
+        result.symbol &&
+        result.last_analyzed_at
+      ) {
+        queryClient.setQueryData<WatchlistItem[]>(
+          watchlistKeys.list(),
+          (items) =>
+            items?.map((item) =>
+              item.symbol === result.symbol
+                ? {
+                    ...item,
+                    last_analyzed_at: result.last_analyzed_at ?? null,
+                  }
+                : item,
+            ),
+        );
+      }
+      await queryClient.invalidateQueries({ queryKey: watchlistKeys.list() });
     },
   });
 }

@@ -4,7 +4,11 @@
  */
 
 import { apiClient } from "./api";
-import { WatchlistItem, WatchlistItemCreate } from "../types/watchlist";
+import type {
+  WatchlistAnalysisResult,
+  WatchlistItem,
+  WatchlistItemCreate,
+} from "../types/watchlist";
 
 /**
  * Get all watchlist items for the user.
@@ -18,7 +22,7 @@ export async function getWatchlist(): Promise<WatchlistItem[]> {
  * Add a symbol to the watchlist.
  */
 export async function addToWatchlist(
-  item: WatchlistItemCreate
+  item: WatchlistItemCreate,
 ): Promise<WatchlistItem> {
   const response = await apiClient.post<WatchlistItem>("/api/watchlist", item);
   return response.data;
@@ -43,18 +47,22 @@ export async function removeFromWatchlist(watchlistId: string): Promise<void> {
  * stays untouched. Once W2.2 rewires this to a background task this
  * override should go away.
  */
-export async function triggerWatchlistAnalysis(symbol?: string): Promise<{
-  status: string;
-  message?: string;
-  symbol?: string;
-}> {
+export async function triggerWatchlistAnalysis(
+  symbol?: string,
+): Promise<WatchlistAnalysisResult> {
   const url = symbol
     ? `/api/watchlist/analyze?symbol=${encodeURIComponent(symbol)}`
     : "/api/watchlist/analyze";
-  const response = await apiClient.post<{
-    status: string;
-    message?: string;
-    symbol?: string;
-  }>(url, undefined, { timeout: 120000 });
+  const response = await apiClient.post<WatchlistAnalysisResult>(
+    url,
+    undefined,
+    { timeout: 120000 },
+  );
+  if (response.data.status === "analysis_failed") {
+    throw new Error(
+      response.data.message ||
+        `Watchlist analysis failed for ${response.data.symbol || symbol || "symbol"}`,
+    );
+  }
   return response.data;
 }

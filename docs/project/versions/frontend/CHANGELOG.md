@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.3] - 2026-07-17
+
+### Watchlist timestamp refresh
+
+- Updates the analyzed watchlist row immediately from the persisted timestamp
+  returned by the mutation.
+- Awaits React Query invalidation so MongoDB remains authoritative.
+- Treats failed analysis results as errors instead of success-shaped responses.
+- Added stable Watchlist selectors and Playwright proof across browser reload.
+
 ## [0.25.2] - 2026-07-17
 
 ### Deep Research context E2E

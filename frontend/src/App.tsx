@@ -65,6 +65,7 @@ function App() {
                 {t("navigation.platform")}
               </button>
               <button
+                data-testid="nav-portfolio"
                 onClick={() => setActiveTab("portfolio")}
                 className={`px-3 sm:px-5 py-1.5 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl transition-all duration-200 ${
                   activeTab === "portfolio"

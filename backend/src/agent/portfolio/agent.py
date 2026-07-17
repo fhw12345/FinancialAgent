@@ -1,13 +1,16 @@
 """Portfolio research and decision pipeline used by the local dashboard."""
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ...core.config import Settings
 from ...database.mongodb import MongoDB
 from ...database.repositories.chat_repository import ChatRepository
 from ...database.repositories.message_repository import MessageRepository
 from ...database.repositories.portfolio_order_repository import PortfolioOrderRepository
-from ...database.repositories.watchlist_repository import WatchlistRepository
+from ...database.repositories.watchlist_repository import (
+    WATCHLIST_COLLECTION,
+    WatchlistRepository,
+)
 from ...services.context_window_manager import ContextWindowManager
 from ..langgraph_react_agent import FinancialAnalysisReActAgent
 from ..order_optimizer import OrderOptimizer
@@ -32,7 +35,7 @@ class PortfolioAnalysisAgent(
         react_agent: FinancialAnalysisReActAgent,
         settings: Settings,
         redis_cache: "RedisCache",
-        market_service=None,
+        market_service: Any | None = None,
     ) -> None:
         self.mongodb = mongodb
         self.react_agent = react_agent
@@ -40,7 +43,9 @@ class PortfolioAnalysisAgent(
         self.redis_cache = redis_cache
         self.market_service = market_service
 
-        self.watchlist_repo = WatchlistRepository(mongodb.get_collection("watchlist"))
+        self.watchlist_repo = WatchlistRepository(
+            mongodb.get_collection(WATCHLIST_COLLECTION)
+        )
         self.chat_repo = ChatRepository(mongodb.get_collection("chats"), redis_cache)
         self.message_repo = MessageRepository(
             mongodb.get_collection("messages"), redis_cache

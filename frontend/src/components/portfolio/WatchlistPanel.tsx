@@ -94,7 +94,10 @@ export function WatchlistPanel() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div
+      data-testid="watchlist-panel"
+      className="bg-white rounded-lg shadow p-6"
+    >
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900">
           {t("portfolio:watchlist.title")}
@@ -147,6 +150,7 @@ export function WatchlistPanel() {
           {watchlist.map((item) => (
             <div
               key={item.watchlist_id}
+              data-testid={`watchlist-row-${item.symbol}`}
               className="flex items-center justify-between p-3 bg-gray-50 rounded-md hover:bg-gray-100"
             >
               <div className="flex-1 min-w-0">
@@ -195,21 +199,26 @@ export function WatchlistPanel() {
                 <div className="text-xs text-gray-400 mt-1">
                   {t("portfolio:watchlistPanel.added")}:{" "}
                   {formatDate(item.added_at, i18n.language)}
-                  {item.last_analyzed_at && (
-                    <span className="ml-2">
-                      • {t("portfolio:watchlistPanel.lastAnalyzed")}:{" "}
-                      {formatTimeAgo(new Date(item.last_analyzed_at))}
-                    </span>
-                  )}
-                  {!item.last_analyzed_at && (
-                    <span className="ml-2 text-amber-600">
-                      • {t("portfolio:watchlistPanel.waitingFirstAnalysis")}
-                    </span>
-                  )}
+                  <span
+                    data-testid={`watchlist-last-analyzed-${item.symbol}`}
+                    data-last-analyzed-at={item.last_analyzed_at || ""}
+                    className={`ml-2 ${
+                      item.last_analyzed_at ? "" : "text-amber-600"
+                    }`}
+                  >
+                    {item.last_analyzed_at
+                      ? `• ${t("portfolio:watchlistPanel.lastAnalyzed")}: ${formatTimeAgo(
+                          new Date(item.last_analyzed_at),
+                        )}`
+                      : `• ${t(
+                          "portfolio:watchlistPanel.waitingFirstAnalysis",
+                        )}`}
+                  </span>
                 </div>
               </div>
               <div className="ml-4 flex items-center gap-1">
                 <button
+                  data-testid={`watchlist-analyze-${item.symbol}`}
                   onClick={() => handleAnalyzeOne(item.symbol)}
                   disabled={triggerAnalysisMutation.isPending}
                   className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"

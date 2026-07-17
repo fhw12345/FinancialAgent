@@ -1,7 +1,7 @@
 # Financial Agent Development Makefile
 # Following the coding guide requirements for fmt, test, lint commands
 
-.PHONY: help dev build test test-e2e test-e2e-real test-e2e-uaw002 test-e2e-uaw003 lint fmt clean up down logs copilot-reverse
+.PHONY: help dev build test test-e2e test-e2e-real test-e2e-uaw002 test-e2e-uaw003 test-e2e-uaw004 lint fmt clean up down logs copilot-reverse
 
 # Default target
 help:
@@ -22,6 +22,7 @@ help:
 	@echo "  test-e2e-real Run real-stack Playwright browser tests"
 	@echo "  test-e2e-uaw002 Run Mongo-authority restart E2E"
 	@echo "  test-e2e-uaw003 Run Deep Research context E2E"
+	@echo "  test-e2e-uaw004 Run Watchlist persistence E2E"
 	@echo ""
 	@echo "Building:"
 	@echo "  build        Build Docker images"
@@ -115,6 +116,16 @@ test-e2e-uaw003:
 	docker compose exec redis redis-cli -n 2 FLUSHDB
 	docker compose --profile e2e restart backend-deep-e2e frontend-deep-e2e
 	docker compose --profile e2e run --rm --no-deps -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:3002 e2e sh -c "until curl -fsS http://host.docker.internal:18083/api/health; do sleep 2; done; UPDATE_E2E_EVIDENCE=true npm run test:e2e:uaw-003"
+
+test-e2e-uaw004:
+	docker compose --profile e2e up -d --build llm-e2e backend-watchlist-e2e
+	docker compose --profile e2e build frontend-deep-e2e
+	docker compose --profile e2e up -d frontend-watchlist-e2e
+	docker compose exec mongodb mongosh --quiet --eval 'db.getSiblingDB("financial_agent_watchlist_e2e").dropDatabase()'
+	docker compose exec redis redis-cli -n 3 FLUSHDB
+	docker compose exec mongodb mongosh --quiet --eval 'db.getSiblingDB("financial_agent_watchlist_e2e").watchlist.insertOne({watchlist_id:"watch_uaw004_aapl",symbol:"AAPL",added_at:new Date("2026-07-17T05:00:00Z"),last_analyzed_at:null,notes:"UAW-004 persistence proof"})'
+	docker compose --profile e2e restart backend-watchlist-e2e frontend-watchlist-e2e
+	docker compose --profile e2e run --rm --no-deps -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:3003 e2e sh -c "until curl -fsS http://host.docker.internal:18084/api/health; do sleep 2; done; UPDATE_E2E_EVIDENCE=true npm run test:e2e:uaw-004"
 
 # Building
 build:

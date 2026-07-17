@@ -14,6 +14,8 @@ from ...models.watchlist import WatchlistItem, WatchlistItemCreate
 
 logger = structlog.get_logger()
 
+WATCHLIST_COLLECTION = "watchlist"
+
 
 class WatchlistRepository:
     """Repository for watchlist data access operations."""
@@ -37,7 +39,9 @@ class WatchlistRepository:
         logger.info("Watchlist indexes ensured")
 
     async def create(
-        self, user_id: str | None = None, watchlist_create: WatchlistItemCreate = None
+        self,
+        watchlist_create: WatchlistItemCreate,
+        user_id: str | None = None,
     ) -> WatchlistItem:
         """Create a new watchlist item. user_id is ignored."""
         import uuid
@@ -82,10 +86,18 @@ class WatchlistRepository:
         item_dict.pop("_id", None)
         return WatchlistItem(**item_dict)
 
+    async def get_by_symbol(self, symbol: str) -> WatchlistItem | None:
+        """Get a watchlist item by normalized symbol."""
+        item_dict = await self.collection.find_one({"symbol": symbol.strip().upper()})
+        if not item_dict:
+            return None
+        item_dict.pop("_id", None)
+        return WatchlistItem(**item_dict)
+
     async def delete(self, watchlist_id: str, user_id: str | None = None) -> bool:
         """Delete a watchlist item. user_id ignored."""
         result = await self.collection.delete_one({"watchlist_id": watchlist_id})
-        deleted = result.deleted_count > 0
+        deleted = int(result.deleted_count) > 0
         if deleted:
             logger.info("Watchlist item deleted", watchlist_id=watchlist_id)
         return deleted
@@ -104,7 +116,25 @@ class WatchlistRepository:
             {"watchlist_id": watchlist_id},
             {"$set": {"last_analyzed_at": timestamp}},
         )
-        return result.modified_count > 0
+        return int(result.matched_count) > 0
+
+    async def mark_analyzed_by_symbol(
+        self,
+        symbol: str,
+        timestamp: datetime | None = None,
+    ) -> datetime | None:
+        """Atomically stamp a watched symbol and return the persisted time."""
+        requested_at = timestamp or utcnow()
+        analyzed_at = requested_at.replace(
+            microsecond=(requested_at.microsecond // 1000) * 1000
+        )
+        result = await self.collection.update_one(
+            {"symbol": symbol.strip().upper()},
+            {"$set": {"last_analyzed_at": analyzed_at}},
+        )
+        if result.matched_count == 0:
+            return None
+        return analyzed_at
 
     async def update_quote_snapshot(
         self,
@@ -131,7 +161,7 @@ class WatchlistRepository:
                 }
             },
         )
-        return result.modified_count > 0
+        return int(result.modified_count) > 0
 
     async def get_stale_items(self, minutes: int = 5) -> list[WatchlistItem]:
         """Get watchlist items not analyzed recently."""

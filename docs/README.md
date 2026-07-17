@@ -22,6 +22,7 @@ All current documentation describes the local single-user application.
 - [Deep Agent Symbol Clarification](features/deep-agent-symbol-clarification.md)
 - [Mongo-Authoritative Conversation State](features/mongo-authoritative-conversation-state.md)
 - [Deep Research Conversation Context](features/deep-research-conversation-context.md)
+- [Watchlist Analysis Persistence Wiring](features/watchlist-persistence-wiring.md)
 - [Portfolio Agent Architecture](features/portfolio-agent-architecture-refactor.md)
 - [Write-time Translation](features/write-time-translation.md)
 - [Market Insights Trends](features/market-insights-trend-visualization.md)
@@ -35,6 +36,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [Watchlist Analysis Persistence Case Study](case-studies/2026-07-17-watchlist-analysis-wrong-collection.md)
 - [Deep Research Conversation Context Case Study](case-studies/2026-07-16-deep-research-lost-conversation-context.md)
 - [Mongo Conversation State Authority Case Study](case-studies/2026-07-16-mongo-conversation-state-authority.md)
 - [Duplicate Chat Titles Case Study](case-studies/2026-07-16-duplicate-chat-titles.md)
