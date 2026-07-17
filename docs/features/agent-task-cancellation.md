@@ -1,6 +1,6 @@
 ---
 title: Agent Task Cancellation
-status: in-progress
+status: shipped
 version: backend@0.36.0, frontend@0.26.0
 last_updated: 2026-07-17
 owner: maintainer
@@ -18,8 +18,7 @@ related_paths:
 
 ## Implementation Record
 
-The implementation and validation are complete in the current working tree.
-The feature remains `in-progress` until the change set is committed.
+Shipped in commit `5b4ac7a`.
 
 Delivered:
 
@@ -57,8 +56,8 @@ Playwright cancellation scenario: 1 passed
 
 | Evidence | Scenario | Stack | Commit | Result |
 | --- | --- | --- | --- | --- |
-| [Stop cancels active work](assets/uaw-005/01-stop-cancels-active-run.png) | Browser Stop cancels the ReAct agent and awaited child with no late event | Real frontend/backend/MongoDB + deterministic slow agent | pending | PASS |
-| [Cancelled state after reload](assets/uaw-005/02-cancelled-status-after-reload.png) | Reload restores the durable cancelled assistant run | Real frontend/backend/MongoDB + deterministic slow agent | pending | PASS |
+| [Stop cancels active work](assets/uaw-005/01-stop-cancels-active-run.png) | Browser Stop cancels the ReAct agent and awaited child with no late event | Real frontend/backend/MongoDB + deterministic slow agent | `5b4ac7a` | PASS |
+| [Cancelled state after reload](assets/uaw-005/02-cancelled-status-after-reload.png) | Reload restores the durable cancelled assistant run | Real frontend/backend/MongoDB + deterministic slow agent | `5b4ac7a` | PASS |
 
 ## 1. Task Summary
 

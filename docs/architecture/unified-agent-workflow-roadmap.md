@@ -348,7 +348,7 @@ continue after the user has stopped the request.
 Detailed implementation plan:
 [UAW-005: Agent Task Cancellation](../features/agent-task-cancellation.md).
 
-Implementation status: code and browser validation completed; commit pending.
+Implementation status: shipped in commit `5b4ac7a`.
 
 **Required behavior**
 
