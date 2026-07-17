@@ -270,6 +270,7 @@ Browse existing feature specs in this directory for examples:
 - **[Mongo-Authoritative Conversation State](mongo-authoritative-conversation-state.md)** — make persisted Mongo history the only cross-turn state source and remove decorative MemorySaver semantics
 - **[Deep Research Conversation Context](deep-research-conversation-context.md)** — carry prior thesis, horizon, risk tolerance, and constraints into follow-up Deep Research
 - **[Watchlist Analysis Persistence Wiring](watchlist-persistence-wiring.md)** — update the real watchlist row and refresh its analysis timestamp after per-symbol analysis
+- **[Agent Task Cancellation](agent-task-cancellation.md)** — propagate browser Stop through SSE handlers into active model, tool, and research tasks
 - **[Write-Time Translation](write-time-translation.md)** — translate LLM output to `zh-CN` on the write path so the read path skips `/api/translate`
 
 ### Market Data & Visualization

@@ -345,6 +345,11 @@ Closing the frontend request aborts the browser stream but does not reliably
 cancel the backend ReAct or research task. Tool calls and model calls may
 continue after the user has stopped the request.
 
+Detailed implementation plan:
+[UAW-005: Agent Task Cancellation](../features/agent-task-cancellation.md).
+
+Implementation status: code and browser validation completed; commit pending.
+
 **Required behavior**
 
 - Detect client disconnect or generator cancellation.

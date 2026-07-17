@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-07-17
+
+### Agent task cancellation
+
+- Added disconnect-aware cancellation for routing, Direct, ReAct, and Deep
+  execution.
+- Cancels and awaits active model/tool/research tasks with AnyIO-shielded
+  cleanup.
+- Added stable run IDs and atomic assistant terminal-message upserts.
+- Persists `run_status=cancelled` and `cancelled_at` instead of error-shaped
+  responses.
+- Added a partial unique run ID index with migration from the sparse index.
+- Covers final-chunk cancellation and Deep post-graph cancellation races.
+- Added unit, integration, and real browser cancellation coverage.
+
 ## [0.35.0] - 2026-07-17
 
 ### Watchlist analysis persistence wiring

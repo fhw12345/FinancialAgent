@@ -233,14 +233,6 @@ async def test_resolved_symbol_continues_to_deep_agent():
     assert agent.ainvoke.await_args.kwargs["resolved_symbol"] == "TSLA"
     resolve_kwargs = agent.resolve_symbol.await_args.kwargs
     assert "conversation_history" in resolve_kwargs
-    assistant_call = next(
-        call
-        for call in chat_service.add_message.await_args_list
-        if call.kwargs["role"] == "assistant"
-    )
-    assert (
-        assistant_call.kwargs["metadata"]["raw_data"]["research_context"][
-            "confirmed_symbol"
-        ]
-        == "TSLA"
-    )
+    assistant_call = chat_service.upsert_run_message.await_args
+    metadata = assistant_call.kwargs["metadata"]
+    assert metadata.raw_data["research_context"]["confirmed_symbol"] == "TSLA"

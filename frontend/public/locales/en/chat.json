@@ -23,6 +23,7 @@
     "thinkingChars": "{{count}} chars",
     "typing": "Typing...",
     "analyzing": "Analyzing...",
+    "cancelled": "Request cancelled.",
     "copied": "Copied to clipboard",
     "copy": "Copy",
     "retry": "Retry",

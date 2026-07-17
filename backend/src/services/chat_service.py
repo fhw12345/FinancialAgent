@@ -108,21 +108,7 @@ class ChatService:
         # Verify chat exists
         await self.get_chat(chat_id)
 
-        # Convert dict metadata to MessageMetadata if needed
-        if isinstance(metadata, dict):
-            # For dict, wrap it in raw_data if it's analysis data
-            if any(
-                key in metadata
-                for key in ["symbol", "timeframe", "fibonacci_levels", "stochastic_k"]
-            ):
-                metadata_obj = MessageMetadata(raw_data=metadata)
-            else:
-                # Try to construct MessageMetadata from dict fields
-                metadata_obj = MessageMetadata(**metadata)
-        elif metadata is None:
-            metadata_obj = MessageMetadata()
-        else:
-            metadata_obj = metadata
+        metadata_obj = self._coerce_metadata(metadata)
 
         # Create message
         message = await self.message_repo.create(
@@ -136,12 +122,7 @@ class ChatService:
             )
         )
 
-        # Update chat with last message info
-        await self.chat_repo.update(
-            chat_id,
-            ChatUpdate(last_message_preview=content[:200]),
-        )
-        await self.chat_repo.update_last_message_at(chat_id)
+        await self._update_chat_after_message(chat_id, content)
 
         logger.info(
             "Message added",
@@ -152,6 +133,56 @@ class ChatService:
         )
 
         return message
+
+    async def upsert_run_message(
+        self,
+        *,
+        chat_id: str,
+        run_id: str,
+        content: str,
+        metadata: MessageMetadata | dict[str, Any] | None = None,
+        tool_call: Any | None = None,
+    ) -> Message:
+        """Atomically persist one terminal assistant message for a run."""
+        await self.get_chat(chat_id)
+        metadata_obj = self._coerce_metadata(metadata).model_copy(
+            update={"run_id": run_id}
+        )
+        message = await self.message_repo.upsert_run_message(
+            MessageCreate(
+                chat_id=chat_id,
+                role="assistant",
+                content=content,
+                source="llm",
+                metadata=metadata_obj,
+                tool_call=tool_call,
+            ),
+            run_id,
+        )
+        await self._update_chat_after_message(chat_id, content)
+        return message
+
+    @staticmethod
+    def _coerce_metadata(
+        metadata: MessageMetadata | dict[str, Any] | None,
+    ) -> MessageMetadata:
+        """Normalize flexible API metadata into the persisted model."""
+        if isinstance(metadata, dict):
+            if any(
+                key in metadata
+                for key in ["symbol", "timeframe", "fibonacci_levels", "stochastic_k"]
+            ):
+                return MessageMetadata(raw_data=metadata)
+            return MessageMetadata(**metadata)
+        return metadata or MessageMetadata()
+
+    async def _update_chat_after_message(self, chat_id: str, content: str) -> None:
+        """Update chat preview and recency after a message write."""
+        await self.chat_repo.update(
+            chat_id,
+            ChatUpdate(last_message_preview=content[:200]),
+        )
+        await self.chat_repo.update_last_message_at(chat_id)
 
     async def get_chat_messages(
         self,
@@ -174,6 +205,8 @@ class ChatService:
     ) -> Chat:
         """Update chat UI state. user_id ignored (W5b)."""
         await self.get_chat(chat_id)
+        if ui_state is None:
+            raise ValidationError("UI state is required")
 
         # Update UI state
         updated_chat = await self.chat_repo.update_ui_state(chat_id, ui_state)
@@ -210,10 +243,12 @@ class ChatService:
         """
         from ..core.utils.title_utils import generate_chat_title
 
-        return generate_chat_title(
-            user_message,
-            assistant_response=assistant_response,
-            current_symbol=current_symbol,
+        return str(
+            generate_chat_title(
+                user_message,
+                assistant_response=assistant_response,
+                current_symbol=current_symbol,
+            )
         )
 
     async def update_chat_title(self, chat_id: str, title: str) -> Chat | None:
@@ -371,4 +406,4 @@ class ChatService:
                 messages_deleted=deleted_messages,
             )
 
-        return deleted
+        return bool(deleted)

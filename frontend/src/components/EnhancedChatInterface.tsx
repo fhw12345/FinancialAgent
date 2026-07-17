@@ -293,6 +293,11 @@ export function EnhancedChatInterface() {
     setMessage("");
   }, [message, chatMutation, deepDispatch]);
 
+  const handleCancelMessage = useCallback(() => {
+    chatMutation.cancelActiveRequest();
+    deepDispatch({ type: "CANCEL" });
+  }, [chatMutation, deepDispatch]);
+
   const isRestoringRef = useRef(false);
   const [isRestoringChat, setIsRestoringChat] = useState(false);
 
@@ -533,11 +538,13 @@ export function EnhancedChatInterface() {
                   message={message}
                   setMessage={setMessage}
                   onSendMessage={handleSendMessage}
+                  onCancelMessage={handleCancelMessage}
                   isPending={
                     isRestoringChat ||
                     chatMutation.isPending ||
                     buttonMutation.isPending
                   }
+                  canCancel={chatMutation.isPending}
                   currentSymbol={currentSymbol}
                 />
               </div>

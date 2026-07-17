@@ -3,10 +3,12 @@ Message repository for conversation history.
 Handles CRUD operations for message collection.
 """
 
+import uuid
 from typing import TYPE_CHECKING
 
 import structlog
 from motor.motor_asyncio import AsyncIOMotorCollection
+from pymongo import ReturnDocument
 
 from src.core.utils.date_utils import utcnow
 from src.services.persistence_translator import translate_for_persistence
@@ -51,6 +53,21 @@ class MessageRepository:
         await self.collection.create_index(
             "metadata.transaction_id", sparse=True, name="metadata.transaction_id_1"
         )
+        index_name = "metadata.run_id_1"
+        indexes = await self.collection.index_information()
+        existing_run_index = indexes.get(index_name)
+        expected_partial = {"metadata.run_id": {"$type": "string"}}
+        if (
+            existing_run_index is not None
+            and existing_run_index.get("partialFilterExpression") != expected_partial
+        ):
+            await self.collection.drop_index(index_name)
+        await self.collection.create_index(
+            "metadata.run_id",
+            unique=True,
+            partialFilterExpression=expected_partial,
+            name=index_name,
+        )
 
         logger.info("Message indexes ensured")
 
@@ -64,9 +81,6 @@ class MessageRepository:
         Returns:
             Created message with generated ID
         """
-        # Generate message_id
-        import uuid
-
         message_id = f"msg_{uuid.uuid4().hex[:12]}"
 
         # Translate user-visible English to zh-CN before insert.
@@ -90,6 +104,7 @@ class MessageRepository:
 
         # Convert to dict for MongoDB
         message_dict = message.model_dump()
+        message_dict["metadata"] = message.metadata.model_dump(exclude_none=True)
 
         # Insert into database
         await self.collection.insert_one(message_dict)
@@ -103,6 +118,56 @@ class MessageRepository:
         )
 
         return message
+
+    async def upsert_run_message(
+        self,
+        message_create: MessageCreate,
+        run_id: str,
+    ) -> Message:
+        """Atomically create or replace the terminal assistant run message."""
+        translations = await translate_for_persistence(
+            {"content": message_create.content},
+            redis_cache=self._redis,
+        )
+        metadata = message_create.metadata.model_copy(update={"run_id": run_id})
+        timestamp = message_create.timestamp or utcnow()
+        message_id = f"msg_run_{run_id.replace('-', '')[:12]}"
+
+        message_dict = await self.collection.find_one_and_update(
+            {
+                "chat_id": message_create.chat_id,
+                "role": "assistant",
+                "metadata.run_id": run_id,
+            },
+            {
+                "$set": {
+                    "content": message_create.content,
+                    "content_zh": translations.get("content_zh"),
+                    "source": message_create.source,
+                    "timestamp": timestamp,
+                    "metadata": metadata.model_dump(exclude_none=True),
+                    "tool_call": message_create.tool_call,
+                },
+                "$setOnInsert": {
+                    "message_id": message_id,
+                    "chat_id": message_create.chat_id,
+                    "role": "assistant",
+                },
+            },
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+        if message_dict is None:
+            raise RuntimeError("Run message upsert returned no document")
+        message_dict.pop("_id", None)
+        logger.info(
+            "Run message upserted",
+            message_id=message_dict["message_id"],
+            chat_id=message_create.chat_id,
+            run_id=run_id,
+            run_status=metadata.run_status,
+        )
+        return Message(**message_dict)
 
     async def get_by_chat(
         self,
@@ -293,7 +358,7 @@ class MessageRepository:
     ) -> list[Message]:
         """Get analysis messages with optional filters. user_id ignored."""
         # Build query
-        query: dict = {
+        query: dict[str, object] = {
             "source": {
                 "$in": ["tool", "llm"]
             },  # Analysis messages from tools or LLM (watchlist)
@@ -388,7 +453,7 @@ class MessageRepository:
             modified=result.modified_count,
         )
 
-        return result.modified_count
+        return int(result.modified_count)
 
     async def delete_old_messages_keep_recent(
         self,
@@ -422,7 +487,7 @@ class MessageRepository:
         keep_message_ids = [doc["message_id"] async for doc in cursor]
 
         # Build delete query: delete messages NOT in keep list
-        delete_query: dict = {
+        delete_query: dict[str, object] = {
             "chat_id": chat_id,
             "message_id": {"$nin": keep_message_ids},
         }

@@ -52,6 +52,8 @@ function DeepAgentAccordionInner({ state, dispatch }: DeepAgentAccordionProps) {
       <CheckCircle2 className="w-4 h-4 text-green-500" />
     ) : state.status === "failed" ? (
       <XCircle className="w-4 h-4 text-red-500" />
+    ) : state.status === "cancelled" ? (
+      <XCircle className="w-4 h-4 text-amber-500" />
     ) : null;
 
   const totalDuration = state.verdict

@@ -23,6 +23,7 @@
     "thinkingChars": "{{count}} 字符",
     "typing": "正在输入...",
     "analyzing": "分析中...",
+    "cancelled": "请求已取消。",
     "copied": "已复制到剪贴板",
     "copy": "复制",
     "retry": "重试",

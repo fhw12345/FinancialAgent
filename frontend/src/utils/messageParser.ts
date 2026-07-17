@@ -19,6 +19,7 @@ interface BackendMessage {
   timestamp: string;
   tool_call?: ChatMessage["tool_call"];
   metadata?: {
+    run_status?: "completed" | "failed" | "cancelled";
     raw_data?: Record<string, unknown>;
     [key: string]: unknown;
   };
@@ -33,11 +34,9 @@ interface BackendMessage {
  */
 export function parseBackendMessage(msg: BackendMessage): ChatMessage {
   const deep_events = msg.metadata?.raw_data?.deep_events as
-    | DeepStreamEvent[]
-    | undefined;
+    DeepStreamEvent[] | undefined;
   const route_selected = msg.metadata?.raw_data?.route_selected as
-    | RouteSelectedEvent
-    | undefined;
+    RouteSelectedEvent | undefined;
   const clarification_required = msg.metadata?.raw_data
     ?.clarification_required as ClarificationRequiredEvent | undefined;
 
@@ -66,6 +65,7 @@ export function parseBackendMessage(msg: BackendMessage): ChatMessage {
     deep_events,
     route_selected,
     clarification_required,
+    run_status: msg.metadata?.run_status,
     tool_call: msg.tool_call,
   };
 }

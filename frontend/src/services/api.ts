@@ -181,6 +181,7 @@ export const chatService = {
       agent_version?: "auto" | "v2" | "v3" | "v4-deep";
       onRouteSelected?: (event: RouteSelectedEvent) => void;
       onClarificationRequired?: (event: ClarificationRequiredEvent) => void;
+      onCancelled?: () => void;
       debug_enabled?: boolean; // Enable debug logging in backend
       // Language Configuration
       language?: "zh-CN" | "en"; // Response language (default: zh-CN)
@@ -308,7 +309,16 @@ export const chatService = {
 
         await processStream(response);
       } catch (error) {
-        if (error instanceof Error && error.name !== "AbortError" && onError) {
+        const errorName =
+          typeof error === "object" &&
+          error !== null &&
+          "name" in error &&
+          typeof error.name === "string"
+            ? error.name
+            : null;
+        if (errorName === "AbortError") {
+          options?.onCancelled?.();
+        } else if (error instanceof Error && onError) {
           onError(error.message);
         }
       }

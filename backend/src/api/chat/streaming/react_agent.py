@@ -7,9 +7,12 @@ execution callbacks, latency metrics, and context management.
 
 import asyncio
 import json
+import uuid
 from collections.abc import AsyncGenerator
+from typing import Any
 
 import structlog
+from fastapi import Request
 from fastapi.responses import StreamingResponse
 
 from ....agent.callbacks.tool_execution_callback import ToolExecutionCallback
@@ -18,11 +21,20 @@ from ....core.utils import extract_token_usage_from_agent_result
 from ....core.utils.date_utils import utcnow
 from ....core.utils.title_utils import extract_title_from_response
 from ....database.repositories.message_repository import MessageRepository
+from ....models.message import MessageMetadata
 from ....services.chat_service import ChatService
 from ....services.context_window_manager import ContextWindowManager
 from ....services.conversation_context_service import ConversationContextService
 from ...schemas.chat_models import ChatRequest
 from ..helpers import get_active_symbol_instruction, get_or_create_chat
+from .cancellation import (
+    ClientDisconnected,
+    await_disconnect_grace,
+    await_task_completion,
+    cancel_and_await,
+    persist_cancelled_run,
+    raise_if_disconnected,
+)
 from .helpers import (
     create_chunk_event,
     create_done_event,
@@ -44,12 +56,17 @@ async def stream_with_react_agent(
     message_repo: MessageRepository,
     debug: bool = False,
     route_metadata: dict[str, str] | None = None,
+    client_request: Request | None = None,
 ) -> StreamingResponse:
     """Stream using SDK ReAct Agent (v3) with real-time tool execution visibility."""
 
     async def generate_stream() -> AsyncGenerator[str, None]:
         chat_id = None
-        tool_event_queue = None
+        tool_event_queue: asyncio.Queue[dict[str, Any]] | None = None
+        agent_task: asyncio.Task[dict[str, Any]] | None = None
+        terminal_task: asyncio.Task[Any] | None = None
+        stream_active = False
+        run_id = f"run_{uuid.uuid4().hex}"
 
         request_start = utcnow()
         ttft_recorded = False
@@ -76,7 +93,7 @@ async def stream_with_react_agent(
                 user_id=user_id,
                 role=request.role,
                 content=request.message,
-                source=request.source or "chat",
+                source=request.source,
                 metadata=request.metadata,
                 tool_call=request.tool_call,
             )
@@ -136,14 +153,14 @@ async def stream_with_react_agent(
 
             tool_event_queue = asyncio.Queue()
             tool_callback = ToolExecutionCallback(tool_event_queue, request.language)
-            agent_task = None
             stream_active = True
 
-            async def stream_tool_events_background():
+            async def stream_tool_events_background() -> AsyncGenerator[str, None]:
                 nonlocal stream_active, agent_task
                 MAX_QUEUE_SIZE = 100
                 while stream_active:
                     try:
+                        await raise_if_disconnected(client_request)
                         queue_size = tool_event_queue.qsize()
                         if queue_size > MAX_QUEUE_SIZE:
                             logger.error(
@@ -168,6 +185,8 @@ async def stream_with_react_agent(
                             stream_active = False
                             break
                         continue
+                    except (asyncio.CancelledError, ClientDisconnected):
+                        raise
                     except Exception as e:
                         logger.error(
                             "Error streaming tool event", error=str(e), exc_info=True
@@ -236,6 +255,8 @@ async def stream_with_react_agent(
                     "AGENT_TIMEOUT",
                 )
                 return
+            except (asyncio.CancelledError, ClientDisconnected):
+                raise
             except Exception as e:
                 logger.error(
                     "Agent execution error",
@@ -297,6 +318,7 @@ async def stream_with_react_agent(
 
             CHUNK_SIZE = 10
             for i in range(0, len(final_answer), CHUNK_SIZE):
+                await raise_if_disconnected(client_request)
                 chunk_text = final_answer[i : i + CHUNK_SIZE]
                 if not ttft_recorded:
                     ttft_recorded = True
@@ -305,25 +327,27 @@ async def stream_with_react_agent(
                 yield create_chunk_event(chunk_text)
                 await asyncio.sleep(0.03)
 
-            await chat_service.add_message(
-                chat_id=chat_id,
-                user_id=user_id,
-                role="assistant",
-                content=final_answer,
-                source="llm",
-                metadata={
-                    "tool_executions": tool_executions,
-                    "trace_id": trace_id,
-                    "agent_type": "react_sdk",
-                    "input_tokens": input_tokens,
-                    "output_tokens": output_tokens,
-                    "raw_data": (
-                        {"route_selected": route_metadata}
-                        if route_metadata is not None
-                        else None
+            await await_disconnect_grace(client_request)
+            terminal_task = asyncio.create_task(
+                chat_service.upsert_run_message(
+                    chat_id=chat_id,
+                    run_id=run_id,
+                    content=final_answer,
+                    metadata=MessageMetadata(
+                        run_id=run_id,
+                        run_status="completed",
+                        trace_id=trace_id,
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens,
+                        raw_data={
+                            "tool_executions": tool_executions,
+                            "route_selected": route_metadata,
+                            "agent_type": "react_sdk",
+                        },
                     ),
-                },
+                )
             )
+            await asyncio.shield(terminal_task)
 
             await chat_service.update_title_if_new(
                 chat_id=chat_id,
@@ -347,6 +371,23 @@ async def stream_with_react_agent(
                 trace_id=trace_id,
             )
 
+        except (asyncio.CancelledError, ClientDisconnected) as exc:
+            stream_active = False
+            await cancel_and_await(agent_task)
+            await await_task_completion(terminal_task)
+            await persist_cancelled_run(
+                chat_service=chat_service,
+                chat_id=chat_id,
+                user_id=user_id,
+                run_id=run_id,
+                language=request.language,
+                agent_type="react_sdk",
+                route_metadata=route_metadata,
+            )
+            logger.info("ReAct agent request cancelled", chat_id=chat_id)
+            if isinstance(exc, asyncio.CancelledError):
+                raise
+            return
         except Exception as e:
             logger.error("Stream error (v3)", error=str(e), chat_id=chat_id)
             yield format_sse_event({"type": "error", "error": str(e)})

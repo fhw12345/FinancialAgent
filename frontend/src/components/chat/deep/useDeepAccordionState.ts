@@ -9,7 +9,7 @@
  * the subagent tools map.
  */
 
-import { useReducer } from 'react';
+import { useReducer } from "react";
 import type {
   DeepAccordionState,
   DeepAccordionAction,
@@ -17,11 +17,11 @@ import type {
   ToolState,
   DebateRoundState,
   RebuttalRound,
-} from './types';
+} from "./types";
 
 const INITIAL_STATE: DeepAccordionState = {
-  symbol: '',
-  status: 'pending',
+  symbol: "",
+  status: "pending",
   enableDebate: false,
   subagentOrder: [],
   subagents: {},
@@ -33,23 +33,35 @@ const INITIAL_STATE: DeepAccordionState = {
 };
 
 /** Helper: create a new ToolState from TOOL_START action fields. */
-function createTool(action: { toolName: string; displayName: string; inputs: Record<string, unknown> }): ToolState {
+function createTool(action: {
+  toolName: string;
+  displayName: string;
+  inputs: Record<string, unknown>;
+}): ToolState {
   return {
     name: action.toolName,
     displayName: action.displayName,
-    status: 'running',
+    status: "running",
     durationMs: 0,
-    outputPreview: '',
+    outputPreview: "",
     inputs: action.inputs,
   };
 }
 
 /** Helper: update a ToolState from TOOL_END action fields. */
-function completeTool(existing: ToolState | undefined, action: { toolName: string; status: 'success' | 'error'; durationMs: number; outputPreview: string }): ToolState {
+function completeTool(
+  existing: ToolState | undefined,
+  action: {
+    toolName: string;
+    status: "success" | "error";
+    durationMs: number;
+    outputPreview: string;
+  },
+): ToolState {
   return {
     name: action.toolName,
     displayName: existing?.displayName ?? action.toolName,
-    status: action.status === 'error' ? 'failed' : 'completed',
+    status: action.status === "error" ? "failed" : "completed",
     durationMs: action.durationMs,
     outputPreview: action.outputPreview,
     inputs: existing?.inputs ?? {},
@@ -65,7 +77,10 @@ function setToolOnLastItem<T extends { tools: Record<string, ToolState> }>(
   if (items.length === 0) return items;
   const copy = [...items];
   const last = copy[copy.length - 1];
-  copy[copy.length - 1] = { ...last, tools: { ...last.tools, [toolName]: tool } };
+  copy[copy.length - 1] = {
+    ...last,
+    tools: { ...last.tools, [toolName]: tool },
+  };
   return copy;
 }
 
@@ -78,12 +93,23 @@ function getToolFromLastItem<T extends { tools: Record<string, ToolState> }>(
   return items[items.length - 1].tools[toolName];
 }
 
+function cancelTools(
+  tools: Record<string, ToolState>,
+): Record<string, ToolState> {
+  return Object.fromEntries(
+    Object.entries(tools).map(([name, tool]) => [
+      name,
+      tool.status === "running" ? { ...tool, status: "cancelled" } : tool,
+    ]),
+  );
+}
+
 function deepAccordionReducer(
   state: DeepAccordionState,
   action: DeepAccordionAction,
 ): DeepAccordionState {
   switch (action.type) {
-    case 'DEEP_START': {
+    case "DEEP_START": {
       const expandedSubagents: Record<string, boolean> = {};
       for (const name of action.subagentNames) {
         expandedSubagents[name] = true;
@@ -91,34 +117,37 @@ function deepAccordionReducer(
       return {
         ...INITIAL_STATE,
         symbol: action.symbol,
-        status: 'running',
+        status: "running",
         enableDebate: action.enableDebate,
         subagentOrder: action.subagentNames,
-        currentPhase: 'research',
+        currentPhase: "research",
         expanded: { main: true, subagents: expandedSubagents },
       };
     }
 
-    case 'SUBAGENT_START': {
+    case "SUBAGENT_START": {
       // During debate/rebuttal phases, debater/defender sub-agent events
       // should not create top-level subagent entries — tools are routed
       // to debate rounds/rebuttals instead.
-      if (state.currentPhase === 'debate' || state.currentPhase === 'rebuttal') {
+      if (
+        state.currentPhase === "debate" ||
+        state.currentPhase === "rebuttal"
+      ) {
         return state;
       }
       // Idempotent: skip if already exists and running
       const existing = state.subagents[action.subagentName];
-      if (existing && existing.status === 'running') {
+      if (existing && existing.status === "running") {
         return state;
       }
       const sa: SubAgentState = {
         name: action.subagentName,
         displayName: action.displayName,
         icon: action.icon,
-        status: 'running',
+        status: "running",
         toolNames: action.toolNames,
         tools: {},
-        resultSummary: '',
+        resultSummary: "",
         durationMs: 0,
         toolCount: 0,
       };
@@ -128,17 +157,37 @@ function deepAccordionReducer(
       };
     }
 
-    case 'TOOL_START': {
+    case "TOOL_START": {
       const tool = createTool(action);
 
       // Phase-based routing: debate tools go to current debate round
-      if (state.currentPhase === 'debate' && state.debate) {
-        return { ...state, debate: { ...state.debate, rounds: setToolOnLastItem(state.debate.rounds, action.toolName, tool) } };
+      if (state.currentPhase === "debate" && state.debate) {
+        return {
+          ...state,
+          debate: {
+            ...state.debate,
+            rounds: setToolOnLastItem(
+              state.debate.rounds,
+              action.toolName,
+              tool,
+            ),
+          },
+        };
       }
 
       // Phase-based routing: rebuttal tools go to current rebuttal
-      if (state.currentPhase === 'rebuttal' && state.debate) {
-        return { ...state, debate: { ...state.debate, rebuttals: setToolOnLastItem(state.debate.rebuttals, action.toolName, tool) } };
+      if (state.currentPhase === "rebuttal" && state.debate) {
+        return {
+          ...state,
+          debate: {
+            ...state.debate,
+            rebuttals: setToolOnLastItem(
+              state.debate.rebuttals,
+              action.toolName,
+              tool,
+            ),
+          },
+        };
       }
 
       // Research phase: route to subagent
@@ -156,19 +205,45 @@ function deepAccordionReducer(
       };
     }
 
-    case 'TOOL_END': {
+    case "TOOL_END": {
       // Phase-based routing: debate tools
-      if (state.currentPhase === 'debate' && state.debate) {
-        const existing = getToolFromLastItem(state.debate.rounds, action.toolName);
+      if (state.currentPhase === "debate" && state.debate) {
+        const existing = getToolFromLastItem(
+          state.debate.rounds,
+          action.toolName,
+        );
         const tool = completeTool(existing, action);
-        return { ...state, debate: { ...state.debate, rounds: setToolOnLastItem(state.debate.rounds, action.toolName, tool) } };
+        return {
+          ...state,
+          debate: {
+            ...state.debate,
+            rounds: setToolOnLastItem(
+              state.debate.rounds,
+              action.toolName,
+              tool,
+            ),
+          },
+        };
       }
 
       // Phase-based routing: rebuttal tools
-      if (state.currentPhase === 'rebuttal' && state.debate) {
-        const existing = getToolFromLastItem(state.debate.rebuttals, action.toolName);
+      if (state.currentPhase === "rebuttal" && state.debate) {
+        const existing = getToolFromLastItem(
+          state.debate.rebuttals,
+          action.toolName,
+        );
         const tool = completeTool(existing, action);
-        return { ...state, debate: { ...state.debate, rebuttals: setToolOnLastItem(state.debate.rebuttals, action.toolName, tool) } };
+        return {
+          ...state,
+          debate: {
+            ...state.debate,
+            rebuttals: setToolOnLastItem(
+              state.debate.rebuttals,
+              action.toolName,
+              tool,
+            ),
+          },
+        };
       }
 
       // Research phase: route to subagent
@@ -188,9 +263,12 @@ function deepAccordionReducer(
       };
     }
 
-    case 'SUBAGENT_RESULT': {
+    case "SUBAGENT_RESULT": {
       // During debate/rebuttal, skip creating subagent result entries
-      if (state.currentPhase === 'debate' || state.currentPhase === 'rebuttal') {
+      if (
+        state.currentPhase === "debate" ||
+        state.currentPhase === "rebuttal"
+      ) {
         return state;
       }
       const sa = state.subagents[action.subagentName];
@@ -202,7 +280,7 @@ function deepAccordionReducer(
           ...state.subagents,
           [action.subagentName]: {
             ...sa,
-            status: action.status === 'error' ? 'failed' : 'completed',
+            status: action.status === "error" ? "failed" : "completed",
             durationMs: action.durationMs,
             resultSummary: action.resultSummary,
             toolCount: action.toolCount,
@@ -211,24 +289,24 @@ function deepAccordionReducer(
       };
     }
 
-    case 'DEBATE_START': {
+    case "DEBATE_START": {
       const pendingRound: DebateRoundState = {
         round: action.round,
         hasConcerns: false,
-        summary: '',
+        summary: "",
         tools: {},
         durationMs: 0,
-        status: 'running',
+        status: "running",
       };
 
       // Round 2+: preserve existing rounds/rebuttals (fix reset bug)
       if (state.debate) {
         return {
           ...state,
-          currentPhase: 'debate',
+          currentPhase: "debate",
           debate: {
             ...state.debate,
-            status: 'running',
+            status: "running",
             currentRound: action.round,
             rounds: [...state.debate.rounds, pendingRound],
           },
@@ -238,9 +316,9 @@ function deepAccordionReducer(
       // First round
       return {
         ...state,
-        currentPhase: 'debate',
+        currentPhase: "debate",
         debate: {
-          status: 'running',
+          status: "running",
           currentRound: action.round,
           maxRounds: action.maxRounds,
           rounds: [pendingRound],
@@ -249,7 +327,7 @@ function deepAccordionReducer(
       };
     }
 
-    case 'DEBATE_ROUND': {
+    case "DEBATE_ROUND": {
       if (!state.debate) return state;
       // Update existing pending round (last entry) instead of appending
       const rounds = [...state.debate.rounds];
@@ -259,7 +337,7 @@ function deepAccordionReducer(
           ...rounds[lastIdx],
           hasConcerns: action.hasConcerns,
           summary: action.summary,
-          status: 'completed',
+          status: "completed",
         };
       }
       return {
@@ -267,34 +345,34 @@ function deepAccordionReducer(
         debate: {
           ...state.debate,
           currentRound: action.round,
-          status: action.hasConcerns ? 'running' : 'completed',
+          status: action.hasConcerns ? "running" : "completed",
           rounds,
         },
       };
     }
 
-    case 'REBUTTAL_START': {
+    case "REBUTTAL_START": {
       if (!state.debate) return state;
       const pendingRebuttal: RebuttalRound = {
         round: action.round,
-        defenseSummary: '',
+        defenseSummary: "",
         toolCount: 0,
         durationMs: 0,
         tools: {},
-        status: 'running',
+        status: "running",
       };
       return {
         ...state,
-        currentPhase: 'rebuttal',
+        currentPhase: "rebuttal",
         debate: {
           ...state.debate,
-          status: 'running',
+          status: "running",
           rebuttals: [...state.debate.rebuttals, pendingRebuttal],
         },
       };
     }
 
-    case 'REBUTTAL_RESULT': {
+    case "REBUTTAL_RESULT": {
       if (!state.debate) return state;
       // Update existing pending rebuttal (last entry) instead of appending
       const rebuttals = [...state.debate.rebuttals];
@@ -305,7 +383,7 @@ function deepAccordionReducer(
           defenseSummary: action.defenseSummary,
           toolCount: action.toolCount,
           durationMs: action.durationMs,
-          status: 'completed',
+          status: "completed",
         };
       }
       return {
@@ -317,35 +395,33 @@ function deepAccordionReducer(
       };
     }
 
-    case 'SYNTHESIS_START': {
+    case "SYNTHESIS_START": {
       return { ...state, synthesisStarted: true };
     }
 
-    case 'VERDICT': {
+    case "VERDICT": {
       return {
         ...state,
-        status: 'completed',
-        currentPhase: 'verdict',
+        status: "completed",
+        currentPhase: "verdict",
         verdict: {
           verdictText: action.verdictText,
           riskLevel: action.riskLevel,
           toolCount: action.toolCount,
           totalDurationMs: action.totalDurationMs,
         },
-        debate: state.debate
-          ? { ...state.debate, status: 'completed' }
-          : null,
+        debate: state.debate ? { ...state.debate, status: "completed" } : null,
       };
     }
 
-    case 'TOGGLE_EXPAND': {
-      if (action.level === 'main') {
+    case "TOGGLE_EXPAND": {
+      if (action.level === "main") {
         return {
           ...state,
           expanded: { ...state.expanded, main: !state.expanded.main },
         };
       }
-      if (action.level === 'subagent' && action.key) {
+      if (action.level === "subagent" && action.key) {
         const subagents = { ...state.expanded.subagents };
         subagents[action.key] = !subagents[action.key];
         return {
@@ -356,7 +432,7 @@ function deepAccordionReducer(
       return state;
     }
 
-    case 'EXPAND_ALL': {
+    case "EXPAND_ALL": {
       const subagents: Record<string, boolean> = {};
       for (const name of state.subagentOrder) {
         subagents[name] = true;
@@ -367,7 +443,7 @@ function deepAccordionReducer(
       };
     }
 
-    case 'COLLAPSE_ALL': {
+    case "COLLAPSE_ALL": {
       // Intentionally does NOT collapse the main section —
       // collapsing it would hide the toggle button itself.
       const subagents: Record<string, boolean> = {};
@@ -380,7 +456,59 @@ function deepAccordionReducer(
       };
     }
 
-    case 'RESET':
+    case "CANCEL": {
+      if (state.status === "pending") {
+        return state;
+      }
+      const subagents = Object.fromEntries(
+        Object.entries(state.subagents).map(([name, subagent]) => [
+          name,
+          {
+            ...subagent,
+            status:
+              subagent.status === "running"
+                ? ("cancelled" as const)
+                : subagent.status,
+            tools: cancelTools(subagent.tools),
+          },
+        ]),
+      );
+      const debate = state.debate
+        ? {
+            ...state.debate,
+            status:
+              state.debate.status === "running"
+                ? ("cancelled" as const)
+                : state.debate.status,
+            rounds: state.debate.rounds.map((round) => ({
+              ...round,
+              status:
+                round.status === "running"
+                  ? ("cancelled" as const)
+                  : round.status,
+              tools: cancelTools(round.tools),
+            })),
+            rebuttals: state.debate.rebuttals.map((rebuttal) => ({
+              ...rebuttal,
+              status:
+                rebuttal.status === "running"
+                  ? ("cancelled" as const)
+                  : rebuttal.status,
+              tools: cancelTools(rebuttal.tools),
+            })),
+          }
+        : null;
+      return {
+        ...state,
+        status: "cancelled",
+        currentPhase: null,
+        synthesisStarted: false,
+        subagents,
+        debate,
+      };
+    }
+
+    case "RESET":
       return INITIAL_STATE;
 
     default:

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-07-17
+
+### Agent Stop and cancelled state
+
+- Added a working Stop button for active chat streams.
+- Keeps pending state stable when a new chat ID is assigned.
+- Settles aborted mutations and re-enables the composer.
+- Shows cancelled tool and Deep states without rendering an error.
+- Restores persisted cancelled assistant messages after reload.
+- Added browser evidence that Stop cancels backend and child work.
+
 ## [0.25.3] - 2026-07-17
 
 ### Watchlist timestamp refresh

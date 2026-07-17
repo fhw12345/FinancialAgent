@@ -15,7 +15,7 @@ export interface ToolExecutionProgressProps {
   toolName: string;
   displayName: string;
   icon: string;
-  status: "running" | "success" | "error";
+  status: "running" | "success" | "error" | "cancelled";
   symbol?: string;
   inputs?: Record<string, unknown>;
   output?: string;
@@ -27,7 +27,10 @@ export interface ToolExecutionProgressProps {
  * Map tool names to user-friendly display names.
  * Fallback to titleized tool_name if not in map.
  */
-const DEFAULT_TOOL_METADATA: Record<string, { displayName: string; icon: string }> = {
+const DEFAULT_TOOL_METADATA: Record<
+  string,
+  { displayName: string; icon: string }
+> = {
   search_ticker: { displayName: "Search Ticker", icon: "🔍" },
   get_company_overview: { displayName: "Company Overview", icon: "🏢" },
   get_news_sentiment: { displayName: "News Sentiment", icon: "📰" },
@@ -46,30 +49,34 @@ export function ToolExecutionProgress({
   error,
   durationMs,
 }: ToolExecutionProgressProps) {
-  const { t } = useTranslation(['chat', 'common']);
+  const { t } = useTranslation(["chat", "common"]);
   // Get status icon and color
   const StatusIcon = {
     running: Loader2,
     success: CheckCircle,
     error: XCircle,
+    cancelled: XCircle,
   }[status];
 
   const statusColor = {
     running: "text-blue-500",
     success: "text-green-500",
     error: "text-red-500",
+    cancelled: "text-amber-500",
   }[status];
 
   const bgColor = {
     running: "bg-blue-50 dark:bg-blue-900/10",
     success: "bg-green-50 dark:bg-green-900/10",
     error: "bg-red-50 dark:bg-red-900/10",
+    cancelled: "bg-amber-50 dark:bg-amber-900/10",
   }[status];
 
   const borderColor = {
     running: "border-blue-200 dark:border-blue-800",
     success: "border-green-200 dark:border-green-800",
     error: "border-red-200 dark:border-red-800",
+    cancelled: "border-amber-200 dark:border-amber-800",
   }[status];
 
   // Format duration
@@ -133,7 +140,7 @@ export function ToolExecutionProgress({
       {status === "success" && output && (
         <details className="border-t border-gray-200 dark:border-gray-700">
           <summary className="px-4 py-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-            {t('chat:tools.viewResultPreview')}
+            {t("chat:tools.viewResultPreview")}
           </summary>
           <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
             <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono overflow-x-auto">
@@ -147,6 +154,11 @@ export function ToolExecutionProgress({
       {status === "error" && error && (
         <div className="px-4 py-3 border-t border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
           <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+        </div>
+      )}
+      {status === "cancelled" && error && (
+        <div className="border-t border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
+          <p className="text-sm text-amber-700 dark:text-amber-300">{error}</p>
         </div>
       )}
     </div>
@@ -163,7 +175,9 @@ export function getToolMetadata(toolName: string): {
 } {
   return (
     DEFAULT_TOOL_METADATA[toolName] || {
-      displayName: toolName.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+      displayName: toolName
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (l) => l.toUpperCase()),
       icon: "🔧",
     }
   );

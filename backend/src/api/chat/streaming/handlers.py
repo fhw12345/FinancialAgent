@@ -1,10 +1,12 @@
 """Unified streaming handler with hybrid automatic flow routing."""
 
+import asyncio
+import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
 import structlog
-from fastapi import Depends, Header
+from fastapi import Depends, Header, Request
 from fastapi.responses import StreamingResponse
 
 from ....agent.chat_agent import ChatAgent
@@ -24,6 +26,13 @@ from ...dependencies.chat_deps import (
     get_react_agent,
 )
 from ...schemas.chat_models import ChatRequest
+from ..helpers import get_or_create_chat
+from .cancellation import (
+    ClientDisconnected,
+    await_task_or_disconnect,
+    cancel_and_await,
+    persist_cancelled_run,
+)
 from .deep_agent import stream_with_deep_agent
 from .helpers import format_sse_event
 from .react_agent import stream_with_react_agent
@@ -34,6 +43,7 @@ logger = structlog.get_logger()
 
 async def chat_stream_unified(
     request: ChatRequest,
+    http_request: Request,
     chat_service: ChatService = Depends(get_chat_service),
     simple_agent: ChatAgent = Depends(get_chat_agent),
     react_agent: FinancialAnalysisReActAgent = Depends(get_react_agent),
@@ -61,13 +71,50 @@ async def chat_stream_unified(
             simple_agent,
             context_manager,
             message_repo,
+            client_request=http_request,
         )
 
-    decision = await flow_router.select(
-        message=request.message,
-        current_symbol=request.current_symbol,
-        requested_version=request.agent_version,
+    routing_task = asyncio.create_task(
+        flow_router.select(
+            message=request.message,
+            current_symbol=request.current_symbol,
+            requested_version=request.agent_version,
+        )
     )
+    routing_run_id = f"run_{uuid.uuid4().hex}"
+
+    async def persist_routing_cancellation() -> None:
+        chat_id, _ = await get_or_create_chat(request, user_id, chat_service)
+        await chat_service.add_message(
+            chat_id=chat_id,
+            user_id=user_id,
+            role=request.role,
+            content=request.message,
+            source=request.source,
+            metadata=request.metadata,
+            tool_call=request.tool_call,
+        )
+        await persist_cancelled_run(
+            chat_service=chat_service,
+            chat_id=chat_id,
+            user_id=user_id,
+            run_id=routing_run_id,
+            language=request.language,
+            agent_type="flow_router",
+            route_metadata=None,
+        )
+
+    try:
+        decision = await await_task_or_disconnect(routing_task, http_request)
+    except ClientDisconnected:
+        await cancel_and_await(routing_task)
+        await persist_routing_cancellation()
+        logger.info("Client disconnected during flow routing")
+        return StreamingResponse(iter(()), media_type="text/event-stream")
+    except asyncio.CancelledError:
+        await cancel_and_await(routing_task)
+        await persist_routing_cancellation()
+        raise
     route_metadata = decision.as_metadata()
     debug_enabled = bool(x_debug and x_debug.lower() in ("true", "1", "yes"))
 
@@ -88,6 +135,7 @@ async def chat_stream_unified(
             context_manager,
             message_repo,
             route_metadata,
+            client_request=http_request,
         )
     elif decision.flow == "v3":
         response = await stream_with_react_agent(
@@ -99,6 +147,7 @@ async def chat_stream_unified(
             message_repo,
             debug_enabled,
             route_metadata,
+            client_request=http_request,
         )
     else:
         response = await stream_with_deep_agent(
@@ -110,6 +159,7 @@ async def chat_stream_unified(
             message_repo,
             debug_enabled,
             route_metadata,
+            client_request=http_request,
         )
 
     return _prepend_route_event(response, decision)

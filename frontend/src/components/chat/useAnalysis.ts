@@ -7,6 +7,7 @@
  */
 
 import { flushSync } from "react-dom";
+import { useCallback, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { analysisService } from "../../services/analysis";
 import { chatService } from "../../services/api";
@@ -53,9 +54,10 @@ export const useAnalysis = (
   onRouteSelected?: (event: RouteSelectedEvent) => void,
 ) => {
   const queryClient = useQueryClient();
+  const abortActiveRef = useRef<(() => void) | null>(null);
 
   const mutation = useMutation({
-    mutationKey: ["chat", chatId],
+    mutationKey: ["chat-stream"],
     mutationFn: async (userMessage: string) => {
       // Input validation
       const trimmed = userMessage.trim();
@@ -96,7 +98,7 @@ export const useAnalysis = (
 
       // Stream response using persistent MongoDB endpoint
       return new Promise((resolve, reject) => {
-        chatService.sendMessageStreamPersistent(
+        abortActiveRef.current = chatService.sendMessageStreamPersistent(
           userMessage,
           chatId || null,
           (chunk: string) => {
@@ -127,12 +129,14 @@ export const useAnalysis = (
           },
           () => {
             // Stream complete - use accumulated content (SAFE)
+            abortActiveRef.current = null;
             resolve({ type: "chat", content: accumulatedContent });
             // Invalidate chat list ONCE after stream completes
             void queryClient.invalidateQueries({ queryKey: chatKeys.lists() });
           },
           (error: string) => {
             // Error callback
+            abortActiveRef.current = null;
             console.error("❌ Streaming error:", error);
             setMessages((prev) =>
               prev.map((msg: any) =>
@@ -237,6 +241,39 @@ export const useAnalysis = (
                 ),
               );
             },
+            onCancelled: () => {
+              abortActiveRef.current = null;
+              const cancelledText = i18n.t("chat:message.cancelled");
+              accumulatedContent = accumulatedContent.trim()
+                ? `${accumulatedContent.trim()}\n\n${cancelledText}`
+                : cancelledText;
+              setMessages((prev) =>
+                prev.map((msg: any) => {
+                  if (msg._id === assistantMessageId) {
+                    return {
+                      ...msg,
+                      content: accumulatedContent,
+                      run_status: "cancelled",
+                    };
+                  }
+                  if (msg.tool_progress?.status === "running") {
+                    return {
+                      ...msg,
+                      tool_progress: {
+                        ...msg.tool_progress,
+                        status: "cancelled",
+                        error: cancelledText,
+                      },
+                    };
+                  }
+                  return msg;
+                }),
+              );
+              resolve({ type: "cancelled", content: accumulatedContent });
+              void queryClient.invalidateQueries({
+                queryKey: chatKeys.lists(),
+              });
+            },
             // Language configuration - get from i18n
             language: (i18n.language === "zh-CN" || i18n.language === "en"
               ? i18n.language
@@ -249,7 +286,11 @@ export const useAnalysis = (
     },
   });
 
-  return mutation;
+  const cancelActiveRequest = useCallback(() => {
+    abortActiveRef.current?.();
+  }, []);
+
+  return { ...mutation, cancelActiveRequest };
 };
 
 // Button analysis hook - direct API calls

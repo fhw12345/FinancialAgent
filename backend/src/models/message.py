@@ -51,6 +51,18 @@ class MessageMetadata(BaseModel):
     output_tokens: int | None = Field(
         default=None, description="Output tokens generated"
     )
+    run_id: str | None = Field(
+        default=None,
+        description="Stable identifier used to upsert one terminal assistant message",
+    )
+    run_status: Literal["completed", "failed", "cancelled"] | None = Field(
+        default=None,
+        description="Durable user-visible status for the request that produced this message",
+    )
+    cancelled_at: datetime | None = Field(
+        default=None,
+        description="UTC timestamp when an active request was cancelled",
+    )
 
     # Credit transaction linkage
     transaction_id: str | None = Field(

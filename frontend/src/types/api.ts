@@ -68,7 +68,7 @@ export interface ChatMessage {
     toolName: string;
     displayName: string;
     icon: string;
-    status: "running" | "success" | "error";
+    status: "running" | "success" | "error" | "cancelled";
     symbol?: string;
     inputs?: Record<string, unknown>;
     output?: string;
@@ -78,6 +78,7 @@ export interface ChatMessage {
   deep_events?: DeepStreamEvent[]; // Persisted accordion events for restore
   route_selected?: RouteSelectedEvent;
   clarification_required?: ClarificationRequiredEvent;
+  run_status?: "completed" | "failed" | "cancelled";
 }
 
 export interface ChatRequest {
@@ -364,4 +365,9 @@ export type DeepStreamEvent =
       risk_level: string | null;
       tool_count: number;
       total_duration_ms: number;
+    }
+  | {
+      type: "deep_cancelled";
+      seq: number;
+      timestamp: string;
     };
