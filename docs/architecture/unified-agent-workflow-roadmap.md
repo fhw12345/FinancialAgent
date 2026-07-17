@@ -374,7 +374,7 @@ token streaming.
 Detailed implementation plan:
 [UAW-006: Honest Streaming Semantics](../features/honest-streaming-semantics.md).
 
-Implementation status: code and browser validation completed; commit pending.
+Implementation status: shipped in commit `9c6f2b5`.
 
 **Required behavior**
 

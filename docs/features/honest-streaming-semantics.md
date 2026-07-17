@@ -1,6 +1,6 @@
 ---
 title: Honest Streaming Semantics
-status: in-progress
+status: shipped
 version: backend@0.37.0, frontend@0.26.1
 last_updated: 2026-07-17
 owner: maintainer
@@ -17,8 +17,7 @@ related_paths:
 
 ## Implementation Record
 
-The implementation and validation are complete in the current working tree.
-The feature remains `in-progress` until the change set is committed.
+Shipped in commit `9c6f2b5`.
 
 Delivered:
 
@@ -51,8 +50,8 @@ Playwright streaming semantics scenario: 1 passed
 
 | Evidence | Scenario | Stack | Commit | Result |
 | --- | --- | --- | --- | --- |
-| [Live model token stream](assets/uaw-006/01-live-model-token-stream.png) | Direct first token is visible while the second token is still absent | Real frontend/backend/MongoDB + deterministic token agent | pending | PASS |
-| [Buffered response label](assets/uaw-006/02-buffered-response-labelled.png) | ReAct progress is live while final answer remains buffered | Real frontend/backend/MongoDB + deterministic buffered agent | pending | PASS |
+| [Live model token stream](assets/uaw-006/01-live-model-token-stream.png) | Direct first token is visible while the second token is still absent | Real frontend/backend/MongoDB + deterministic token agent | `9c6f2b5` | PASS |
+| [Buffered response label](assets/uaw-006/02-buffered-response-labelled.png) | ReAct progress is live while final answer remains buffered | Real frontend/backend/MongoDB + deterministic buffered agent | `9c6f2b5` | PASS |
 
 ## 1. Task Summary
 
