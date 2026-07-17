@@ -1,6 +1,6 @@
 ---
 title: Deep Research Conversation Context
-status: in-progress
+status: shipped
 version: backend@0.34.0, frontend@0.25.2
 last_updated: 2026-07-17
 owner: maintainer
@@ -17,8 +17,7 @@ related_paths:
 
 ## Implementation Record
 
-The implementation and validation are complete in the current working tree.
-The feature remains `in-progress` until the change set is committed.
+Shipped in commit `95631fc`.
 
 Delivered:
 
@@ -64,10 +63,10 @@ errors across 91 files. UAW-003 changed modules pass isolated mypy checking.
 
 | Evidence | Scenario | Stack | Commit | Result |
 | --- | --- | --- | --- | --- |
-| [Prior thesis challenged](assets/uaw-003/01-prior-thesis-challenged.png) | Follow-up receives previous bullish thesis and adversarial/downside constraints | Real frontend/backend + deterministic Deep adapter | pending | PASS |
-| [Horizon preserved](assets/uaw-003/02-horizon-preserved.png) | Initial six-month horizon and moderate risk are structured | Real frontend/backend + deterministic Deep adapter | pending | PASS |
-| [Constraints after reload](assets/uaw-003/03-constraints-restored-after-reload.png) | Reloaded chat preserves valuation, downside, horizon, and risk constraints | Real frontend/backend + deterministic Deep adapter | pending | PASS |
-| [Context metadata](assets/uaw-003/04-context-metadata-visible-in-history.png) | Persisted response exposes turn count, prior-report status, and truncation | Real frontend/backend + deterministic Deep adapter | pending | PASS |
+| [Prior thesis challenged](assets/uaw-003/01-prior-thesis-challenged.png) | Follow-up receives previous bullish thesis and adversarial/downside constraints | Real frontend/backend + deterministic Deep adapter | `95631fc` | PASS |
+| [Horizon preserved](assets/uaw-003/02-horizon-preserved.png) | Initial six-month horizon and moderate risk are structured | Real frontend/backend + deterministic Deep adapter | `95631fc` | PASS |
+| [Constraints after reload](assets/uaw-003/03-constraints-restored-after-reload.png) | Reloaded chat preserves valuation, downside, horizon, and risk constraints | Real frontend/backend + deterministic Deep adapter | `95631fc` | PASS |
+| [Context metadata](assets/uaw-003/04-context-metadata-visible-in-history.png) | Persisted response exposes turn count, prior-report status, and truncation | Real frontend/backend + deterministic Deep adapter | `95631fc` | PASS |
 
 ## 1. Task Summary
 

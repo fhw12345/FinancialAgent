@@ -297,7 +297,7 @@ constraints, and conclusions.
 Detailed implementation plan:
 [UAW-003: Deep Research Conversation Context](../features/deep-research-conversation-context.md).
 
-Implementation status: code and browser validation completed; commit pending.
+Implementation status: shipped in commit `95631fc`.
 
 **Required behavior**
 
