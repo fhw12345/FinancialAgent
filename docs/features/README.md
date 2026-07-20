@@ -272,6 +272,7 @@ Browse existing feature specs in this directory for examples:
 - **[Watchlist Analysis Persistence Wiring](watchlist-persistence-wiring.md)** — update the real watchlist row and refresh its analysis timestamp after per-symbol analysis
 - **[Agent Task Cancellation](agent-task-cancellation.md)** — propagate browser Stop through SSE handlers into active model, tool, and research tasks
 - **[Honest Streaming Semantics](honest-streaming-semantics.md)** — distinguish real model-token streaming from buffered ReAct and Deep final responses
+- **[Shared Durable Run Model](shared-run-model.md)** — persist one execution status and observability contract across chat and Portfolio flows
 - **[Write-Time Translation](write-time-translation.md)** — translate LLM output to `zh-CN` on the write path so the read path skips `/api/translate`
 
 ### Market Data & Visualization

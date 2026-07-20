@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-07-20
+
+### Shared durable agent runs
+
+- Added one `agent_runs` model and atomic state machine for Direct, ReAct,
+  Deep Research, and Portfolio analysis.
+- Creates chat runs before routing and persists selected policy, execution
+  mode, prompt versions, model routes, metrics, failures, clarification, and
+  cancellation.
+- Added run lookup and per-chat list APIs with deterministic newest-first
+  ordering.
+- Migrated Portfolio status persistence to unique durable IDs while preserving
+  existing fixed-key API responses and historical fallback reads.
+- Added leased Portfolio claims and automatic stale shared/legacy run recovery.
+- Closes routing/handler disconnect windows so terminal runs cannot remain
+  indefinitely `running`.
+- Added repository, API, streaming lifecycle, cancellation, and real-Mongo
+  browser coverage.
+
 ## [0.37.0] - 2026-07-17
 
 ### Honest streaming semantics

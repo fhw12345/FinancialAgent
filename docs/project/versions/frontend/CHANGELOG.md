@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-07-20
+
+### Durable run visibility
+
+- Displays the durable run ID, status, execution mode, and route metadata for
+  the active response.
+- Restores the newest authoritative run after chat reload.
+- Falls back to terminal assistant metadata for pre-migration chats and empty
+  or unavailable run API results.
+- Prevents a late Abort signal from replacing an already completed run badge.
+- Added real-Mongo Playwright proof for running, completion, and reload
+  restoration.
+
 ## [0.26.1] - 2026-07-17
 
 ### Streaming mode transparency

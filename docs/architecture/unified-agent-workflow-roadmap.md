@@ -426,6 +426,11 @@ pending | running | waiting_for_input | completed | failed | cancelled
 This run record should be the common observability boundary for instant,
 agentic, research, and portfolio analysis.
 
+Detailed implementation plan:
+[UAW-007: Shared Durable Run Model](../features/shared-run-model.md).
+
+Implementation status: shipped in commit `dde269b`.
+
 ### 7.2 Unify Chat Handler Lifecycle
 
 Extract one shared lifecycle for:
