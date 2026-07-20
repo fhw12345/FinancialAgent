@@ -38,8 +38,14 @@ export function parseBackendMessage(msg: BackendMessage): ChatMessage {
     DeepStreamEvent[] | undefined;
   const route_selected = msg.metadata?.raw_data?.route_selected as
     RouteSelectedEvent | undefined;
-  const clarification_required = msg.metadata?.raw_data
-    ?.clarification_required as ClarificationRequiredEvent | undefined;
+  const storedClarification = msg.metadata?.raw_data?.clarification_required as
+    ClarificationRequiredEvent | undefined;
+  const clarification_required =
+    msg.metadata?.run_status === "failed" ||
+    msg.metadata?.run_status === "cancelled" ||
+    msg.metadata?.run_status === "completed"
+      ? undefined
+      : storedClarification;
 
   let analysis_data: Record<string, unknown> | undefined = undefined;
 

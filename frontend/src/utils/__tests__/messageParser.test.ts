@@ -66,4 +66,28 @@ describe("parseBackendMessage", () => {
     expect(parsed.clarification_required?.candidates).toHaveLength(2);
     expect(parsed.analysis_data).toEqual({ symbol: "AAA" });
   });
+
+  it("does not restore a clarification card for a terminal failed message", () => {
+    const parsed = parseBackendMessage({
+      role: "assistant",
+      content: "Clarification persistence failed.",
+      timestamp: "2026-07-20T00:00:00Z",
+      metadata: {
+        run_status: "failed",
+        raw_data: {
+          clarification_required: {
+            type: "clarification_required",
+            clarification_type: "symbol",
+            reason_code: "ambiguous_symbol",
+            message: "Please confirm the stock.",
+            original_request: "Analyze Alpha",
+            candidates: [],
+          },
+        },
+      },
+    });
+
+    expect(parsed.clarification_required).toBeUndefined();
+    expect(parsed.run_status).toBe("failed");
+  });
 });

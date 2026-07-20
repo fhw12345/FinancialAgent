@@ -7,7 +7,6 @@ sub-agents (Technical, News, Financial, Debater) and optional debate loop.
 
 import asyncio
 import os
-import uuid
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -19,32 +18,29 @@ from ....core.utils import extract_token_usage_from_agent_result
 from ....core.utils.date_utils import utcnow
 from ....core.utils.title_utils import extract_title_from_response
 from ....database.repositories.message_repository import MessageRepository
-from ....models.message import MessageMetadata
 from ....services.agent_run_service import AgentRunService
 from ....services.chat_service import ChatService
 from ....services.context_window_manager import ContextWindowManager
-from ....services.conversation_context_service import ConversationContextService
 from ...schemas.chat_models import ChatRequest
-from ..helpers import get_or_create_chat
 from .cancellation import (
     ClientDisconnected,
     await_disconnect_grace,
-    await_task_completion,
     await_task_or_disconnect,
-    cancel_and_await,
-    persist_cancelled_run,
     raise_if_disconnected,
 )
 from .helpers import (
     create_chunk_event,
-    create_clarification_event,
     create_done_event,
-    create_error_event,
     create_latency_event,
-    create_run_state_event,
     create_stream_mode_event,
     create_thinking_event,
     format_sse_event,
+)
+from .lifecycle import (
+    ChatClarification,
+    ChatCompletion,
+    ChatFailure,
+    ChatStreamLifecycle,
 )
 
 logger = structlog.get_logger()
@@ -72,72 +68,40 @@ async def stream_with_deep_agent(
     """Stream using Deep ReAct Agent (v4-deep) with hierarchical sub-agents."""
 
     async def generate_stream() -> AsyncGenerator[str, None]:
-        chat_id = None
         collected_events: list[dict[str, Any]] = []
-        request_start = utcnow()
         first_progress_event_recorded = False
         first_response_chunk_recorded = False
         agent_task: asyncio.Task[Any] | None = None
-        terminal_task: asyncio.Task[Any] | None = None
-        active_run_id = run_id or f"run_{uuid.uuid4().hex}"
-
-        def get_elapsed_ms() -> int:
-            return int((utcnow() - request_start).total_seconds() * 1000)
+        lifecycle = ChatStreamLifecycle(
+            request=request,
+            user_id=user_id,
+            chat_service=chat_service,
+            context_manager=context_manager,
+            message_repo=message_repo,
+            route_metadata=route_metadata,
+            run_id=run_id,
+            run_service=run_service,
+        )
 
         try:
             # ===== Phase 1: Setup =====
-            chat_id, chat_created_event = await get_or_create_chat(
-                request, user_id, chat_service
-            )
+            chat_created_event = await lifecycle.start()
             if chat_created_event:
                 yield format_sse_event(chat_created_event)
-            if run_service is not None:
-                await run_service.attach_chat(active_run_id, chat_id)
 
-            yield create_thinking_event("initializing", chat_id)
+            yield create_thinking_event("initializing", lifecycle.chat_id)
 
-            current_message = await chat_service.add_message(
-                chat_id=chat_id,
-                user_id=user_id,
-                role=request.role,
-                content=request.message,
-                source=request.source,
-                metadata=request.metadata,
-                tool_call=request.tool_call,
+            prepared_context = await lifecycle.prepare_context(
+                include_symbol_context=False
             )
-
-            if request.role != "user" or request.source == "tool":
-                yield create_done_event(chat_id)
+            if prepared_context is None:
+                yield create_done_event(lifecycle.require_chat_id())
                 return
 
-            try:
-                await chat_service.update_title_if_new(
-                    chat_id=chat_id,
-                    llm_title=None,
-                    user_message=request.message,
-                    current_symbol=request.current_symbol,
-                )
-            except Exception:
-                logger.warning(
-                    "Failed to set initial Deep chat title",
-                    chat_id=chat_id,
-                    exc_info=True,
-                )
-
-            messages = await chat_service.get_chat_messages(chat_id, user_id)
-            context_service = ConversationContextService(
-                context_manager=context_manager,
-                message_repo=message_repo,
-            )
-            prepared_context = await context_service.prepare(
-                chat_id=chat_id,
-                messages=messages,
-                current_message=current_message,
-            )
             conversation_history = prepared_context.history
 
-            yield create_latency_event("context_prepared", get_elapsed_ms())
-            yield create_thinking_event("deep_analysis", chat_id)
+            yield create_latency_event("context_prepared", lifecycle.elapsed_ms())
+            yield create_thinking_event("deep_analysis", lifecycle.chat_id)
             yield create_stream_mode_event("buffered")
 
             resolution = await agent.resolve_symbol(
@@ -168,53 +132,28 @@ async def stream_with_deep_agent(
                         candidate.model_dump() for candidate in resolution.candidates
                     ],
                 }
-                await chat_service.add_message(
-                    chat_id=chat_id,
-                    user_id=user_id,
-                    role="assistant",
-                    content=clarification_message,
-                    source="llm",
-                    metadata={
-                        "run_id": active_run_id,
-                        "run_status": "waiting_for_input",
-                        "agent_type": "deep_react",
-                        "raw_data": {
-                            "clarification_required": {
-                                "type": "clarification_required",
-                                **clarification,
-                            },
-                            "route_selected": route_metadata,
-                        },
-                    },
-                )
-                yield create_clarification_event(clarification)
-                if run_service is not None:
-                    await run_service.wait_for_input(
-                        active_run_id,
-                        metadata={
-                            "clarification_type": "symbol",
-                            "reason_code": resolution.reason_code,
-                        },
+                async for event in lifecycle.clarify(
+                    ChatClarification(
+                        execution_mode="research",
+                        agent_type="deep_react",
+                        content=clarification_message,
+                        payload=clarification,
                     )
-                    yield create_run_state_event(
-                        active_run_id,
-                        "waiting_for_input",
-                        "research",
-                    )
-                yield create_done_event(chat_id, clarification_required=True)
+                ):
+                    yield event
                 return
 
             logger.info(
                 "Starting deep agent invocation",
-                chat_id=chat_id,
+                chat_id=lifecycle.chat_id,
                 user_id=user_id,
                 streaming_v2=DEEP_STREAMING_V2,
                 message_preview=request.message[:100],
-                elapsed_ms=get_elapsed_ms(),
+                elapsed_ms=lifecycle.elapsed_ms(),
             )
 
             # ===== Phase 2: Agent Invocation =====
-            yield create_latency_event("agent_started", get_elapsed_ms())
+            yield create_latency_event("agent_started", lifecycle.elapsed_ms())
 
             result: dict[str, Any]
 
@@ -269,7 +208,7 @@ async def stream_with_deep_agent(
                         first_progress_event_recorded = True
                         yield create_latency_event(
                             "first_progress_event",
-                            get_elapsed_ms(),
+                            lifecycle.elapsed_ms(),
                         )
                     yield event_str
 
@@ -296,37 +235,33 @@ async def stream_with_deep_agent(
                 )
 
         except (asyncio.CancelledError, ClientDisconnected, GeneratorExit) as exc:
-            await cancel_and_await(agent_task)
-            await await_task_completion(terminal_task)
             cancelled_event = {
                 "type": "deep_cancelled",
                 "seq": len(collected_events) + 1,
                 "timestamp": utcnow().isoformat(),
             }
-            await persist_cancelled_run(
-                chat_service=chat_service,
-                chat_id=chat_id,
-                user_id=user_id,
-                run_id=active_run_id,
-                language=request.language,
+            await lifecycle.cancel(
+                active_task=agent_task,
                 agent_type="deep_react",
-                route_metadata=route_metadata,
                 extra_raw_data={
                     "deep_events": [*collected_events, cancelled_event],
                 },
-                run_service=run_service,
             )
-            logger.info("Deep agent request cancelled", chat_id=chat_id)
+            logger.info("Deep agent request cancelled", chat_id=lifecycle.chat_id)
             if isinstance(exc, (asyncio.CancelledError, GeneratorExit)):
                 raise
             return
         except TimeoutError:
-            logger.error("Deep agent timeout", chat_id=chat_id, timeout_seconds=600)
+            logger.error(
+                "Deep agent timeout",
+                chat_id=lifecycle.chat_id,
+                timeout_seconds=600,
+            )
             # Persist partial events so the accordion can be restored.
-            if collected_events and chat_id:
+            if collected_events and lifecycle.chat_id:
                 try:
                     await chat_service.add_message(
-                        chat_id=chat_id,
+                        chat_id=lifecycle.chat_id,
                         user_id=user_id,
                         role="assistant",
                         content="Deep analysis timed out. Partial results may be available.",
@@ -341,29 +276,30 @@ async def stream_with_deep_agent(
                     )
                 except Exception:
                     logger.warning("Failed to persist partial deep events on timeout")
-            yield create_error_event(
-                "Deep analysis timed out (10 min limit). Try a simpler query.",
-                "AGENT_TIMEOUT",
-            )
-            if run_service is not None:
-                await run_service.fail(
-                    active_run_id,
+            async for event in lifecycle.fail(
+                ChatFailure(
+                    execution_mode="research",
                     error_code="AGENT_TIMEOUT",
                     error_message="Deep analysis timed out",
+                    client_message=(
+                        "Deep analysis timed out (10 min limit). "
+                        "Try a simpler query."
+                    ),
                 )
-                yield create_run_state_event(active_run_id, "failed", "research")
+            ):
+                yield event
             return
         except Exception as e:
             logger.error(
                 "Deep agent execution error",
-                chat_id=chat_id,
+                chat_id=lifecycle.chat_id,
                 error=str(e),
                 exc_info=True,
             )
-            if collected_events and chat_id:
+            if collected_events and lifecycle.chat_id:
                 try:
                     await chat_service.add_message(
-                        chat_id=chat_id,
+                        chat_id=lifecycle.chat_id,
                         user_id=user_id,
                         role="assistant",
                         content=f"Deep analysis encountered an error: {e!s}",
@@ -378,14 +314,15 @@ async def stream_with_deep_agent(
                     )
                 except Exception:
                     logger.warning("Failed to persist partial deep events on error")
-            yield create_error_event(f"Deep analysis failed: {e!s}", "AGENT_ERROR")
-            if run_service is not None:
-                await run_service.fail(
-                    active_run_id,
+            async for event in lifecycle.fail(
+                ChatFailure(
+                    execution_mode="research",
                     error_code="AGENT_ERROR",
                     error_message=str(e),
+                    client_message=f"Deep analysis failed: {e!s}",
                 )
-                yield create_run_state_event(active_run_id, "failed", "research")
+            ):
+                yield event
             return
 
         # ===== Phase 3: Process Result =====
@@ -404,26 +341,23 @@ async def stream_with_deep_agent(
             if "error" in result:
                 logger.error(
                     "Deep agent returned error",
-                    chat_id=chat_id,
+                    chat_id=lifecycle.chat_id,
                     error=result["error"],
                 )
-                yield create_error_event(result["error"], "AGENT_EXECUTION_FAILED")
-                if run_service is not None:
-                    await run_service.fail(
-                        active_run_id,
+                async for event in lifecycle.fail(
+                    ChatFailure(
+                        execution_mode="research",
                         error_code="AGENT_EXECUTION_FAILED",
                         error_message=str(result["error"]),
+                        client_message=str(result["error"]),
                     )
-                    yield create_run_state_event(
-                        active_run_id,
-                        "failed",
-                        "research",
-                    )
+                ):
+                    yield event
                 return
 
             logger.info(
                 "Deep agent execution completed",
-                chat_id=chat_id,
+                chat_id=lifecycle.chat_id,
                 trace_id=trace_id,
                 tool_executions=tool_executions,
                 answer_length=len(final_answer),
@@ -445,114 +379,73 @@ async def stream_with_deep_agent(
                     first_response_chunk_recorded = True
                     yield create_latency_event(
                         "first_response_chunk",
-                        get_elapsed_ms(),
+                        lifecycle.elapsed_ms(),
                     )
                 yield create_chunk_event(final_answer)
 
             await await_disconnect_grace(client_request)
-            terminal_task = asyncio.create_task(
-                chat_service.upsert_run_message(
-                    chat_id=chat_id,
-                    run_id=active_run_id,
+            async for event in lifecycle.complete(
+                ChatCompletion(
                     content=final_answer,
-                    metadata=MessageMetadata(
-                        run_id=active_run_id,
-                        run_status="completed",
-                        trace_id=trace_id,
-                        input_tokens=input_tokens,
-                        output_tokens=output_tokens,
-                        raw_data={
-                            "tool_executions": tool_executions,
-                            "agent_type": "deep_react",
-                            "deep_events": collected_events,
-                            "route_selected": route_metadata,
-                            "research_context": result.get("research_context"),
-                        },
-                    ),
-                )
-            )
-            await asyncio.shield(terminal_task)
-            if run_service is not None:
-                completed_run = await run_service.complete(
-                    active_run_id,
+                    execution_mode="research",
+                    agent_type="deep_react",
+                    llm_title=llm_title,
+                    update_final_title=True,
+                    trace_id=trace_id,
                     tool_calls=tool_executions,
                     input_tokens=input_tokens,
                     output_tokens=output_tokens,
+                    raw_data={
+                        "tool_executions": tool_executions,
+                        "agent_type": "deep_react",
+                        "deep_events": collected_events,
+                        "route_selected": route_metadata,
+                        "research_context": result.get("research_context"),
+                    },
+                    latency_metrics={
+                        "tool_executions": tool_executions,
+                        "input_tokens": input_tokens,
+                        "output_tokens": output_tokens,
+                    },
+                    done_data={
+                        "tool_executions": tool_executions,
+                        "trace_id": trace_id,
+                    },
                 )
-                if completed_run is not None:
-                    yield create_run_state_event(
-                        active_run_id,
-                        "completed",
-                        "research",
-                    )
-
-            try:
-                await chat_service.update_title_if_new(
-                    chat_id=chat_id,
-                    llm_title=llm_title,
-                    user_message=request.message,
-                )
-            except Exception:
-                logger.warning(
-                    "Failed to update completed Deep chat title",
-                    chat_id=chat_id,
-                    exc_info=True,
-                )
-
-            total_duration_ms = get_elapsed_ms()
-            yield create_latency_event(
-                "stream_complete",
-                total_duration_ms,
-                trace_id=trace_id,
-                tool_executions=tool_executions,
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-            )
-
-            yield create_done_event(
-                chat_id,
-                tool_executions=tool_executions,
-                trace_id=trace_id,
-            )
+            ):
+                yield event
 
         except (asyncio.CancelledError, ClientDisconnected, GeneratorExit) as exc:
-            await cancel_and_await(agent_task)
-            await await_task_completion(terminal_task)
             cancelled_event = {
                 "type": "deep_cancelled",
                 "seq": len(collected_events) + 1,
                 "timestamp": utcnow().isoformat(),
             }
-            await persist_cancelled_run(
-                chat_service=chat_service,
-                chat_id=chat_id,
-                user_id=user_id,
-                run_id=active_run_id,
-                language=request.language,
+            await lifecycle.cancel(
+                active_task=agent_task,
                 agent_type="deep_react",
-                route_metadata=route_metadata,
                 extra_raw_data={
                     "deep_events": [*collected_events, cancelled_event],
                 },
-                run_service=run_service,
             )
             if isinstance(exc, (asyncio.CancelledError, GeneratorExit)):
                 raise
             return
         except Exception as e:
-            logger.error("Stream error (v4-deep)", error=str(e), chat_id=chat_id)
-            if run_service is not None:
-                failed_run = await run_service.fail(
-                    active_run_id,
+            logger.error(
+                "Stream error (v4-deep)",
+                error=str(e),
+                chat_id=lifecycle.chat_id,
+            )
+            async for event in lifecycle.fail(
+                ChatFailure(
+                    execution_mode="research",
                     error_code="STREAM_ERROR",
                     error_message=str(e),
+                    client_message=str(e),
+                    include_error_code=False,
                 )
-                if failed_run is not None:
-                    yield create_run_state_event(
-                        active_run_id,
-                        "failed",
-                        "research",
-                    )
-            yield format_sse_event({"type": "error", "error": str(e)})
+            ):
+                yield event
 
     return StreamingResponse(generate_stream(), media_type="text/event-stream")

@@ -197,6 +197,179 @@ describe("chat cancellation UI", () => {
     expect(messages[messages.length - 1].run_status).not.toBe("cancelled");
   });
 
+  it("does not downgrade a completed run on a late transport error", async () => {
+    let messages: any[] = [];
+    const setMessages = (updater: (current: any[]) => any[]) => {
+      messages = updater(messages);
+    };
+    vi.mocked(chatService.sendMessageStreamPersistent).mockImplementation(
+      (...args: any[]) => {
+        const onChunk = args[2] as (content: string) => void;
+        const onError = args[6] as (error: string) => void;
+        const options = args[11] as {
+          onRunState?: (event: {
+            type: "run_state";
+            run_id: string;
+            status: "completed";
+          }) => void;
+        };
+        queueMicrotask(() => {
+          onChunk("Completed answer");
+          options.onRunState?.({
+            type: "run_state",
+            run_id: "run_completed",
+            status: "completed",
+          });
+          onError("connection reset after completion");
+        });
+        return vi.fn();
+      },
+    );
+    const { result } = renderHook(
+      () =>
+        useAnalysis(
+          "AAPL",
+          { start: "", end: "" },
+          setMessages,
+          vi.fn(),
+          "1d",
+          "chat_1",
+          vi.fn(),
+        ),
+      { wrapper },
+    );
+
+    await act(async () => result.current.mutateAsync("Analyze AAPL"));
+
+    const lastMessage = messages[messages.length - 1];
+    expect(lastMessage.content).toBe("Completed answer");
+    expect(lastMessage.run_status).not.toBe("failed");
+  });
+
+  it("clears a clarification card when the stream later fails", async () => {
+    let messages: any[] = [];
+    const setMessages = (updater: (current: any[]) => any[]) => {
+      messages = updater(messages);
+    };
+    vi.mocked(chatService.sendMessageStreamPersistent).mockImplementation(
+      (...args: any[]) => {
+        const onError = args[6] as (error: string) => void;
+        const options = args[11] as {
+          onClarificationRequired?: (event: {
+            type: "clarification_required";
+            clarification_type: "symbol";
+            reason_code: string;
+            message: string;
+            original_request: string;
+            candidates: [];
+          }) => void;
+        };
+        queueMicrotask(() => {
+          options.onClarificationRequired?.({
+            type: "clarification_required",
+            clarification_type: "symbol",
+            reason_code: "ambiguous_symbol",
+            message: "Please select a company.",
+            original_request: "Analyze Alpha",
+            candidates: [],
+          });
+          onError("Clarification state could not be persisted.");
+        });
+        return vi.fn();
+      },
+    );
+    const { result } = renderHook(
+      () =>
+        useAnalysis(
+          "AAPL",
+          { start: "", end: "" },
+          setMessages,
+          vi.fn(),
+          "1d",
+          "chat_1",
+          vi.fn(),
+        ),
+      { wrapper },
+    );
+
+    let request!: Promise<unknown>;
+    act(() => {
+      request = result.current.mutateAsync("Analyze Alpha");
+    });
+    await expect(request).rejects.toThrow(
+      "Clarification state could not be persisted.",
+    );
+
+    const lastMessage = messages[messages.length - 1];
+    expect(lastMessage.clarification_required).toBeUndefined();
+    expect(lastMessage.run_status).toBe("failed");
+    expect(lastMessage.content).toContain("Clarification state");
+  });
+
+  it("clears a clarification card when the stream is cancelled", async () => {
+    let messages: any[] = [];
+    const setMessages = (updater: (current: any[]) => any[]) => {
+      messages = updater(messages);
+    };
+    const abort = vi.fn();
+    vi.mocked(chatService.sendMessageStreamPersistent).mockImplementation(
+      (...args: any[]) => {
+        const options = args[11] as {
+          onClarificationRequired?: (event: {
+            type: "clarification_required";
+            clarification_type: "symbol";
+            reason_code: string;
+            message: string;
+            original_request: string;
+            candidates: [];
+          }) => void;
+          onCancelled?: () => void;
+        };
+        queueMicrotask(() =>
+          options.onClarificationRequired?.({
+            type: "clarification_required",
+            clarification_type: "symbol",
+            reason_code: "ambiguous_symbol",
+            message: "Please select a company.",
+            original_request: "Analyze Alpha",
+            candidates: [],
+          }),
+        );
+        abort.mockImplementation(() => options.onCancelled?.());
+        return abort;
+      },
+    );
+    const { result } = renderHook(
+      () =>
+        useAnalysis(
+          "AAPL",
+          { start: "", end: "" },
+          setMessages,
+          vi.fn(),
+          "1d",
+          "chat_1",
+          vi.fn(),
+        ),
+      { wrapper },
+    );
+
+    let request!: Promise<unknown>;
+    act(() => {
+      request = result.current.mutateAsync("Analyze Alpha");
+    });
+    await waitFor(() =>
+      expect(
+        messages[messages.length - 1]?.clarification_required,
+      ).toBeDefined(),
+    );
+    act(() => result.current.cancelActiveRequest());
+    await act(async () => request);
+
+    const lastMessage = messages[messages.length - 1];
+    expect(lastMessage.clarification_required).toBeUndefined();
+    expect(lastMessage.run_status).toBe("cancelled");
+  });
+
   it("maps persisted deep cancellation into cancelled accordion state", () => {
     const running = deepAccordionReducer(INITIAL_STATE, {
       type: "DEEP_START",

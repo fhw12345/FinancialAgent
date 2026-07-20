@@ -145,6 +145,10 @@ export const useAnalysis = (
           (error: string) => {
             // Error callback
             abortActiveRef.current = null;
+            if (activeRunStatusRef.current === "completed") {
+              resolve({ type: "chat", content: accumulatedContent });
+              return;
+            }
             console.error("❌ Streaming error:", error);
             setMessages((prev) =>
               prev.map((msg: any) =>
@@ -152,6 +156,8 @@ export const useAnalysis = (
                   ? {
                       ...msg,
                       content: `❌ **Error**: ${error}`,
+                      clarification_required: undefined,
+                      run_status: "failed" as const,
                     }
                   : msg,
               ),
@@ -275,6 +281,7 @@ export const useAnalysis = (
                     return {
                       ...msg,
                       content: accumulatedContent,
+                      clarification_required: undefined,
                       run_status: "cancelled",
                     };
                   }

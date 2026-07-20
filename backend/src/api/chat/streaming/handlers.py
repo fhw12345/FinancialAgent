@@ -27,15 +27,14 @@ from ...dependencies.chat_deps import (
 )
 from ...dependencies.run_deps import get_agent_run_service
 from ...schemas.chat_models import ChatRequest
-from ..helpers import get_or_create_chat
 from .cancellation import (
     ClientDisconnected,
     await_task_or_disconnect,
     cancel_and_await,
-    persist_cancelled_run,
 )
 from .deep_agent import stream_with_deep_agent
 from .helpers import create_run_state_event, format_sse_event
+from .lifecycle import ChatStreamLifecycle
 from .react_agent import stream_with_react_agent
 from .simple_agent import stream_with_simple_agent
 
@@ -92,26 +91,20 @@ async def chat_stream_unified(
         agent_type: str,
         cancel_reason: str,
     ) -> None:
-        chat_id, _ = await get_or_create_chat(request, user_id, chat_service)
-        await run_service.attach_chat(run.run_id, chat_id)
-        await chat_service.add_message(
-            chat_id=chat_id,
+        lifecycle = ChatStreamLifecycle(
+            request=request,
             user_id=user_id,
-            role=request.role,
-            content=request.message,
-            source=request.source,
-            metadata=request.metadata,
-            tool_call=request.tool_call,
-        )
-        await persist_cancelled_run(
             chat_service=chat_service,
-            chat_id=chat_id,
-            user_id=user_id,
+            context_manager=context_manager,
+            message_repo=message_repo,
             run_id=run.run_id,
-            language=request.language,
-            agent_type=agent_type,
-            route_metadata=None,
             run_service=run_service,
+        )
+        await lifecycle.start()
+        await lifecycle.persist_request()
+        await lifecycle.cancel(
+            active_task=None,
+            agent_type=agent_type,
             cancel_reason=cancel_reason,
         )
 
