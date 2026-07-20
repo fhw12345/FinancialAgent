@@ -273,6 +273,7 @@ Browse existing feature specs in this directory for examples:
 - **[Agent Task Cancellation](agent-task-cancellation.md)** — propagate browser Stop through SSE handlers into active model, tool, and research tasks
 - **[Honest Streaming Semantics](honest-streaming-semantics.md)** — distinguish real model-token streaming from buffered ReAct and Deep final responses
 - **[Shared Durable Run Model](shared-run-model.md)** — persist one execution status and observability contract across chat and Portfolio flows
+- **[Unified Chat Handler Lifecycle](unified-chat-handler-lifecycle.md)** — centralize chat setup, context, terminal persistence, title handling, clarification, and cancellation across Direct, ReAct, and Deep
 - **[Write-Time Translation](write-time-translation.md)** — translate LLM output to `zh-CN` on the write path so the read path skips `/api/translate`
 
 ### Market Data & Visualization

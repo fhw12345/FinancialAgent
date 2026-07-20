@@ -449,6 +449,11 @@ Extract one shared lifecycle for:
 The execution engines should return typed events instead of each handler
 reimplementing SSE formatting, persistence, timeout, and exception behavior.
 
+Detailed implementation plan:
+[UAW-008: Unified Chat Handler Lifecycle](../features/unified-chat-handler-lifecycle.md).
+
+Implementation status: shipped in commit `80e8d5d`.
+
 ### 7.3 Standardize Agent Events
 
 Use one event envelope:

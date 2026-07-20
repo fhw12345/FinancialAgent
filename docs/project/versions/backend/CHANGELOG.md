@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-07-20
+
+### Unified chat handler lifecycle
+
+- Added one `ChatStreamLifecycle` for chat/run setup, Mongo-authoritative
+  context preparation, title handling, and terminal persistence.
+- Migrated Direct, ReAct, Deep Research, and routing cancellation to the same
+  lifecycle owner while preserving existing SSE payloads.
+- Added typed completion, failure, and clarification contracts.
+- Emits terminal run state before post-completion title I/O.
+- Compensates completion and clarification transition failures without
+  duplicate errors or contradictory actionable messages.
+- Reduced every streaming source file to at most 500 lines.
+- Added lifecycle unit, fault-injection, handler parity, and real-Mongo browser
+  coverage.
+
 ## [0.38.0] - 2026-07-20
 
 ### Shared durable agent runs

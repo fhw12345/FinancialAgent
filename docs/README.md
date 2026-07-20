@@ -26,6 +26,7 @@ All current documentation describes the local single-user application.
 - [Agent Task Cancellation](features/agent-task-cancellation.md)
 - [Honest Streaming Semantics](features/honest-streaming-semantics.md)
 - [Shared Durable Run Model](features/shared-run-model.md)
+- [Unified Chat Handler Lifecycle](features/unified-chat-handler-lifecycle.md)
 - [Portfolio Agent Architecture](features/portfolio-agent-architecture-refactor.md)
 - [Write-time Translation](features/write-time-translation.md)
 - [Market Insights Trends](features/market-insights-trend-visualization.md)
@@ -39,6 +40,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [Unified Chat Lifecycle Case Study](case-studies/2026-07-20-three-chat-handlers-three-lifecycles.md)
 - [Shared Durable Run Model Case Study](case-studies/2026-07-20-one-run-model-four-lifecycles.md)
 - [Honest Streaming Semantics Case Study](case-studies/2026-07-17-typewriter-effect-was-not-streaming.md)
 - [Agent Task Cancellation Case Study](case-studies/2026-07-17-stop-button-left-agent-running.md)

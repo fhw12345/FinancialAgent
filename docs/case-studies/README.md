@@ -13,6 +13,7 @@ can decide whether the case is relevant before reading the Chinese body.
 
 | Date       | Title                                                                                       | Stack                   | Topic                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-20 | [Three Chat Handlers Had Three Lifecycles](2026-07-20-three-chat-handlers-three-lifecycles.md) | asyncio / SSE / MongoDB / React | Shared lifecycle ownership, event ordering, terminal compensation, and late transport races |
 | 2026-07-20 | [One Run Model Had to Survive Four Lifecycles](2026-07-20-one-run-model-four-lifecycles.md) | MongoDB / SSE / asyncio / React | Atomic run state, stream closure, leased compatibility keys, and migration recovery |
 | 2026-07-17 | [A Typewriter Effect Was Reported as Model Streaming](2026-07-17-typewriter-effect-was-not-streaming.md) | SSE / LLM / React / Playwright | Real model tokens versus buffered response delivery and truthful latency metrics |
 | 2026-07-17 | [Stop Closed the Stream but Left the Agent Running](2026-07-17-stop-button-left-agent-running.md) | asyncio / SSE / React Query / Playwright | Abort propagation, awaited task cancellation, and idempotent cancelled terminal state |

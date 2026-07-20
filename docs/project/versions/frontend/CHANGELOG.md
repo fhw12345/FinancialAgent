@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.1] - 2026-07-20
+
+### Terminal lifecycle race handling
+
+- Preserves completed responses when a transport error or Abort arrives after
+  the authoritative completed run state.
+- Clears actionable clarification cards when the run fails or is cancelled.
+- Suppresses persisted clarification cards for terminal messages during
+  reload.
+- Added deterministic lifecycle browser coverage for Direct completion and
+  Deep clarification restoration.
+
 ## [0.27.0] - 2026-07-20
 
 ### Durable run visibility
