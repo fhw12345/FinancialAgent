@@ -33,6 +33,7 @@ from .api.insights import router as insights_router
 from .api.market_data import router as market_data_router
 from .api.portfolio import router as portfolio_router
 from .api.portfolio_admin import router as portfolio_admin_router
+from .api.runs import router as runs_router
 from .api.translate import router as translate_router
 from .api.watchlist import router as watchlist_router
 from .core.config import get_settings
@@ -112,6 +113,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
         await watchlist_repo.ensure_indexes()
         logger.info("Watchlist indexes created (symbol tracking)")
+
+        from .database.repositories.agent_run_repository import (
+            AGENT_RUNS_COLLECTION,
+            AgentRunRepository,
+        )
+
+        agent_run_repo = AgentRunRepository(
+            mongodb.get_collection(AGENT_RUNS_COLLECTION)
+        )
+        await agent_run_repo.ensure_indexes()
+        logger.info("Agent run indexes created")
 
         # Portfolio order indexes (order audit trail)
         from .database.repositories.portfolio_order_repository import (
@@ -424,6 +436,7 @@ def create_app() -> FastAPI:
     app.include_router(chat_router)  # Persistent MongoDB-based chat
     app.include_router(portfolio_router)  # Portfolio holdings management
     app.include_router(portfolio_admin_router)  # Two-button analysis + settings
+    app.include_router(runs_router)  # Shared durable execution records
     app.include_router(watchlist_router)  # Watchlist symbol tracking
     app.include_router(insights_router)  # Market Insights Platform
     app.include_router(translate_router)  # On-demand translation for LLM output

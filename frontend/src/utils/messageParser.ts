@@ -19,7 +19,8 @@ interface BackendMessage {
   timestamp: string;
   tool_call?: ChatMessage["tool_call"];
   metadata?: {
-    run_status?: "completed" | "failed" | "cancelled";
+    run_status?: "waiting_for_input" | "completed" | "failed" | "cancelled";
+    run_id?: string;
     raw_data?: Record<string, unknown>;
     [key: string]: unknown;
   };
@@ -66,6 +67,7 @@ export function parseBackendMessage(msg: BackendMessage): ChatMessage {
     route_selected,
     clarification_required,
     run_status: msg.metadata?.run_status,
+    run_id: msg.metadata?.run_id,
     tool_call: msg.tool_call,
   };
 }

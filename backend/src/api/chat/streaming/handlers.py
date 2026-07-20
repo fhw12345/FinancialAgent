@@ -1,8 +1,7 @@
 """Unified streaming handler with hybrid automatic flow routing."""
 
 import asyncio
-import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
 
 import structlog
@@ -14,6 +13,7 @@ from ....agent.flow_router import AgentFlowRouter, FlowRoutingDecision
 from ....agent.langgraph_react_agent import FinancialAnalysisReActAgent
 from ....core.local_user import LOCAL_USER_ID
 from ....database.repositories.message_repository import MessageRepository
+from ....services.agent_run_service import AgentRunService
 from ....services.chat_service import ChatService
 from ....services.context_window_manager import ContextWindowManager
 from ...dependencies.chat_deps import (
@@ -25,6 +25,7 @@ from ...dependencies.chat_deps import (
     get_message_repository,
     get_react_agent,
 )
+from ...dependencies.run_deps import get_agent_run_service
 from ...schemas.chat_models import ChatRequest
 from ..helpers import get_or_create_chat
 from .cancellation import (
@@ -34,7 +35,7 @@ from .cancellation import (
     persist_cancelled_run,
 )
 from .deep_agent import stream_with_deep_agent
-from .helpers import format_sse_event
+from .helpers import create_run_state_event, format_sse_event
 from .react_agent import stream_with_react_agent
 from .simple_agent import stream_with_simple_agent
 
@@ -51,6 +52,7 @@ async def chat_stream_unified(
     context_manager: ContextWindowManager = Depends(get_context_manager),
     message_repo: MessageRepository = Depends(get_message_repository),
     flow_router: AgentFlowRouter = Depends(get_flow_router),
+    run_service: AgentRunService = Depends(get_agent_run_service),
     x_debug: str | None = Header(None, alias="X-Debug"),
 ) -> StreamingResponse:
     """Select and execute the appropriate chat flow for one request."""
@@ -74,6 +76,9 @@ async def chat_stream_unified(
             client_request=http_request,
         )
 
+    run = await run_service.create_chat_run(
+        requested_policy=request.agent_version,
+    )
     routing_task = asyncio.create_task(
         flow_router.select(
             message=request.message,
@@ -81,10 +86,14 @@ async def chat_stream_unified(
             requested_version=request.agent_version,
         )
     )
-    routing_run_id = f"run_{uuid.uuid4().hex}"
 
-    async def persist_routing_cancellation() -> None:
+    async def persist_unstarted_cancellation(
+        *,
+        agent_type: str,
+        cancel_reason: str,
+    ) -> None:
         chat_id, _ = await get_or_create_chat(request, user_id, chat_service)
+        await run_service.attach_chat(run.run_id, chat_id)
         await chat_service.add_message(
             chat_id=chat_id,
             user_id=user_id,
@@ -98,23 +107,43 @@ async def chat_stream_unified(
             chat_service=chat_service,
             chat_id=chat_id,
             user_id=user_id,
-            run_id=routing_run_id,
+            run_id=run.run_id,
             language=request.language,
-            agent_type="flow_router",
+            agent_type=agent_type,
             route_metadata=None,
+            run_service=run_service,
+            cancel_reason=cancel_reason,
         )
 
     try:
         decision = await await_task_or_disconnect(routing_task, http_request)
     except ClientDisconnected:
         await cancel_and_await(routing_task)
-        await persist_routing_cancellation()
+        await persist_unstarted_cancellation(
+            agent_type="flow_router",
+            cancel_reason="client_disconnected_during_routing",
+        )
         logger.info("Client disconnected during flow routing")
         return StreamingResponse(iter(()), media_type="text/event-stream")
     except asyncio.CancelledError:
         await cancel_and_await(routing_task)
-        await persist_routing_cancellation()
+        await persist_unstarted_cancellation(
+            agent_type="flow_router",
+            cancel_reason="client_disconnected_during_routing",
+        )
         raise
+    except Exception as exc:
+        await run_service.fail(
+            run.run_id,
+            error_code="ROUTING_ERROR",
+            error_message=str(exc),
+        )
+        raise
+
+    running_run = await run_service.mark_running(
+        run.run_id,
+        selected_policy=decision.flow,
+    )
     route_metadata = decision.as_metadata()
     debug_enabled = bool(x_debug and x_debug.lower() in ("true", "1", "yes"))
 
@@ -136,6 +165,8 @@ async def chat_stream_unified(
             message_repo,
             route_metadata,
             client_request=http_request,
+            run_id=run.run_id,
+            run_service=run_service,
         )
     elif decision.flow == "v3":
         response = await stream_with_react_agent(
@@ -148,6 +179,8 @@ async def chat_stream_unified(
             debug_enabled,
             route_metadata,
             client_request=http_request,
+            run_id=run.run_id,
+            run_service=run_service,
         )
     else:
         response = await stream_with_deep_agent(
@@ -160,20 +193,53 @@ async def chat_stream_unified(
             debug_enabled,
             route_metadata,
             client_request=http_request,
+            run_id=run.run_id,
+            run_service=run_service,
         )
 
-    return _prepend_route_event(response, decision)
+    async def persist_prelude_cancellation() -> None:
+        await persist_unstarted_cancellation(
+            agent_type=decision.flow,
+            cancel_reason="client_disconnected_before_agent_stream",
+        )
+
+    return _prepend_route_event(
+        response,
+        decision,
+        running_run or run,
+        on_prelude_cancel=persist_prelude_cancellation,
+    )
 
 
 def _prepend_route_event(
     response: StreamingResponse,
     decision: FlowRoutingDecision,
+    run: Any,
+    *,
+    on_prelude_cancel: Callable[[], Awaitable[None]] | None = None,
 ) -> StreamingResponse:
     """Prepend the existing data-only SSE envelope with route metadata."""
 
     async def routed_stream() -> AsyncIterator[Any]:
-        yield format_sse_event(decision.as_event())
-        async for chunk in response.body_iterator:
-            yield chunk
+        inner_started = False
+        stream_finished = False
+        try:
+            yield create_run_state_event(
+                run.run_id,
+                run.status,
+                run.execution_mode,
+            )
+            yield format_sse_event(decision.as_event())
+            inner_started = True
+            async for chunk in response.body_iterator:
+                yield chunk
+            stream_finished = True
+        finally:
+            if not stream_finished:
+                close = getattr(response.body_iterator, "aclose", None)
+                if inner_started and close is not None:
+                    await close()
+                elif on_prelude_cancel is not None:
+                    await on_prelude_cancel()
 
     return StreamingResponse(routed_stream(), media_type="text/event-stream")

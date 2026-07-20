@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { agentRunService } from "../services/api";
 import { marketService, TimeInterval } from "../services/market";
 import { useChatManager } from "./chat/useChatManager";
 import { useAnalysis, useButtonAnalysis } from "./chat/useAnalysis";
@@ -19,6 +20,7 @@ import type {
   AgentFlow,
   DeepStreamEvent,
   ResponseStreamModeEvent,
+  RunStateEvent,
   RouteSelectedEvent,
   SymbolCandidate,
 } from "../types/api";
@@ -77,6 +79,7 @@ export function EnhancedChatInterface() {
   const [responseStreamMode, setResponseStreamMode] = useState<
     ResponseStreamModeEvent["mode"] | null
   >(null);
+  const [runInfo, setRunInfo] = useState<RunStateEvent | null>(null);
 
   const { state: deepState, dispatch: deepDispatch } = useDeepAccordionState();
 
@@ -103,6 +106,9 @@ export function EnhancedChatInterface() {
   }, []);
   const handleStreamMode = useCallback((event: ResponseStreamModeEvent) => {
     setResponseStreamMode(event.mode);
+  }, []);
+  const handleRunState = useCallback((event: RunStateEvent) => {
+    setRunInfo(event);
   }, []);
 
   // Pagination state for loading older messages
@@ -184,6 +190,7 @@ export function EnhancedChatInterface() {
     handleDeepEvent,
     handleRouteSelected,
     handleStreamMode,
+    handleRunState,
   );
 
   // Button analysis mutation for quick analysis buttons
@@ -297,6 +304,7 @@ export function EnhancedChatInterface() {
 
     setRouteInfo(null);
     setResponseStreamMode(null);
+    setRunInfo(null);
     deepDispatch({ type: "RESET" });
     chatMutation.mutate(message);
     setMessage("");
@@ -322,6 +330,7 @@ export function EnhancedChatInterface() {
       setIsRestoringChat(true);
       setChatId(selectedChatId);
       setResponseStreamMode(null);
+      setRunInfo(null);
       try {
         deepDispatch({ type: "RESET" });
 
@@ -349,6 +358,34 @@ export function EnhancedChatInterface() {
                   }
                 : null),
           );
+          const latestRunMessage = [...restoredMessages]
+            .reverse()
+            .find((msg) => msg.run_id && msg.run_status);
+          const messageRunInfo = latestRunMessage
+            ? {
+                type: "run_state" as const,
+                run_id: latestRunMessage.run_id as string,
+                status: latestRunMessage.run_status as RunStateEvent["status"],
+              }
+            : null;
+          try {
+            const [latestRun] = await agentRunService.listChatRuns(
+              selectedChatId,
+              1,
+            );
+            setRunInfo(
+              latestRun
+                ? {
+                    type: "run_state",
+                    run_id: latestRun.run_id,
+                    status: latestRun.status,
+                    execution_mode: latestRun.execution_mode ?? undefined,
+                  }
+                : messageRunInfo,
+            );
+          } catch {
+            setRunInfo(messageRunInfo);
+          }
         } else {
           setChatId(null);
         }
@@ -371,6 +408,7 @@ export function EnhancedChatInterface() {
     deepDispatch({ type: "RESET" }); // Reset deep accordion state
     setRouteInfo(null);
     setResponseStreamMode(null);
+    setRunInfo(null);
   }, [setMessages, setChatId, deepDispatch]);
 
   const handleLoadMore = useCallback(async () => {
@@ -554,6 +592,17 @@ export function EnhancedChatInterface() {
                         {responseStreamMode === "model_tokens"
                           ? t("chat:streaming.modelTokens")
                           : t("chat:streaming.buffered")}
+                      </span>
+                    )}
+                    {runInfo && (
+                      <span
+                        data-testid="run-state"
+                        data-run-id={runInfo.run_id}
+                        data-run-status={runInfo.status}
+                        className="rounded-full bg-slate-200 px-2.5 py-1 font-mono text-xs text-slate-700"
+                        title={runInfo.run_id}
+                      >
+                        {runInfo.status} · {runInfo.run_id.slice(-8)}
                       </span>
                     )}
                   </div>

@@ -10,6 +10,8 @@ import type {
   DeepStreamEvent,
   RouteSelectedEvent,
   ResponseStreamModeEvent,
+  RunStateEvent,
+  AgentRun,
   MarketStatus,
 } from "../types/api";
 
@@ -182,6 +184,7 @@ export const chatService = {
       agent_version?: "auto" | "v2" | "v3" | "v4-deep";
       onRouteSelected?: (event: RouteSelectedEvent) => void;
       onStreamMode?: (event: ResponseStreamModeEvent) => void;
+      onRunState?: (event: RunStateEvent) => void;
       onClarificationRequired?: (event: ClarificationRequiredEvent) => void;
       onCancelled?: () => void;
       debug_enabled?: boolean; // Enable debug logging in backend
@@ -249,6 +252,8 @@ export const chatService = {
               options?.onRouteSelected?.(data);
             } else if (data.type === "response_stream_mode") {
               options?.onStreamMode?.(data);
+            } else if (data.type === "run_state") {
+              options?.onRunState?.(data);
             } else if (data.type === "clarification_required") {
               options?.onClarificationRequired?.(data);
             } else if (
@@ -331,6 +336,20 @@ export const chatService = {
     return () => {
       controller.abort();
     };
+  },
+};
+
+export const agentRunService = {
+  async getRun(runId: string): Promise<AgentRun> {
+    const response = await api.get<AgentRun>(`/api/runs/${runId}`);
+    return response.data;
+  },
+
+  async listChatRuns(chatId: string, limit: number = 20): Promise<AgentRun[]> {
+    const response = await api.get<AgentRun[]>("/api/runs", {
+      params: { chat_id: chatId, limit },
+    });
+    return response.data;
   },
 };
 

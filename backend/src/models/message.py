@@ -55,7 +55,15 @@ class MessageMetadata(BaseModel):
         default=None,
         description="Stable identifier used to upsert one terminal assistant message",
     )
-    run_status: Literal["completed", "failed", "cancelled"] | None = Field(
+    run_status: (
+        Literal[
+            "waiting_for_input",
+            "completed",
+            "failed",
+            "cancelled",
+        ]
+        | None
+    ) = Field(
         default=None,
         description="Durable user-visible status for the request that produced this message",
     )

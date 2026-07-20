@@ -85,6 +85,22 @@ def create_stream_mode_event(mode: str) -> str:
     )
 
 
+def create_run_state_event(
+    run_id: str,
+    status: str,
+    execution_mode: str | None = None,
+) -> str:
+    """Emit a transitional run status event before event standardization."""
+    payload: dict[str, Any] = {
+        "type": "run_state",
+        "run_id": run_id,
+        "status": status,
+    }
+    if execution_mode is not None:
+        payload["execution_mode"] = execution_mode
+    return format_sse_event(payload)
+
+
 def create_clarification_event(event_data: dict[str, Any]) -> str:
     """Create a non-error SSE event requesting structured user clarification."""
     return format_sse_event({"type": "clarification_required", **event_data})

@@ -8,6 +8,8 @@ from langchain_core.messages import AIMessage
 
 from src.agent.flow_router import AgentFlowRouter, FlowRoutingDecision
 from src.api.chat.streaming.handlers import _prepend_route_event
+from src.core.utils.date_utils import utcnow
+from src.models.agent_run import AgentRun
 
 
 @pytest.mark.asyncio
@@ -140,6 +142,15 @@ async def test_route_event_is_prepended_as_data_only_sse():
             source="rule",
             reason_code="live_data_or_tool_request",
         ),
+        AgentRun(
+            run_id="run_1",
+            requested_policy="auto",
+            selected_policy="v3",
+            policy_version="auto-router-v1",
+            execution_mode="agentic",
+            status="running",
+            started_at=utcnow(),
+        ),
     )
 
     chunks = []
@@ -147,6 +158,45 @@ async def test_route_event_is_prepended_as_data_only_sse():
         chunks.append(chunk.decode() if isinstance(chunk, bytes) else chunk)
 
     output = "".join(chunks)
-    assert output.startswith('data: {"type": "route_selected"')
+    assert output.startswith('data: {"type": "run_state"')
+    assert '"run_id": "run_1"' in output
+    assert 'data: {"type": "route_selected"' in output
     assert '"flow": "v3"' in output
     assert output.endswith('data: {"type":"done","chat_id":"chat_1"}\n\n')
+
+
+@pytest.mark.asyncio
+async def test_closing_route_prelude_cancels_unstarted_run():
+    inner_started = False
+    cancelled = AsyncMock()
+
+    async def original_stream():
+        nonlocal inner_started
+        inner_started = True
+        yield 'data: {"type":"done"}\n\n'
+
+    wrapped = _prepend_route_event(
+        StreamingResponse(original_stream(), media_type="text/event-stream"),
+        FlowRoutingDecision(
+            flow="v2",
+            source="rule",
+            reason_code="concept_explanation",
+        ),
+        AgentRun(
+            run_id="run_1",
+            requested_policy="auto",
+            selected_policy="v2",
+            policy_version="auto-router-v1",
+            execution_mode="instant",
+            status="running",
+            started_at=utcnow(),
+        ),
+        on_prelude_cancel=cancelled,
+    )
+
+    iterator = wrapped.body_iterator
+    await anext(iterator)
+    await iterator.aclose()
+
+    cancelled.assert_awaited_once_with()
+    assert inner_started is False

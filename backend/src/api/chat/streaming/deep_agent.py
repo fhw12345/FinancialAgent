@@ -20,6 +20,7 @@ from ....core.utils.date_utils import utcnow
 from ....core.utils.title_utils import extract_title_from_response
 from ....database.repositories.message_repository import MessageRepository
 from ....models.message import MessageMetadata
+from ....services.agent_run_service import AgentRunService
 from ....services.chat_service import ChatService
 from ....services.context_window_manager import ContextWindowManager
 from ....services.conversation_context_service import ConversationContextService
@@ -40,6 +41,7 @@ from .helpers import (
     create_done_event,
     create_error_event,
     create_latency_event,
+    create_run_state_event,
     create_stream_mode_event,
     create_thinking_event,
     format_sse_event,
@@ -64,6 +66,8 @@ async def stream_with_deep_agent(
     debug: bool = False,
     route_metadata: dict[str, str] | None = None,
     client_request: Request | None = None,
+    run_id: str | None = None,
+    run_service: AgentRunService | None = None,
 ) -> StreamingResponse:
     """Stream using Deep ReAct Agent (v4-deep) with hierarchical sub-agents."""
 
@@ -75,7 +79,7 @@ async def stream_with_deep_agent(
         first_response_chunk_recorded = False
         agent_task: asyncio.Task[Any] | None = None
         terminal_task: asyncio.Task[Any] | None = None
-        run_id = f"run_{uuid.uuid4().hex}"
+        active_run_id = run_id or f"run_{uuid.uuid4().hex}"
 
         def get_elapsed_ms() -> int:
             return int((utcnow() - request_start).total_seconds() * 1000)
@@ -87,6 +91,8 @@ async def stream_with_deep_agent(
             )
             if chat_created_event:
                 yield format_sse_event(chat_created_event)
+            if run_service is not None:
+                await run_service.attach_chat(active_run_id, chat_id)
 
             yield create_thinking_event("initializing", chat_id)
 
@@ -104,12 +110,19 @@ async def stream_with_deep_agent(
                 yield create_done_event(chat_id)
                 return
 
-            await chat_service.update_title_if_new(
-                chat_id=chat_id,
-                llm_title=None,
-                user_message=request.message,
-                current_symbol=request.current_symbol,
-            )
+            try:
+                await chat_service.update_title_if_new(
+                    chat_id=chat_id,
+                    llm_title=None,
+                    user_message=request.message,
+                    current_symbol=request.current_symbol,
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to set initial Deep chat title",
+                    chat_id=chat_id,
+                    exc_info=True,
+                )
 
             messages = await chat_service.get_chat_messages(chat_id, user_id)
             context_service = ConversationContextService(
@@ -162,6 +175,8 @@ async def stream_with_deep_agent(
                     content=clarification_message,
                     source="llm",
                     metadata={
+                        "run_id": active_run_id,
+                        "run_status": "waiting_for_input",
                         "agent_type": "deep_react",
                         "raw_data": {
                             "clarification_required": {
@@ -173,6 +188,19 @@ async def stream_with_deep_agent(
                     },
                 )
                 yield create_clarification_event(clarification)
+                if run_service is not None:
+                    await run_service.wait_for_input(
+                        active_run_id,
+                        metadata={
+                            "clarification_type": "symbol",
+                            "reason_code": resolution.reason_code,
+                        },
+                    )
+                    yield create_run_state_event(
+                        active_run_id,
+                        "waiting_for_input",
+                        "research",
+                    )
                 yield create_done_event(chat_id, clarification_required=True)
                 return
 
@@ -267,7 +295,7 @@ async def stream_with_deep_agent(
                     client_request,
                 )
 
-        except (asyncio.CancelledError, ClientDisconnected) as exc:
+        except (asyncio.CancelledError, ClientDisconnected, GeneratorExit) as exc:
             await cancel_and_await(agent_task)
             await await_task_completion(terminal_task)
             cancelled_event = {
@@ -279,16 +307,17 @@ async def stream_with_deep_agent(
                 chat_service=chat_service,
                 chat_id=chat_id,
                 user_id=user_id,
-                run_id=run_id,
+                run_id=active_run_id,
                 language=request.language,
                 agent_type="deep_react",
                 route_metadata=route_metadata,
                 extra_raw_data={
                     "deep_events": [*collected_events, cancelled_event],
                 },
+                run_service=run_service,
             )
             logger.info("Deep agent request cancelled", chat_id=chat_id)
-            if isinstance(exc, asyncio.CancelledError):
+            if isinstance(exc, (asyncio.CancelledError, GeneratorExit)):
                 raise
             return
         except TimeoutError:
@@ -316,6 +345,13 @@ async def stream_with_deep_agent(
                 "Deep analysis timed out (10 min limit). Try a simpler query.",
                 "AGENT_TIMEOUT",
             )
+            if run_service is not None:
+                await run_service.fail(
+                    active_run_id,
+                    error_code="AGENT_TIMEOUT",
+                    error_message="Deep analysis timed out",
+                )
+                yield create_run_state_event(active_run_id, "failed", "research")
             return
         except Exception as e:
             logger.error(
@@ -343,6 +379,13 @@ async def stream_with_deep_agent(
                 except Exception:
                     logger.warning("Failed to persist partial deep events on error")
             yield create_error_event(f"Deep analysis failed: {e!s}", "AGENT_ERROR")
+            if run_service is not None:
+                await run_service.fail(
+                    active_run_id,
+                    error_code="AGENT_ERROR",
+                    error_message=str(e),
+                )
+                yield create_run_state_event(active_run_id, "failed", "research")
             return
 
         # ===== Phase 3: Process Result =====
@@ -365,6 +408,17 @@ async def stream_with_deep_agent(
                     error=result["error"],
                 )
                 yield create_error_event(result["error"], "AGENT_EXECUTION_FAILED")
+                if run_service is not None:
+                    await run_service.fail(
+                        active_run_id,
+                        error_code="AGENT_EXECUTION_FAILED",
+                        error_message=str(result["error"]),
+                    )
+                    yield create_run_state_event(
+                        active_run_id,
+                        "failed",
+                        "research",
+                    )
                 return
 
             logger.info(
@@ -399,10 +453,10 @@ async def stream_with_deep_agent(
             terminal_task = asyncio.create_task(
                 chat_service.upsert_run_message(
                     chat_id=chat_id,
-                    run_id=run_id,
+                    run_id=active_run_id,
                     content=final_answer,
                     metadata=MessageMetadata(
-                        run_id=run_id,
+                        run_id=active_run_id,
                         run_status="completed",
                         trace_id=trace_id,
                         input_tokens=input_tokens,
@@ -418,12 +472,32 @@ async def stream_with_deep_agent(
                 )
             )
             await asyncio.shield(terminal_task)
+            if run_service is not None:
+                completed_run = await run_service.complete(
+                    active_run_id,
+                    tool_calls=tool_executions,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                )
+                if completed_run is not None:
+                    yield create_run_state_event(
+                        active_run_id,
+                        "completed",
+                        "research",
+                    )
 
-            await chat_service.update_title_if_new(
-                chat_id=chat_id,
-                llm_title=llm_title,
-                user_message=request.message,
-            )
+            try:
+                await chat_service.update_title_if_new(
+                    chat_id=chat_id,
+                    llm_title=llm_title,
+                    user_message=request.message,
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to update completed Deep chat title",
+                    chat_id=chat_id,
+                    exc_info=True,
+                )
 
             total_duration_ms = get_elapsed_ms()
             yield create_latency_event(
@@ -441,7 +515,7 @@ async def stream_with_deep_agent(
                 trace_id=trace_id,
             )
 
-        except (asyncio.CancelledError, ClientDisconnected) as exc:
+        except (asyncio.CancelledError, ClientDisconnected, GeneratorExit) as exc:
             await cancel_and_await(agent_task)
             await await_task_completion(terminal_task)
             cancelled_event = {
@@ -453,19 +527,32 @@ async def stream_with_deep_agent(
                 chat_service=chat_service,
                 chat_id=chat_id,
                 user_id=user_id,
-                run_id=run_id,
+                run_id=active_run_id,
                 language=request.language,
                 agent_type="deep_react",
                 route_metadata=route_metadata,
                 extra_raw_data={
                     "deep_events": [*collected_events, cancelled_event],
                 },
+                run_service=run_service,
             )
-            if isinstance(exc, asyncio.CancelledError):
+            if isinstance(exc, (asyncio.CancelledError, GeneratorExit)):
                 raise
             return
         except Exception as e:
             logger.error("Stream error (v4-deep)", error=str(e), chat_id=chat_id)
+            if run_service is not None:
+                failed_run = await run_service.fail(
+                    active_run_id,
+                    error_code="STREAM_ERROR",
+                    error_message=str(e),
+                )
+                if failed_run is not None:
+                    yield create_run_state_event(
+                        active_run_id,
+                        "failed",
+                        "research",
+                    )
             yield format_sse_event({"type": "error", "error": str(e)})
 
     return StreamingResponse(generate_stream(), media_type="text/event-stream")

@@ -1,7 +1,7 @@
 # Financial Agent Development Makefile
 # Following the coding guide requirements for fmt, test, lint commands
 
-.PHONY: help dev build test test-e2e test-e2e-real test-e2e-uaw002 test-e2e-uaw003 test-e2e-uaw004 test-e2e-uaw005 test-e2e-uaw006 lint fmt clean up down logs copilot-reverse
+.PHONY: help dev build test test-e2e test-e2e-real test-e2e-uaw002 test-e2e-uaw003 test-e2e-uaw004 test-e2e-uaw005 test-e2e-uaw006 test-e2e-uaw007 lint fmt clean up down logs copilot-reverse
 
 # Default target
 help:
@@ -25,6 +25,7 @@ help:
 	@echo "  test-e2e-uaw004 Run Watchlist persistence E2E"
 	@echo "  test-e2e-uaw005 Run Agent cancellation E2E"
 	@echo "  test-e2e-uaw006 Run Honest streaming semantics E2E"
+	@echo "  test-e2e-uaw007 Run Shared durable Run model E2E"
 	@echo ""
 	@echo "Building:"
 	@echo "  build        Build Docker images"
@@ -146,6 +147,15 @@ test-e2e-uaw006:
 	docker compose exec redis redis-cli -n 5 FLUSHDB
 	docker compose --profile e2e restart backend-streaming-e2e frontend-streaming-e2e
 	docker compose --profile e2e run --rm --no-deps -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:3005 e2e sh -c "until curl -fsS http://host.docker.internal:18086/api/health; do sleep 2; done; UPDATE_E2E_EVIDENCE=true npm run test:e2e:uaw-006"
+
+test-e2e-uaw007:
+	docker compose --profile e2e up -d --build llm-e2e backend-run-e2e
+	docker compose --profile e2e build frontend-deep-e2e
+	docker compose --profile e2e up -d frontend-run-e2e
+	docker compose exec mongodb mongosh --quiet --eval 'db.getSiblingDB("financial_agent_run_e2e").dropDatabase()'
+	docker compose exec redis redis-cli -n 6 FLUSHDB
+	docker compose --profile e2e restart backend-run-e2e frontend-run-e2e
+	docker compose --profile e2e run --rm --no-deps -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:3006 e2e sh -c "until curl -fsS http://host.docker.internal:18087/api/health; do sleep 2; done; UPDATE_E2E_EVIDENCE=true npm run test:e2e:uaw-007"
 
 # Building
 build:

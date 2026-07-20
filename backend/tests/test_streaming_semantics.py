@@ -62,6 +62,8 @@ async def test_direct_declares_real_model_token_stream():
         def get_last_token_usage(self):
             return None
 
+    chat_service = make_chat_service()
+    chat_service.update_title_if_new.side_effect = RuntimeError("title unavailable")
     response = await stream_with_simple_agent(
         request=ChatRequest(
             message="Explain P/E",
@@ -70,7 +72,7 @@ async def test_direct_declares_real_model_token_stream():
             language="en",
         ),
         user_id="local",
-        chat_service=make_chat_service(),
+        chat_service=chat_service,
         agent=StreamingAgent(),  # type: ignore[arg-type]
         context_manager=make_context_manager(),
         message_repo=AsyncMock(),
@@ -98,6 +100,8 @@ async def test_react_declares_one_buffered_response_chunk():
                 "trace_id": "react_buffered",
             }
 
+    chat_service = make_chat_service()
+    chat_service.update_title_if_new.side_effect = RuntimeError("title unavailable")
     response = await stream_with_react_agent(
         request=ChatRequest(
             message="What is the AAPL price?",
@@ -106,7 +110,7 @@ async def test_react_declares_one_buffered_response_chunk():
             language="en",
         ),
         user_id="local",
-        chat_service=make_chat_service(),
+        chat_service=chat_service,
         agent=BufferedReactAgent(),  # type: ignore[arg-type]
         context_manager=make_context_manager(),
         message_repo=AsyncMock(),
@@ -159,6 +163,8 @@ async def test_deep_separates_progress_from_buffered_response():
                 "research_context": {},
             }
 
+    chat_service = make_chat_service()
+    chat_service.update_title_if_new.side_effect = RuntimeError("title unavailable")
     response = await stream_with_deep_agent(
         request=ChatRequest(
             message="Deeply analyze AAPL",
@@ -167,7 +173,7 @@ async def test_deep_separates_progress_from_buffered_response():
             language="en",
         ),
         user_id="local",
-        chat_service=make_chat_service(),
+        chat_service=chat_service,
         agent=BufferedDeepAdapter(),
         context_manager=make_context_manager(),
         message_repo=AsyncMock(),

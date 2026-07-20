@@ -8,12 +8,14 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from src.api.chat.streaming.cancellation import persist_cancelled_run
 from src.api.chat.streaming.deep_agent import stream_with_deep_agent
 from src.api.chat.streaming.handlers import chat_stream_unified
 from src.api.chat.streaming.react_agent import stream_with_react_agent
 from src.api.chat.streaming.simple_agent import stream_with_simple_agent
 from src.api.schemas.chat_models import ChatRequest
 from src.core.utils.date_utils import utcnow
+from src.models.agent_run import AgentRun
 from src.models.message import Message, MessageMetadata
 from src.models.symbol_resolution import SymbolCandidate, SymbolResolution
 
@@ -70,6 +72,37 @@ def cancelled_metadata(chat_service: AsyncMock) -> MessageMetadata:
     metadata = call.kwargs["metadata"]
     assert isinstance(metadata, MessageMetadata)
     return metadata
+
+
+@pytest.mark.asyncio
+async def test_cancellation_without_chat_still_transitions_durable_run():
+    chat_service = make_chat_service()
+    run_service = AsyncMock()
+    run_service.cancel.return_value = AgentRun(
+        run_id="run_without_chat",
+        requested_policy="auto",
+        policy_version="auto-router-v1",
+        status="cancelled",
+        started_at=utcnow(),
+        finished_at=utcnow(),
+    )
+
+    await persist_cancelled_run(
+        chat_service=chat_service,
+        chat_id=None,
+        user_id="local",
+        run_id="run_without_chat",
+        language="en",
+        agent_type="simple_chat",
+        route_metadata=None,
+        run_service=run_service,
+    )
+
+    run_service.cancel.assert_awaited_once_with(
+        "run_without_chat",
+        cancel_reason="client_cancelled",
+    )
+    chat_service.upsert_run_message.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -134,6 +167,14 @@ async def test_disconnect_during_routing_cancels_and_persists_request():
                 raise
 
     chat_service = make_chat_service()
+    run_service = AsyncMock()
+    run_service.create_chat_run.return_value = AgentRun(
+        run_id="run_routing",
+        requested_policy="auto",
+        policy_version="auto-router-v1",
+        status="pending",
+        started_at=utcnow(),
+    )
     response = await chat_stream_unified(
         request=ChatRequest(
             message="Analyze this company",
@@ -149,6 +190,7 @@ async def test_disconnect_during_routing_cancels_and_persists_request():
         context_manager=make_context_manager(),
         message_repo=AsyncMock(),
         flow_router=SlowRouter(),  # type: ignore[arg-type]
+        run_service=run_service,
         x_debug=None,
     )
 
@@ -158,6 +200,85 @@ async def test_disconnect_during_routing_cancels_and_persists_request():
     assert routing_started.is_set()
     assert routing_cancelled.is_set()
     assert chat_service.add_message.await_args.kwargs["role"] == "user"
+    assert cancelled_metadata(chat_service).run_status == "cancelled"
+    run_service.cancel.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_closing_unified_stream_after_agent_starts_persists_cancellation():
+    class IdleSimpleAgent:
+        async def stream_chat(self, messages, max_tokens=3000, language="zh-CN"):
+            await asyncio.sleep(30)
+            yield "late"
+
+        def get_last_token_usage(self):
+            return None
+
+    class SimpleRouter:
+        async def select(self, **kwargs):
+            return SimpleNamespace(
+                flow="v2",
+                source="rule",
+                reason_code="concept_explanation",
+                as_metadata=lambda: {
+                    "flow": "v2",
+                    "source": "rule",
+                    "reason_code": "concept_explanation",
+                },
+                as_event=lambda: {
+                    "type": "route_selected",
+                    "flow": "v2",
+                    "source": "rule",
+                    "reason_code": "concept_explanation",
+                },
+            )
+
+    chat_service = make_chat_service()
+    run_service = AsyncMock()
+    created_run = AgentRun(
+        run_id="run_stream_close",
+        requested_policy="auto",
+        policy_version="auto-router-v1",
+        status="pending",
+        started_at=utcnow(),
+    )
+    run_service.create_chat_run.return_value = created_run
+    run_service.mark_running.return_value = created_run.model_copy(
+        update={
+            "selected_policy": "v2",
+            "execution_mode": "instant",
+            "status": "running",
+        }
+    )
+    response = await chat_stream_unified(
+        request=ChatRequest(
+            message="Explain valuation",
+            chat_id="chat_cancel",
+            agent_version="auto",
+            language="en",
+        ),
+        http_request=DisconnectOnCall(100),  # type: ignore[arg-type]
+        chat_service=chat_service,
+        simple_agent=IdleSimpleAgent(),  # type: ignore[arg-type]
+        react_agent=Mock(),
+        deep_agent=Mock(),
+        context_manager=make_context_manager(),
+        message_repo=AsyncMock(),
+        flow_router=SimpleRouter(),  # type: ignore[arg-type]
+        run_service=run_service,
+        x_debug=None,
+    )
+
+    iterator = response.body_iterator
+    await anext(iterator)
+    await anext(iterator)
+    await anext(iterator)
+    await iterator.aclose()
+
+    run_service.cancel.assert_awaited_once_with(
+        "run_stream_close",
+        cancel_reason="client_cancelled",
+    )
     assert cancelled_metadata(chat_service).run_status == "cancelled"
 
 

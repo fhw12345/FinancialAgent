@@ -37,6 +37,38 @@ export interface ResponseStreamModeEvent {
   mode: "model_tokens" | "buffered";
 }
 
+export type AgentRunStatus =
+  | "pending"
+  | "running"
+  | "waiting_for_input"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export interface RunStateEvent {
+  type: "run_state";
+  run_id: string;
+  status: AgentRunStatus;
+  execution_mode?: "instant" | "agentic" | "research" | "portfolio";
+}
+
+export interface AgentRun {
+  run_id: string;
+  chat_id: string | null;
+  execution_mode: "instant" | "agentic" | "research" | "portfolio" | null;
+  requested_policy: string;
+  selected_policy: string | null;
+  policy_version: string;
+  prompt_versions: Record<string, string>;
+  model_routes: Record<string, string>;
+  status: AgentRunStatus;
+  started_at: string;
+  finished_at: string | null;
+  tool_calls: number;
+  input_tokens: number;
+  output_tokens: number;
+}
+
 export interface SymbolCandidate {
   symbol: string;
   name: string;
@@ -83,7 +115,8 @@ export interface ChatMessage {
   deep_events?: DeepStreamEvent[]; // Persisted accordion events for restore
   route_selected?: RouteSelectedEvent;
   clarification_required?: ClarificationRequiredEvent;
-  run_status?: "completed" | "failed" | "cancelled";
+  run_status?: "waiting_for_input" | "completed" | "failed" | "cancelled";
+  run_id?: string;
 }
 
 export interface ChatRequest {
@@ -222,6 +255,7 @@ export interface UpdateUIStateRequest {
 export type StreamEvent =
   | RouteSelectedEvent
   | ResponseStreamModeEvent
+  | RunStateEvent
   | ClarificationRequiredEvent
   | {
       type: "chat_created";

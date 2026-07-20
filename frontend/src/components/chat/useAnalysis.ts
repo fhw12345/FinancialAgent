@@ -36,6 +36,7 @@ import type {
   ClarificationRequiredEvent,
   DeepStreamEvent,
   ResponseStreamModeEvent,
+  RunStateEvent,
   RouteSelectedEvent,
 } from "../../types/api";
 import i18n from "../../i18n";
@@ -54,15 +55,20 @@ export const useAnalysis = (
   onDeepEvent?: (event: DeepStreamEvent) => void,
   onRouteSelected?: (event: RouteSelectedEvent) => void,
   onStreamMode?: (event: ResponseStreamModeEvent) => void,
+  onRunState?: (event: RunStateEvent) => void,
 ) => {
   const queryClient = useQueryClient();
   const abortActiveRef = useRef<(() => void) | null>(null);
+  const activeRunIdRef = useRef<string | null>(null);
+  const activeRunStatusRef = useRef<RunStateEvent["status"] | null>(null);
 
   const mutation = useMutation({
     mutationKey: ["chat-stream"],
     mutationFn: async (userMessage: string) => {
       // Input validation
       const trimmed = userMessage.trim();
+      activeRunIdRef.current = null;
+      activeRunStatusRef.current = null;
 
       if (!trimmed) {
         throw new Error("Message cannot be empty");
@@ -230,6 +236,11 @@ export const useAnalysis = (
             agent_version: "auto",
             onRouteSelected,
             onStreamMode,
+            onRunState: (event: RunStateEvent) => {
+              activeRunIdRef.current = event.run_id;
+              activeRunStatusRef.current = event.status;
+              onRunState?.(event);
+            },
             onClarificationRequired: (event: ClarificationRequiredEvent) => {
               accumulatedContent = event.message;
               setMessages((prev) =>
@@ -246,6 +257,14 @@ export const useAnalysis = (
             },
             onCancelled: () => {
               abortActiveRef.current = null;
+              if (
+                activeRunStatusRef.current === "completed" ||
+                activeRunStatusRef.current === "failed" ||
+                activeRunStatusRef.current === "cancelled"
+              ) {
+                resolve({ type: "chat", content: accumulatedContent });
+                return;
+              }
               const cancelledText = i18n.t("chat:message.cancelled");
               accumulatedContent = accumulatedContent.trim()
                 ? `${accumulatedContent.trim()}\n\n${cancelledText}`
@@ -272,6 +291,13 @@ export const useAnalysis = (
                   return msg;
                 }),
               );
+              if (activeRunIdRef.current) {
+                onRunState?.({
+                  type: "run_state",
+                  run_id: activeRunIdRef.current,
+                  status: "cancelled",
+                });
+              }
               resolve({ type: "cancelled", content: accumulatedContent });
               void queryClient.invalidateQueries({
                 queryKey: chatKeys.lists(),

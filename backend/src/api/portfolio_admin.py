@@ -12,21 +12,28 @@ existing run doc (no second task spawned).
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Any
 
 import structlog
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ValidationError
 
+from ..core.utils.date_utils import utcnow
 from ..data.sector_universe import list_sectors
 from ..database.mongodb import MongoDB
+from ..database.repositories.agent_run_repository import AgentRunRepository
+from ..models.agent_run import AgentRun
 from ..models.portfolio_analysis import (
     AnalysisRun,
     PortfolioSettings,
     PortfolioSettingsUpdate,
 )
+from ..services.agent_run_service import PORTFOLIO_RUN_LEASE, AgentRunService
 from .dependencies.rate_limit import limiter
+from .dependencies.run_deps import (
+    get_agent_run_repository,
+    get_agent_run_service,
+)
 from .dependencies.storage import get_mongodb
 
 logger = structlog.get_logger()
@@ -109,14 +116,24 @@ class TriggerRequest(BaseModel):
     sectors: list[str] | None = None  # required for flow=picks
 
 
-async def _set_run(mongodb: MongoDB, run: AnalysisRun) -> None:
-    await mongodb.get_collection("analysis_runs").replace_one(
-        {"run_id": run.run_id}, run.model_dump(), upsert=True
+async def _get_legacy_run(mongodb: MongoDB, run_id: str) -> AnalysisRun | None:
+    collection = mongodb.get_collection("analysis_runs")
+    now = utcnow()
+    await collection.update_one(
+        {
+            "run_id": run_id,
+            "status": "running",
+            "started_at": {"$lte": now - PORTFOLIO_RUN_LEASE},
+        },
+        {
+            "$set": {
+                "status": "error",
+                "finished_at": now,
+                "message": "Legacy run lease expired before completion",
+            }
+        },
     )
-
-
-async def _get_run(mongodb: MongoDB, run_id: str) -> AnalysisRun | None:
-    doc = await mongodb.get_collection("analysis_runs").find_one({"run_id": run_id})
+    doc = await collection.find_one({"run_id": run_id})
     if not doc:
         return None
     doc.pop("_id", None)
@@ -126,125 +143,131 @@ async def _get_run(mongodb: MongoDB, run_id: str) -> AnalysisRun | None:
         return None
 
 
+def _to_analysis_run(run: AgentRun) -> AnalysisRun:
+    status_map = {
+        "pending": "pending",
+        "running": "running",
+        "waiting_for_input": "running",
+        "completed": "done",
+        "failed": "error",
+        "cancelled": "error",
+    }
+    return AnalysisRun(
+        run_id=run.portfolio_key or run.run_id,
+        agent_run_id=run.run_id,
+        status=status_map[run.status],
+        started_at=run.started_at,
+        finished_at=run.finished_at,
+        message=run.metadata.get("message") or run.error_message,
+        result_count=run.metadata.get("result_count"),
+        sectors=run.metadata.get("sectors"),
+    )
+
+
 async def _run_holdings_flow(
-    mongodb: MongoDB, app: Any, settings: PortfolioSettings
+    run_service: AgentRunService,
+    run_id: str,
+    app: Any,
+    settings: PortfolioSettings,
 ) -> None:
     from ..agent.portfolio.flows import run_analyze_holdings
 
-    run_id = "holdings"
-    started = datetime.now(UTC)
-    await _set_run(
-        mongodb,
-        AnalysisRun(run_id=run_id, status="running", started_at=started),
-    )
     try:
+        running = await run_service.transition_portfolio(
+            run_id,
+            status="running",
+        )
+        if running is None:
+            raise RuntimeError("Could not transition holdings run to running")
         result = await run_analyze_holdings(app, settings)
-        await _set_run(
-            mongodb,
-            AnalysisRun(
-                run_id=run_id,
-                status="done",
-                started_at=started,
-                finished_at=datetime.now(UTC),
-                message=result.get("message"),
-                result_count=result.get("result_count"),
-            ),
+        await run_service.transition_portfolio(
+            run_id,
+            status="completed",
+            metadata={
+                "message": result.get("message"),
+                "result_count": result.get("result_count"),
+            },
         )
     except Exception as e:
         logger.error("holdings_flow_failed", error=str(e))
-        await _set_run(
-            mongodb,
-            AnalysisRun(
-                run_id=run_id,
-                status="error",
-                started_at=started,
-                finished_at=datetime.now(UTC),
-                message=f"{type(e).__name__}: {str(e)[:200]}",
-            ),
+        await run_service.transition_portfolio(
+            run_id,
+            status="failed",
+            error_code="HOLDINGS_FLOW_ERROR",
+            error_message=f"{type(e).__name__}: {str(e)[:200]}",
         )
 
 
 async def _run_picks_flow(
-    mongodb: MongoDB, app: Any, settings: PortfolioSettings, sectors: list[str]
+    run_service: AgentRunService,
+    run_id: str,
+    app: Any,
+    settings: PortfolioSettings,
+    sectors: list[str],
 ) -> None:
     from ..agent.portfolio.flows import run_today_picks
 
-    run_id = "picks"
-    started = datetime.now(UTC)
-    await _set_run(
-        mongodb,
-        AnalysisRun(
-            run_id=run_id, status="running", started_at=started, sectors=sectors
-        ),
-    )
     try:
+        running = await run_service.transition_portfolio(
+            run_id,
+            status="running",
+        )
+        if running is None:
+            raise RuntimeError("Could not transition picks run to running")
         result = await run_today_picks(app, settings, sectors)
-        await _set_run(
-            mongodb,
-            AnalysisRun(
-                run_id=run_id,
-                status="done",
-                started_at=started,
-                finished_at=datetime.now(UTC),
-                message=result.get("message"),
-                result_count=result.get("result_count"),
-                sectors=sectors,
-            ),
+        await run_service.transition_portfolio(
+            run_id,
+            status="completed",
+            metadata={
+                "message": result.get("message"),
+                "result_count": result.get("result_count"),
+                "sectors": sectors,
+            },
         )
     except Exception as e:
         logger.error("picks_flow_failed", error=str(e))
-        await _set_run(
-            mongodb,
-            AnalysisRun(
-                run_id=run_id,
-                status="error",
-                started_at=started,
-                finished_at=datetime.now(UTC),
-                message=f"{type(e).__name__}: {str(e)[:200]}",
-                sectors=sectors,
-            ),
+        await run_service.transition_portfolio(
+            run_id,
+            status="failed",
+            error_code="PICKS_FLOW_ERROR",
+            error_message=f"{type(e).__name__}: {str(e)[:200]}",
+            metadata={"sectors": sectors},
         )
 
 
 async def _run_single_symbol_flow(
-    mongodb: MongoDB,
+    run_service: AgentRunService,
+    run_id: str,
     app: Any,
     settings: PortfolioSettings,
     symbol: str,
-    run_key: str,
 ) -> None:
     """W2.1+W2.2 background runner for the unified single-symbol flow."""
     from ..agent.portfolio.flows import run_single_symbol
 
-    started = datetime.now(UTC)
-    await _set_run(
-        mongodb,
-        AnalysisRun(run_id=run_key, status="running", started_at=started),
-    )
     try:
+        running = await run_service.transition_portfolio(
+            run_id,
+            status="running",
+        )
+        if running is None:
+            raise RuntimeError("Could not transition symbol run to running")
         result = await run_single_symbol(app, symbol, settings)
-        await _set_run(
-            mongodb,
-            AnalysisRun(
-                run_id=run_key,
-                status="done",
-                started_at=started,
-                finished_at=datetime.now(UTC),
-                message=result.get("message"),
-                result_count=result.get("result_count"),
-            ),
+        await run_service.transition_portfolio(
+            run_id,
+            status="completed",
+            metadata={
+                "message": result.get("message"),
+                "result_count": result.get("result_count"),
+            },
         )
     except Exception as e:
         logger.error("single_symbol_flow_failed", symbol=symbol, error=str(e))
-        await _set_run(
-            mongodb,
-            AnalysisRun(
-                run_id=run_key,
-                status="error",
-                started_at=started,
-                finished_at=datetime.now(UTC),
-                message=f"{type(e).__name__}: {str(e)[:200]}",
-            ),
+        await run_service.transition_portfolio(
+            run_id,
+            status="failed",
+            error_code="SINGLE_SYMBOL_FLOW_ERROR",
+            error_message=f"{type(e).__name__}: {str(e)[:200]}",
         )
 
 
@@ -257,14 +280,17 @@ async def trigger_analysis(
     symbol: str | None = None,  # required when flow='single_symbol'
     payload: TriggerRequest | None = None,
     mongodb: MongoDB = Depends(get_mongodb),
+    run_repository: AgentRunRepository = Depends(get_agent_run_repository),
+    run_service: AgentRunService = Depends(get_agent_run_service),
 ) -> AnalysisRun:
     if flow not in ("holdings", "picks", "single_symbol"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="flow must be 'holdings', 'picks', or 'single_symbol'",
         )
+    normalized_symbol = symbol.strip().upper() if symbol else None
     if flow == "single_symbol":
-        if not symbol or not symbol.strip():
+        if not normalized_symbol:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="single_symbol flow requires ?symbol=TICKER",
@@ -272,10 +298,10 @@ async def trigger_analysis(
 
     # Idempotency: per-flow run id (single_symbol gets a per-symbol id so two
     # different symbols can run concurrently)
-    run_key = f"single_{symbol.strip().upper()}" if flow == "single_symbol" else flow
-    existing = await _get_run(mongodb, run_key)
-    if existing and existing.status == "running":
-        return existing
+    run_key = f"single_{normalized_symbol}" if flow == "single_symbol" else flow
+    legacy = await _get_legacy_run(mongodb, run_key)
+    if legacy is not None and legacy.status == "running":
+        return legacy
 
     # Settings must be saved
     settings_doc = await mongodb.get_collection("user_settings").find_one({})
@@ -293,48 +319,67 @@ async def trigger_analysis(
             detail=f"Settings invalid: {e}",
         ) from e
 
+    metadata = {"sectors": (payload.sectors if (flow == "picks" and payload) else None)}
+    run, created = await run_service.create_portfolio_run(
+        portfolio_key=run_key,
+        metadata={key: value for key, value in metadata.items() if value is not None},
+    )
+    if not created:
+        return _to_analysis_run(run)
+
     if flow == "picks":
         sectors = (payload.sectors if payload else None) or []
         background_tasks.add_task(
-            _run_picks_flow, mongodb, request.app, settings, sectors
-        )
-    elif flow == "single_symbol":
-        background_tasks.add_task(
-            _run_single_symbol_flow,
-            mongodb,
+            _run_picks_flow,
+            run_service,
+            run.run_id,
             request.app,
             settings,
-            symbol.strip().upper(),
-            run_key,
+            sectors,
+        )
+    elif flow == "single_symbol":
+        assert normalized_symbol is not None
+        background_tasks.add_task(
+            _run_single_symbol_flow,
+            run_service,
+            run.run_id,
+            request.app,
+            settings,
+            normalized_symbol,
         )
     else:
-        background_tasks.add_task(_run_holdings_flow, mongodb, request.app, settings)
+        background_tasks.add_task(
+            _run_holdings_flow,
+            run_service,
+            run.run_id,
+            request.app,
+            settings,
+        )
 
-    started = datetime.now(UTC)
-    run = AnalysisRun(
-        run_id=run_key,  # type: ignore[arg-type]
-        status="pending",
-        started_at=started,
-        sectors=(payload.sectors if (flow == "picks" and payload) else None),
-    )
-    await _set_run(mongodb, run)
-    return run
+    return _to_analysis_run(run)
 
 
 @router.get("/status/{run_id}", response_model=AnalysisRun)
 @limiter.limit("120/minute")
 async def get_status(
-    request: Request, run_id: str, mongodb: MongoDB = Depends(get_mongodb)
+    request: Request,
+    run_id: str,
+    mongodb: MongoDB = Depends(get_mongodb),
+    run_repository: AgentRunRepository = Depends(get_agent_run_repository),
 ) -> AnalysisRun:
     if run_id not in ("holdings", "picks") and not run_id.startswith("single_"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="run_id must be 'holdings', 'picks', or 'single_<TICKER>'",
         )
-    run = await _get_run(mongodb, run_id)
-    if not run:
+    await run_repository.release_stale_portfolio_claim(run_id, now=utcnow())
+    run = await run_repository.get_latest_by_portfolio_key(run_id)
+    if run is not None:
+        return _to_analysis_run(run)
+    legacy = await _get_legacy_run(mongodb, run_id)
+    if legacy is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No run for {run_id}",
         )
-    return run
+    return legacy

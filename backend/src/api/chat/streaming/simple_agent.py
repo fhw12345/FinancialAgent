@@ -18,6 +18,7 @@ from ....agent.chat_agent import ChatAgent
 from ....core.utils.date_utils import utcnow
 from ....database.repositories.message_repository import MessageRepository
 from ....models.message import MessageMetadata
+from ....services.agent_run_service import AgentRunService
 from ....services.chat_service import ChatService
 from ....services.context_window_manager import ContextWindowManager
 from ....services.conversation_context_service import ConversationContextService
@@ -36,6 +37,7 @@ from .helpers import (
     create_done_event,
     create_error_event,
     create_latency_event,
+    create_run_state_event,
     create_stream_mode_event,
     format_sse_event,
 )
@@ -52,6 +54,8 @@ async def stream_with_simple_agent(
     message_repo: MessageRepository,
     route_metadata: dict[str, str] | None = None,
     client_request: Request | None = None,
+    run_id: str | None = None,
+    run_service: AgentRunService | None = None,
 ) -> StreamingResponse:
     """Stream using simple ChatAgent (v2) with context compaction."""
 
@@ -60,7 +64,7 @@ async def stream_with_simple_agent(
         active_task: asyncio.Task[None] | None = None
         terminal_task: asyncio.Task[Any] | None = None
         full_response = ""
-        run_id = f"run_{uuid.uuid4().hex}"
+        active_run_id = run_id or f"run_{uuid.uuid4().hex}"
         request_start = utcnow()
         first_model_token_recorded = False
 
@@ -74,6 +78,8 @@ async def stream_with_simple_agent(
             )
             if chat_created_event:
                 yield format_sse_event(chat_created_event)
+            if run_service is not None:
+                await run_service.attach_chat(active_run_id, chat_id)
 
             # Save user message
             current_message = await chat_service.add_message(
@@ -97,12 +103,19 @@ async def stream_with_simple_agent(
                 )
                 return
 
-            await chat_service.update_title_if_new(
-                chat_id=chat_id,
-                llm_title=None,
-                user_message=request.message,
-                current_symbol=request.current_symbol,
-            )
+            try:
+                await chat_service.update_title_if_new(
+                    chat_id=chat_id,
+                    llm_title=None,
+                    user_message=request.message,
+                    current_symbol=request.current_symbol,
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to set initial Direct chat title",
+                    chat_id=chat_id,
+                    exc_info=True,
+                )
 
             messages_list = await chat_service.get_chat_messages(
                 chat_id=chat_id, user_id=user_id
@@ -196,6 +209,13 @@ async def stream_with_simple_agent(
                     "Request timeout. The response is taking too long. Please try again.",
                     "STREAM_TIMEOUT",
                 )
+                if run_service is not None:
+                    await run_service.fail(
+                        active_run_id,
+                        error_code="STREAM_TIMEOUT",
+                        error_message="Direct model stream timed out",
+                    )
+                    yield create_run_state_event(active_run_id, "failed", "instant")
                 return
             except (asyncio.CancelledError, ClientDisconnected):
                 raise
@@ -211,6 +231,13 @@ async def stream_with_simple_agent(
                     f"Streaming failed: {str(e)}",
                     "STREAM_ERROR",
                 )
+                if run_service is not None:
+                    await run_service.fail(
+                        active_run_id,
+                        error_code="STREAM_ERROR",
+                        error_message=str(e),
+                    )
+                    yield create_run_state_event(active_run_id, "failed", "instant")
                 return
 
             # Get token usage from agent (best-effort, for telemetry only)
@@ -220,10 +247,10 @@ async def stream_with_simple_agent(
             terminal_task = asyncio.create_task(
                 chat_service.upsert_run_message(
                     chat_id=chat_id,
-                    run_id=run_id,
+                    run_id=active_run_id,
                     content=full_response,
                     metadata=MessageMetadata(
-                        run_id=run_id,
+                        run_id=active_run_id,
                         run_status="completed",
                         model="simple_chat",
                         tokens=token_usage.total_tokens if token_usage else 0,
@@ -238,29 +265,48 @@ async def stream_with_simple_agent(
                 )
             )
             await asyncio.shield(terminal_task)
+            if run_service is not None:
+                await run_service.complete(
+                    active_run_id,
+                    input_tokens=token_usage.input_tokens if token_usage else 0,
+                    output_tokens=token_usage.output_tokens if token_usage else 0,
+                )
+                yield create_run_state_event(
+                    active_run_id,
+                    "completed",
+                    "instant",
+                )
 
             yield create_latency_event("stream_complete", get_elapsed_ms())
             yield create_done_event(chat_id)
 
-        except (asyncio.CancelledError, ClientDisconnected) as exc:
+        except (asyncio.CancelledError, ClientDisconnected, GeneratorExit) as exc:
             await cancel_and_await(active_task)
             await await_task_completion(terminal_task)
             await persist_cancelled_run(
                 chat_service=chat_service,
                 chat_id=chat_id,
                 user_id=user_id,
-                run_id=run_id,
+                run_id=active_run_id,
                 language=request.language,
                 agent_type="simple_chat",
                 route_metadata=route_metadata,
                 partial_content=full_response,
+                run_service=run_service,
             )
             logger.info("Simple agent request cancelled", chat_id=chat_id)
-            if isinstance(exc, asyncio.CancelledError):
+            if isinstance(exc, (asyncio.CancelledError, GeneratorExit)):
                 raise
             return
         except Exception as e:
             logger.error("Stream error (v2)", error=str(e), chat_id=chat_id)
+            if run_service is not None:
+                await run_service.fail(
+                    active_run_id,
+                    error_code="STREAM_ERROR",
+                    error_message=str(e),
+                )
+                yield create_run_state_event(active_run_id, "failed", "instant")
             yield format_sse_event({"type": "error", "error": str(e)})
 
     return StreamingResponse(generate_stream(), media_type="text/event-stream")

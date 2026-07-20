@@ -12,6 +12,7 @@ from fastapi import Request
 
 from ....core.utils.date_utils import utcnow
 from ....models.message import MessageMetadata
+from ....services.agent_run_service import AgentRunService
 from ....services.chat_service import ChatService
 
 logger = structlog.get_logger()
@@ -89,11 +90,10 @@ async def persist_cancelled_run(
     route_metadata: dict[str, str] | None,
     partial_content: str = "",
     extra_raw_data: dict[str, Any] | None = None,
+    run_service: AgentRunService | None = None,
+    cancel_reason: str = "client_cancelled",
 ) -> None:
     """Persist a user-visible cancellation marker and durable run status."""
-    if chat_id is None:
-        return
-
     cancelled_at = utcnow()
     cancellation_text = "请求已取消。" if language == "zh-CN" else "Request cancelled."
     content = (
@@ -109,6 +109,15 @@ async def persist_cancelled_run(
 
     try:
         with anyio.CancelScope(shield=True):
+            if run_service is not None:
+                cancelled_run = await run_service.cancel(
+                    run_id,
+                    cancel_reason=cancel_reason,
+                )
+                if cancelled_run is None:
+                    return
+            if chat_id is None:
+                return
             await chat_service.upsert_run_message(
                 chat_id=chat_id,
                 run_id=run_id,

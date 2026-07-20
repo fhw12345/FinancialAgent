@@ -101,4 +101,52 @@ describe("chatService clarification stream", () => {
     expect(mode).toBe("buffered");
     vi.unstubAllGlobals();
   });
+
+  it("dispatches shared run state", async () => {
+    const encoder = new TextEncoder();
+    const body = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            'data: {"type":"run_state","run_id":"run_123","status":"running","execution_mode":"instant"}\n\n',
+          ),
+        );
+        controller.enqueue(
+          encoder.encode('data: {"type":"done","chat_id":"chat_1"}\n\n'),
+        );
+        controller.close();
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(body, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        }),
+      ),
+    );
+
+    const runId = await new Promise<string>((resolve) => {
+      chatService.sendMessageStreamPersistent(
+        "Explain",
+        "chat_1",
+        vi.fn(),
+        undefined,
+        undefined,
+        vi.fn(),
+        vi.fn(),
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        {
+          onRunState: (event) => resolve(event.run_id),
+        },
+      );
+    });
+
+    expect(runId).toBe("run_123");
+    vi.unstubAllGlobals();
+  });
 });

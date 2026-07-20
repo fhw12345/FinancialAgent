@@ -136,6 +136,67 @@ describe("chat cancellation UI", () => {
     expect(screen.queryByTestId("chat-send")).toBeNull();
   });
 
+  it("does not overwrite a completed run when transport aborts late", async () => {
+    let messages: any[] = [];
+    const setMessages = (updater: (current: any[]) => any[]) => {
+      messages = updater(messages);
+    };
+    const abort = vi.fn();
+    vi.mocked(chatService.sendMessageStreamPersistent).mockImplementation(
+      (...args: any[]) => {
+        const onChunk = args[2] as (content: string) => void;
+        const options = args[11] as {
+          onRunState?: (event: {
+            type: "run_state";
+            run_id: string;
+            status: "completed";
+          }) => void;
+          onCancelled?: () => void;
+        };
+        queueMicrotask(() => {
+          onChunk("Completed answer");
+          options.onRunState?.({
+            type: "run_state",
+            run_id: "run_completed",
+            status: "completed",
+          });
+        });
+        abort.mockImplementation(() => options.onCancelled?.());
+        return abort;
+      },
+    );
+    const { result } = renderHook(
+      () =>
+        useAnalysis(
+          "AAPL",
+          { start: "", end: "" },
+          setMessages,
+          vi.fn(),
+          "1d",
+          "chat_1",
+          vi.fn(),
+          undefined,
+          undefined,
+          undefined,
+          vi.fn(),
+        ),
+      { wrapper },
+    );
+
+    let request!: Promise<unknown>;
+    act(() => {
+      request = result.current.mutateAsync("Analyze AAPL");
+    });
+    await waitFor(() =>
+      expect(messages[messages.length - 1]?.content).toBe("Completed answer"),
+    );
+    act(() => result.current.cancelActiveRequest());
+    await act(async () => request);
+
+    expect(messages[messages.length - 1].content).toBe("Completed answer");
+    expect(messages[messages.length - 1].run_status).not.toBe("cancelled");
+  });
+
   it("maps persisted deep cancellation into cancelled accordion state", () => {
     const running = deepAccordionReducer(INITIAL_STATE, {
       type: "DEEP_START",

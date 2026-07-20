@@ -22,6 +22,7 @@ from ....core.utils.date_utils import utcnow
 from ....core.utils.title_utils import extract_title_from_response
 from ....database.repositories.message_repository import MessageRepository
 from ....models.message import MessageMetadata
+from ....services.agent_run_service import AgentRunService
 from ....services.chat_service import ChatService
 from ....services.context_window_manager import ContextWindowManager
 from ....services.conversation_context_service import ConversationContextService
@@ -40,6 +41,7 @@ from .helpers import (
     create_done_event,
     create_error_event,
     create_latency_event,
+    create_run_state_event,
     create_stream_mode_event,
     create_thinking_event,
     format_sse_event,
@@ -58,6 +60,8 @@ async def stream_with_react_agent(
     debug: bool = False,
     route_metadata: dict[str, str] | None = None,
     client_request: Request | None = None,
+    run_id: str | None = None,
+    run_service: AgentRunService | None = None,
 ) -> StreamingResponse:
     """Stream using SDK ReAct Agent (v3) with real-time tool execution visibility."""
 
@@ -67,7 +71,7 @@ async def stream_with_react_agent(
         agent_task: asyncio.Task[dict[str, Any]] | None = None
         terminal_task: asyncio.Task[Any] | None = None
         stream_active = False
-        run_id = f"run_{uuid.uuid4().hex}"
+        active_run_id = run_id or f"run_{uuid.uuid4().hex}"
 
         request_start = utcnow()
         first_response_chunk_recorded = False
@@ -82,6 +86,8 @@ async def stream_with_react_agent(
             )
             if chat_created_event:
                 yield format_sse_event(chat_created_event)
+            if run_service is not None:
+                await run_service.attach_chat(active_run_id, chat_id)
 
             yield create_thinking_event("initializing", chat_id)
 
@@ -109,12 +115,19 @@ async def stream_with_react_agent(
                 )
                 return
 
-            await chat_service.update_title_if_new(
-                chat_id=chat_id,
-                llm_title=None,
-                user_message=request.message,
-                current_symbol=request.current_symbol,
-            )
+            try:
+                await chat_service.update_title_if_new(
+                    chat_id=chat_id,
+                    llm_title=None,
+                    user_message=request.message,
+                    current_symbol=request.current_symbol,
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to set initial ReAct chat title",
+                    chat_id=chat_id,
+                    exc_info=True,
+                )
 
             messages = await chat_service.get_chat_messages(chat_id, user_id)
 
@@ -256,6 +269,17 @@ async def stream_with_react_agent(
                     "Request timeout. The analysis is taking too long. Please try again with a simpler question.",
                     "AGENT_TIMEOUT",
                 )
+                if run_service is not None:
+                    await run_service.fail(
+                        active_run_id,
+                        error_code="AGENT_TIMEOUT",
+                        error_message="ReAct agent timed out",
+                    )
+                    yield create_run_state_event(
+                        active_run_id,
+                        "failed",
+                        "agentic",
+                    )
                 return
             except (asyncio.CancelledError, ClientDisconnected):
                 raise
@@ -274,13 +298,25 @@ async def stream_with_react_agent(
                     f"Agent execution failed: {str(e)}",
                     "AGENT_ERROR",
                 )
+                if run_service is not None:
+                    await run_service.fail(
+                        active_run_id,
+                        error_code="AGENT_ERROR",
+                        error_message=str(e),
+                    )
+                    yield create_run_state_event(
+                        active_run_id,
+                        "failed",
+                        "agentic",
+                    )
                 return
 
             raw_answer = result["final_answer"]
             tool_executions = result.get("tool_executions", 0)
             trace_id = result.get("trace_id", "unknown")
 
-            llm_title, final_answer = extract_title_from_response(raw_answer)
+            llm_title, extracted_answer = extract_title_from_response(raw_answer)
+            final_answer = extracted_answer or ""
 
             token_usage = extract_token_usage_from_agent_result(result)
             input_tokens = token_usage["input_tokens"]
@@ -297,6 +333,17 @@ async def stream_with_react_agent(
                     result["error"],
                     "AGENT_EXECUTION_FAILED",
                 )
+                if run_service is not None:
+                    await run_service.fail(
+                        active_run_id,
+                        error_code="AGENT_EXECUTION_FAILED",
+                        error_message=str(result["error"]),
+                    )
+                    yield create_run_state_event(
+                        active_run_id,
+                        "failed",
+                        "agentic",
+                    )
                 return
 
             logger.info(
@@ -332,10 +379,10 @@ async def stream_with_react_agent(
             terminal_task = asyncio.create_task(
                 chat_service.upsert_run_message(
                     chat_id=chat_id,
-                    run_id=run_id,
+                    run_id=active_run_id,
                     content=final_answer,
                     metadata=MessageMetadata(
-                        run_id=run_id,
+                        run_id=active_run_id,
                         run_status="completed",
                         trace_id=trace_id,
                         input_tokens=input_tokens,
@@ -349,12 +396,32 @@ async def stream_with_react_agent(
                 )
             )
             await asyncio.shield(terminal_task)
+            if run_service is not None:
+                completed_run = await run_service.complete(
+                    active_run_id,
+                    tool_calls=tool_executions,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                )
+                if completed_run is not None:
+                    yield create_run_state_event(
+                        active_run_id,
+                        "completed",
+                        "agentic",
+                    )
 
-            await chat_service.update_title_if_new(
-                chat_id=chat_id,
-                llm_title=llm_title,
-                user_message=request.message,
-            )
+            try:
+                await chat_service.update_title_if_new(
+                    chat_id=chat_id,
+                    llm_title=llm_title,
+                    user_message=request.message,
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to update completed ReAct chat title",
+                    chat_id=chat_id,
+                    exc_info=True,
+                )
 
             total_duration_ms = get_elapsed_ms()
             yield create_latency_event(
@@ -372,7 +439,7 @@ async def stream_with_react_agent(
                 trace_id=trace_id,
             )
 
-        except (asyncio.CancelledError, ClientDisconnected) as exc:
+        except (asyncio.CancelledError, ClientDisconnected, GeneratorExit) as exc:
             stream_active = False
             await cancel_and_await(agent_task)
             await await_task_completion(terminal_task)
@@ -380,17 +447,30 @@ async def stream_with_react_agent(
                 chat_service=chat_service,
                 chat_id=chat_id,
                 user_id=user_id,
-                run_id=run_id,
+                run_id=active_run_id,
                 language=request.language,
                 agent_type="react_sdk",
                 route_metadata=route_metadata,
+                run_service=run_service,
             )
             logger.info("ReAct agent request cancelled", chat_id=chat_id)
-            if isinstance(exc, asyncio.CancelledError):
+            if isinstance(exc, (asyncio.CancelledError, GeneratorExit)):
                 raise
             return
         except Exception as e:
             logger.error("Stream error (v3)", error=str(e), chat_id=chat_id)
+            if run_service is not None:
+                failed_run = await run_service.fail(
+                    active_run_id,
+                    error_code="STREAM_ERROR",
+                    error_message=str(e),
+                )
+                if failed_run is not None:
+                    yield create_run_state_event(
+                        active_run_id,
+                        "failed",
+                        "agentic",
+                    )
             yield format_sse_event({"type": "error", "error": str(e)})
 
     return StreamingResponse(generate_stream(), media_type="text/event-stream")

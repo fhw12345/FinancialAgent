@@ -36,6 +36,7 @@ class AnalysisRun(BaseModel):
     """
 
     run_id: str
+    agent_run_id: str | None = None
     status: Literal["pending", "running", "done", "error"]
     started_at: datetime
     finished_at: datetime | None = None
