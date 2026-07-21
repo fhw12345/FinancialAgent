@@ -592,6 +592,11 @@ Before changing a model or prompt:
 - aggregate quality score must not regress without an explicit waiver;
 - estimated cost and p95 latency changes must be reported.
 
+Detailed implementation plan:
+[P1: Agent Evaluation Framework](../features/agent-evaluation-framework.md).
+
+Implementation status: shipped in commit `57a6f39`.
+
 ## 9. Priority 1: Prompt, Model, and Cost Governance
 
 ### 9.1 Prompt Registry

@@ -276,6 +276,7 @@ Browse existing feature specs in this directory for examples:
 - **[Unified Chat Handler Lifecycle](unified-chat-handler-lifecycle.md)** — centralize chat setup, context, terminal persistence, title handling, clarification, and cancellation across Direct, ReAct, and Deep
 - **[Standard Agent Event Envelope](standard-agent-event-envelope.md)** — wrap every agent SSE event with one run ID, monotonic sequence, canonical type, timestamp, and typed payload
 - **[Request Idempotency](request-idempotency.md)** — atomically reuse one durable run and terminal message for duplicate client request IDs
+- **[Agent Evaluation Framework](agent-evaluation-framework.md)** — run versioned bilingual golden cases with deterministic router and symbol-safety quality gates
 - **[Write-Time Translation](write-time-translation.md)** — translate LLM output to `zh-CN` on the write path so the read path skips `/api/translate`
 
 ### Market Data & Visualization

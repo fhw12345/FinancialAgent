@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-07-21
+
+### Agent evaluation framework
+
+- Added a versioned 70-case bilingual golden suite.
+- Added deterministic production-router evaluation with live model creation
+  explicitly disabled.
+- Runs the real symbol resolver for 15 unknown/adversarial safety cases.
+- Added structured case results, quality gates, JSON reports, and Markdown
+  reports.
+- Added `make eval` and a CLI that exits non-zero when gates fail.
+- Established an audited 74.5% deterministic router baseline and 100%
+  unknown-symbol safety baseline.
+
 ## [0.41.0] - 2026-07-21
 
 ### Request idempotency
