@@ -26,6 +26,9 @@ curl http://localhost:8000/api/health
 Frontend commands run inside the container:
 `docker compose exec frontend npm <cmd>`
 
+Never run `npm ci` inside Docker containers or Docker image builds. Reuse the
+existing frontend image and dependency volume for validation.
+
 After changing any `.env*` file:
 `docker compose up -d --force-recreate <service>` — `restart` does NOT reload env vars.
 
@@ -59,6 +62,27 @@ NEVER commit secrets (API keys, tokens, passwords, connection strings).
 - Start with the simplest fix that works
 - Avoid duplicating logic across files
 - Compare environments when something works locally but not elsewhere
+
+## Feature Development Workflow
+
+Feature work is complete only after the full repository workflow:
+
+1. Investigate the current implementation and identify the root cause or
+   architectural boundary.
+2. Write or update `docs/features/<feature>.md` with scope, contracts, risks,
+   tests, Playwright scenarios, and acceptance criteria.
+3. Implement the smallest complete change while preserving existing behavior
+   and code style.
+4. Run targeted tests first, then the full backend/frontend quality gates.
+5. Run a real browser Playwright scenario and save curated screenshots under
+   `docs/features/assets/<task-id>/`.
+6. Perform a final code review and fix lifecycle, race, persistence, security,
+   and compatibility findings.
+7. Bump component versions and update changelogs, roadmap status, feature docs,
+   documentation indexes, and a bilingual case study.
+8. Stage changes, run `git diff --cached`, scan for secrets, commit the
+   implementation, then record its hash in the shipped documentation commit.
+9. Push both commits and confirm the branch is synchronized with `origin`.
 
 ## Documentation Rules
 
