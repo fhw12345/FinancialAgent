@@ -277,6 +277,7 @@ Browse existing feature specs in this directory for examples:
 - **[Standard Agent Event Envelope](standard-agent-event-envelope.md)** — wrap every agent SSE event with one run ID, monotonic sequence, canonical type, timestamp, and typed payload
 - **[Request Idempotency](request-idempotency.md)** — atomically reuse one durable run and terminal message for duplicate client request IDs
 - **[Agent Evaluation Framework](agent-evaluation-framework.md)** — run versioned bilingual golden cases with deterministic router and symbol-safety quality gates
+- **[Prompt Registry Foundation](prompt-registry-foundation.md)** — version the router prompt and replace free-text JSON parsing with Pydantic structured output
 - **[Write-Time Translation](write-time-translation.md)** — translate LLM output to `zh-CN` on the write path so the read path skips `/api/translate`
 
 ### Market Data & Visualization

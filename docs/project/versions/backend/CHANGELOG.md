@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-07-21
+
+### Prompt registry foundation
+
+- Added stable prompt registry lookup, rendering, versions, and snapshots.
+- Migrated the automatic router prompt to `router@1`.
+- Replaced free-text JSON extraction with Pydantic structured output.
+- Preserved explicit fallback behavior for validation/provider failures.
+- Evaluation reports now list only prompt versions covered by the suite.
+- Avoided assigning registry versions to prompts that remain inline.
+
 ## [0.42.0] - 2026-07-21
 
 ### Agent evaluation framework
