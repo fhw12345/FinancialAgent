@@ -2,22 +2,27 @@
 
 from __future__ import annotations
 
-import json
 import re
 from dataclasses import dataclass
 from typing import Any, Literal
 
 import structlog
 from langchain_core.messages import HumanMessage
+from pydantic import BaseModel
 
-from ..core.utils import message_content_to_text
 from .llm_factory import get_llm
+from .prompt_registry import render_prompt
 
 logger = structlog.get_logger()
 
 AgentFlow = Literal["v2", "v3", "v4-deep"]
 AgentVersion = Literal["auto", "v2", "v3", "v4-deep"]
 RouteSource = Literal["explicit", "rule", "classifier", "fallback"]
+
+
+class RouteClassification(BaseModel):
+    flow: AgentFlow
+
 
 DEEP_MARKERS = (
     "deep analysis",
@@ -289,24 +294,21 @@ class AgentFlowRouter:
             max_tokens=80,
             timeout=15,
         )
-        prompt = f"""Classify this Financial Agent request into exactly one flow.
-
-v2: direct conversational answer; no current market data or tools needed.
-v3: tool-using financial analysis, current data, news, fundamentals, or technical analysis.
-v4-deep: explicitly requests comprehensive/deep investment research, multi-angle analysis, or adversarial debate.
-
-Selected symbol from UI: {current_symbol or "none"}
-User message: {message[:2000]}
-
-Return JSON only: {{"flow":"v2"|"v3"|"v4-deep"}}"""
+        prompt = render_prompt(
+            "router",
+            current_symbol=current_symbol or "none",
+            message=message[:2000],
+        )
 
         try:
-            response = await llm.ainvoke([HumanMessage(content=prompt)])
-            text = message_content_to_text(response.content)
-            payload = self._extract_json(text)
-            flow = payload.get("flow")
-            if flow not in ("v2", "v3", "v4-deep"):
-                raise ValueError(f"Invalid flow: {flow!r}")
+            classifier = llm.with_structured_output(RouteClassification)
+            result = await classifier.ainvoke([HumanMessage(content=prompt)])
+            classification = (
+                result
+                if isinstance(result, RouteClassification)
+                else RouteClassification.model_validate(result)
+            )
+            flow = classification.flow
             return FlowRoutingDecision(
                 flow=flow,
                 source="classifier",
@@ -324,16 +326,3 @@ Return JSON only: {{"flow":"v2"|"v3"|"v4-deep"}}"""
                 source="fallback",
                 reason_code="classifier_error_fallback",
             )
-
-    @staticmethod
-    def _extract_json(text: str) -> dict[str, Any]:
-        stripped = text.strip().removeprefix("```json").removeprefix("```")
-        stripped = stripped.removesuffix("```").strip()
-        start = stripped.find("{")
-        end = stripped.rfind("}")
-        if start < 0 or end < start:
-            raise ValueError("Classifier did not return a JSON object")
-        parsed = json.loads(stripped[start : end + 1])
-        if not isinstance(parsed, dict):
-            raise ValueError("Classifier JSON must be an object")
-        return parsed

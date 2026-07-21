@@ -19,7 +19,6 @@ PROMPT_VERSIONS: dict[str, str] = {
     "deep_research": "deep-research-v1",
     "portfolio": "portfolio-v1",
 }
-
 FLOW_EXECUTION_MODES: dict[str, ExecutionMode] = {
     "v2": "instant",
     "v3": "agentic",

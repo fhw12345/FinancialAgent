@@ -2,13 +2,16 @@
 
 import asyncio
 import json
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from fastapi.responses import StreamingResponse
-from langchain_core.messages import AIMessage
 
-from src.agent.flow_router import AgentFlowRouter, FlowRoutingDecision
+from src.agent.flow_router import (
+    AgentFlowRouter,
+    FlowRoutingDecision,
+    RouteClassification,
+)
 from src.api.chat.streaming.handlers import (
     _prepend_route_event,
     _wrap_persistence_event_stream,
@@ -103,8 +106,10 @@ async def test_explicit_ticker_analysis_uses_react():
 
 @pytest.mark.asyncio
 async def test_ambiguous_request_uses_classifier():
-    llm = AsyncMock()
-    llm.ainvoke.return_value = AIMessage(content='{"flow":"v4-deep"}')
+    classifier = AsyncMock()
+    classifier.ainvoke.return_value = RouteClassification(flow="v4-deep")
+    llm = Mock()
+    llm.with_structured_output.return_value = classifier
     router = AgentFlowRouter(llm=llm)
 
     result = await router.select(
@@ -120,8 +125,10 @@ async def test_ambiguous_request_uses_classifier():
 
 @pytest.mark.asyncio
 async def test_classifier_failure_falls_back_to_react():
-    llm = AsyncMock()
-    llm.ainvoke.return_value = AIMessage(content="not json")
+    classifier = AsyncMock()
+    classifier.ainvoke.side_effect = ValueError("invalid structured output")
+    llm = Mock()
+    llm.with_structured_output.return_value = classifier
     router = AgentFlowRouter(llm=llm)
 
     result = await router.select(

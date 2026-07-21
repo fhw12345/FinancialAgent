@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 from ..agent.flow_router import AgentFlowRouter
+from ..agent.prompt_registry import prompt_registry_snapshot
 from ..agent.symbol_resolver import SymbolResolver
 from ..core.utils.date_utils import utcnow
 from .schemas import (
@@ -109,5 +110,6 @@ async def run_deterministic_evaluation(
             and unknown_symbol_safety >= thresholds.unknown_symbol_safety
         ),
         thresholds=thresholds,
+        evaluated_prompt_versions=prompt_registry_snapshot(),
         results=results,
     )

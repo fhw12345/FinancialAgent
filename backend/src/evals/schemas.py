@@ -47,4 +47,5 @@ class EvaluationReport(BaseModel):
     unknown_symbol_safety: float
     gates_passed: bool
     thresholds: EvaluationThresholds
+    evaluated_prompt_versions: dict[str, str]
     results: list[CaseEvaluationResult]
