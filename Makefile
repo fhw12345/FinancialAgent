@@ -1,7 +1,7 @@
 # Financial Agent Development Makefile
 # Following the coding guide requirements for fmt, test, lint commands
 
-.PHONY: help dev build test test-e2e test-e2e-real test-e2e-uaw002 test-e2e-uaw003 test-e2e-uaw004 test-e2e-uaw005 test-e2e-uaw006 test-e2e-uaw007 test-e2e-uaw008 test-e2e-uaw009 test-e2e-uaw010 lint fmt clean up down logs copilot-reverse
+.PHONY: help dev build test eval test-e2e test-e2e-real test-e2e-uaw002 test-e2e-uaw003 test-e2e-uaw004 test-e2e-uaw005 test-e2e-uaw006 test-e2e-uaw007 test-e2e-uaw008 test-e2e-uaw009 test-e2e-uaw010 lint fmt clean up down logs copilot-reverse
 
 # Default target
 help:
@@ -18,6 +18,7 @@ help:
 	@echo "  fmt          Format code (backend: black+ruff, frontend: prettier)"
 	@echo "  lint         Lint code (backend: ruff+mypy, frontend: eslint)"
 	@echo "  test         Run all tests"
+	@echo "  eval         Run deterministic agent golden evaluation"
 	@echo "  test-e2e     Run deterministic Playwright browser tests"
 	@echo "  test-e2e-real Run real-stack Playwright browser tests"
 	@echo "  test-e2e-uaw002 Run Mongo-authority restart E2E"
@@ -100,6 +101,9 @@ lint: lint-backend lint-frontend
 
 test: test-backend test-frontend
 	@echo "🧪 All tests completed!"
+
+eval:
+	docker compose run --rm --no-deps backend python scripts/run_agent_eval.py --out artifacts/evals
 
 test-e2e:
 	docker compose --profile e2e run --rm e2e sh -c "until curl -fsS http://host.docker.internal:18081/api/health; do sleep 2; done; npm run test:e2e"
