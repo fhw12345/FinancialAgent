@@ -1,7 +1,7 @@
 # Financial Agent Development Makefile
 # Following the coding guide requirements for fmt, test, lint commands
 
-.PHONY: help dev build test test-e2e test-e2e-real test-e2e-uaw002 test-e2e-uaw003 test-e2e-uaw004 test-e2e-uaw005 test-e2e-uaw006 test-e2e-uaw007 test-e2e-uaw008 lint fmt clean up down logs copilot-reverse
+.PHONY: help dev build test test-e2e test-e2e-real test-e2e-uaw002 test-e2e-uaw003 test-e2e-uaw004 test-e2e-uaw005 test-e2e-uaw006 test-e2e-uaw007 test-e2e-uaw008 test-e2e-uaw009 lint fmt clean up down logs copilot-reverse
 
 # Default target
 help:
@@ -27,6 +27,7 @@ help:
 	@echo "  test-e2e-uaw006 Run Honest streaming semantics E2E"
 	@echo "  test-e2e-uaw007 Run Shared durable Run model E2E"
 	@echo "  test-e2e-uaw008 Run Unified chat lifecycle E2E"
+	@echo "  test-e2e-uaw009 Run Standard agent events E2E"
 	@echo ""
 	@echo "Building:"
 	@echo "  build        Build Docker images"
@@ -166,6 +167,15 @@ test-e2e-uaw008:
 	docker compose exec redis redis-cli -n 7 FLUSHDB
 	docker compose --profile e2e restart backend-lifecycle-e2e frontend-lifecycle-e2e
 	docker compose --profile e2e run --rm --no-deps -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:3007 e2e sh -c "until curl -fsS http://host.docker.internal:18088/api/health; do sleep 2; done; until curl -fsS http://host.docker.internal:3007; do sleep 2; done; UPDATE_E2E_EVIDENCE=true npm run test:e2e:uaw-008"
+
+test-e2e-uaw009:
+	docker compose --profile e2e up -d --build llm-e2e backend-events-e2e
+	docker compose --profile e2e build frontend-deep-e2e
+	docker compose --profile e2e up -d frontend-events-e2e
+	docker compose exec mongodb mongosh --quiet --eval 'db.getSiblingDB("financial_agent_events_e2e").dropDatabase()'
+	docker compose exec redis redis-cli -n 8 FLUSHDB
+	docker compose --profile e2e restart backend-events-e2e frontend-events-e2e
+	docker compose --profile e2e run --rm --no-deps -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:3008 e2e sh -c "until curl -fsS http://host.docker.internal:18089/api/health; do sleep 2; done; until curl -fsS http://host.docker.internal:3008; do sleep 2; done; UPDATE_E2E_EVIDENCE=true npm run test:e2e:uaw-009"
 
 # Building
 build:

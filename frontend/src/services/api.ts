@@ -14,6 +14,10 @@ import type {
   AgentRun,
   MarketStatus,
 } from "../types/api";
+import {
+  isAgentEventEnvelope,
+  normalizeAgentStreamEvent,
+} from "../types/agentEvents";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -232,6 +236,7 @@ export const chatService = {
 
       const decoder = new TextDecoder();
       let buffer = "";
+      const lastSequenceByRun = new Map<string, number>();
 
       while (true) {
         const { done, value } = await reader.read();
@@ -246,7 +251,15 @@ export const chatService = {
 
         for (const message of messages) {
           if (message.startsWith("data: ")) {
-            const data: StreamEvent = JSON.parse(message.slice(6));
+            const parsed: unknown = JSON.parse(message.slice(6));
+            if (isAgentEventEnvelope(parsed)) {
+              const previous = lastSequenceByRun.get(parsed.run_id) ?? 0;
+              if (parsed.sequence <= previous) {
+                continue;
+              }
+              lastSequenceByRun.set(parsed.run_id, parsed.sequence);
+            }
+            const data = normalizeAgentStreamEvent(parsed as StreamEvent);
 
             if (data.type === "route_selected") {
               options?.onRouteSelected?.(data);

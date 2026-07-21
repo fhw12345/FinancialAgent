@@ -2,6 +2,76 @@ import { describe, expect, it, vi } from "vitest";
 import { chatService } from "../api";
 
 describe("chatService clarification stream", () => {
+  it("unwraps sequenced envelopes and ignores duplicate sequences", async () => {
+    const encoder = new TextEncoder();
+    const envelope = (
+      sequence: number,
+      type: string,
+      payload: Record<string, unknown>,
+    ) =>
+      `data: ${JSON.stringify({
+        schema_version: "1.0",
+        run_id: "run_1",
+        sequence,
+        type,
+        timestamp: "2026-07-21T02:00:00Z",
+        payload,
+      })}\n\n`;
+    const body = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            envelope(1, "response_chunk", {
+              type: "chunk",
+              content: "FIRST",
+            }),
+          ),
+        );
+        controller.enqueue(
+          encoder.encode(
+            envelope(1, "response_chunk", {
+              type: "chunk",
+              content: "DUPLICATE",
+            }),
+          ),
+        );
+        controller.enqueue(
+          encoder.encode(
+            envelope(2, "stream_completed", {
+              type: "done",
+              chat_id: "chat_1",
+            }),
+          ),
+        );
+        controller.close();
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(body, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        }),
+      ),
+    );
+    const chunks: string[] = [];
+
+    await new Promise<void>((resolve) => {
+      chatService.sendMessageStreamPersistent(
+        "Explain",
+        "chat_1",
+        (content) => chunks.push(content),
+        undefined,
+        undefined,
+        () => resolve(),
+      );
+    });
+
+    expect(chunks).toEqual(["FIRST"]);
+    vi.unstubAllGlobals();
+  });
+
   it("dispatches clarification as a normal stream event", async () => {
     const encoder = new TextEncoder();
     const body = new ReadableStream({

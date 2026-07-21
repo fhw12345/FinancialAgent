@@ -1,5 +1,7 @@
 """Tests for hybrid automatic chat-flow routing."""
 
+import asyncio
+import json
 from unittest.mock import AsyncMock
 
 import pytest
@@ -7,7 +9,10 @@ from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage
 
 from src.agent.flow_router import AgentFlowRouter, FlowRoutingDecision
-from src.api.chat.streaming.handlers import _prepend_route_event
+from src.api.chat.streaming.handlers import (
+    _prepend_route_event,
+    _wrap_persistence_event_stream,
+)
 from src.core.utils.date_utils import utcnow
 from src.models.agent_run import AgentRun
 
@@ -157,12 +162,20 @@ async def test_route_event_is_prepended_as_data_only_sse():
     async for chunk in wrapped.body_iterator:
         chunks.append(chunk.decode() if isinstance(chunk, bytes) else chunk)
 
-    output = "".join(chunks)
-    assert output.startswith('data: {"type": "run_state"')
-    assert '"run_id": "run_1"' in output
-    assert 'data: {"type": "route_selected"' in output
-    assert '"flow": "v3"' in output
-    assert output.endswith('data: {"type":"done","chat_id":"chat_1"}\n\n')
+    envelopes = [
+        json.loads(block.removeprefix("data: "))
+        for block in "".join(chunks).split("\n\n")
+        if block
+    ]
+    assert [event["sequence"] for event in envelopes] == [1, 2, 3]
+    assert [event["type"] for event in envelopes] == [
+        "run_started",
+        "policy_selected",
+        "stream_completed",
+    ]
+    assert envelopes[0]["run_id"] == "run_1"
+    assert envelopes[1]["payload"]["flow"] == "v3"
+    assert envelopes[2]["payload"]["chat_id"] == "chat_1"
 
 
 @pytest.mark.asyncio
@@ -200,3 +213,107 @@ async def test_closing_route_prelude_cancels_unstarted_run():
 
     cancelled.assert_awaited_once_with()
     assert inner_started is False
+
+
+@pytest.mark.asyncio
+async def test_persistence_only_stream_is_enveloped():
+    async def original_stream():
+        yield 'data: {"type":"done","chat_id":"chat_1"}\n\n'
+
+    wrapped = _wrap_persistence_event_stream(
+        StreamingResponse(original_stream(), media_type="text/event-stream"),
+        run_id="event_1",
+    )
+    output = ""
+    async for chunk in wrapped.body_iterator:
+        output += chunk.decode() if isinstance(chunk, bytes) else chunk
+
+    envelope = json.loads(output.removeprefix("data: ").strip())
+    assert envelope["run_id"] == "event_1"
+    assert envelope["sequence"] == 1
+    assert envelope["type"] == "stream_completed"
+
+
+@pytest.mark.asyncio
+async def test_envelope_failure_marks_run_failed_before_inner_close():
+    failed = AsyncMock()
+
+    async def malformed_stream():
+        yield "not-sse"
+
+    wrapped = _prepend_route_event(
+        StreamingResponse(malformed_stream(), media_type="text/event-stream"),
+        FlowRoutingDecision(
+            flow="v2",
+            source="rule",
+            reason_code="concept_explanation",
+        ),
+        AgentRun(
+            run_id="run_1",
+            requested_policy="auto",
+            selected_policy="v2",
+            policy_version="auto-router-v1",
+            execution_mode="instant",
+            status="running",
+            started_at=utcnow(),
+        ),
+        on_stream_failure=failed,
+    )
+
+    with pytest.raises(ValueError, match="must start"):
+        async for _ in wrapped.body_iterator:
+            pass
+
+    failed.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_envelope_failure_is_shielded_before_cancelled_inner_close():
+    failure_started = asyncio.Event()
+    release_failure = asyncio.Event()
+    failure_completed = asyncio.Event()
+    inner_closed = asyncio.Event()
+
+    async def malformed_stream():
+        try:
+            yield "not-sse"
+        finally:
+            inner_closed.set()
+
+    async def persist_failure(exc: Exception):
+        failure_started.set()
+        await release_failure.wait()
+        failure_completed.set()
+
+    wrapped = _prepend_route_event(
+        StreamingResponse(malformed_stream(), media_type="text/event-stream"),
+        FlowRoutingDecision(
+            flow="v2",
+            source="rule",
+            reason_code="concept_explanation",
+        ),
+        AgentRun(
+            run_id="run_1",
+            requested_policy="auto",
+            selected_policy="v2",
+            policy_version="auto-router-v1",
+            execution_mode="instant",
+            status="running",
+            started_at=utcnow(),
+        ),
+        on_stream_failure=persist_failure,
+    )
+
+    async def consume():
+        async for _ in wrapped.body_iterator:
+            pass
+
+    consumer = asyncio.create_task(consume())
+    await failure_started.wait()
+    consumer.cancel()
+    release_failure.set()
+    with pytest.raises(asyncio.CancelledError):
+        await consumer
+
+    assert failure_completed.is_set()
+    assert inner_closed.is_set()
