@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-07-21
+
+### Sequenced agent events
+
+- Added typed schema `1.0` agent event envelopes.
+- Unwraps canonical envelopes into existing chat callbacks during migration.
+- Deduplicates repeated or lower sequence events per run.
+- Preserves legacy fixtures and current Direct, ReAct, Deep, tool, and
+  clarification UI behavior.
+- Added real browser proof for ordered Direct, tool, and research events.
+
 ## [0.27.1] - 2026-07-20
 
 ### Terminal lifecycle race handling

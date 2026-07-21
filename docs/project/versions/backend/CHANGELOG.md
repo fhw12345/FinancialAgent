@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-07-21
+
+### Standard agent event envelope
+
+- Wrapped every unified chat SSE event with schema version, durable run ID,
+  contiguous sequence, canonical type, UTC timestamp, and legacy payload.
+- Added canonical mappings for routing, model, response, tool, research,
+  clarification, and terminal events.
+- Standardized persistence-only endpoint events without creating fake agent
+  runs.
+- Shields envelope-processing failures so runs become failed rather than
+  cancelled during cleanup.
+- Added schema, ordering, malformed-event, cancellation-race, and real browser
+  coverage.
+
 ## [0.39.0] - 2026-07-20
 
 ### Unified chat handler lifecycle

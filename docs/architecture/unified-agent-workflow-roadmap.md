@@ -488,6 +488,11 @@ run_cancelled
 Events should have monotonically increasing sequence numbers so the frontend
 can deduplicate or replay them.
 
+Detailed implementation plan:
+[UAW-009: Standard Agent Event Envelope](../features/standard-agent-event-envelope.md).
+
+Implementation status: shipped in commit `5f32e0d`.
+
 ### 7.4 Add Idempotency
 
 Duplicate clicks and network retries must not create duplicate messages or
