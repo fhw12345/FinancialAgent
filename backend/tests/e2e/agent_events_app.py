@@ -17,6 +17,8 @@ from src.main import app
 from src.models.symbol_resolution import SymbolCandidate, SymbolResolution
 from src.services.cache_warming_service import CacheWarmingService
 
+execution_count = 0
+
 
 class EventRouter:
     async def select(self, *, message: str, **kwargs: Any) -> FlowRoutingDecision:
@@ -35,6 +37,8 @@ class EventRouter:
 
 class DirectAgent:
     async def stream_chat(self, **kwargs: Any):
+        global execution_count
+        execution_count += 1
         yield "DIRECT_ENVELOPE_OK"
 
     def get_last_token_usage(self):
@@ -122,3 +126,8 @@ app.dependency_overrides[get_chat_agent] = lambda: DirectAgent()
 app.dependency_overrides[get_react_agent] = lambda: ReactAgent()
 app.dependency_overrides[get_deep_agent] = lambda: DeepAgent()
 CacheWarmingService.warm_startup_cache = skip_cache_warming
+
+
+@app.get("/api/test/idempotency-count")
+async def idempotency_count() -> dict[str, int]:
+    return {"execution_count": execution_count}

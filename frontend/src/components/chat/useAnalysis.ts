@@ -135,9 +135,12 @@ export const useAnalysis = (
             // Title generated callback - could update UI if needed
             console.log("📝 Chat title generated:", title);
           },
-          () => {
+          (completedChatId: string) => {
             // Stream complete - use accumulated content (SAFE)
             abortActiveRef.current = null;
+            if (setChatId && !chatId) {
+              setChatId(completedChatId);
+            }
             resolve({ type: "chat", content: accumulatedContent });
             // Invalidate chat list ONCE after stream completes
             void queryClient.invalidateQueries({ queryKey: chatKeys.lists() });

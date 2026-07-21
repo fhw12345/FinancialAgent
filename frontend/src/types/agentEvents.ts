@@ -3,6 +3,7 @@ import type { StreamEvent } from "./api";
 export interface AgentEventEnvelope {
   schema_version: "1.0";
   run_id: string;
+  stream_id?: string;
   sequence: number;
   type: string;
   timestamp: string;
@@ -41,6 +42,7 @@ export function normalizeAgentStreamEvent(
     agent_event: {
       schema_version: value.schema_version,
       run_id: value.run_id,
+      stream_id: value.stream_id ?? value.run_id,
       sequence: value.sequence,
       type: value.type,
       timestamp: value.timestamp,

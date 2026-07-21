@@ -201,6 +201,13 @@ class MessageRepository:
 
         return messages
 
+    async def get_by_run_id(self, run_id: str) -> Message | None:
+        document = await self.collection.find_one({"metadata.run_id": run_id})
+        if document is None:
+            return None
+        document.pop("_id", None)
+        return Message(**document)
+
     async def get_by_chat_reverse(
         self,
         chat_id: str,

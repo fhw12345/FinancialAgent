@@ -15,6 +15,7 @@ const updateEvidence = process.env.UPDATE_E2E_EVIDENCE === "true";
 interface Envelope {
   schema_version: string;
   run_id: string;
+  stream_id: string;
   sequence: number;
   type: string;
   payload: Record<string, unknown>;

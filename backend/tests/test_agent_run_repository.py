@@ -256,6 +256,7 @@ async def test_ensure_indexes_creates_shared_lookup_indexes():
     names = {call.kwargs["name"] for call in collection.create_index.await_args_list}
     assert names == {
         "run_id_1",
+        "request_id_1",
         "chat_id_1_started_at_-1",
         "portfolio_key_1_started_at_-1",
         "active_portfolio_key_1",

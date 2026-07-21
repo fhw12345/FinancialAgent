@@ -23,6 +23,12 @@ class ChatRequest(BaseModel):
         max_length=10000,
         description="User message or analysis results",
     )
+    request_id: str | None = Field(
+        None,
+        min_length=8,
+        max_length=100,
+        description="Client-generated idempotency key for one logical request",
+    )
     chat_id: str | None = Field(None, description="Chat ID for persistent conversation")
     title: str | None = Field(
         None,

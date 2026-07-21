@@ -64,6 +64,23 @@ class AgentRunService:
         )
         return await self.repository.create(run)
 
+    async def claim_chat_run(
+        self,
+        *,
+        requested_policy: str,
+        request_id: str | None,
+    ) -> tuple[AgentRun, bool]:
+        run = AgentRun(
+            run_id=f"run_{uuid.uuid4().hex}",
+            request_id=request_id,
+            requested_policy=requested_policy,
+            policy_version=POLICY_VERSION,
+            prompt_versions={},
+            status="pending",
+            started_at=utcnow(),
+        )
+        return await self.repository.claim_request_run(run)
+
     async def create_portfolio_run(
         self,
         *,

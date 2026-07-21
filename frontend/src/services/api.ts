@@ -21,6 +21,16 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
+function createRequestId(): string {
+  if (typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return `request_${Array.from(bytes, (value) =>
+    value.toString(16).padStart(2, "0"),
+  ).join("")}`;
+}
+
 // Configure the local backend client.
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -179,6 +189,7 @@ export const chatService = {
     }) => void,
     onDeepEvent?: (event: DeepStreamEvent) => void,
     options?: {
+      request_id?: string;
       title?: string;
       role?: string;
       source?: string;
@@ -210,6 +221,7 @@ export const chatService = {
         },
         body: JSON.stringify({
           message,
+          request_id: options?.request_id ?? createRequestId(),
           chat_id: chatId,
           title: options?.title,
           role: options?.role ?? "user",
@@ -236,7 +248,7 @@ export const chatService = {
 
       const decoder = new TextDecoder();
       let buffer = "";
-      const lastSequenceByRun = new Map<string, number>();
+      const lastSequenceByStream = new Map<string, number>();
 
       while (true) {
         const { done, value } = await reader.read();
@@ -253,11 +265,16 @@ export const chatService = {
           if (message.startsWith("data: ")) {
             const parsed: unknown = JSON.parse(message.slice(6));
             if (isAgentEventEnvelope(parsed)) {
-              const previous = lastSequenceByRun.get(parsed.run_id) ?? 0;
+              const previous =
+                lastSequenceByStream.get(parsed.stream_id ?? parsed.run_id) ??
+                0;
               if (parsed.sequence <= previous) {
                 continue;
               }
-              lastSequenceByRun.set(parsed.run_id, parsed.sequence);
+              lastSequenceByStream.set(
+                parsed.stream_id ?? parsed.run_id,
+                parsed.sequence,
+              );
             }
             const data = normalizeAgentStreamEvent(parsed as StreamEvent);
 
@@ -288,6 +305,8 @@ export const chatService = {
             } else if (data.type === "error" && onError) {
               console.error("SSE error:", data.error);
               onError(data.error || "Unknown error");
+            } else if (data.type === "cancelled") {
+              options?.onCancelled?.();
             } else if (data.type === "tool_start" && onToolStart) {
               onToolStart({
                 tool_name: data.tool_name,

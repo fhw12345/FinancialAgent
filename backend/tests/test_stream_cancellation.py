@@ -168,12 +168,15 @@ async def test_disconnect_during_routing_cancels_and_persists_request():
 
     chat_service = make_chat_service()
     run_service = AsyncMock()
-    run_service.create_chat_run.return_value = AgentRun(
-        run_id="run_routing",
-        requested_policy="auto",
-        policy_version="auto-router-v1",
-        status="pending",
-        started_at=utcnow(),
+    run_service.claim_chat_run.return_value = (
+        AgentRun(
+            run_id="run_routing",
+            requested_policy="auto",
+            policy_version="auto-router-v1",
+            status="pending",
+            started_at=utcnow(),
+        ),
+        True,
     )
     response = await chat_stream_unified(
         request=ChatRequest(
@@ -242,7 +245,7 @@ async def test_closing_unified_stream_after_agent_starts_persists_cancellation()
         status="pending",
         started_at=utcnow(),
     )
-    run_service.create_chat_run.return_value = created_run
+    run_service.claim_chat_run.return_value = (created_run, True)
     run_service.mark_running.return_value = created_run.model_copy(
         update={
             "selected_policy": "v2",

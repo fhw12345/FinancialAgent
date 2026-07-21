@@ -14,6 +14,7 @@ from ....agent.flow_router import AgentFlowRouter, FlowRoutingDecision
 from ....agent.langgraph_react_agent import FinancialAnalysisReActAgent
 from ....core.local_user import LOCAL_USER_ID
 from ....database.repositories.message_repository import MessageRepository
+from ....models.agent_run import AgentRun
 from ....services.agent_run_service import AgentRunService
 from ....services.chat_service import ChatService
 from ....services.context_window_manager import ContextWindowManager
@@ -82,9 +83,13 @@ async def chat_stream_unified(
             run_id=f"event_{uuid.uuid4().hex}",
         )
 
-    run = await run_service.create_chat_run(
+    run, owns_execution = await run_service.claim_chat_run(
         requested_policy=request.agent_version,
+        request_id=request.request_id,
     )
+    if not owns_execution:
+        message = await _load_replay_message(run, message_repo)
+        return _replay_existing_run(run, message)
     routing_task = asyncio.create_task(
         flow_router.select(
             message=request.message,
@@ -292,3 +297,87 @@ def _wrap_persistence_event_stream(
                     await close()
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+def _replay_existing_run(run: AgentRun, message: Any | None) -> StreamingResponse:
+    """Return current or terminal state without repeating expensive work."""
+
+    async def replay_stream() -> AsyncIterator[str]:
+        sequencer = AgentEventSequencer(
+            run.run_id,
+            stream_id=f"replay_{uuid.uuid4().hex}",
+        )
+        yield sequencer.format_sse(
+            {
+                "type": "run_state",
+                "run_id": run.run_id,
+                "status": run.status,
+                "execution_mode": run.execution_mode,
+                "request_reused": True,
+            }
+        )
+        if run.status in {"pending", "running"}:
+            yield sequencer.format_sse(
+                {
+                    "type": "error",
+                    "error": "This request is already running.",
+                    "error_code": "REQUEST_IN_PROGRESS",
+                }
+            )
+            return
+        if message is not None:
+            clarification = (
+                message.metadata.raw_data.get("clarification_required")
+                if message.metadata.raw_data
+                else None
+            )
+            if isinstance(clarification, dict):
+                yield sequencer.format_sse(clarification)
+            elif message.content:
+                yield sequencer.format_sse(
+                    {"type": "chunk", "content": message.content}
+                )
+        if run.status == "failed":
+            yield sequencer.format_sse(
+                {
+                    "type": "error",
+                    "error": run.error_message or "Request failed.",
+                    "error_code": run.error_code or "REQUEST_FAILED",
+                }
+            )
+            return
+        if run.status == "cancelled":
+            if message is None:
+                yield sequencer.format_sse(
+                    {
+                        "type": "chunk",
+                        "content": "请求已取消。 / Request cancelled.",
+                    }
+                )
+            yield sequencer.format_sse({"type": "cancelled"})
+            return
+        if run.chat_id is not None:
+            yield sequencer.format_sse(
+                {
+                    "type": "done",
+                    "chat_id": run.chat_id,
+                    "request_reused": True,
+                }
+            )
+
+    return StreamingResponse(replay_stream(), media_type="text/event-stream")
+
+
+async def _load_replay_message(
+    run: AgentRun,
+    message_repo: MessageRepository,
+) -> Any | None:
+    if run.status in {"pending", "running"}:
+        return None
+    for attempt in range(5):
+        message = await message_repo.get_by_run_id(run.run_id)
+        if message is not None:
+            return message
+        if attempt < 4:
+            await asyncio.sleep(0.05)
+    return None

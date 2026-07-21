@@ -2,6 +2,45 @@ import { describe, expect, it, vi } from "vitest";
 import { chatService } from "../api";
 
 describe("chatService clarification stream", () => {
+  it("forwards a caller-owned request id", async () => {
+    const encoder = new TextEncoder();
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              encoder.encode('data: {"type":"done","chat_id":"chat_1"}\n\n'),
+            );
+            controller.close();
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await new Promise<void>((resolve) => {
+      chatService.sendMessageStreamPersistent(
+        "Explain",
+        "chat_1",
+        vi.fn(),
+        undefined,
+        undefined,
+        () => resolve(),
+        vi.fn(),
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        { request_id: "request_fixed_123" },
+      );
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body.request_id).toBe("request_fixed_123");
+    vi.unstubAllGlobals();
+  });
+
   it("unwraps sequenced envelopes and ignores duplicate sequences", async () => {
     const encoder = new TextEncoder();
     const envelope = (
@@ -12,6 +51,7 @@ describe("chatService clarification stream", () => {
       `data: ${JSON.stringify({
         schema_version: "1.0",
         run_id: "run_1",
+        stream_id: "run_1",
         sequence,
         type,
         timestamp: "2026-07-21T02:00:00Z",

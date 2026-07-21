@@ -27,6 +27,12 @@ class AgentRunRepository:
     async def ensure_indexes(self) -> None:
         await self.collection.create_index("run_id", unique=True, name="run_id_1")
         await self.collection.create_index(
+            "request_id",
+            unique=True,
+            partialFilterExpression={"request_id": {"$type": "string"}},
+            name="request_id_1",
+        )
+        await self.collection.create_index(
             [("chat_id", 1), ("started_at", -1)],
             name="chat_id_1_started_at_-1",
         )
@@ -49,6 +55,18 @@ class AgentRunRepository:
         await self.collection.insert_one(run.model_dump(exclude_none=True))
         return run
 
+    async def claim_request_run(self, run: AgentRun) -> tuple[AgentRun, bool]:
+        if run.request_id is None:
+            return await self.create(run), True
+        try:
+            await self.collection.insert_one(run.model_dump(exclude_none=True))
+            return run, True
+        except DuplicateKeyError:
+            existing = await self.get_by_request_id(run.request_id)
+            if existing is None:
+                raise
+            return existing, False
+
     async def claim_portfolio_run(self, run: AgentRun) -> tuple[AgentRun, bool]:
         """Insert one active run per portfolio key, returning the winner."""
         for _ in range(2):
@@ -66,6 +84,10 @@ class AgentRunRepository:
 
     async def get(self, run_id: str) -> AgentRun | None:
         document = await self.collection.find_one({"run_id": run_id})
+        return self._parse(document)
+
+    async def get_by_request_id(self, request_id: str) -> AgentRun | None:
+        document = await self.collection.find_one({"request_id": request_id})
         return self._parse(document)
 
     async def list_by_chat(

@@ -279,6 +279,9 @@ export type StreamEvent =
       error?: string;
     }
   | {
+      type: "cancelled";
+    }
+  | {
       type: "tool_start";
       tool_name: string;
       display_name: string;

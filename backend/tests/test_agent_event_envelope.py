@@ -18,6 +18,7 @@ def test_envelope_requires_run_id_and_positive_sequence():
     with pytest.raises(ValidationError):
         AgentEventEnvelope(
             run_id="",
+            stream_id="",
             sequence=0,
             type="run_started",
             timestamp=utcnow(),
@@ -65,6 +66,7 @@ def test_parse_multiple_sse_blocks_and_format_envelope():
     assert [event["type"] for event in events] == ["chunk", "done"]
     assert envelope["schema_version"] == "1.0"
     assert envelope["run_id"] == "run_1"
+    assert envelope["stream_id"] == "run_1"
     assert envelope["payload"]["content"] == "a"
 
 
