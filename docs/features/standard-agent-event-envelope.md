@@ -43,6 +43,7 @@ Every agent-generated SSE event must use one versioned envelope:
 {
   "schema_version": "1.0",
   "run_id": "run_123",
+  "stream_id": "run_123",
   "sequence": 8,
   "type": "tool_completed",
   "timestamp": "2026-07-21T02:00:00Z",
@@ -53,6 +54,7 @@ Every agent-generated SSE event must use one versioned envelope:
 The envelope provides:
 
 - one durable run identity;
+- one per-delivery stream identity for safe replay;
 - one monotonically increasing sequence for the complete stream;
 - one canonical event type;
 - one UTC timestamp;
@@ -83,6 +85,7 @@ Add `backend/src/api/schemas/agent_events.py`.
 class AgentEventEnvelope(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
     run_id: str
+    stream_id: str
     sequence: int = Field(ge=1)
     type: str
     timestamp: datetime
@@ -184,7 +187,7 @@ Behavior:
 
 - envelope input returns the legacy payload shape;
 - legacy input remains supported during migration and in unit fixtures;
-- envelope events are deduplicated by `run_id + sequence`;
+- envelope events are deduplicated by `stream_id + sequence`;
 - duplicate or lower sequence events do not invoke callbacks twice;
 - canonical metadata remains available as `agent_event` on the normalized
   event for diagnostics.
@@ -209,7 +212,7 @@ onError
 - Routing events precede engine events.
 - `run_completed`, `run_failed`, or `run_cancelled` precedes
   `stream_completed`.
-- The frontend ignores duplicate `(run_id, sequence)` envelopes.
+- The frontend ignores duplicate `(stream_id, sequence)` envelopes.
 - Deep payload `seq` remains diagnostic only; envelope `sequence` is
   authoritative for stream ordering.
 

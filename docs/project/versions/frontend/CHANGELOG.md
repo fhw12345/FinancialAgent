@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.1] - 2026-07-21
+
+### Idempotent chat requests
+
+- Sends a client-generated request ID with every chat request.
+- Supports caller-owned IDs for network retry and duplicate-request tests.
+- Deduplicates envelopes by stream identity while supporting older schema
+  `1.0` envelopes without `stream_id`.
+- Restores the persisted chat ID when a completed request is replayed.
+
 ## [0.28.0] - 2026-07-21
 
 ### Sequenced agent events

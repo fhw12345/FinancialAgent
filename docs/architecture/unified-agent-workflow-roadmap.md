@@ -502,6 +502,11 @@ duplicate expensive research jobs.
 - Store an idempotency record for the request.
 - Return or resume the existing run when the same request is retried.
 
+Detailed implementation plan:
+[UAW-010: Request Idempotency](../features/request-idempotency.md).
+
+Implementation status: shipped in commit `70e15c3`.
+
 ## 8. Priority 1: Agent Evaluation
 
 The project needs a repeatable answer to:

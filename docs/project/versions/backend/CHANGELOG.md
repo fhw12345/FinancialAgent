@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-07-21
+
+### Request idempotency
+
+- Added client request IDs with a unique partial `agent_runs.request_id` index.
+- Uses an atomic first-writer run claim so duplicate requests never repeat
+  routing, model, tool, or research work.
+- Replays active, completed, failed, cancelled, and clarification states with
+  status-specific semantics.
+- Retries terminal-message reads across the run/message persistence boundary.
+- Uses distinct replay stream IDs while retaining the durable run ID.
+
 ## [0.40.0] - 2026-07-21
 
 ### Standard agent event envelope
