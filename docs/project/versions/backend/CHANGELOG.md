@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-07-27
+
+### Deep prompt governance
+
+- Migrated Deep debater, rebuttal, and verdict templates to stable registry
+  versions.
+- Preserved exact structured JSON and verdict output contracts.
+- Added graph-level prompt version accumulation for conditional nodes.
+- Added request-local prompt usage signaling for success, failure, timeout, and
+  cancellation.
+- Prevents prompt metadata failures from blocking terminal lifecycle cleanup.
+
 ## [0.44.0] - 2026-07-27
 
 ### Runtime-linked prompt migrations
