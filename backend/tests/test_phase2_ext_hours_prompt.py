@@ -11,13 +11,11 @@ from __future__ import annotations
 
 import inspect
 
-from src.agent.portfolio import phase2_decisions
+from src.agent import portfolio_phase2_prompt
 
 
 def _src() -> str:
-    return inspect.getsource(
-        phase2_decisions.Phase2DecisionsMixin._make_portfolio_decisions
-    )
+    return inspect.getsource(portfolio_phase2_prompt)
 
 
 def test_prompt_mentions_extended_hours_companion() -> None:

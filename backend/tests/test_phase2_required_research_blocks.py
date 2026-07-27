@@ -14,13 +14,11 @@ This test guards against regressing back to the optional framing.
 
 import inspect
 
-from src.agent.portfolio import phase2_decisions
+from src.agent import portfolio_phase2_prompt
 
 
 def _src() -> str:
-    return inspect.getsource(
-        phase2_decisions.Phase2DecisionsMixin._make_portfolio_decisions
-    )
+    return inspect.getsource(portfolio_phase2_prompt)
 
 
 def test_prompt_marks_blocks_required_for_buy_sell() -> None:

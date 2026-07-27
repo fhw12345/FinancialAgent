@@ -19,13 +19,11 @@ from __future__ import annotations
 
 import inspect
 
-from src.agent.portfolio import phase2_decisions
+from src.agent import portfolio_phase2_prompt
 
 
 def _src() -> str:
-    return inspect.getsource(
-        phase2_decisions.Phase2DecisionsMixin._make_portfolio_decisions
-    )
+    return inspect.getsource(portfolio_phase2_prompt)
 
 
 def test_prompt_requires_thesis_bullets_to_cite_source_ids() -> None:

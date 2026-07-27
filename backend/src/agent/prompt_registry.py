@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
+
+from src.agent.portfolio_phase2_prompt import render_portfolio_phase2_prompt
 
 
 @dataclass(frozen=True)
@@ -12,12 +15,15 @@ class PromptSpec:
     version: int
     template: str = ""
     tags: tuple[str, ...] = ()
+    renderer: Callable[..., str] | None = None
 
     @property
     def versioned_id(self) -> str:
         return f"{self.prompt_id}@{self.version}"
 
     def render(self, **context: Any) -> str:
+        if self.renderer is not None:
+            return self.renderer(**context)
         if not self.template:
             raise ValueError(f"Prompt {self.versioned_id} has no registered template")
         return self.template.format(**context)
@@ -196,6 +202,12 @@ _PROMPTS = {
             2,
             CONSISTENCY_GATE_TEMPLATE,
             ("portfolio", "validation", "structured"),
+        ),
+        PromptSpec(
+            "portfolio-phase2",
+            4,
+            tags=("portfolio", "decisions", "structured"),
+            renderer=render_portfolio_phase2_prompt,
         ),
     )
 }
