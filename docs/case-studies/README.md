@@ -13,6 +13,7 @@ can decide whether the case is relevant before reading the Chinese body.
 
 | Date       | Title                                                                                       | Stack                   | Topic                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-27 | [Backend Tests Are Not Browser Evidence](2026-07-27-backend-tests-are-not-browser-evidence.md) | Playwright / Workflow / Documentation | Reopening shipped work to restore mandatory browser evidence |
 | 2026-07-27 | [Large Prompts Need Builders](2026-07-27-large-prompts-need-builders.md) | Portfolio / Prompt Registry / Pydantic | Exact prompt extraction, source-test migration, and file-size boundaries |
 | 2026-07-27 | [Skipped Prompts Are Not Used Prompts](2026-07-27-skipped-prompts-are-not-used-prompts.md) | Portfolio / Pydantic / Prompt Registry | Conditional prompt execution and truthful usage metadata |
 | 2026-07-27 | [Prompt Observability Must Survive Failure](2026-07-27-prompt-observability-must-survive-failure.md) | LangGraph / Prompt Registry / asyncio | Conditional prompt usage across success, failure, timeout, and cancellation |

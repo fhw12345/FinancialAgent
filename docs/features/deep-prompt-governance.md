@@ -36,3 +36,6 @@ related_paths:
 ## Implementation Record
 
 Shipped in implementation commit `ea0dd16`, backend `0.45.0`.
+
+Browser evidence:
+[Prompt Governance Browser Evidence](prompt-governance-e2e.md).

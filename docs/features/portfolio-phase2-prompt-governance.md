@@ -1,7 +1,7 @@
 ---
 title: Portfolio Phase 2 Prompt Governance
 status: shipped
-version: backend@0.47.0
+version: backend@0.47.1
 last_updated: 2026-07-27
 owner: maintainer
 related_paths:
@@ -35,4 +35,10 @@ related_paths:
 
 ## Implementation Record
 
-Shipped in implementation commit `3bf826c`, backend `0.47.0`.
+Shipped in implementation commit `3bf826c`, with provenance hardening and
+browser evidence in backend `0.47.1`.
+
+Browser evidence:
+[Prompt Governance Browser Evidence](prompt-governance-e2e.md).
+
+Provenance hardening and E2E commit: `0c00a48`.

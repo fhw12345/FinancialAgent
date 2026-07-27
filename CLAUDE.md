@@ -84,6 +84,10 @@ Feature work is complete only after the full repository workflow:
    implementation, then record its hash in the shipped documentation commit.
 9. Push both commits and confirm the branch is synchronized with `origin`.
 
+This workflow is mandatory. Do not mark a feature `shipped`, update its roadmap
+status to shipped, or report it complete until the required Playwright E2E has
+passed and its curated screenshot evidence is committed.
+
 ## Documentation Rules
 
 - 所有 `docs/features/*.md` 必须使用统一 YAML frontmatter（`status` / `version` / `last_updated` / `owner` / `related_paths`）

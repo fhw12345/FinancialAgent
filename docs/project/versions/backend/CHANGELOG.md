@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.47.1] - 2026-07-27
+
+### Prompt governance evidence and provenance
+
+- Moved Phase 2 prompt provenance into a private code-owned field that cannot
+  be supplied by structured LLM output.
+- Added mandatory Playwright coverage for governed chat prompts and Portfolio
+  background analysis.
+- Added curated browser screenshots and explicit workflow completion gates.
+
 ## [0.47.0] - 2026-07-27
 
 ### Portfolio Phase 2 prompt governance
