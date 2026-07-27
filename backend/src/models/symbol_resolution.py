@@ -35,6 +35,7 @@ class SymbolResolution(BaseModel):
     company_name: str | None = None
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     candidates: list[SymbolCandidate] = Field(default_factory=list, max_length=5)
+    prompt_versions: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def validate_status_payload(self) -> "SymbolResolution":

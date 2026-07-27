@@ -62,7 +62,9 @@ test("One durable run spans routing, execution, and reload @uaw007", async ({
   expect(runningRun.execution_mode).toBe("instant");
   expect(runningRun.selected_policy).toBe("v2");
   expect(runningRun.policy_version).toBe("auto-router-v1");
-  expect(runningRun.prompt_versions.simple_chat).toBe("simple-chat-v1");
+  expect(runningRun.prompt_versions["financial-system"]).toBe(
+    "financial-system@3",
+  );
   expect(runningRun.model_routes.simple_chat).toBeTruthy();
 
   if (updateEvidence) {

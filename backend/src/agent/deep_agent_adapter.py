@@ -15,7 +15,7 @@ The adapter handles:
 import time
 import uuid
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import structlog
 
@@ -57,6 +57,7 @@ class DeepAgentAdapter:
             message=user_message,
             current_symbol=current_symbol,
         )
+        prompt_versions = dict(resolution.prompt_versions)
         research_context = DeepResearchContext.from_history(
             current_request=user_message,
             conversation_history=conversation_history,
@@ -73,10 +74,16 @@ class DeepAgentAdapter:
                     message=historical_symbol,
                     current_symbol=None,
                 )
+                prompt_versions.update(historical_resolution.prompt_versions)
                 if historical_resolution.status == "resolved":
                     historical_resolutions.append(historical_resolution)
             if len(historical_resolutions) == 1:
-                return historical_resolutions[0]
+                return cast(
+                    SymbolResolution,
+                    historical_resolutions[0].model_copy(
+                        update={"prompt_versions": prompt_versions}
+                    ),
+                )
             if len(historical_resolutions) > 1:
                 return SymbolResolution(
                     status="ambiguous",
@@ -88,8 +95,12 @@ class DeepAgentAdapter:
                         for item in historical_resolutions
                         if item.candidates
                     ][:5],
+                    prompt_versions=prompt_versions,
                 )
-        return resolution
+        return cast(
+            SymbolResolution,
+            resolution.model_copy(update={"prompt_versions": prompt_versions}),
+        )
 
     async def ainvoke(
         self,

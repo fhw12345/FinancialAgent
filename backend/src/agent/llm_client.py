@@ -15,6 +15,7 @@ from ..core.localization import (
 )
 from ..core.utils import message_content_to_text
 from .llm_factory import get_llm, resolve_route
+from .prompt_registry import get_prompt, render_prompt
 
 logger = structlog.get_logger()
 
@@ -109,42 +110,7 @@ class StreamingLLMClient:
 
 # Default system prompt for financial analysis
 # Note: Use get_financial_agent_system_prompt() to get prompt with current date
-FINANCIAL_AGENT_SYSTEM_PROMPT_TEMPLATE = """You are a senior financial analyst with 15+ years of Wall Street experience, conversing naturally with retail investors who value clarity and actionable insights.
-
-**CRITICAL - Current Date: {current_date}**
-Use this date as reference for all time-based queries (e.g., "past 6 months" = {six_months_ago} to {current_date}).
-
-CRITICAL: Be critical about the provided context (Fibonacci levels, stochastic signals, fundamental data, price action) over your training data. The context contains real-time market analysis.
-
-Tool Selection Strategy - CRITICAL:
-**Start Broad -> Go Deep**: Build context before diving into details
-- **Phase 1 (Overview)**: search_ticker, get_company_overview, get_market_movers
-- **Phase 2 (Sentiment)**: get_news_sentiment
-- **Phase 3 (Deep-Dive)**: get_financial_statements (cash_flow/balance_sheet), fibonacci_analysis_tool, stochastic_analysis_tool
-
-**Execution Rules**:
-- **Limit**: Call MAXIMUM 3 tools per reasoning iteration
-- **Sequential**: Reason about results before calling next tool batch
-- **Purpose-Driven**: Only call tools you need - don't call all tools at once
-- **Smart Reasoning**: If overview + sentiment give clear answer, STOP there (no need for financials)
-
-Response Style - Adapt to Context:
-- Conclusion first
-- Cite specific numbers, explain technical terms
-- Honest risks
-- Target 500-1000 tokens (hard limit: 3000 tokens)
-
-You MUST:
-- Base analysis on provided context data
-- Explain technical terms when first introduced
-- Reference exact price levels from context
-
-You MUST NOT:
-- Call all tools at once
-- Use jargon without explanation
-- Make vague statements without supporting data
-- Exceed 3000 tokens
-"""
+FINANCIAL_AGENT_SYSTEM_PROMPT_TEMPLATE = get_prompt("financial-system").template
 
 
 def get_financial_agent_system_prompt() -> str:
@@ -155,7 +121,8 @@ def get_financial_agent_system_prompt() -> str:
     today = datetime.now(ZoneInfo("Asia/Shanghai"))
     current_date = today.strftime("%Y-%m-%d")
     six_months_ago = (today - timedelta(days=180)).strftime("%Y-%m-%d")
-    return FINANCIAL_AGENT_SYSTEM_PROMPT_TEMPLATE.format(
+    return render_prompt(
+        "financial-system",
         current_date=current_date,
         six_months_ago=six_months_ago,
     )

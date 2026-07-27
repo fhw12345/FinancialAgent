@@ -170,6 +170,25 @@ class AgentRunRepository:
         )
         return self._parse(document)
 
+    async def merge_prompt_versions(
+        self,
+        run_id: str,
+        prompt_versions: dict[str, str],
+    ) -> AgentRun | None:
+        if not prompt_versions:
+            return await self.get(run_id)
+        document = await self.collection.find_one_and_update(
+            {"run_id": run_id},
+            {
+                "$set": {
+                    f"prompt_versions.{prompt_id}": version
+                    for prompt_id, version in prompt_versions.items()
+                }
+            },
+            return_document=ReturnDocument.AFTER,
+        )
+        return self._parse(document)
+
     async def transition(
         self,
         run_id: str,

@@ -208,12 +208,32 @@ async def test_service_records_policy_models_and_metrics():
     assert running is not None
     assert running.execution_mode == "agentic"
     assert running.model_routes == {"react_agent": "model-react"}
-    assert running.prompt_versions == {"react_agent": "react-agent-v1"}
+    assert running.prompt_versions == {"financial-system": "financial-system@3"}
     assert completed is not None
     assert completed.status == "completed"
     assert completed.tool_calls == 2
     assert completed.input_tokens == 100
     assert completed.output_tokens == 50
+
+
+@pytest.mark.asyncio
+async def test_service_merges_prompt_versions_used_during_execution():
+    repository = AsyncMock()
+    repository.merge_prompt_versions.return_value = make_run(
+        prompt_versions={"symbol-extraction": "symbol-extraction@2"}
+    )
+    service = AgentRunService(repository)
+
+    updated = await service.record_prompt_versions(
+        "run_1",
+        {"symbol-extraction": "symbol-extraction@2"},
+    )
+
+    repository.merge_prompt_versions.assert_awaited_once_with(
+        "run_1",
+        {"symbol-extraction": "symbol-extraction@2"},
+    )
+    assert updated is not None
 
 
 @pytest.mark.asyncio

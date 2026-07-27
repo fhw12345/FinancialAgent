@@ -109,6 +109,12 @@ async def stream_with_deep_agent(
                 current_symbol=request.current_symbol,
                 conversation_history=conversation_history,
             )
+            prompt_versions = resolution.prompt_versions
+            if run_service is not None and prompt_versions:
+                await run_service.record_prompt_versions(
+                    lifecycle.run_id,
+                    prompt_versions,
+                )
             if resolution.status != "resolved" or resolution.symbol is None:
                 has_candidates = bool(resolution.candidates)
                 if request.language == "zh-CN":

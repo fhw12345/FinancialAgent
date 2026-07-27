@@ -14,8 +14,7 @@ from ..models.agent_run import AgentRun, AgentRunStatus, ExecutionMode
 POLICY_VERSION = "auto-router-v1"
 PORTFOLIO_RUN_LEASE = timedelta(hours=2)
 PROMPT_VERSIONS: dict[str, str] = {
-    "simple_chat": "simple-chat-v1",
-    "react_agent": "react-agent-v1",
+    "financial-system": "financial-system@3",
     "deep_research": "deep-research-v1",
     "portfolio": "portfolio-v1",
 }
@@ -119,8 +118,8 @@ class AgentRunService:
         models = get_role_models()
         roles = FLOW_MODEL_ROLES.get(selected_policy, ())
         prompt_key = {
-            "v2": "simple_chat",
-            "v3": "react_agent",
+            "v2": "financial-system",
+            "v3": "financial-system",
             "v4-deep": "deep_research",
         }.get(selected_policy)
         return await self.repository.transition(
@@ -138,6 +137,16 @@ class AgentRunService:
 
     async def attach_chat(self, run_id: str, chat_id: str) -> AgentRun | None:
         return await self.repository.update_fields(run_id, chat_id=chat_id)
+
+    async def record_prompt_versions(
+        self,
+        run_id: str,
+        prompt_versions: dict[str, str],
+    ) -> AgentRun | None:
+        return await self.repository.merge_prompt_versions(
+            run_id,
+            prompt_versions,
+        )
 
     async def complete(
         self,

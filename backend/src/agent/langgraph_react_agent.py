@@ -57,7 +57,7 @@ from ..services.insights import InsightsCategoryRegistry
 from ..services.insights.snapshot_service import InsightsSnapshotService
 from ..services.market_data import FREDService
 from ..services.tool_cache_wrapper import ToolCacheWrapper
-from .llm_client import FINANCIAL_AGENT_SYSTEM_PROMPT_TEMPLATE
+from .llm_client import get_financial_agent_system_prompt
 from .llm_factory import get_llm
 from .tools.alpha_vantage_tools import create_alpha_vantage_tools
 from .tools.insights_tools import create_insights_tools
@@ -266,14 +266,7 @@ class FinancialAnalysisReActAgent:
         # call tools (observed Apr 2026). We now pass a static string built at
         # init; date drift across a 24h cycle is acceptable since the agent
         # restarts at deploy time.
-        from datetime import timedelta
-        from zoneinfo import ZoneInfo
-
-        _today = datetime.now(ZoneInfo("Asia/Shanghai"))
-        _system_prompt_str = FINANCIAL_AGENT_SYSTEM_PROMPT_TEMPLATE.format(
-            current_date=_today.strftime("%Y-%m-%d"),
-            six_months_ago=(_today - timedelta(days=180)).strftime("%Y-%m-%d"),
-        )
+        _system_prompt_str = get_financial_agent_system_prompt()
 
         self.agent = create_react_agent(
             self.llm,

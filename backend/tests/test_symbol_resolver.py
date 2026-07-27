@@ -327,6 +327,7 @@ async def test_llm_candidate_must_be_validated():
     assert result.symbol == "BABA"
     assert result.source == "llm_assisted"
     assert search.exact_calls == ["BABA"]
+    assert result.prompt_versions == {"symbol-extraction": "symbol-extraction@2"}
 
 
 @pytest.mark.asyncio
@@ -343,6 +344,7 @@ async def test_llm_unknown_returns_unresolved_not_aapl():
     assert result.status == "unresolved"
     assert result.symbol is None
     assert all(item.symbol != "AAPL" for item in result.candidates)
+    assert result.prompt_versions == {"symbol-extraction": "symbol-extraction@2"}
 
 
 @pytest.mark.asyncio

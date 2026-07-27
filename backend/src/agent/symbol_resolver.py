@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from langchain_core.messages import HumanMessage
@@ -18,6 +18,7 @@ from ..models.symbol_resolution import (
 )
 from ..services.symbol_search_service import SymbolSearchService
 from .llm_factory import get_llm
+from .prompt_registry import get_prompt, render_prompt
 from .symbol_tokens import (
     extract_explicit_symbols,
     has_explicit_symbol_intent,
@@ -25,15 +26,6 @@ from .symbol_tokens import (
 )
 
 logger = structlog.get_logger()
-
-_LLM_PROMPT = """Identify possible US stock ticker symbols in this request.
-
-Return a short search query for the company name and at most three ticker
-candidates. Return an empty candidate list when uncertain. Do not invent a
-default symbol.
-
-User request: {message}
-"""
 
 
 class LLMSymbolCandidates(BaseModel):
@@ -128,7 +120,7 @@ class SymbolResolver:
                 started=started,
             )
 
-        llm_candidates = await self._propose_candidates(message)
+        llm_candidates, prompt_versions = await self._propose_candidates(message)
         validated = await self._validate_candidates(llm_candidates.candidates)
         if len(validated) == 1:
             return self._resolved(
@@ -136,6 +128,7 @@ class SymbolResolver:
                 source="llm_assisted",
                 reason_code="resolved_llm_candidate",
                 started=started,
+                prompt_versions=prompt_versions,
             )
         if len(validated) > 1:
             return self._ambiguous(
@@ -143,6 +136,7 @@ class SymbolResolver:
                 source="llm_assisted",
                 reason_code="ambiguous_symbol",
                 started=started,
+                prompt_versions=prompt_versions,
             )
 
         if llm_candidates.query:
@@ -156,22 +150,28 @@ class SymbolResolver:
                 started=started,
             )
             if searched_decision is not None:
-                return searched_decision
+                return cast(
+                    SymbolResolution,
+                    searched_decision.model_copy(
+                        update={"prompt_versions": prompt_versions}
+                    ),
+                )
 
         return self._unresolved(
             source="llm_assisted",
             reason_code="symbol_missing",
             candidates=deterministic,
             started=started,
+            prompt_versions=prompt_versions,
         )
 
     @staticmethod
     def normalize_symbol(value: str) -> str | None:
         """Normalize case and whitespace while rejecting invalid punctuation."""
-        return normalize_symbol(value)
+        return cast(str | None, normalize_symbol(value))
 
     def _extract_explicit_symbols(self, message: str) -> list[str]:
-        return extract_explicit_symbols(message)
+        return cast(list[str], extract_explicit_symbols(message))
 
     async def _validate_candidates(
         self,
@@ -187,7 +187,12 @@ class SymbolResolver:
         )
         return [candidate for candidate in results if candidate is not None]
 
-    async def _propose_candidates(self, message: str) -> LLMSymbolCandidates:
+    async def _propose_candidates(
+        self,
+        message: str,
+    ) -> tuple[LLMSymbolCandidates, dict[str, str]]:
+        prompt = get_prompt("symbol-extraction")
+        prompt_versions = {prompt.prompt_id: prompt.versioned_id}
         llm = self._llm or get_llm(
             "router",
             temperature=0,
@@ -198,16 +203,23 @@ class SymbolResolver:
         try:
             async with asyncio.timeout(self._timeout_seconds):
                 result = await structured.ainvoke(
-                    [HumanMessage(content=_LLM_PROMPT.format(message=message[:1000]))]
+                    [
+                        HumanMessage(
+                            content=render_prompt(
+                                "symbol-extraction",
+                                message=message[:1000],
+                            )
+                        )
+                    ]
                 )
             validated: LLMSymbolCandidates = LLMSymbolCandidates.model_validate(result)
-            return validated
+            return validated, prompt_versions
         except Exception as exc:
             logger.warning(
                 "symbol_resolution_llm_failed",
                 error=str(exc),
             )
-            return LLMSymbolCandidates()
+            return LLMSymbolCandidates(), prompt_versions
 
     def _ranked_decision(
         self,
@@ -246,6 +258,7 @@ class SymbolResolver:
         source: SymbolResolutionSource,
         reason_code: str,
         started: float,
+        prompt_versions: dict[str, str] | None = None,
     ) -> SymbolResolution:
         resolution = SymbolResolution(
             status="resolved",
@@ -255,6 +268,7 @@ class SymbolResolver:
             company_name=candidate.name,
             confidence=candidate.confidence,
             candidates=[candidate],
+            prompt_versions=prompt_versions or {},
         )
         self._log_resolution(resolution, started)
         return resolution
@@ -266,6 +280,7 @@ class SymbolResolver:
         source: SymbolResolutionSource,
         reason_code: str,
         started: float,
+        prompt_versions: dict[str, str] | None = None,
     ) -> SymbolResolution:
         resolution = SymbolResolution(
             status="ambiguous",
@@ -273,6 +288,7 @@ class SymbolResolver:
             reason_code=reason_code,
             confidence=candidates[0].confidence,
             candidates=candidates[:5],
+            prompt_versions=prompt_versions or {},
         )
         self._log_resolution(resolution, started)
         return resolution
@@ -284,12 +300,14 @@ class SymbolResolver:
         reason_code: str,
         started: float,
         candidates: list[SymbolCandidate] | None = None,
+        prompt_versions: dict[str, str] | None = None,
     ) -> SymbolResolution:
         resolution = SymbolResolution(
             status="unresolved",
             source=source,
             reason_code=reason_code,
             candidates=(candidates or [])[:5],
+            prompt_versions=prompt_versions or {},
         )
         self._log_resolution(resolution, started)
         return resolution
