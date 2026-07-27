@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-07-27
+
+### Runtime-linked prompt migrations
+
+- Centralized the shared Direct/ReAct financial system prompt as
+  `financial-system@3`.
+- Centralized structured symbol extraction as `symbol-extraction@2`.
+- Made registry snapshots independent of import order.
+- Carries prompt usage on each symbol-resolution result instead of singleton
+  mutable state.
+- Merges symbol prompt versions into the correct Deep durable run only when
+  the LLM resolver executes.
+- Keeps deterministic evaluation prompt coverage honest.
+
 ## [0.43.0] - 2026-07-21
 
 ### Prompt registry foundation

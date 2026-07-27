@@ -13,6 +13,7 @@ can decide whether the case is relevant before reading the Chinese body.
 
 | Date       | Title                                                                                       | Stack                   | Topic                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-27 | [Singleton Prompt Metadata Crossed Requests](2026-07-27-singleton-prompt-metadata-race.md) | asyncio / Prompt Registry / MongoDB | Request-local prompt usage and concurrency-safe durable metadata |
 | 2026-07-21 | [A Prompt Registry Can Lie](2026-07-21-a-registry-can-lie.md) | Prompt / Pydantic / Evaluation | Runtime-linked versions, structured router output, and honest coverage metadata |
 | 2026-07-21 | [The First Golden Suite Found Router Gaps](2026-07-21-evaluation-first-found-router-gaps.md) | Python / Router / Pydantic | Honest deterministic baselines, no-live guarantees, and real symbol-safety evaluation |
 | 2026-07-21 | [One Logical Request Could Start Two Expensive Runs](2026-07-21-one-click-two-expensive-runs.md) | MongoDB / SSE / React | Atomic request claims, terminal replay, and run-versus-stream identity |
