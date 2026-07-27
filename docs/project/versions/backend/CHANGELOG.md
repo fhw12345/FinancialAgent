@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-07-27
+
+### Portfolio Phase 2 prompt governance
+
+- Migrated the complete Portfolio decision prompt to `portfolio-phase2@4`.
+- Preserved all trading geometry, structured research, citation,
+  extended-hours, derivation, example, and language requirements.
+- Added a governed structured-output subtype carrying prompt versions.
+- Persists prompt usage only after successful Phase 2 execution.
+- Reduced `phase2_decisions.py` to the 500-line source limit.
+
 ## [0.46.1] - 2026-07-27
 
 ### Consistency gate cleanup

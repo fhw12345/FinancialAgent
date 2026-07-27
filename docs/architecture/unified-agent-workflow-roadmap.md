@@ -617,8 +617,8 @@ consistency-gate@2
 Every run records the exact prompt version. Prompt changes require related
 golden evaluations.
 
-Implementation status: foundation shipped for `router@1`; remaining prompt
-migrations are in progress.
+Implementation status: runtime prompt registry migrations shipped; remaining
+structured-output migrations are in progress.
 
 ### 9.2 Structured Outputs
 

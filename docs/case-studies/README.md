@@ -13,6 +13,7 @@ can decide whether the case is relevant before reading the Chinese body.
 
 | Date       | Title                                                                                       | Stack                   | Topic                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-27 | [Large Prompts Need Builders](2026-07-27-large-prompts-need-builders.md) | Portfolio / Prompt Registry / Pydantic | Exact prompt extraction, source-test migration, and file-size boundaries |
 | 2026-07-27 | [Skipped Prompts Are Not Used Prompts](2026-07-27-skipped-prompts-are-not-used-prompts.md) | Portfolio / Pydantic / Prompt Registry | Conditional prompt execution and truthful usage metadata |
 | 2026-07-27 | [Prompt Observability Must Survive Failure](2026-07-27-prompt-observability-must-survive-failure.md) | LangGraph / Prompt Registry / asyncio | Conditional prompt usage across success, failure, timeout, and cancellation |
 | 2026-07-27 | [Singleton Prompt Metadata Crossed Requests](2026-07-27-singleton-prompt-metadata-race.md) | asyncio / Prompt Registry / MongoDB | Request-local prompt usage and concurrency-safe durable metadata |

@@ -281,6 +281,7 @@ Browse existing feature specs in this directory for examples:
 - **[Runtime-Linked Prompt Migrations](runtime-linked-prompt-migrations.md)** — route Direct/ReAct and symbol extraction through deterministic registry templates with request-local usage metadata
 - **[Deep Prompt Governance](deep-prompt-governance.md)** — migrate debate, rebuttal, and verdict prompts while recording conditional usage on every terminal path
 - **[Consistency Gate Prompt Governance](consistency-gate-prompt-governance.md)** — registry-version the structured research-quality gate only when its LLM call executes
+- **[Portfolio Phase 2 Prompt Governance](portfolio-phase2-prompt-governance.md)** — preserve the complete decision contract behind a versioned renderer with successful-call usage metadata
 - **[Write-Time Translation](write-time-translation.md)** — translate LLM output to `zh-CN` on the write path so the read path skips `/api/translate`
 
 ### Market Data & Visualization
