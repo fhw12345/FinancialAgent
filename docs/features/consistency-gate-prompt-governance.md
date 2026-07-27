@@ -1,7 +1,7 @@
 ---
 title: Consistency Gate Prompt Governance
 status: shipped
-version: backend@0.46.0
+version: backend@0.46.1
 last_updated: 2026-07-27
 owner: maintainer
 related_paths:
@@ -30,4 +30,5 @@ related_paths:
 
 ## Implementation Record
 
-Shipped in implementation commit `1aab971`, backend `0.46.0`.
+Shipped in implementation commit `1aab971`, with cleanup patch in backend
+`0.46.1`.

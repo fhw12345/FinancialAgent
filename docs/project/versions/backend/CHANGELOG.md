@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.46.1] - 2026-07-27
+
+### Consistency gate cleanup
+
+- Removed an accidental module-level Pydantic `Field` left beside the
+  degraded-data regex constants.
+
 ## [0.46.0] - 2026-07-27
 
 ### Consistency gate prompt governance

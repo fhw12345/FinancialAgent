@@ -51,7 +51,6 @@ _UNAVAILABLE_RX = re.compile(
     r"⚠️\s*\*\*([\w\s]+)\s+unavailable\s+for\s+([A-Z]{1,5})\.\*\*",
     re.IGNORECASE,
 )
-prompt_versions: dict[str, str] = Field(default_factory=dict)
 _STALE_FIB_RX = re.compile(r"STALE\s+FIB\s+SWING")
 _RANGE_POS_RX = re.compile(r"range_position:\s*(above_range|below_range|in_range)")
 
