@@ -35,6 +35,7 @@ from .debate_types import (
 )
 from .deep_research_context import DeepResearchContext
 from .llm_factory import get_llm
+from .prompt_registry import get_prompt, render_prompt
 from .subagent_invoker import invoke_subagent
 from .subagents.debater import TERMINATION_SIGNAL, create_debater_subagent
 from .subagents.financial import create_financial_subagent
@@ -72,6 +73,7 @@ class AnalysisState(TypedDict, total=False):
     research_context: str
     research_context_with_report: str
     research_constraints: tuple[str, ...]
+    prompt_versions: dict[str, str]
 
 
 class DeepReActAgent:
@@ -337,32 +339,20 @@ class DeepReActAgent:
                 for c in all_concerns
             )
 
-            rebuttal_prompt = f"""{state.get("research_context_with_report", "")}
-
-The debater raised concerns about {symbol}:
-
-{concern_lines}
-
-Your job is to DEFEND the thesis by addressing each concern with evidence:
-1. For each concern, use tools to gather SPECIFIC data that confirms or refutes it
-2. If the concern is valid, acknowledge it and explain why the thesis still holds
-3. If the concern is wrong, provide evidence that disproves it
-
-RESPONSE FORMAT: Include a JSON block in your response:
-```json
-{{
-  "rebuttals": [
-    {{
-      "concern_id": "C1",
-      "status": "REFUTED|PARTIALLY_VALID|CONCEDED",
-      "defense": "Your defense with specific data",
-      "evidence": "Source of your evidence"
-    }}
-  ]
-}}
-```
-
-Be concise — focus on DATA, not rhetoric."""
+            rebuttal_spec = get_prompt("deep-rebuttal")
+            _emit(
+                {
+                    "type": "prompt_used",
+                    "prompt_id": rebuttal_spec.prompt_id,
+                    "version": rebuttal_spec.versioned_id,
+                }
+            )
+            rebuttal_prompt = render_prompt(
+                "deep-rebuttal",
+                research_context=state.get("research_context_with_report", ""),
+                symbol=symbol,
+                concern_lines=concern_lines,
+            )
 
             defense_parts: list[str] = []
             total_tool_count = 0
@@ -432,6 +422,10 @@ Be concise — focus on DATA, not rhetoric."""
                 # Only return NEW items — operator.add reducer handles accumulation
                 "all_concerns": [],
                 "all_rebuttals": new_rebuttals,
+                "prompt_versions": {
+                    **state.get("prompt_versions", {}),
+                    rebuttal_spec.prompt_id: rebuttal_spec.versioned_id,
+                },
             }
 
         # ── debate_node ──────────────────────────────────────────────────
@@ -462,38 +456,20 @@ Be concise — focus on DATA, not rhetoric."""
                 if last_period > max_len // 2:
                     truncated_report = truncated_report[: last_period + 1]
 
-            critique_prompt = f"""{state.get("research_context_with_report", "")}
-
-Review the following investment thesis and challenge it:
-
-{truncated_report}
-
-Your job is to:
-1. Use your fact-checking skills to verify key claims
-2. Search for counter-evidence and contradicting data
-3. Identify overlooked risks and stress-test assumptions
-
-RESPONSE FORMAT: Include a JSON block in your response:
-```json
-{{
-  "concerns": [
-    {{
-      "id": "C1",
-      "claim": "Claim being challenged",
-      "category": "technical|fundamental|valuation|risk",
-      "challenge": "Specific evidence-based challenge",
-      "severity": "MAJOR|MINOR",
-      "evidence": "Source or data supporting the challenge"
-    }}
-  ]
-}}
-```
-
-Be aggressive but fair. Use real evidence, not speculation.
-
-If after thorough review you genuinely have no concerns, respond with:
-"{TERMINATION_SIGNAL}"
-"""
+            debater_spec = get_prompt("deep-debater")
+            _emit(
+                {
+                    "type": "prompt_used",
+                    "prompt_id": debater_spec.prompt_id,
+                    "version": debater_spec.versioned_id,
+                }
+            )
+            critique_prompt = render_prompt(
+                "deep-debater",
+                research_context=state.get("research_context_with_report", ""),
+                report=truncated_report,
+                termination_signal=TERMINATION_SIGNAL,
+            )
 
             critique_subagent_key = _constraint_subagent_key(state, "debater")
             critique, _tool_count = await self._invoke_with_events(
@@ -545,6 +521,10 @@ If after thorough review you genuinely have no concerns, respond with:
                 "all_concerns": new_concerns,
                 "all_rebuttals": [],
                 "debate_active": has_concerns,
+                "prompt_versions": {
+                    **state.get("prompt_versions", {}),
+                    debater_spec.prompt_id: debater_spec.versioned_id,
+                },
             }
 
         # ── should_continue ──────────────────────────────────────────────
@@ -621,31 +601,20 @@ If after thorough review you genuinely have no concerns, respond with:
             parts = report.split("\n\n## Defense (Round")
             original_research = parts[0].strip()
 
-            verdict_prompt = f"""You are a Senior Investment Committee Judge delivering a final verdict.
-
-{verified_facts_block}
-
-{state.get("research_context_with_report", "")}
-
-## Research Report
-{original_research[:6000]}
-
-## Your Task
-
-For EACH concern raised by the Debater, categorize it:
-- ✅ **VERIFIED**: [concern] — [1-sentence reasoning citing specific data]
-- ⚠️ **NEEDS MORE EVIDENCE**: [concern] — [what data is missing]
-- ❌ **CONTRADICTED**: [concern] — [evidence that disproves it]
-
-Then provide your final verdict:
-
-### Final Verdict
-- **Action**: Buy / Hold / Sell
-- **Conviction**: High / Medium / Low
-- **Risk Level**: HIGH / MODERATE / LOW
-- **Key Insight**: 1-2 sentences on the most important takeaway
-
-Be decisive. Use the evidence from both sides. Do not hedge excessively."""
+            verdict_spec = get_prompt("deep-verdict")
+            _emit(
+                {
+                    "type": "prompt_used",
+                    "prompt_id": verdict_spec.prompt_id,
+                    "version": verdict_spec.versioned_id,
+                }
+            )
+            verdict_prompt = render_prompt(
+                "deep-verdict",
+                verified_facts=verified_facts_block,
+                research_context=state.get("research_context_with_report", ""),
+                report=original_research[:6000],
+            )
 
             verdict_response = await self.verdict_llm.ainvoke(
                 [HumanMessage(content=verdict_prompt)],
@@ -672,6 +641,10 @@ Be decisive. Use the evidence from both sides. Do not hedge excessively."""
                 # Empty — no new items; operator.add preserves accumulated state
                 "all_concerns": [],
                 "all_rebuttals": [],
+                "prompt_versions": {
+                    **state.get("prompt_versions", {}),
+                    verdict_spec.prompt_id: verdict_spec.versioned_id,
+                },
             }
 
         # ── Graph Assembly ───────────────────────────────────────────────
@@ -949,6 +922,7 @@ Be decisive. Use the evidence from both sides. Do not hedge excessively."""
             "research_context": rendered_context,
             "research_context_with_report": rendered_context_with_report,
             "research_constraints": research_context.constraints,
+            "prompt_versions": {},
         }
 
         def _safe_emit(event: dict[str, Any]) -> None:

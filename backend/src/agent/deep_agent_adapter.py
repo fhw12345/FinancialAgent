@@ -216,6 +216,7 @@ class DeepAgentAdapter:
                 "total_tokens": result.get("total_tokens", 0),
                 "agent_duration_ms": duration_ms,
                 "research_context": research_context.metadata(symbol=symbol),
+                "prompt_versions": result.get("prompt_versions", {}),
             }
 
         except Exception as e:

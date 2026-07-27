@@ -76,6 +76,89 @@ You MUST NOT:
 - Make vague statements without supporting data
 - Exceed 3000 tokens
 """
+DEEP_REBUTTAL_TEMPLATE = """{research_context}
+
+The debater raised concerns about {symbol}:
+
+{concern_lines}
+
+Your job is to DEFEND the thesis by addressing each concern with evidence:
+1. For each concern, use tools to gather SPECIFIC data that confirms or refutes it
+2. If the concern is valid, acknowledge it and explain why the thesis still holds
+3. If the concern is wrong, provide evidence that disproves it
+
+RESPONSE FORMAT: Include a JSON block with a `rebuttals` array containing
+the exact structure:
+```json
+{{
+  "rebuttals": [
+    {{
+      "concern_id": "C1",
+      "status": "REFUTED|PARTIALLY_VALID|CONCEDED",
+      "defense": "Your defense with specific data",
+      "evidence": "Source of your evidence"
+    }}
+  ]
+}}
+```
+
+Be concise — focus on DATA, not rhetoric."""
+DEEP_DEBATER_TEMPLATE = """{research_context}
+
+Review the following investment thesis and challenge it:
+
+{report}
+
+Your job is to:
+1. Use your fact-checking skills to verify key claims
+2. Search for counter-evidence and contradicting data
+3. Identify overlooked risks and stress-test assumptions
+
+RESPONSE FORMAT: Include a JSON block with a `concerns` array containing id,
+the exact structure:
+```json
+{{
+  "concerns": [
+    {{
+      "id": "C1",
+      "claim": "Claim being challenged",
+      "category": "technical|fundamental|valuation|risk",
+      "challenge": "Specific evidence-based challenge",
+      "severity": "MAJOR|MINOR",
+      "evidence": "Source or data supporting the challenge"
+    }}
+  ]
+}}
+```
+
+Be aggressive but fair. Use real evidence, not speculation.
+
+If after thorough review you genuinely have no concerns, respond with:
+"{termination_signal}"
+"""
+DEEP_VERDICT_TEMPLATE = """You are a Senior Investment Committee Judge delivering a final verdict.
+
+{verified_facts}
+
+{research_context}
+
+## Research Report
+{report}
+
+For EACH concern raised by the Debater, categorize it:
+- ✅ **VERIFIED**: [concern] — [1-sentence reasoning citing specific data]
+- ⚠️ **NEEDS MORE EVIDENCE**: [concern] — [what data is missing]
+- ❌ **CONTRADICTED**: [concern] — [evidence that disproves it]
+
+Then provide:
+
+### Final Verdict
+- **Action**: Buy / Hold / Sell
+- **Conviction**: High / Medium / Low
+- **Risk Level**: HIGH / MODERATE / LOW
+- **Key Insight**: 1-2 sentences on the most important takeaway
+
+Be decisive. Use evidence from both sides. Do not hedge excessively."""
 
 _PROMPTS = {
     spec.prompt_id: spec
@@ -93,6 +176,9 @@ _PROMPTS = {
             FINANCIAL_SYSTEM_TEMPLATE,
             ("chat", "react", "tools"),
         ),
+        PromptSpec("deep-rebuttal", 1, DEEP_REBUTTAL_TEMPLATE, ("deep", "debate")),
+        PromptSpec("deep-debater", 2, DEEP_DEBATER_TEMPLATE, ("deep", "debate")),
+        PromptSpec("deep-verdict", 1, DEEP_VERDICT_TEMPLATE, ("deep", "verdict")),
     )
 }
 

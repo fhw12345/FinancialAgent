@@ -72,6 +72,7 @@ async def stream_with_deep_agent(
         first_progress_event_recorded = False
         first_response_chunk_recorded = False
         agent_task: asyncio.Task[Any] | None = None
+        used_prompt_versions: dict[str, str] = {}
         lifecycle = ChatStreamLifecycle(
             request=request,
             user_id=user_id,
@@ -82,6 +83,19 @@ async def stream_with_deep_agent(
             run_id=run_id,
             run_service=run_service,
         )
+
+        async def persist_used_prompt_versions() -> None:
+            if run_service is not None and used_prompt_versions:
+                try:
+                    await run_service.record_prompt_versions(
+                        lifecycle.run_id,
+                        dict(used_prompt_versions),
+                    )
+                except Exception:
+                    logger.exception(
+                        "Failed to persist Deep prompt versions",
+                        run_id=lifecycle.run_id,
+                    )
 
         try:
             # ===== Phase 1: Setup =====
@@ -162,21 +176,30 @@ async def stream_with_deep_agent(
             yield create_latency_event("agent_started", lifecycle.elapsed_ms())
 
             result: dict[str, Any]
+            event_queue: asyncio.Queue[str | None] | None = None
+
+            def on_event(event: dict[str, Any]) -> None:
+                if event.get("type") == "prompt_used":
+                    prompt_id = event.get("prompt_id")
+                    version = event.get("version")
+                    if isinstance(prompt_id, str) and isinstance(version, str):
+                        used_prompt_versions[prompt_id] = version
+                    return
+                if event_queue is None:
+                    return
+                try:
+                    event_queue.put_nowait(format_sse_event(event))
+                    collected_events.append(event)
+                except Exception:
+                    logger.warning(
+                        "Failed to enqueue SSE event",
+                        event_type=event.get("type"),
+                        exc_info=True,
+                    )
 
             if DEEP_STREAMING_V2:
-                event_queue: asyncio.Queue[str | None] = asyncio.Queue()
+                event_queue = asyncio.Queue()
                 result_holder: dict[str, Any] = {}
-
-                def on_event(event: dict[str, Any]) -> None:
-                    try:
-                        event_queue.put_nowait(format_sse_event(event))
-                        collected_events.append(event)
-                    except Exception:
-                        logger.warning(
-                            "Failed to enqueue SSE event",
-                            event_type=event.get("type"),
-                            exc_info=True,
-                        )
 
                 async def run_agent() -> None:
                     try:
@@ -229,6 +252,7 @@ async def stream_with_deep_agent(
                             debug=debug,
                             language=request.language,
                             user_id=user_id,
+                            on_event=on_event,
                             current_symbol=request.current_symbol,
                             resolved_symbol=resolution.symbol,
                         ),
@@ -253,11 +277,13 @@ async def stream_with_deep_agent(
                     "deep_events": [*collected_events, cancelled_event],
                 },
             )
+            await persist_used_prompt_versions()
             logger.info("Deep agent request cancelled", chat_id=lifecycle.chat_id)
             if isinstance(exc, (asyncio.CancelledError, GeneratorExit)):
                 raise
             return
         except TimeoutError:
+            await persist_used_prompt_versions()
             logger.error(
                 "Deep agent timeout",
                 chat_id=lifecycle.chat_id,
@@ -296,6 +322,7 @@ async def stream_with_deep_agent(
                 yield event
             return
         except Exception as e:
+            await persist_used_prompt_versions()
             logger.error(
                 "Deep agent execution error",
                 chat_id=lifecycle.chat_id,
@@ -333,6 +360,9 @@ async def stream_with_deep_agent(
 
         # ===== Phase 3: Process Result =====
         try:
+            result_prompt_versions = result.get("prompt_versions", {})
+            used_prompt_versions.update(result_prompt_versions)
+            await persist_used_prompt_versions()
             raw_answer = result["final_answer"]
             tool_executions = result.get("tool_executions", 0)
             trace_id = result.get("trace_id", "unknown")
