@@ -2,14 +2,21 @@
 
 from typing import Any
 
-from pydantic import Field
+from pydantic import PrivateAttr
 
 from src.core.localization import ANALYSIS_OUTPUT_LANG
 from src.models.trading_decision import PortfolioDecisionList
 
 
 class GovernedPortfolioDecisionList(PortfolioDecisionList):
-    prompt_versions: dict[str, str] = Field(default_factory=dict)
+    _prompt_versions: dict[str, str] = PrivateAttr(default_factory=dict)
+
+    @property
+    def prompt_versions(self) -> dict[str, str]:
+        return dict(self._prompt_versions)
+
+    def record_prompt_version(self, prompt_id: str, version: str) -> None:
+        self._prompt_versions[prompt_id] = version
 
 
 def _phase2_language_directive() -> str:

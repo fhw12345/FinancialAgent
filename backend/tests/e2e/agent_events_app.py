@@ -7,6 +7,7 @@ from typing import Any
 from uuid import uuid4
 
 from src.agent.flow_router import FlowRoutingDecision
+from src.agent.portfolio import flows as portfolio_flows
 from src.api.dependencies.chat_deps import (
     get_chat_agent,
     get_deep_agent,
@@ -111,6 +112,10 @@ class DeepAgent:
             "tool_executions": 0,
             "trace_id": "uaw009_deep",
             "research_context": {},
+            "prompt_versions": {
+                "deep-debater": "deep-debater@2",
+                "deep-verdict": "deep-verdict@1",
+            },
         }
 
 
@@ -131,3 +136,13 @@ CacheWarmingService.warm_startup_cache = skip_cache_warming
 @app.get("/api/test/idempotency-count")
 async def idempotency_count() -> dict[str, int]:
     return {"execution_count": execution_count}
+
+
+async def governed_holdings_flow(app: Any, settings: Any) -> dict[str, Any]:
+    return {
+        "message": "PROMPT_GOVERNANCE_PORTFOLIO_OK",
+        "result_count": 1,
+    }
+
+
+portfolio_flows.run_analyze_holdings = governed_holdings_flow

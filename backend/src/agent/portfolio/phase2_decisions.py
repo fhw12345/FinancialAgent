@@ -86,7 +86,6 @@ class Phase2DecisionsMixin:
             symbol_analyses: List of SymbolAnalysisResult from Phase 1
             portfolio_context: Portfolio state (equity, buying_power, positions)
             user_id: User ID for tracking
-
         Returns the governed structured decision batch, or None on failure.
         """
         if not symbol_analyses:
@@ -159,8 +158,9 @@ class Phase2DecisionsMixin:
                 schema=GovernedPortfolioDecisionList,
                 context=None,  # Context is embedded in prompt
             )
-            decision_result.prompt_versions[phase2_prompt.prompt_id] = (
-                phase2_prompt.versioned_id
+            decision_result.record_prompt_version(
+                phase2_prompt.prompt_id,
+                phase2_prompt.versioned_id,
             )
 
             logger.info(

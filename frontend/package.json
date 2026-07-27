@@ -25,7 +25,8 @@
     "test:e2e:uaw-007": "playwright test e2e/uaw-007-shared-run-model.spec.ts",
     "test:e2e:uaw-008": "playwright test e2e/uaw-008-unified-lifecycle.spec.ts",
     "test:e2e:uaw-009": "playwright test e2e/uaw-009-agent-events.spec.ts",
-    "test:e2e:uaw-010": "playwright test e2e/uaw-010-request-idempotency.spec.ts"
+    "test:e2e:uaw-010": "playwright test e2e/uaw-010-request-idempotency.spec.ts",
+    "test:e2e:prompt-governance": "playwright test e2e/prompt-governance.spec.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.0",

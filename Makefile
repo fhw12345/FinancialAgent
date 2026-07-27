@@ -1,7 +1,7 @@
 # Financial Agent Development Makefile
 # Following the coding guide requirements for fmt, test, lint commands
 
-.PHONY: help dev build test eval test-e2e test-e2e-real test-e2e-uaw002 test-e2e-uaw003 test-e2e-uaw004 test-e2e-uaw005 test-e2e-uaw006 test-e2e-uaw007 test-e2e-uaw008 test-e2e-uaw009 test-e2e-uaw010 lint fmt clean up down logs copilot-reverse
+.PHONY: help dev build test eval test-e2e test-e2e-real test-e2e-uaw002 test-e2e-uaw003 test-e2e-uaw004 test-e2e-uaw005 test-e2e-uaw006 test-e2e-uaw007 test-e2e-uaw008 test-e2e-uaw009 test-e2e-uaw010 test-e2e-prompt-governance lint fmt clean up down logs copilot-reverse
 
 # Default target
 help:
@@ -187,6 +187,14 @@ test-e2e-uaw010:
 	docker compose exec redis redis-cli -n 8 FLUSHDB
 	docker compose --profile e2e restart backend-events-e2e frontend-events-e2e
 	docker compose --profile e2e run --rm --no-deps -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:3008 e2e sh -c "until curl -fsS http://host.docker.internal:18089/api/health; do sleep 2; done; until curl -fsS http://host.docker.internal:3008; do sleep 2; done; UPDATE_E2E_EVIDENCE=true npm run test:e2e:uaw-010"
+
+test-e2e-prompt-governance:
+	docker compose exec mongodb mongosh --quiet --eval 'db.getSiblingDB("financial_agent_events_e2e").dropDatabase()'
+	docker compose exec redis redis-cli -n 8 FLUSHDB
+	docker compose exec mongodb mongosh --quiet --eval 'db.getSiblingDB("financial_agent_events_e2e").user_settings.insertOne({cash_balance:100000,risk_tolerance:"moderate",max_position_pct:10})'
+	docker compose exec mongodb mongosh --quiet --eval 'db.getSiblingDB("financial_agent_events_e2e").holdings.insertOne({holding_id:"holding_prompt_e2e",symbol:"AAPL",quantity:10,avg_price:180,cost_basis:1800,current_price:200,market_value:2000,unrealized_pl:200,unrealized_pl_pct:11.11,created_at:new Date(),updated_at:new Date()})'
+	docker compose --profile e2e restart backend-events-e2e frontend-events-e2e
+	docker compose --profile e2e run --rm --no-deps -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:3008 e2e sh -c "until curl -fsS http://host.docker.internal:18089/api/health; do sleep 2; done; until curl -fsS http://host.docker.internal:3008; do sleep 2; done; UPDATE_E2E_EVIDENCE=true npm run test:e2e:prompt-governance"
 
 # Building
 build:
