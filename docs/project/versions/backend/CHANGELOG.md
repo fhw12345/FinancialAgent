@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.46.0] - 2026-07-27
+
+### Consistency gate prompt governance
+
+- Added the runtime-linked `consistency-gate@2` registry template.
+- Preserved the existing Pydantic `GateVerdict` output contract.
+- Records no prompt version when clean research skips the LLM.
+- Propagates actual gate prompt usage through per-symbol Portfolio research.
+
 ## [0.45.0] - 2026-07-27
 
 ### Deep prompt governance
