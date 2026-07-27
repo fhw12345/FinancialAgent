@@ -37,6 +37,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
 from src.agent.llm_factory import get_llm
+from src.agent.prompt_registry import get_prompt, render_prompt
 
 logger = structlog.get_logger(__name__)
 
@@ -50,6 +51,7 @@ _UNAVAILABLE_RX = re.compile(
     r"⚠️\s*\*\*([\w\s]+)\s+unavailable\s+for\s+([A-Z]{1,5})\.\*\*",
     re.IGNORECASE,
 )
+prompt_versions: dict[str, str] = Field(default_factory=dict)
 _STALE_FIB_RX = re.compile(r"STALE\s+FIB\s+SWING")
 _RANGE_POS_RX = re.compile(r"range_position:\s*(above_range|below_range|in_range)")
 
@@ -93,35 +95,12 @@ class GateVerdict(BaseModel):
         default=None,
         description="One short sentence summarising the verdict; optional",
     )
+    prompt_versions: dict[str, str] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
 # Gate runner
 # ---------------------------------------------------------------------------
-
-
-_SYSTEM_PROMPT = """You are a research-quality gate. You will receive:
-
-1. A market-research report for a single stock symbol.
-2. A list of `degraded` data signals detected upstream (data unavailable,
-   stale Fibonacci swing, etc.).
-
-Your ONLY job: check whether the report's bullish or bearish thesis
-bullets cite any of those degraded fields as evidence. Examples of
-violations:
-- Report says "P/E unavailable" but thesis says "the stock is the
-  cheapest in its cohort".
-- Report says "STALE FIB SWING" but thesis says "support at the
-  golden zone $264".
-
-Return passed=true if no thesis bullet relies on a degraded signal.
-Return passed=false with violations[] listing each. Each violation
-includes the exact 1-2 line quote and which degraded field it cites.
-
-Do NOT evaluate the analytical correctness or quality of the report —
-only check this single consistency rule. Be terse. If degraded list
-is empty, return passed=true with no violations.
-"""
 
 
 _RESEARCH_TRUNCATE_CHARS = 6000
@@ -152,13 +131,20 @@ async def run_consistency_gate(
     )
 
     try:
+        prompt = get_prompt("consistency-gate")
         llm = get_llm("simple_chat", temperature=0.0, max_tokens=400)
         structured = llm.with_structured_output(GateVerdict)
         verdict = await structured.ainvoke(
             [
-                SystemMessage(content=_SYSTEM_PROMPT),
+                SystemMessage(content=render_prompt("consistency-gate")),
                 HumanMessage(content=user_msg),
             ]
+        )
+        verdict = GateVerdict.model_validate(verdict).model_copy(
+            update={"prompt_versions": {prompt.prompt_id: prompt.versioned_id}}
+        )
+        verdict = GateVerdict.model_validate(verdict).model_copy(
+            update={"prompt_versions": {prompt.prompt_id: prompt.versioned_id}}
         )
     except Exception as e:  # pragma: no cover — network-class failure
         logger.warning(

@@ -82,6 +82,7 @@ async def test_gate_skips_llm_when_no_degraded() -> None:
         verdict, degraded = await run_consistency_gate("AAPL", text)
     assert verdict.passed is True
     assert verdict.violations == []
+    assert verdict.prompt_versions == {}
     assert degraded == []
     # Cost discipline: do NOT call the LLM when nothing to check.
     mock_llm.assert_not_called()
@@ -115,6 +116,7 @@ async def test_gate_calls_llm_when_degraded_present() -> None:
         verdict, degraded = await run_consistency_gate("AAPL", text)
     assert verdict.passed is False
     assert len(verdict.violations) == 1
+    assert verdict.prompt_versions == {"consistency-gate": "consistency-gate@2"}
     assert len(degraded) == 1
 
 

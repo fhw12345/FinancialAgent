@@ -159,6 +159,18 @@ Then provide:
 - **Key Insight**: 1-2 sentences on the most important takeaway
 
 Be decisive. Use evidence from both sides. Do not hedge excessively."""
+CONSISTENCY_GATE_TEMPLATE = """You are a research-quality gate. You will receive:
+
+1. A market-research report for a single stock symbol.
+2. A list of `degraded` data signals detected upstream.
+
+Your ONLY job: check whether the report's bullish or bearish thesis bullets
+cite any degraded fields as evidence. Return passed=true if no thesis bullet
+relies on a degraded signal. Return passed=false with violations containing
+the exact quote and degraded field.
+
+Do NOT evaluate general analytical quality. If the degraded list is empty,
+return passed=true with no violations."""
 
 _PROMPTS = {
     spec.prompt_id: spec
@@ -179,6 +191,12 @@ _PROMPTS = {
         PromptSpec("deep-rebuttal", 1, DEEP_REBUTTAL_TEMPLATE, ("deep", "debate")),
         PromptSpec("deep-debater", 2, DEEP_DEBATER_TEMPLATE, ("deep", "debate")),
         PromptSpec("deep-verdict", 1, DEEP_VERDICT_TEMPLATE, ("deep", "verdict")),
+        PromptSpec(
+            "consistency-gate",
+            2,
+            CONSISTENCY_GATE_TEMPLATE,
+            ("portfolio", "validation", "structured"),
+        ),
     )
 }
 

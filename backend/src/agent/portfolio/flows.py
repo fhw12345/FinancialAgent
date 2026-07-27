@@ -79,6 +79,7 @@ async def _apply_consistency_gate(phase1_results: list[Any]) -> None:
                 {"field": v.field, "quote": v.quote} for v in verdict.violations
             ]
             r.degraded_fields = degraded
+            r.prompt_versions.update(verdict.prompt_versions)
             if not verdict.passed:
                 hint = violations_as_corrective_hint(verdict.violations)
                 logger.warning(

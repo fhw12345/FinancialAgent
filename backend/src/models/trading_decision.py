@@ -618,6 +618,7 @@ class SymbolAnalysisResult(BaseModel):
     consistency_passed: bool | None = None
     consistency_violations: list[dict[str, Any]] = Field(default_factory=list)
     degraded_fields: list[str] = Field(default_factory=list)
+    prompt_versions: dict[str, str] = Field(default_factory=dict)
 
 
 class PortfolioDecisionList(BaseModel):

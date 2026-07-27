@@ -15,6 +15,7 @@ def test_registry_has_stable_versioned_prompt_ids():
     assert snapshot["deep-debater"] == "deep-debater@2"
     assert snapshot["deep-rebuttal"] == "deep-rebuttal@1"
     assert snapshot["deep-verdict"] == "deep-verdict@1"
+    assert snapshot["consistency-gate"] == "consistency-gate@2"
 
 
 def test_router_prompt_renders_context_and_unknown_prompt_fails():
