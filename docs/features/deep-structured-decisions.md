@@ -19,6 +19,9 @@ related_paths:
 
 # P1: Deep Structured Decisions
 
+Shipped in implementation commit `3631bae`, backend `0.48.0`, with browser
+evidence captured by the Prompt Governance Playwright flow.
+
 ## Delivered
 
 - Debater concerns and rebuttals accept one strict JSON object validated by

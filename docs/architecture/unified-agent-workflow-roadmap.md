@@ -639,7 +639,8 @@ machine decisions should not depend on regex parsing.
 Implementation status: routing, symbol resolution, Deep debate/rebuttal/verdict,
 Portfolio decisions, consistency gate, and clarification requests now use
 structured contracts. Deep multi-round decision integrity and durable verdict
-signal persistence shipped in backend `0.48.0`.
+signal persistence shipped in backend `0.48.0`, implementation commit
+`3631bae`.
 
 ### 9.3 Enforce Budgets
 
