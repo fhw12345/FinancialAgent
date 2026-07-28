@@ -22,7 +22,7 @@ import {
   formatNewsSentimentResponse,
   formatStochasticResponse,
 } from "./analysisFormatters";
-import { calculateDateRange } from "../../utils/dateRangeCalculator";
+import { calculateDateRangeForSymbol } from "../../utils/dateRangeCalculator";
 import {
   extractFibonacciMetadata,
   extractStochasticMetadata,
@@ -56,6 +56,7 @@ export const useAnalysis = (
   onRouteSelected?: (event: RouteSelectedEvent) => void,
   onStreamMode?: (event: ResponseStreamModeEvent) => void,
   onRunState?: (event: RunStateEvent) => void,
+  onChatCreated?: (id: string) => void,
 ) => {
   const queryClient = useQueryClient();
   const abortActiveRef = useRef<(() => void) | null>(null);
@@ -126,7 +127,9 @@ export const useAnalysis = (
           },
           (newChatId: string) => {
             // Chat created callback - save new chat ID
-            if (setChatId) {
+            if (onChatCreated) {
+              onChatCreated(newChatId);
+            } else if (setChatId) {
               setChatId(newChatId);
             }
             // Don't invalidate here - wait for stream completion to avoid duplicate requests
@@ -341,6 +344,7 @@ export const useButtonAnalysis = (
   selectedInterval?: string,
   chatId?: string | null,
   setChatId?: (id: string) => void,
+  onChatCreated?: (id: string) => void,
 ) => {
   const queryClient = useQueryClient();
 
@@ -393,9 +397,10 @@ export const useButtonAnalysis = (
             throw new Error("Please select a stock symbol first.");
 
           // Calculate date range using shared utility
-          const dateRange = calculateDateRange(
+          const dateRange = calculateDateRangeForSymbol(
             selectedDateRange,
             (selectedInterval as "1d" | "1w" | "1mo") || "1d",
+            currentSymbol,
           );
 
           const result = await analysisService.fibonacciAnalysis({
@@ -437,9 +442,10 @@ export const useButtonAnalysis = (
             throw new Error("Please select a stock symbol first.");
 
           // Calculate date range using shared utility
-          const dateRange = calculateDateRange(
+          const dateRange = calculateDateRangeForSymbol(
             selectedDateRange,
             (selectedInterval as "1d" | "1w" | "1mo") || "1d",
+            currentSymbol,
           );
 
           const result = await analysisService.stochasticAnalysis({
@@ -531,7 +537,9 @@ export const useButtonAnalysis = (
             (newChatId: string) => {
               // Capture new chat ID for use in second call
               activeChatId = newChatId;
-              if (setChatId) {
+              if (onChatCreated) {
+                onChatCreated(newChatId);
+              } else if (setChatId) {
                 setChatId(newChatId);
               }
             },

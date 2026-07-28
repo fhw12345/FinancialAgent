@@ -49,7 +49,7 @@ async def fibonacci_analysis(
 
     try:
         # Validate date range first
-        validate_date_range(request.start_date, request.end_date)
+        validate_date_range(request.start_date, request.end_date, request.symbol)
 
         # Intraday intervals (1m, 60m) are not supported for Fibonacci analysis
         # Reason: Insufficient historical data (Alpha Vantage compact mode ~100 bars)

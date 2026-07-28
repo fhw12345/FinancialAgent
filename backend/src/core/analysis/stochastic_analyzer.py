@@ -166,6 +166,7 @@ class StochasticAnalyzer:
                 "1d": "daily",
                 "1w": "weekly",
                 "1M": "monthly",
+                "1mo": "monthly",
             }
             granularity = granularity_map.get(self.timeframe, "daily")
 
@@ -178,7 +179,9 @@ class StochasticAnalyzer:
             ohlcv_list = await self.data_manager.get_ohlcv(
                 symbol=self.symbol,
                 granularity=granularity,
-                outputsize="compact",  # 6 months is sufficient for stochastic
+                outputsize="full" if start_date and end_date else "compact",
+                start_date=start_date,
+                end_date=end_date,
             )
 
             if not ohlcv_list:
@@ -205,15 +208,6 @@ class StochasticAnalyzer:
 
             # Sort by date ascending (oldest first) for stochastic calculation
             data = data.sort_index()
-
-            # Apply date filters if provided
-            if start_date:
-                start_dt = pd.Timestamp(start_date, tz=UTC)
-                data = data[data.index >= start_dt]
-
-            if end_date:
-                end_dt = pd.Timestamp(end_date, tz=UTC)
-                data = data[data.index <= end_dt]
 
             logger.info(
                 "Fetched stock data via DataManager",

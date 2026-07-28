@@ -7,6 +7,7 @@ import { useCallback } from "react";
 import type { ChatMessage } from "../types/api";
 import type { TimeInterval } from "../services/market";
 import { parseBackendMessage } from "../utils/messageParser";
+import { calculateDateRangeForSymbol } from "../utils/dateRangeCalculator";
 
 interface ChatRestoreCallbacks {
   setMessages: (messages: ChatMessage[]) => void;
@@ -86,7 +87,15 @@ export function useChatRestoration(callbacks: ChatRestoreCallbacks) {
             end: uiState.current_date_range.end,
           });
         } else {
-          setSelectedDateRange({ start: "", end: "" });
+          setSelectedDateRange(
+            uiState.current_symbol
+              ? calculateDateRangeForSymbol(
+                  { start: "", end: "" },
+                  (uiState.current_interval as TimeInterval) || "1d",
+                  uiState.current_symbol,
+                )
+              : { start: "", end: "" },
+          );
         }
 
         // TODO: Restore active_overlays when overlay state management is implemented

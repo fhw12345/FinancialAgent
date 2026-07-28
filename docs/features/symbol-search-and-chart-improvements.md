@@ -1,21 +1,94 @@
 ---
 title: Symbol Search and Chart Visualization Improvements
 status: in-progress
-version: backend@0.8.x, frontend@0.10.x
-last_updated: 2026-05-16
+version: backend@0.48.0, frontend@0.29.0
+last_updated: 2026-07-28
 owner: maintainer
 related_paths:
   - backend/src/api/market/search.py
   - backend/src/api/market/prices.py
-  - frontend/src/components/Chart/
+  - frontend/src/components/TradingChart.tsx
+  - frontend/src/components/chart/
+  - frontend/src/components/chat/ChartPanel.tsx
+  - frontend/src/components/chat/useAnalysis.ts
+  - frontend/src/utils/dateRangeCalculator.ts
 ---
 
 # Symbol Search and Chart Visualization Improvements
 
 > Phase 1 (deduplication, match_type ranking, OHLC tooltip) shipped. Phase 2
 > backend date-range support (`start_date` / `end_date` in analysis endpoints)
-> shipped; matching frontend `DateRangePicker` component not yet implemented.
-> Phase 3 candlestick / volume overlay still planning.
+> and frontend `DateRangePicker` shipped in backend `0.49.0` and frontend
+> `0.29.0`. Phase 3 candlestick / volume overlay remains planning.
+
+## Current Delivery Slice (2026-07-28)
+
+This iteration completed the remaining Phase 2 frontend and provider contract:
+
+- add an accessible date range picker with `1W`, `1M`, `3M`, `6M`, `1Y`,
+  `YTD`, and `Max` presets;
+- keep draft input separate from the applied range;
+- validate required dates, ordering, future dates, the five-year analysis
+  limit, and the 30-day intraday provider limit;
+- send the applied range to `/api/market/price/{symbol}`;
+- send the same range to Fibonacci and Stochastic requests;
+- show the applied range and inclusive day count near the chart;
+- reset to interval-appropriate defaults when the symbol or interval changes.
+
+Fundamental statements, company overview, news sentiment, macro sentiment, and
+market movers intentionally remain latest-snapshot workflows. A historical
+date range does not change those provider contracts.
+
+### State Contract
+
+```text
+draft range
+  -> validate on Apply
+  -> applied selectedDateRange
+  -> price query key and request
+  -> Fibonacci/Stochastic request
+  -> Mongo-backed UI state
+```
+
+The existing chart-click range selection remains supported and updates the
+same applied state.
+
+### Risks
+
+- HTML date values must be treated as calendar dates rather than local
+  midnight timestamps to avoid timezone shifts.
+- Applying one side of a range must not silently fall back to defaults.
+- Intraday presets outside the provider's 30-day window must be disabled or
+  rejected before network I/O.
+- A failed draft must not invalidate the last successfully applied range.
+
+### Test and Browser Evidence
+
+- unit-test preset calculation, inclusive day counts, and validation;
+- component-test Apply, reset, invalid order, future date, and intraday limits;
+- service-test price query serialization with `start_date` and `end_date`;
+- verify Fibonacci and Stochastic receive the applied range;
+- Playwright: select `AAPL`, apply a custom range, observe the chart request,
+  run Fibonacci, and verify the persisted analysis metadata contains the same
+  range;
+- save curated screenshots under
+  `docs/features/assets/symbol-date-range/`.
+
+## Phase 2 Delivery
+
+- Accessible draft/apply/reset picker with quick presets.
+- Symbol-scoped market calendars for US, Hong Kong, mainland China, Japan, and
+  London ticker suffixes.
+- Explicit range isolation in DataManager cache keys and invalidation.
+- Range-aware yfinance retrieval, including seven-day chunking for 1-minute
+  data.
+- No fallback to unrelated recent bars when an explicit range is empty.
+- Correct monthly granularity and full-history Fibonacci/Stochastic retrieval.
+- Exact-range Fibonacci overlays and Mongo-backed UI-state restoration.
+- Two Playwright scenarios with curated screenshot evidence.
+- Final validation: 1,910 backend tests and 243 frontend tests passed; frontend
+  lint/type-check passed. Full-repository mypy retains 311 pre-existing errors,
+  while the new market-calendar and endpoint modules pass focused mypy.
 
 ## Context
 

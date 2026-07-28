@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.0] - 2026-07-28
+
+### Explicit market-data date ranges
+
+- Passes explicit ranges through DataManager and provider fetches.
+- Isolates compact, full, and range-specific OHLCV cache entries.
+- Chunks one-minute yfinance history into supported windows.
+- Removes unrelated recent-bar fallback for empty explicit ranges.
+- Preserves five-year daily ranges and monthly analysis granularity.
+- Uses symbol-scoped exchange calendars and rejects partial ranges.
+
 ## [0.48.0] - 2026-07-28
 
 ### Deep structured decisions

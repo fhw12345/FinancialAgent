@@ -3,7 +3,7 @@ Extended price bars methods (extended intraday and unified get_price_bars).
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from io import StringIO
 from typing import Any
 
@@ -231,6 +231,8 @@ class BarsExtendedMixin(AlphaVantageBase):
         frontend_to_granularity = {
             "1m": "1min",
             "1min": "1min",
+            "2m": "2min",
+            "2min": "2min",
             "5m": "5min",
             "5min": "5min",
             "15m": "15min",
@@ -258,7 +260,13 @@ class BarsExtendedMixin(AlphaVantageBase):
                 else "compact"
             )
             try:
-                df_yf = await yfinance_bars.get_bars(symbol, granularity, outputsize)
+                df_yf = await yfinance_bars.get_bars(
+                    symbol,
+                    granularity,
+                    outputsize,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
                 logger.info(
                     "Price bars via yfinance",
                     symbol=symbol,
@@ -271,6 +279,8 @@ class BarsExtendedMixin(AlphaVantageBase):
                 )
             except Exception as yf_err:
                 if not self.api_key:
+                    if start_date and end_date and "returned no bars" in str(yf_err):
+                        return pd.DataFrame()
                     logger.error(
                         "yfinance bars failed (no AV fallback)",
                         symbol=symbol,
@@ -295,14 +305,16 @@ class BarsExtendedMixin(AlphaVantageBase):
                     av_interval = interval.replace("m", "min")
 
                 # Use TIME_SERIES_INTRADAY (converged API with extended hours support)
-                # Use compact mode (100 bars)
-                df = await self.get_intraday_bars(symbol, av_interval, "compact")  # type: ignore[attr-defined]
+                outputsize = "full" if start_date and end_date else "compact"
+                df = await self.get_intraday_bars(  # type: ignore[attr-defined]
+                    symbol, av_interval, outputsize
+                )
 
                 logger.info(
                     "Fetched intraday data",
                     symbol=symbol,
                     interval=interval,
-                    outputsize="compact",
+                    outputsize=outputsize,
                     bars_count=len(df),
                     time_range=(
                         f"{df.index.min()} to {df.index.max()}"
@@ -371,7 +383,7 @@ class BarsExtendedMixin(AlphaVantageBase):
         sources produce identically-shaped output.
         """
         # Apply interval-specific time caps
-        if not df.empty:
+        if not df.empty and not (start_date and end_date):
             time_cap_years = {
                 "1d": 2,
                 "day": 2,
@@ -408,26 +420,11 @@ class BarsExtendedMixin(AlphaVantageBase):
         # Filter data by custom date range OR apply default limits
         if not df.empty:
             if start_date and end_date:
-                if df.index.tz is not None:
-                    start_dt = pd.to_datetime(start_date).tz_localize(
-                        "America/New_York"
-                    )
-                    end_dt = (
-                        pd.to_datetime(end_date)
-                        + pd.Timedelta(days=1)
-                        - pd.Timedelta(seconds=1)
-                    ).tz_localize("America/New_York")
-                else:
-                    start_dt = pd.to_datetime(start_date)
-                    end_dt = (
-                        pd.to_datetime(end_date)
-                        + pd.Timedelta(days=1)
-                        - pd.Timedelta(seconds=1)
-                    )
-
                 original_count = len(df)
-                original_df_copy = df.copy()
-                df = df[(df.index >= start_dt) & (df.index <= end_dt)]
+                start = date.fromisoformat(start_date)
+                end = date.fromisoformat(end_date)
+                index_dates = pd.Index(df.index.date)
+                df = df[(index_dates >= start) & (index_dates <= end)]
 
                 logger.info(
                     "Filtered to custom date range",
@@ -438,19 +435,6 @@ class BarsExtendedMixin(AlphaVantageBase):
                     original_count=original_count,
                     filtered_count=len(df),
                 )
-
-                # For intraday: if no data, fall back to most recent available
-                if df.empty and interval in ["1m", "60m", "1h", "60min"]:
-                    logger.info(
-                        "No data for requested date range, returning most recent intraday data",
-                        symbol=symbol,
-                        interval=interval,
-                        requested_range=f"{start_date} to {end_date}",
-                    )
-                    df = original_df_copy
-                    max_bars = 420 if interval == "1m" else 85
-                    if len(df) > max_bars:
-                        df = df.tail(max_bars)
             else:
                 # Apply default bar limits
                 max_bars_map: dict[str, int] = {

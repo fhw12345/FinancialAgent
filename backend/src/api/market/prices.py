@@ -125,7 +125,12 @@ async def get_price_data(
 
         # Validate custom date range if provided
         if start_date or end_date:
-            is_valid, error_msg = validate_date_range(start_date, end_date, interval)
+            is_valid, error_msg = validate_date_range(
+                start_date,
+                end_date,
+                interval,
+                symbol,
+            )
             if not is_valid:
                 raise ValueError(error_msg)
 

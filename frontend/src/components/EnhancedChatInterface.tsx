@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { agentRunService } from "../services/api";
+import { agentRunService, chatService } from "../services/api";
 import { marketService, TimeInterval } from "../services/market";
 import { useChatManager } from "./chat/useChatManager";
 import { useAnalysis, useButtonAnalysis } from "./chat/useAnalysis";
@@ -13,8 +13,8 @@ import { useChatRestoration } from "../hooks/useChatRestoration";
 import { useUIStateSync } from "../hooks/useUIStateSync";
 import type { FibonacciMetadata } from "../utils/analysisMetadataExtractor";
 import {
+  calculateDateRangeForSymbol,
   getPeriodForInterval,
-  calculateDateRange,
 } from "../utils/dateRangeCalculator";
 import type {
   AgentFlow,
@@ -120,6 +120,18 @@ export function EnhancedChatInterface() {
     () => ({ start: dateRangeStart, end: dateRangeEnd }),
     [dateRangeStart, dateRangeEnd],
   );
+  const latestUIStateRef = useRef({
+    currentSymbol,
+    currentCompanyName,
+    selectedInterval,
+    selectedDateRange,
+  });
+  latestUIStateRef.current = {
+    currentSymbol,
+    currentCompanyName,
+    selectedInterval,
+    selectedDateRange,
+  };
 
   // Stable setter for date range
   const setSelectedDateRange = useCallback(
@@ -131,6 +143,43 @@ export function EnhancedChatInterface() {
   );
 
   const { messages, setMessages, chatId, setChatId } = useChatManager();
+
+  const setCreatedChatId = useCallback(
+    (newChatId: string) => {
+      setChatId(newChatId);
+
+      const persistLatestState = async (attempt = 0): Promise<void> => {
+        const latest = latestUIStateRef.current;
+        if (!latest.currentSymbol && !latest.selectedDateRange.start) return;
+        try {
+          await chatService.updateUIState(newChatId, {
+            ui_state: {
+              current_symbol: latest.currentSymbol || null,
+              current_company_name: latest.currentCompanyName || null,
+              current_interval: latest.selectedInterval,
+              current_date_range: {
+                start: latest.selectedDateRange.start || null,
+                end: latest.selectedDateRange.end || null,
+              },
+              active_overlays: {},
+            },
+          });
+        } catch (error) {
+          if (attempt < 2) {
+            window.setTimeout(
+              () => void persistLatestState(attempt + 1),
+              500 * (attempt + 1),
+            );
+            return;
+          }
+          console.error("Failed to persist initial chat UI state:", error);
+        }
+      };
+
+      void persistLatestState();
+    },
+    [setChatId],
+  );
 
   // Chat restoration hook
   const { restoreChat } = useChatRestoration({
@@ -166,7 +215,9 @@ export function EnhancedChatInterface() {
         msg.analysis_data &&
         msg.analysis_data.symbol === currentSymbol &&
         msg.analysis_data.fibonacci_levels &&
-        msg.analysis_data.timeframe === selectedInterval
+        msg.analysis_data.timeframe === selectedInterval &&
+        msg.analysis_data.start_date === selectedDateRange.start &&
+        msg.analysis_data.end_date === selectedDateRange.end
       ) {
         fibMessage = msg;
         break;
@@ -176,7 +227,13 @@ export function EnhancedChatInterface() {
     // Type guard to ensure proper typing
     if (!fibMessage?.analysis_data) return null;
     return fibMessage.analysis_data as unknown as FibonacciMetadata;
-  }, [messages, currentSymbol, selectedInterval]);
+  }, [
+    messages,
+    currentSymbol,
+    selectedInterval,
+    selectedDateRange.start,
+    selectedDateRange.end,
+  ]);
 
   // Chat mutation for user messages
   const chatMutation = useAnalysis(
@@ -191,6 +248,7 @@ export function EnhancedChatInterface() {
     handleRouteSelected,
     handleStreamMode,
     handleRunState,
+    setCreatedChatId,
   );
 
   // Button analysis mutation for quick analysis buttons
@@ -202,6 +260,7 @@ export function EnhancedChatInterface() {
     selectedInterval,
     chatId,
     setChatId,
+    setCreatedChatId,
   );
 
   const priceDataQuery = useQuery({
@@ -212,17 +271,13 @@ export function EnhancedChatInterface() {
       selectedDateRange.start,
       selectedDateRange.end,
     ],
-    queryFn: () => {
-      // Don't send dates - just use period for all intervals
-      // This follows the principle: "show what we got" - full data without filtering
-      // 1m, 60m: compact mode (100 bars)
-      // 1d, 1w, 1mo: full mode (20+ years)
-      return marketService.getPriceData(currentSymbol, {
+    queryFn: () =>
+      marketService.getPriceData(currentSymbol, {
         interval: selectedInterval,
         period: getPeriodForInterval(selectedInterval),
-        // No custom dates - always show full available data
-      });
-    },
+        start_date: selectedDateRange.start || undefined,
+        end_date: selectedDateRange.end || undefined,
+      }),
     enabled: !!currentSymbol,
     staleTime: 30000,
     refetchInterval: 60000,
@@ -235,9 +290,10 @@ export function EnhancedChatInterface() {
       setCurrentCompanyName(name);
 
       // Calculate date range for current interval
-      const dateRange = calculateDateRange(
+      const dateRange = calculateDateRangeForSymbol(
         { start: "", end: "" },
         selectedInterval,
+        symbol,
       );
       setDateRangeStart(dateRange.start);
       setDateRangeEnd(dateRange.end);
@@ -257,14 +313,20 @@ export function EnhancedChatInterface() {
     [handleSymbolSelect, t],
   );
 
-  const handleIntervalChange = useCallback((interval: TimeInterval) => {
-    setSelectedInterval(interval);
+  const handleIntervalChange = useCallback(
+    (interval: TimeInterval) => {
+      setSelectedInterval(interval);
 
-    // Calculate appropriate date range for this interval
-    const dateRange = calculateDateRange({ start: "", end: "" }, interval);
-    setDateRangeStart(dateRange.start);
-    setDateRangeEnd(dateRange.end);
-  }, []);
+      const dateRange = calculateDateRangeForSymbol(
+        { start: "", end: "" },
+        interval,
+        currentSymbol,
+      );
+      setDateRangeStart(dateRange.start);
+      setDateRangeEnd(dateRange.end);
+    },
+    [currentSymbol],
+  );
 
   const handleDateRangeSelect = useCallback(
     (startDate: string, endDate: string) => {

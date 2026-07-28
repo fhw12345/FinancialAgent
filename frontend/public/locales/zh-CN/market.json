@@ -80,7 +80,21 @@
     "fullscreen": "全屏",
     "reset": "重置",
     "compare": "对比",
-    "export": "导出"
+    "export": "导出",
+    "dateRange": {
+      "start": "开始日期",
+      "end": "结束日期",
+      "apply": "应用",
+      "reset": "重置",
+      "summary": "显示 {{start}} 至 {{end}}（{{days}} 天）。图表和技术分析将使用此范围。",
+      "errors": {
+        "required": "请选择开始和结束日期。",
+        "invalidOrder": "开始日期不能晚于结束日期。",
+        "future": "日期不能晚于今天。",
+        "tooLong": "最大日期范围为五年。",
+        "intradayTooLong": "分时数据仅支持最近 30 天。"
+      }
+    }
   },
   "news": {
     "title": "新闻资讯",

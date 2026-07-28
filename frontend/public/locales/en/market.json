@@ -80,7 +80,21 @@
     "fullscreen": "Fullscreen",
     "reset": "Reset",
     "compare": "Compare",
-    "export": "Export"
+    "export": "Export",
+    "dateRange": {
+      "start": "Start date",
+      "end": "End date",
+      "apply": "Apply",
+      "reset": "Reset",
+      "summary": "Showing {{start}} to {{end}} ({{days}} days). Chart and technical analyses use this range.",
+      "errors": {
+        "required": "Choose both a start and end date.",
+        "invalidOrder": "Start date must be on or before end date.",
+        "future": "Dates cannot be in the future.",
+        "tooLong": "The maximum range is five years.",
+        "intradayTooLong": "Intraday data is limited to the most recent 30 days."
+      }
+    }
   },
   "news": {
     "title": "News",

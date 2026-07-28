@@ -19,6 +19,7 @@ from typing import Literal
 
 import pandas as pd
 
+from ...core.utils.market_calendar import market_today
 from .bars_basic import BarsBasicMixin
 from .bars_extended import BarsExtendedMixin
 from .base import AlphaVantageBase
@@ -81,6 +82,7 @@ def validate_date_range(
     start_date: str | None,
     end_date: str | None,
     interval: str,
+    symbol: str | None = None,
 ) -> tuple[bool, str | None]:
     """
     Validate date range based on interval constraints.
@@ -97,9 +99,15 @@ def validate_date_range(
     Returns:
         (is_valid, error_message)
     """
+    if bool(start_date) != bool(end_date):
+        return False, "Both start_date and end_date are required together"
+
     # If no custom dates provided, always valid (use defaults)
-    if not start_date or not end_date:
+    if not start_date and not end_date:
         return True, None
+
+    assert start_date is not None
+    assert end_date is not None
 
     # Parse dates
     try:
@@ -114,11 +122,19 @@ def validate_date_range(
 
     # For intraday intervals, allow recent dates (last 30 days)
     # Show whatever data is available - market closed/pre/post hours data included
-    intraday_intervals = ["1m", "1h", "60min"]
+    intraday_intervals = [
+        "1m",
+        "2m",
+        "5m",
+        "15m",
+        "30m",
+        "60m",
+        "1h",
+        "60min",
+    ]
     if interval in intraday_intervals:
         # Get current date in Eastern Time
-        now_et = pd.Timestamp.now(tz="America/New_York")
-        today = now_et.date()
+        today = market_today(symbol)
 
         # Allow dates within last 30 days (Alpha Vantage intraday limit)
         earliest_allowed = today - pd.Timedelta(days=30)

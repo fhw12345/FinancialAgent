@@ -9,11 +9,7 @@ import React from "react";
 import { TimeInterval } from "../../services/market";
 
 type SupportedTimezone =
-  | "US/Eastern"
-  | "UTC"
-  | "Asia/Shanghai"
-  | "Europe/London"
-  | "Asia/Tokyo";
+  "US/Eastern" | "UTC" | "Asia/Shanghai" | "Europe/London" | "Asia/Tokyo";
 
 const TIMEZONE_OPTIONS: { value: SupportedTimezone; label: string }[] = [
   { value: "US/Eastern", label: "US Eastern (Market Time)" },
@@ -35,24 +31,16 @@ interface ChartHeaderProps {
   symbol: string;
   interval: TimeInterval;
   selectedTimezone: SupportedTimezone;
-  dateSelection: {
-    startDate: string | null;
-    endDate: string | null;
-    clickCount: number;
-  };
   onIntervalChange?: (interval: TimeInterval) => void;
   onTimezoneChange: (timezone: SupportedTimezone) => void;
-  highlightDateRange?: { start: string; end: string };
 }
 
 export const ChartHeader: React.FC<ChartHeaderProps> = ({
   symbol,
   interval,
   selectedTimezone,
-  dateSelection,
   onIntervalChange,
   onTimezoneChange,
-  highlightDateRange,
 }) => {
   return (
     <div className="mb-4">
@@ -61,19 +49,6 @@ export const ChartHeader: React.FC<ChartHeaderProps> = ({
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold">{symbol}</h3>
           </div>
-          {dateSelection.startDate && !highlightDateRange && (
-            <div className="mt-1">
-              {dateSelection.clickCount === 1 ? (
-                <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                  📅 Start: {dateSelection.startDate} • Click again for end date
-                </span>
-              ) : dateSelection.endDate ? (
-                <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                  📊 Range: {dateSelection.startDate} to {dateSelection.endDate}
-                </span>
-              ) : null}
-            </div>
-          )}
         </div>
 
         <div className="flex gap-2 items-center">

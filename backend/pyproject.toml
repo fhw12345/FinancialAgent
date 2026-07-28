@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "financial-agent-backend"
-version = "0.48.0"
+version = "0.49.0"
 description = "AI-Enhanced Financial Analysis Platform Backend"
 authors = []
 # readme = "README.md"
@@ -129,6 +129,7 @@ module = [
     "langchain_community.*",
     "langchain_core.*",
     "deepagents.*",
+    "yfinance.*",
 ]
 ignore_missing_imports = true
 

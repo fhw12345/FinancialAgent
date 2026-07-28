@@ -9,6 +9,7 @@ import { UseQueryResult, UseMutationResult, useQuery } from "@tanstack/react-que
 import { useTranslation } from "react-i18next";
 import { SymbolSearch } from "../SymbolSearch";
 import { TradingChart } from "../TradingChart";
+import { DateRangePicker } from "../chart/DateRangePicker";
 import { marketService } from "../../services/market";
 import {
   BarChart3,
@@ -204,6 +205,7 @@ const ChartPanelComponent: React.FC<ChartPanelProps> = ({
                   <button
                     onClick={() => handleQuickAnalysis("fibonacci")}
                     disabled={analysisMutation.isPending || priceDataQuery.isLoading}
+                    data-testid="analysis-fibonacci"
                     className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
                   >
                     {priceDataQuery.isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BarChart3 className="h-3.5 w-3.5" />}
@@ -212,6 +214,7 @@ const ChartPanelComponent: React.FC<ChartPanelProps> = ({
                   <button
                     onClick={() => handleQuickAnalysis("stochastic")}
                     disabled={analysisMutation.isPending || priceDataQuery.isLoading}
+                    data-testid="analysis-stochastic"
                     className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
                   >
                     {priceDataQuery.isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
@@ -284,6 +287,17 @@ const ChartPanelComponent: React.FC<ChartPanelProps> = ({
             </div>
           </div>
         )}
+        {currentSymbol && (
+          <DateRangePicker
+            value={selectedDateRange}
+            interval={selectedInterval}
+            symbol={currentSymbol}
+            onApply={(range) =>
+              handleDateRangeSelect(range.start, range.end)
+            }
+            disabled={priceDataQuery.isFetching}
+          />
+        )}
       </div>
 
       <div className="flex-1 p-4 overflow-y-auto">
@@ -350,11 +364,6 @@ const ChartPanelComponent: React.FC<ChartPanelProps> = ({
               interval={selectedInterval}
               onIntervalChange={handleIntervalChange}
               onDateRangeSelect={handleDateRangeSelect}
-              highlightDateRange={
-                selectedDateRange.start && selectedDateRange.end
-                  ? selectedDateRange
-                  : undefined
-              }
               fibonacciAnalysis={fibonacciAnalysis as any}
               className="bg-white rounded-lg border h-full"
             />

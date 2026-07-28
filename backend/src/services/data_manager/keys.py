@@ -33,7 +33,14 @@ class CacheKeys:
     INSIGHTS = "insights"
 
     @staticmethod
-    def market(granularity: str, symbol: str) -> str:
+    def market(
+        granularity: str,
+        symbol: str,
+        *,
+        outputsize: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> str:
         """
         Generate cache key for market OHLCV data.
 
@@ -44,7 +51,12 @@ class CacheKeys:
         Returns:
             Cache key like 'market:daily:AAPL'
         """
-        return f"{CacheKeys.MARKET}:{granularity.lower()}:{symbol.upper()}"
+        key = f"{CacheKeys.MARKET}:{granularity.lower()}:{symbol.upper()}"
+        if outputsize is not None:
+            key += f":{outputsize.lower()}"
+        if start_date is not None or end_date is not None:
+            key += f":{start_date or 'none'}:{end_date or 'none'}"
+        return key
 
     @staticmethod
     def treasury(maturity: str) -> str:

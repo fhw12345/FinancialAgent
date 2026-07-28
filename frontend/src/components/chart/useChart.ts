@@ -365,15 +365,10 @@ export const useChart = (
     });
   }, [fibonacciAnalysis]);
 
-  const setChartData = useCallback((
-    data: (LineData | CandlestickData)[],
-    highlightDateRange?: { start: string; end: string },
-  ) => {
+  const setChartData = useCallback((data: (LineData | CandlestickData)[]) => {
     if (seriesRef.current) {
       seriesRef.current.setData(data);
-      if (!highlightDateRange) {
-        chartRef.current?.timeScale().fitContent();
-      }
+      chartRef.current?.timeScale().fitContent();
     }
   }, []); // Empty deps - refs are stable
 

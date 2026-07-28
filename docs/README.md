@@ -60,6 +60,7 @@ All current documentation describes the local single-user application.
 - [Portfolio Prompt Builder Case Study](case-studies/2026-07-27-large-prompts-need-builders.md)
 - [Mandatory Browser Evidence Case Study](case-studies/2026-07-27-backend-tests-are-not-browser-evidence.md)
 - [Structured Verdict Consistency Case Study](case-studies/2026-07-27-markdown-and-machine-decisions-diverged.md)
+- [Date Range Provider Contract Case Study](case-studies/2026-07-28-date-ranges-need-provider-contracts.md)
 - [Unified Chat Lifecycle Case Study](case-studies/2026-07-20-three-chat-handlers-three-lifecycles.md)
 - [Shared Durable Run Model Case Study](case-studies/2026-07-20-one-run-model-four-lifecycles.md)
 - [Honest Streaming Semantics Case Study](case-studies/2026-07-17-typewriter-effect-was-not-streaming.md)

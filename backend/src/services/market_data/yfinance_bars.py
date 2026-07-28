@@ -27,6 +27,7 @@ Granularity → yfinance interval/period mapping:
 from __future__ import annotations
 
 import asyncio
+from datetime import date, timedelta
 
 import pandas as pd
 import structlog
@@ -38,6 +39,7 @@ logger = structlog.get_logger()
 # Granularity string → yfinance (interval, period_compact, period_full)
 _INTERVAL_MAP: dict[str, tuple[str, str, str]] = {
     "1min": ("1m", "1d", "7d"),
+    "2min": ("2m", "5d", "60d"),
     "5min": ("5m", "5d", "60d"),
     "15min": ("15m", "5d", "60d"),
     "30min": ("30m", "10d", "60d"),
@@ -49,7 +51,12 @@ _INTERVAL_MAP: dict[str, tuple[str, str, str]] = {
 
 
 def _fetch_sync(
-    symbol: str, granularity: str, outputsize: str, prepost: bool = False
+    symbol: str,
+    granularity: str,
+    outputsize: str,
+    prepost: bool = False,
+    start_date: str | None = None,
+    end_date: str | None = None,
 ) -> pd.DataFrame:
     """Blocking yfinance call. Returns AV-shaped DataFrame indexed by datetime.
 
@@ -60,12 +67,44 @@ def _fetch_sync(
     if spec is None:
         raise ValueError(f"Unsupported granularity for yfinance bars: {granularity}")
     interval, period_compact, period_full = spec
-    period = period_full if outputsize == "full" else period_compact
-
     ticker = yf.Ticker(symbol)
-    df = ticker.history(
-        period=period, interval=interval, auto_adjust=False, prepost=prepost
-    )
+    if start_date and end_date:
+        start = date.fromisoformat(start_date)
+        end_exclusive = date.fromisoformat(end_date) + timedelta(days=1)
+        if interval == "1m":
+            chunks: list[pd.DataFrame] = []
+            chunk_start = start
+            while chunk_start < end_exclusive:
+                chunk_end = min(chunk_start + timedelta(days=7), end_exclusive)
+                chunk = ticker.history(
+                    start=chunk_start.isoformat(),
+                    end=chunk_end.isoformat(),
+                    interval=interval,
+                    auto_adjust=False,
+                    prepost=prepost,
+                )
+                if chunk is not None and not chunk.empty:
+                    chunks.append(chunk)
+                chunk_start = chunk_end
+            df = pd.concat(chunks).sort_index() if chunks else pd.DataFrame()
+            if not df.empty:
+                df = df[~df.index.duplicated(keep="last")]
+        else:
+            df = ticker.history(
+                start=start.isoformat(),
+                end=end_exclusive.isoformat(),
+                interval=interval,
+                auto_adjust=False,
+                prepost=prepost,
+            )
+    else:
+        period = period_full if outputsize == "full" else period_compact
+        df = ticker.history(
+            period=period,
+            interval=interval,
+            auto_adjust=False,
+            prepost=prepost,
+        )
     if df is None or df.empty:
         raise RuntimeError(f"yfinance returned no bars for {symbol} ({granularity})")
 
@@ -83,6 +122,8 @@ async def get_bars(
     granularity: str,
     outputsize: str = "compact",
     prepost: bool = False,
+    start_date: str | None = None,
+    end_date: str | None = None,
 ) -> pd.DataFrame:
     """Async wrapper. Raises if yfinance can't return data so the caller's
     fallback chain (→ AV) can take over.
@@ -91,5 +132,11 @@ async def get_bars(
     16:00-20:00 ET). Default False keeps chart/indicator surfaces RTH-only.
     """
     return await asyncio.to_thread(
-        _fetch_sync, symbol, granularity, outputsize, prepost
+        _fetch_sync,
+        symbol,
+        granularity,
+        outputsize,
+        prepost,
+        start_date,
+        end_date,
     )

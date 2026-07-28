@@ -14,11 +14,7 @@ import { useChart } from "./chart/useChart";
 import { useChartData } from "./chart/useChartData";
 
 type SupportedTimezone =
-  | "US/Eastern"
-  | "UTC"
-  | "Asia/Shanghai"
-  | "Europe/London"
-  | "Asia/Tokyo";
+  "US/Eastern" | "UTC" | "Asia/Shanghai" | "Europe/London" | "Asia/Tokyo";
 
 interface FibonacciLevel {
   level: number;
@@ -59,7 +55,6 @@ interface TradingChartProps {
   interval: TimeInterval;
   onIntervalChange?: (interval: TimeInterval) => void;
   onDateRangeSelect?: (startDate: string, endDate: string) => void;
-  highlightDateRange?: { start: string; end: string };
   fibonacciAnalysis?: FibonacciAnalysisData | null;
   className?: string;
 }
@@ -71,23 +66,12 @@ export const TradingChart: React.FC<TradingChartProps> = ({
   interval,
   onIntervalChange,
   onDateRangeSelect,
-  highlightDateRange,
   fibonacciAnalysis,
   className = "",
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [selectedTimezone, setSelectedTimezone] =
     useState<SupportedTimezone>("US/Eastern");
-  const [dateSelection, setDateSelection] = useState<{
-    startDate: string | null;
-    endDate: string | null;
-    clickCount: number;
-  }>({
-    startDate: null,
-    endDate: null,
-    clickCount: 0,
-  });
-
   const [tooltip, setTooltip] = useState({
     visible: false,
     x: 0,
@@ -97,7 +81,6 @@ export const TradingChart: React.FC<TradingChartProps> = ({
   });
 
   const handleDateRangeSelect = (startDate: string, endDate: string) => {
-    setDateSelection({ startDate, endDate, clickCount: 0 });
     onDateRangeSelect?.(startDate, endDate);
   };
 
@@ -118,11 +101,8 @@ export const TradingChart: React.FC<TradingChartProps> = ({
 
   React.useEffect(() => {
     const chartData = convertToChartData();
-    setChartData(chartData, highlightDateRange);
-  }, [data, convertToChartData, setChartData, highlightDateRange]);
-
-  // Use highlightDateRange if available (from Fibonacci/Stochastic)
-  const displayDateRange = highlightDateRange || undefined;
+    setChartData(chartData);
+  }, [data, convertToChartData, setChartData]);
 
   return (
     <div className={`relative ${className}`}>
@@ -130,10 +110,8 @@ export const TradingChart: React.FC<TradingChartProps> = ({
         symbol={symbol}
         interval={interval}
         selectedTimezone={selectedTimezone}
-        dateSelection={dateSelection}
         onIntervalChange={onIntervalChange}
         onTimezoneChange={setSelectedTimezone}
-        highlightDateRange={displayDateRange}
       />
       <div className="relative">
         <div

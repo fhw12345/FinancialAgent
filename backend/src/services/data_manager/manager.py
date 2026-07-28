@@ -209,6 +209,8 @@ class DataManager:
         symbol: str,
         granularity: str | Granularity,
         outputsize: str = "compact",
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> list[OHLCVData]:
         """
         Get OHLCV bars for a symbol.
@@ -229,26 +231,63 @@ class DataManager:
         Raises:
             DataFetchError: If fetch fails
         """
+        if bool(start_date) != bool(end_date):
+            raise ValueError("Both start_date and end_date are required together")
+
         # Normalize granularity
         if isinstance(granularity, str):
+            aliases = {
+                "1m": "1min",
+                "5m": "5min",
+                "15m": "15min",
+                "30m": "30min",
+                "60m": "60min",
+                "1h": "60min",
+                "1d": "daily",
+                "1w": "weekly",
+                "1wk": "weekly",
+                "1mo": "monthly",
+            }
+            normalized_granularity = aliases.get(
+                granularity.lower(),
+                granularity.lower(),
+            )
             try:
-                gran = Granularity(granularity.lower())
+                gran = Granularity(normalized_granularity)
             except ValueError:
                 gran = Granularity.DAILY
         else:
             gran = granularity
 
         symbol = symbol.upper()
-        cache_key = CacheKeys.market(gran.value, symbol)
+        cache_key = CacheKeys.market(
+            gran.value,
+            symbol,
+            outputsize=outputsize,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
         # Skip cache for intraday
         if gran.is_intraday:
             logger.debug("ohlcv_no_cache", symbol=symbol, granularity=gran.value)
-            return await self._fetch_ohlcv(symbol, gran, outputsize)
+            return await self._fetch_ohlcv(
+                symbol,
+                gran,
+                outputsize,
+                start_date,
+                end_date,
+            )
 
         # Try cache first
-        async def fetch_func():
-            data = await self._fetch_ohlcv(symbol, gran, outputsize)
+        async def fetch_func() -> list[dict[str, Any]]:
+            data = await self._fetch_ohlcv(
+                symbol,
+                gran,
+                outputsize,
+                start_date,
+                end_date,
+            )
             return [d.to_dict() for d in data]
 
         cached = await self._cache.get_with_fetch(
@@ -265,6 +304,8 @@ class DataManager:
         symbol: str,
         granularity: Granularity,
         outputsize: str,
+        start_date: str | None,
+        end_date: str | None,
     ) -> list[OHLCVData]:
         """Internal: Fetch OHLCV bars. yfinance is the primary source (no key,
         no daily cap); Alpha Vantage is the fallback when yfinance fails."""
@@ -272,8 +313,18 @@ class DataManager:
         try:
             from src.services.market_data import yfinance_bars
 
-            df = await yfinance_bars.get_bars(symbol, granularity.value, outputsize)
-            return self._dataframe_to_ohlcv(df)
+            df = await yfinance_bars.get_bars(
+                symbol,
+                granularity.value,
+                outputsize,
+                start_date=start_date,
+                end_date=end_date,
+            )
+            return self._filter_ohlcv_range(
+                self._dataframe_to_ohlcv(df),
+                start_date,
+                end_date,
+            )
         except Exception as e:
             logger.warning(
                 "ohlcv_provider_failed",
@@ -292,7 +343,7 @@ class DataManager:
                 df = await self._av_service.get_intraday_bars(
                     symbol=symbol,
                     interval=granularity.value,
-                    outputsize=outputsize,
+                    outputsize="full" if start_date and end_date else outputsize,
                 )
             else:
                 method_map = {
@@ -301,9 +352,16 @@ class DataManager:
                     Granularity.MONTHLY: self._av_service.get_monthly_bars,
                 }
                 method = method_map.get(granularity, self._av_service.get_daily_bars)
-                df = await method(symbol=symbol, outputsize=outputsize)
+                df = await method(
+                    symbol=symbol,
+                    outputsize="full" if start_date and end_date else outputsize,
+                )
 
-            return self._dataframe_to_ohlcv(df)
+            return self._filter_ohlcv_range(
+                self._dataframe_to_ohlcv(df),
+                start_date,
+                end_date,
+            )
 
         except Exception as e:
             logger.error(
@@ -313,6 +371,19 @@ class DataManager:
                 error=str(e),
             )
             raise DataFetchError(str(e), "all_providers") from e
+
+    @staticmethod
+    def _filter_ohlcv_range(
+        data: list[OHLCVData],
+        start_date: str | None,
+        end_date: str | None,
+    ) -> list[OHLCVData]:
+        """Filter bars to an inclusive explicit calendar range."""
+        if not start_date or not end_date:
+            return data
+        start = datetime.fromisoformat(start_date).date()
+        end = datetime.fromisoformat(end_date).date()
+        return [item for item in data if start <= item.date.date() <= end]
 
     def _dataframe_to_ohlcv(self, df: pd.DataFrame) -> list[OHLCVData]:
         """Convert pandas DataFrame to list of OHLCVData."""
@@ -1589,17 +1660,23 @@ class DataManager:
             Number of keys invalidated
         """
         if symbol and granularity:
-            key = CacheKeys.market(granularity, symbol)
-            deleted = await self._cache.delete(key)
-            return 1 if deleted else 0
+            legacy_key = CacheKeys.market(granularity, symbol)
+            deleted = await self._cache.delete(legacy_key)
+            pattern = f"{legacy_key}:*"
+            ranged_deleted = int(await self._cache.invalidate_pattern(pattern))
+            return (1 if deleted else 0) + ranged_deleted
         elif symbol:
-            pattern = f"{CacheKeys.MARKET}:*:{symbol.upper()}"
+            legacy_pattern = f"{CacheKeys.MARKET}:*:{symbol.upper()}"
+            ranged_pattern = f"{legacy_pattern}:*"
+            legacy_deleted = int(await self._cache.invalidate_pattern(legacy_pattern))
+            ranged_deleted = int(await self._cache.invalidate_pattern(ranged_pattern))
+            return legacy_deleted + ranged_deleted
         elif granularity:
             pattern = CacheKeys.pattern(CacheKeys.MARKET, granularity)
         else:
             pattern = CacheKeys.pattern(CacheKeys.MARKET)
 
-        return await self._cache.invalidate_pattern(pattern)
+        return int(await self._cache.invalidate_pattern(pattern))
 
     async def invalidate_quote(self, symbol: str) -> bool:
         """Invalidate the cached quote for ``symbol`` so the next get_quote

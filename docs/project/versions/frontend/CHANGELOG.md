@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-07-28
+
+### Chart and technical-analysis date ranges
+
+- Added an accessible date range picker with presets, Apply, and Reset.
+- Applies one validated range to chart, Fibonacci, and Stochastic requests.
+- Keeps controls available when a valid range contains no bars.
+- Uses symbol-scoped market calendars and safe legacy intraday defaults.
+- Persists and restores ranges through Mongo-backed chat UI state.
+- Added real-browser request, persistence, recovery, and screenshot evidence.
+
 ## [0.28.1] - 2026-07-21
 
 ### Idempotent chat requests

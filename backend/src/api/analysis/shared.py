@@ -5,11 +5,12 @@ Provides common dependencies, validation functions, and constants used across
 all analysis endpoints.
 """
 
-from datetime import date, datetime
+from datetime import datetime
 from typing import Any
 
 import structlog
 
+from ...core.utils.market_calendar import market_today
 from ...services.alphavantage_market_data import AlphaVantageMarketDataService
 from ...services.alphavantage_response_formatter import AlphaVantageResponseFormatter
 from ...services.data_manager import DataManager
@@ -75,14 +76,21 @@ def get_formatter() -> AlphaVantageResponseFormatter:
     return AlphaVantageResponseFormatter()
 
 
-def validate_date_range(start_date: str | None, end_date: str | None) -> None:
+def validate_date_range(
+    start_date: str | None,
+    end_date: str | None,
+    symbol: str | None = None,
+) -> None:
     """
     Validate date range inputs.
 
     Raises:
         ValueError: If dates are invalid or in the future
     """
-    today = date.today()
+    if bool(start_date) != bool(end_date):
+        raise ValueError("Both start_date and end_date are required together")
+
+    today = market_today(symbol)
 
     if start_date:
         try:

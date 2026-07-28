@@ -187,7 +187,7 @@ class FibonacciAnalyzer:
         config = TimeframeConfigs.get_config(timeframe)
         # Need at least 3x swing_lookback for meaningful trend detection
         calculated_min = config.swing_lookback * 3
-        return max(calculated_min, 20)
+        return int(max(calculated_min, 20))
 
     async def _fetch_stock_data(
         self, start_date: str | None = None, end_date: str | None = None
@@ -212,6 +212,7 @@ class FibonacciAnalyzer:
                 "1d": "daily",
                 "1w": "weekly",
                 "1M": "monthly",
+                "1mo": "monthly",
             }
             granularity = granularity_map.get(self.timeframe, "daily")
 
@@ -225,6 +226,8 @@ class FibonacciAnalyzer:
                 symbol=self.symbol,
                 granularity=granularity,
                 outputsize="full",  # Need full data for trend detection
+                start_date=start_date,
+                end_date=end_date,
             )
 
             if not ohlcv_list:
@@ -252,11 +255,7 @@ class FibonacciAnalyzer:
             # Sort by date ascending (oldest first) for trend detection
             data = data.sort_index()
 
-            # Apply date filters if provided
-            if start_date:
-                start_dt = pd.Timestamp(start_date, tz=UTC)
-                data = data[data.index >= start_dt]
-            elif self.timeframe == "1d":
+            if not start_date and self.timeframe == "1d":
                 # Default to 1 year lookback for daily timeframe
                 one_year_ago = dt.now(UTC) - timedelta(days=365)
                 data = data[data.index >= pd.Timestamp(one_year_ago)]
@@ -264,10 +263,6 @@ class FibonacciAnalyzer:
                     "Defaulting to 1-year lookback for daily Fibonacci analysis",
                     symbol=self.symbol,
                 )
-
-            if end_date:
-                end_dt = pd.Timestamp(end_date, tz=UTC)
-                data = data[data.index <= end_dt]
 
             logger.info(
                 "Fetched stock data via DataManager",

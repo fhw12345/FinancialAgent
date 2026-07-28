@@ -56,7 +56,7 @@ async def stochastic_analysis(
 
     try:
         # Validate date range if provided
-        validate_date_range(request.start_date, request.end_date)
+        validate_date_range(request.start_date, request.end_date, request.symbol)
 
         # Intraday intervals (1m, 60m) are not supported for Stochastic analysis
         # Reason: Insufficient historical data and excessive noise
@@ -192,7 +192,7 @@ async def generate_chart(
     """
     try:
         # Validate date range first
-        validate_date_range(request.start_date, request.end_date)
+        validate_date_range(request.start_date, request.end_date, request.symbol)
 
         # For now, return chart data structure that frontend can use
         # Chart image generation will be implemented in next phase
