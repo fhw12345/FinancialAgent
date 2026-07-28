@@ -76,6 +76,10 @@ same applied state.
 
 ## Phase 2 Delivery
 
+Phase 2 shipped in implementation commit `e64aa5d`, backend `0.49.0`, and
+frontend `0.29.0`. This feature remains `in-progress` because Phase 3
+candlestick volume overlays are still planned.
+
 - Accessible draft/apply/reset picker with quick presets.
 - Symbol-scoped market calendars for US, Hong Kong, mainland China, Japan, and
   London ticker suffixes.
