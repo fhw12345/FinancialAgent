@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from pymongo import ReturnDocument
 
 from src.database.repositories.portfolio_order_repository import (
     PortfolioOrderRepository,
@@ -38,6 +39,25 @@ async def test_create_inserts_local_order(order):
 
     assert result == order
     collection.insert_one.assert_awaited_once_with(order.model_dump())
+
+
+@pytest.mark.asyncio
+async def test_upsert_uses_atomic_deterministic_order_identity(order):
+    collection = MagicMock()
+    collection.find_one_and_update = AsyncMock(
+        return_value={"_id": "mongo", **order.model_dump()}
+    )
+    repository = PortfolioOrderRepository(collection)
+
+    result = await repository.upsert(order)
+
+    assert result == order
+    collection.find_one_and_update.assert_awaited_once_with(
+        {"order_id": order.order_id},
+        {"$setOnInsert": order.model_dump()},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
 
 
 @pytest.mark.asyncio
@@ -91,3 +111,9 @@ async def test_ensure_indexes_has_no_broker_index():
 
     names = [call.kwargs["name"] for call in collection.create_index.await_args_list]
     assert "idx_alpaca_order" not in names
+    unique_index = next(
+        call
+        for call in collection.create_index.await_args_list
+        if call.kwargs["name"] == "idx_order_id_unique"
+    )
+    assert unique_index.kwargs["unique"] is True

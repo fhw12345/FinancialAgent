@@ -1,8 +1,8 @@
 ---
 title: Unified Agent Workflow Improvement Roadmap
-status: planning
+status: in-progress
 version: n/a
-last_updated: 2026-07-17
+last_updated: 2026-07-28
 owner: maintainer
 related_paths:
   - backend/src/agent/
@@ -635,6 +635,11 @@ Use Pydantic structured output for:
 
 Free-form Markdown remains appropriate for the final user response, but
 machine decisions should not depend on regex parsing.
+
+Implementation status: routing, symbol resolution, Deep debate/rebuttal/verdict,
+Portfolio decisions, consistency gate, and clarification requests now use
+structured contracts. Deep multi-round decision integrity and durable verdict
+signal persistence shipped in backend `0.48.0`.
 
 ### 9.3 Enforce Budgets
 

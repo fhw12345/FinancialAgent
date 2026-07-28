@@ -13,7 +13,12 @@ from pymongo import ReturnDocument
 from src.core.utils.date_utils import utcnow
 from src.services.persistence_translator import translate_for_persistence
 
-from ...models.message import Message, MessageCreate, MessageMetadata
+from ...models.message import (
+    Message,
+    MessageCreate,
+    MessageMetadata,
+)
+from ...models.run_identity import message_id_for_run
 
 if TYPE_CHECKING:
     from src.database.redis import RedisCache
@@ -131,7 +136,7 @@ class MessageRepository:
         )
         metadata = message_create.metadata.model_copy(update={"run_id": run_id})
         timestamp = message_create.timestamp or utcnow()
-        message_id = f"msg_run_{run_id.replace('-', '')[:12]}"
+        message_id = message_id_for_run(run_id)
 
         message_dict = await self.collection.find_one_and_update(
             {

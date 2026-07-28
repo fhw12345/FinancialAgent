@@ -251,9 +251,9 @@ class TestOperatorAddReducer:
         """
         import inspect
 
-        from src.agent.deep_react_agent import DeepReActAgent
+        from src.agent.deep_workflow import build_deep_workflow
 
-        source = inspect.getsource(DeepReActAgent._build_workflow)
+        source = inspect.getsource(build_deep_workflow)
         assert "StateGraph(AnalysisState)" in source, (
             "StateGraph must use AnalysisState for operator.add reducers to work. "
             "StateGraph(dict) silently ignores Annotated reducers."
@@ -290,17 +290,14 @@ class TestStrictTerminationMatching:
     def test_signal_embedded_in_sentence_does_not_terminate(self) -> None:
         """If the LLM quotes the signal in analysis text, should NOT terminate."""
         response = (
-            f'The debater said "{TERMINATION_SIGNAL}" but I found issues.\n\n'
-            '```json\n{"concerns": [{"id": "C1", "claim": "test", '
-            '"category": "financial", "challenge": "issue", '
-            '"severity": "MAJOR", "evidence": "data"}]}\n```'
+            '{"concerns": [{"id": "C1", '
+            f'"claim": "The debater said {TERMINATION_SIGNAL} but I found issues", '
+            '"category": "fundamental", "challenge": "issue", '
+            '"severity": "MAJOR", "evidence": "data"}]}'
         )
         output = parse_debater_output(response)
-        # The signal appears within a sentence, not as a standalone line
-        # However, line-level matching splits by newlines — if the signal
-        # is on a line by itself after strip(), it would match
-        # This test verifies the current behavior
-        assert output.terminated is False or len(output.concerns) > 0
+        assert output.terminated is False
+        assert len(output.concerns) == 1
 
     def test_signal_with_surrounding_whitespace_terminates(self) -> None:
         response = f"Review complete.\n\n   {TERMINATION_SIGNAL}   \n"
@@ -308,6 +305,10 @@ class TestStrictTerminationMatching:
         assert output.terminated is True
 
     def test_partial_signal_does_not_terminate(self) -> None:
-        response = "NO FURTHER issues found but some CONCERNS remain."
-        output = parse_debater_output(response)
-        assert output.terminated is False
+        response = (
+            '{"concerns": [{"id": "C1", '
+            '"claim": "NO FURTHER issues found but some CONCERNS remain", '
+            '"category": "risk", "challenge": "issue", '
+            '"severity": "MINOR", "evidence": "data"}]}'
+        )
+        assert parse_debater_output(response).terminated is False

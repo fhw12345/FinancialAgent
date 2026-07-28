@@ -65,6 +65,41 @@ async def test_adapter_forwards_structured_research_context():
 
 
 @pytest.mark.asyncio
+async def test_adapter_preserves_request_local_prompt_versions_on_failure():
+    async def fail_after_prompt(on_event, **kwargs):
+        on_event(
+            {
+                "type": "prompt_used",
+                "prompt_id": "deep-debater",
+                "version": "deep-debater@3",
+            }
+        )
+        raise RuntimeError("invalid structured debate output")
+
+    deep_agent = SimpleNamespace(analyze=AsyncMock(side_effect=fail_after_prompt))
+    resolver = SimpleNamespace(
+        resolve=AsyncMock(
+            return_value=SymbolResolution(
+                status="resolved",
+                source="explicit_ticker",
+                reason_code="resolved_explicit_ticker",
+                symbol="AAPL",
+                confidence=1.0,
+            )
+        )
+    )
+    adapter = DeepAgentAdapter(deep_agent, resolver)
+
+    result = await adapter.ainvoke(
+        user_message="Deeply analyze AAPL.",
+        resolved_symbol="AAPL",
+    )
+
+    assert result["error"] == "invalid structured debate output"
+    assert result["prompt_versions"] == {"deep-debater": "deep-debater@3"}
+
+
+@pytest.mark.asyncio
 async def test_adapter_clears_target_specific_history_after_symbol_switch():
     deep_agent = SimpleNamespace(
         analyze=AsyncMock(

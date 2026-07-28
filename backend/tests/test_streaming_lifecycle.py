@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
+import anyio
 import pytest
 
+from src.api.chat.streaming.durable_tasks import await_task_through_cancellation
 from src.api.chat.streaming.lifecycle import (
     ChatClarification,
     ChatCompletion,
@@ -18,6 +21,11 @@ from src.api.schemas.chat_models import ChatRequest
 from src.core.utils.date_utils import utcnow
 from src.models.agent_run import AgentRun
 from src.models.message import Message, MessageMetadata
+
+
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"
 
 
 def make_context_manager() -> Mock:
@@ -229,6 +237,94 @@ async def test_completion_transition_failure_compensates_terminal_message():
         "error",
         "run_state",
     ]
+
+
+@pytest.mark.asyncio
+async def test_completion_cancellation_runs_durable_hook_after_committed_run():
+    lifecycle, _, run_service = make_lifecycle()
+    await lifecycle.start()
+    completion_started = asyncio.Event()
+    release_completion = asyncio.Event()
+    after_durable = AsyncMock()
+
+    async def complete_run(*args, **kwargs):
+        completion_started.set()
+        await release_completion.wait()
+        return make_run("completed")
+
+    run_service.complete.side_effect = complete_run
+    completion_task = asyncio.create_task(
+        collect_events(
+            lifecycle.complete(
+                ChatCompletion(
+                    content="Completed answer",
+                    execution_mode="agentic",
+                    agent_type="react_sdk",
+                    after_durable=after_durable,
+                )
+            )
+        )
+    )
+
+    await completion_started.wait()
+    completion_task.cancel()
+    release_completion.set()
+
+    with pytest.raises(asyncio.CancelledError):
+        await completion_task
+    assert lifecycle.completed is True
+    after_durable.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_rejected_completion_transition_skips_durable_hook():
+    lifecycle, _, run_service = make_lifecycle()
+    await lifecycle.start()
+    run_service.complete.return_value = None
+    after_durable = AsyncMock()
+
+    await collect_events(
+        lifecycle.complete(
+            ChatCompletion(
+                content="Completed answer",
+                execution_mode="agentic",
+                agent_type="react_sdk",
+                after_durable=after_durable,
+            )
+        )
+    )
+
+    assert lifecycle.completed is False
+    after_durable.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_anyio_cancellation_finishes_durable_task():
+    started = anyio.Event()
+    release = anyio.Event()
+    completed = anyio.Event()
+    result: dict[str, object] = {}
+
+    async def durable_work() -> str:
+        started.set()
+        await release.wait()
+        completed.set()
+        return "done"
+
+    async def wait_for_durable_work() -> None:
+        task = asyncio.create_task(durable_work())
+        result["value"], result["cancelled"] = await await_task_through_cancellation(
+            task
+        )
+
+    async with anyio.create_task_group() as task_group:
+        task_group.start_soon(wait_for_durable_work)
+        await started.wait()
+        task_group.cancel_scope.cancel()
+        release.set()
+
+    assert completed.is_set()
+    assert result == {"value": "done", "cancelled": True}
 
 
 @pytest.mark.asyncio

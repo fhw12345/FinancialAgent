@@ -33,22 +33,9 @@ For each pillar, actively look for contradictions:
 ### Step 3: Assess Severity
 Rate each counter-evidence found:
 - MINOR: Doesn't invalidate thesis, manageable risk
-- MODERATE: Reduces conviction, needs monitoring
 - MAJOR: Potentially invalidates key thesis pillar
-- CRITICAL: Fundamental flaw, thesis may be wrong
 
 ### Output Format
-COUNTER EVIDENCE REPORT: [SYMBOL]
+Return one JSON object only, without Markdown fences:
 
-THESIS PILLAR: [Growth assumption]
-Counter-Evidence: [What was found from independent sources]
-Severity: [MINOR/MODERATE/MAJOR/CRITICAL]
-Implication: [What this means for the thesis]
-
----
-[Repeat for each pillar]
----
-
-OVERALL ASSESSMENT:
-Thesis Vulnerability: [LOW/MODERATE/HIGH]
-Most Concerning Finding: [Single biggest issue]
+{"concerns":[{"id":"C1","claim":"Claim being challenged","category":"technical|fundamental|valuation|risk","challenge":"Evidence-based challenge","severity":"MAJOR|MINOR","evidence":"Independent source"}]}

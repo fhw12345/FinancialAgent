@@ -16,9 +16,9 @@ def test_registry_has_stable_versioned_prompt_ids():
     assert snapshot["router"] == "router@1"
     assert snapshot["financial-system"] == "financial-system@3"
     assert snapshot["symbol-extraction"] == "symbol-extraction@2"
-    assert snapshot["deep-debater"] == "deep-debater@2"
-    assert snapshot["deep-rebuttal"] == "deep-rebuttal@1"
-    assert snapshot["deep-verdict"] == "deep-verdict@1"
+    assert snapshot["deep-debater"] == "deep-debater@3"
+    assert snapshot["deep-rebuttal"] == "deep-rebuttal@2"
+    assert snapshot["deep-verdict"] == "deep-verdict@2"
     assert snapshot["consistency-gate"] == "consistency-gate@2"
     assert snapshot["portfolio-phase2"] == "portfolio-phase2@4"
 
@@ -62,7 +62,11 @@ def test_deep_prompt_contracts_preserve_structured_fields():
 
     assert "REFUTED|PARTIALLY_VALID|CONCEDED" in rebuttal
     assert '"category": "technical|fundamental|valuation|risk"' in debater
-    assert "NEEDS MORE EVIDENCE" in verdict
+    assert "NEEDS_MORE_EVIDENCE" in verdict
+    assert "report_markdown" in verdict
+    for prompt in (rebuttal, debater):
+        assert "```" not in prompt
+        assert "exactly one JSON object" in prompt
 
 
 def test_portfolio_phase2_uses_canonical_renderer():

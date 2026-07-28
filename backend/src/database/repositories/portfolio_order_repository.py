@@ -5,6 +5,7 @@ from typing import Any
 
 import structlog
 from motor.motor_asyncio import AsyncIOMotorCollection
+from pymongo import ReturnDocument
 
 from src.core.utils.date_utils import utcnow
 
@@ -27,6 +28,11 @@ class PortfolioOrderRepository:
 
     async def ensure_indexes(self) -> None:
         """Create indexes for optimal query performance."""
+        await self.collection.create_index(
+            [("order_id", 1)],
+            name="idx_order_id_unique",
+            unique=True,
+        )
         # Index for listing orders sorted by time
         await self.collection.create_index(
             [("created_at", -1)],
@@ -77,6 +83,19 @@ class PortfolioOrderRepository:
         )
 
         return order
+
+    async def upsert(self, order: PortfolioOrder) -> PortfolioOrder:
+        """Atomically persist a deterministic order once."""
+        order_dict = await self.collection.find_one_and_update(
+            {"order_id": order.order_id},
+            {"$setOnInsert": order.model_dump()},
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+        if order_dict is None:
+            raise RuntimeError("Portfolio order upsert returned no document")
+        order_dict.pop("_id", None)
+        return PortfolioOrder(**order_dict)
 
     async def create_many(self, orders: list[PortfolioOrder]) -> int:
         """
@@ -309,7 +328,7 @@ class PortfolioOrderRepository:
                 }
             },
         )
-        return result.matched_count > 0
+        return bool(result.matched_count)
 
     async def list_decisions(
         self,

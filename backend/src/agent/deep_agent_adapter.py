@@ -15,7 +15,7 @@ The adapter handles:
 import time
 import uuid
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Any
 
 import structlog
 
@@ -23,6 +23,7 @@ from ..core.localization import DEFAULT_LANGUAGE, SupportedLanguage
 from ..core.utils import message_content_to_text
 from ..models.symbol_resolution import SymbolResolution
 from ..services.symbol_search_service import symbol_comparison_key
+from .debate_types import DeepVerdict
 from .deep_react_agent import DeepReActAgent
 from .deep_research_context import DeepResearchContext
 from .symbol_resolver import SymbolResolver
@@ -44,6 +45,25 @@ class DeepAgentAdapter:
     ) -> None:
         self.deep_agent = deep_agent
         self.symbol_resolver = symbol_resolver
+
+    async def persist_verdict_decision(
+        self,
+        *,
+        symbol: str,
+        verdict: dict[str, Any],
+        chat_id: str,
+        run_id: str,
+        message_id: str,
+    ) -> None:
+        """Persist a validated verdict signal after chat completion is durable."""
+        structured_verdict = DeepVerdict.model_validate(verdict, strict=True)
+        await self.deep_agent._persist_verdict_decision(
+            symbol=symbol,
+            action=structured_verdict.action,
+            chat_id=chat_id,
+            run_id=run_id,
+            message_id=message_id,
+        )
 
     async def resolve_symbol(
         self,
@@ -78,11 +98,8 @@ class DeepAgentAdapter:
                 if historical_resolution.status == "resolved":
                     historical_resolutions.append(historical_resolution)
             if len(historical_resolutions) == 1:
-                return cast(
-                    SymbolResolution,
-                    historical_resolutions[0].model_copy(
-                        update={"prompt_versions": prompt_versions}
-                    ),
+                return historical_resolutions[0].model_copy(
+                    update={"prompt_versions": prompt_versions}
                 )
             if len(historical_resolutions) > 1:
                 return SymbolResolution(
@@ -97,9 +114,8 @@ class DeepAgentAdapter:
                     ][:5],
                     prompt_versions=prompt_versions,
                 )
-        return cast(
-            SymbolResolution,
-            resolution.model_copy(update={"prompt_versions": prompt_versions}),
+        return resolution.model_copy(
+            update={"prompt_versions": prompt_versions},
         )
 
     async def ainvoke(
@@ -168,13 +184,24 @@ class DeepAgentAdapter:
             user_message_preview=user_message[:100],
         )
 
+        used_prompt_versions: dict[str, str] = {}
+
+        def track_event(event: dict[str, Any]) -> None:
+            if event.get("type") == "prompt_used":
+                prompt_id = event.get("prompt_id")
+                version = event.get("version")
+                if isinstance(prompt_id, str) and isinstance(version, str):
+                    used_prompt_versions[prompt_id] = version
+            if on_event is not None:
+                on_event(event)
+
         try:
             # Run deep analysis with optional event streaming
             result = await self.deep_agent.analyze(
                 symbol=symbol,
                 user_id=user_id,
                 enable_debate=True,
-                on_event=on_event,
+                on_event=track_event,
                 user_message=user_message,
                 research_context=research_context,
             )
@@ -196,6 +223,7 @@ class DeepAgentAdapter:
             ]
 
             duration_ms = int((time.perf_counter() - start_time) * 1000)
+            used_prompt_versions.update(result.get("prompt_versions", {}))
 
             logger.info(
                 "DeepAgentAdapter invocation completed",
@@ -216,7 +244,8 @@ class DeepAgentAdapter:
                 "total_tokens": result.get("total_tokens", 0),
                 "agent_duration_ms": duration_ms,
                 "research_context": research_context.metadata(symbol=symbol),
-                "prompt_versions": result.get("prompt_versions", {}),
+                "prompt_versions": used_prompt_versions,
+                "verdict": result.get("verdict"),
             }
 
         except Exception as e:
@@ -238,4 +267,5 @@ class DeepAgentAdapter:
                 "output_tokens": 0,
                 "total_tokens": 0,
                 "agent_duration_ms": duration_ms,
+                "prompt_versions": used_prompt_versions,
             }

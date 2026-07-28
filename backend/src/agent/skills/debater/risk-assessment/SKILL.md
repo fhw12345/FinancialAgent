@@ -36,21 +36,6 @@ Which of these risks were NOT mentioned in thesis?
 - Mentioned but underweighted?
 
 ### Output Format
-RISK ASSESSMENT: [SYMBOL]
+Return one JSON object only, without Markdown fences:
 
-RISKS MENTIONED IN THESIS:
-- [List from thesis]
-
-POTENTIALLY OVERLOOKED RISKS:
-1. [Risk Category]: [Specific finding]
-   Evidence: [Independent source data]
-   Severity: [HIGH/MEDIUM/LOW]
-
-2. [Next risk...]
-
-RISK MATRIX:
-| Risk | Mentioned? | Severity | Status |
-|------|-----------|----------|--------|
-| ...  | ...       | ...      | ...    |
-
-BIGGEST GAP: [Most significant overlooked risk]
+{"concerns":[{"id":"C1","claim":"Risk assumption being challenged","category":"risk","challenge":"Specific overlooked or underweighted risk","severity":"MAJOR|MINOR","evidence":"Independent source"}]}

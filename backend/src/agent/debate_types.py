@@ -1,170 +1,289 @@
-"""
-Structured types for debate exchange and fact verification.
-
-Provides parsing, merging, and rendering of debater concerns
-and rebuttal defenses into verified facts for verdict injection.
-"""
+"""Strict structured types for Deep debate and verdict output."""
 
 from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field
+from collections import Counter
+from typing import Literal
 
-import structlog
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-logger = structlog.get_logger()
+ConcernCategory = Literal["technical", "fundamental", "valuation", "risk"]
+ConcernSeverity = Literal["MAJOR", "MINOR"]
+RebuttalStatus = Literal["REFUTED", "PARTIALLY_VALID", "CONCEDED"]
+VerdictAction = Literal["BUY", "HOLD", "SELL"]
+VerdictConviction = Literal["HIGH", "MEDIUM", "LOW"]
+VerdictRiskLevel = Literal["HIGH", "MODERATE", "LOW"]
+ConcernAssessmentStatus = Literal[
+    "VERIFIED",
+    "NEEDS_MORE_EVIDENCE",
+    "CONTRADICTED",
+]
 
 
-@dataclass
-class Concern:
+class StrictModel(BaseModel):
+    """Base model for LLM contracts that reject unknown fields and coercion."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        strict=True,
+        str_strip_whitespace=True,
+    )
+
+
+class Concern(StrictModel):
+    id: str = Field(min_length=1)
+    claim: str = Field(min_length=1)
+    category: ConcernCategory
+    challenge: str = Field(min_length=1)
+    severity: ConcernSeverity
+    evidence: str = Field(min_length=1)
+
+
+class _DebaterPayload(StrictModel):
+    concerns: list[Concern] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_unique_ids(self) -> _DebaterPayload:
+        ids = [concern.id for concern in self.concerns]
+        if len(ids) != len(set(ids)):
+            raise ValueError("concern ids must be unique")
+        return self
+
+
+class DebaterOutput(StrictModel):
+    concerns: list[Concern]
+    terminated: bool
+    raw_text: str
+
+
+class Rebuttal(StrictModel):
+    concern_id: str = Field(min_length=1)
+    status: RebuttalStatus
+    defense: str = Field(min_length=1)
+    evidence: str = Field(min_length=1)
+
+
+class _RebuttalPayload(StrictModel):
+    rebuttals: list[Rebuttal] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_unique_ids(self) -> _RebuttalPayload:
+        ids = [rebuttal.concern_id for rebuttal in self.rebuttals]
+        if len(ids) != len(set(ids)):
+            raise ValueError("rebuttal concern_ids must be unique")
+        return self
+
+
+class RebuttalOutput(StrictModel):
+    rebuttals: list[Rebuttal]
+    raw_text: str
+
+
+class MergedFact(StrictModel):
     id: str
     claim: str
-    category: str
-    challenge: str
-    severity: str
-    evidence: str
+    category: ConcernCategory
+    debater: dict[str, str]
+    defense: dict[str, str] | None = None
 
 
-@dataclass
-class DebaterOutput:
-    concerns: list[Concern] = field(default_factory=list)
-    terminated: bool = False
-    raw_text: str = ""
+class ConcernAssessment(StrictModel):
+    concern_id: str = Field(min_length=1)
+    assessment: ConcernAssessmentStatus
+    reasoning: str = Field(min_length=1)
+    evidence: str = Field(min_length=1)
 
 
-@dataclass
-class Rebuttal:
-    concern_id: str
-    status: str  # REFUTED | PARTIALLY_VALID | CONCEDED
-    defense: str
-    evidence: str
+class DeepVerdict(StrictModel):
+    """Structured verdict whose Markdown report remains the user-facing answer."""
+
+    report_markdown: str = Field(
+        min_length=1,
+        description=(
+            "Self-contained final investment committee report in Markdown with "
+            "an explicit Action or Recommendation field."
+        ),
+    )
+    action: VerdictAction
+    conviction: VerdictConviction
+    risk_level: VerdictRiskLevel
+    key_insight: str = Field(min_length=1)
+    concern_assessments: list[ConcernAssessment]
+
+    @model_validator(mode="after")
+    def validate_report_action(self) -> DeepVerdict:
+        normalized = self.report_markdown.replace("**", "")
+        actions: set[str] = set()
+        found_field = False
+        field_pattern = re.compile(r"(?i)\b(?:Action|Recommendation)\b\s*([:|])")
+        for line in normalized.splitlines():
+            matches = list(field_pattern.finditer(line))
+            for index, match in enumerate(matches):
+                found_field = True
+                value_end = (
+                    matches[index + 1].start()
+                    if index + 1 < len(matches)
+                    else len(line)
+                )
+                value = line[match.end() : value_end]
+                if match.group(1) == "|":
+                    value = value.split("|", maxsplit=1)[0]
+                value = value.strip(" \t:|;,.")
+                action_match = re.fullmatch(
+                    r"(?i)(BUY|HOLD|SELL)",
+                    value,
+                )
+                if action_match is None:
+                    raise ValueError(
+                        "each report Action or Recommendation field must contain "
+                        "exactly one BUY, HOLD, or SELL value"
+                    )
+                actions.add(action_match.group(1).upper())
+        if not found_field:
+            raise ValueError(
+                "report_markdown must include an explicit Action or "
+                "Recommendation field"
+            )
+        if actions != {self.action}:
+            raise ValueError("report_markdown action must match structured action")
+        return self
 
 
-@dataclass
-class RebuttalOutput:
-    rebuttals: list[Rebuttal] = field(default_factory=list)
-    raw_text: str = ""
+class DebateOutputValidationError(ValueError):
+    """Base error raised when a Deep debate response violates its JSON contract."""
+
+    def __init__(self, output_type: str, raw_text: str, cause: Exception) -> None:
+        super().__init__(
+            f"Invalid {output_type} output: expected one strict JSON object"
+        )
+        self.output_type = output_type
+        self.raw_text = raw_text
+        self.__cause__ = cause
 
 
-@dataclass
-class MergedFact:
-    id: str
-    claim: str
-    category: str
-    debater: dict
-    defense: dict | None = None
+class DebaterOutputValidationError(DebateOutputValidationError):
+    """Raised for invalid debater JSON."""
 
 
-def _extract_json_block(text: str) -> dict | None:
-    """Extract first JSON code block from text."""
-    pattern = r"```(?:json)?\s*\n?(.*?)\n?```"
-    match = re.search(pattern, text, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group(1))
-        except json.JSONDecodeError:
-            pass
+class RebuttalOutputValidationError(DebateOutputValidationError):
+    """Raised for invalid rebuttal JSON."""
 
-    # Fallback: try outermost { ... } in the text (O(1) parse attempts)
-    first_brace = text.find("{")
-    last_brace = text.rfind("}")
-    if first_brace != -1 and last_brace > first_brace:
-        try:
-            return json.loads(text[first_brace : last_brace + 1])
-        except json.JSONDecodeError:
-            pass
-    return None
+
+class RebuttalCoverageValidationError(ValueError):
+    """Raised when rebuttals do not cover the exact debated concern IDs."""
+
+    def __init__(self, expected_ids: list[str], actual_ids: list[str]) -> None:
+        super().__init__(
+            "Invalid rebuttal coverage: expected exactly "
+            f"{expected_ids}, received {actual_ids}"
+        )
+        self.expected_ids = expected_ids
+        self.actual_ids = actual_ids
+
+
+class VerdictAssessmentValidationError(ValueError):
+    """Raised when verdict assessments do not match the debated concerns."""
+
+    def __init__(self, expected_ids: list[str], actual_ids: list[str]) -> None:
+        super().__init__(
+            "Invalid verdict concern assessments: expected exactly "
+            f"{expected_ids}, received {actual_ids}"
+        )
+        self.expected_ids = expected_ids
+        self.actual_ids = actual_ids
 
 
 def parse_debater_output(response: str) -> DebaterOutput:
-    """Parse debater's response into structured concerns."""
+    """Validate a pure-JSON concern object or the standalone termination signal."""
     from .subagents.debater import TERMINATION_SIGNAL
 
-    # Strict match: signal must appear on its own line (not embedded in analysis)
-    # to avoid false termination when LLM quotes the signal alongside concerns
     response_lines = [line.strip() for line in response.strip().splitlines()]
     if TERMINATION_SIGNAL in response_lines:
-        return DebaterOutput(terminated=True, raw_text=response)
+        return DebaterOutput(concerns=[], terminated=True, raw_text=response)
 
-    data = _extract_json_block(response)
-    if not data or "concerns" not in data:
-        logger.warning("Could not parse structured debater output, using raw text")
-        return DebaterOutput(raw_text=response)
-
-    concerns = [
-        Concern(
-            id=c.get("id", f"C{i+1}"),
-            claim=c.get("claim", ""),
-            category=c.get("category", "unknown"),
-            challenge=c.get("challenge", ""),
-            severity=c.get("severity", "MAJOR"),
-            evidence=c.get("evidence", ""),
-        )
-        for i, c in enumerate(data["concerns"])
-    ]
-    return DebaterOutput(concerns=concerns, raw_text=response)
+    try:
+        payload = _DebaterPayload.model_validate_json(response, strict=True)
+    except ValidationError as exc:
+        raise DebaterOutputValidationError("debater", response, exc) from exc
+    return DebaterOutput(
+        concerns=payload.concerns,
+        terminated=False,
+        raw_text=response,
+    )
 
 
 def parse_rebuttal_output(response: str) -> RebuttalOutput:
-    """Parse main agent's rebuttal into structured defenses."""
-    data = _extract_json_block(response)
-    if not data or "rebuttals" not in data:
-        logger.warning("Could not parse structured rebuttal output, using raw text")
-        return RebuttalOutput(raw_text=response)
+    """Validate a pure-JSON rebuttal object."""
+    try:
+        payload = _RebuttalPayload.model_validate_json(response, strict=True)
+    except ValidationError as exc:
+        raise RebuttalOutputValidationError("rebuttal", response, exc) from exc
+    return RebuttalOutput(rebuttals=payload.rebuttals, raw_text=response)
 
-    rebuttals = [
-        Rebuttal(
-            concern_id=r.get("concern_id", ""),
-            status=r.get("status", "PARTIALLY_VALID"),
-            defense=r.get("defense", ""),
-            evidence=r.get("evidence", ""),
-        )
-        for r in data["rebuttals"]
+
+def namespace_concern_ids(
+    concerns: list[Concern],
+    round_number: int,
+) -> list[Concern]:
+    """Make model-generated concern IDs unique across debate rounds."""
+    return [
+        concern.model_copy(update={"id": f"R{round_number}-{concern.id}"})
+        for concern in concerns
     ]
-    return RebuttalOutput(rebuttals=rebuttals, raw_text=response)
+
+
+def validate_verdict_assessments(
+    verdict: DeepVerdict,
+    concerns: list[Concern],
+) -> None:
+    """Require one verdict assessment for every debated concern."""
+    expected_ids = [concern.id for concern in concerns]
+    actual_ids = [assessment.concern_id for assessment in verdict.concern_assessments]
+    if Counter(expected_ids) != Counter(actual_ids):
+        raise VerdictAssessmentValidationError(expected_ids, actual_ids)
+
+
+def validate_rebuttal_coverage(
+    rebuttals: list[Rebuttal],
+    concerns: list[Concern],
+) -> None:
+    """Require one rebuttal for every concern ID shown to the defender."""
+    expected_ids = [concern.id for concern in concerns]
+    actual_ids = [rebuttal.concern_id for rebuttal in rebuttals]
+    if Counter(expected_ids) != Counter(actual_ids):
+        raise RebuttalCoverageValidationError(expected_ids, actual_ids)
 
 
 def merge_facts(concerns: list[Concern], rebuttals: list[Rebuttal]) -> list[MergedFact]:
-    """Merge debater concerns with rebuttal defenses by ID."""
-    rebuttal_map = {r.concern_id: r for r in rebuttals}
-
+    """Merge debater concerns with rebuttal defenses by concern ID."""
+    rebuttal_map = {rebuttal.concern_id: rebuttal for rebuttal in rebuttals}
     return [
         MergedFact(
-            id=c.id,
-            claim=c.claim,
-            category=c.category,
+            id=concern.id,
+            claim=concern.claim,
+            category=concern.category,
             debater={
-                "severity": c.severity,
-                "challenge": c.challenge,
-                "evidence": c.evidence,
+                "severity": concern.severity,
+                "challenge": concern.challenge,
+                "evidence": concern.evidence,
             },
             defense=(
                 {
-                    "status": rebuttal_map[c.id].status,
-                    "rebuttal": rebuttal_map[c.id].defense,
-                    "evidence": rebuttal_map[c.id].evidence,
+                    "status": rebuttal_map[concern.id].status,
+                    "rebuttal": rebuttal_map[concern.id].defense,
+                    "evidence": rebuttal_map[concern.id].evidence,
                 }
-                if c.id in rebuttal_map
+                if concern.id in rebuttal_map
                 else None
             ),
         )
-        for c in concerns
+        for concern in concerns
     ]
 
 
 def render_verified_facts_reminder(facts: list[MergedFact]) -> str:
-    """Render merged facts as a <system-reminder> JSON block for verdict injection."""
-    payload = {
-        "verified_facts": [
-            {
-                "id": f.id,
-                "claim": f.claim,
-                "category": f.category,
-                "debater": f.debater,
-                "defense": f.defense,
-            }
-            for f in facts
-        ]
-    }
+    """Render merged facts as a system-reminder JSON block for the verdict."""
+    payload = {"verified_facts": [fact.model_dump() for fact in facts]}
     return f"<system-reminder>\n{json.dumps(payload, indent=2)}\n</system-reminder>"

@@ -19,8 +19,10 @@ import pytest
 
 from src.agent.debate_types import (
     Concern,
+    DebaterOutputValidationError,
     MergedFact,
     Rebuttal,
+    RebuttalOutputValidationError,
     merge_facts,
     parse_debater_output,
     parse_rebuttal_output,
@@ -43,40 +45,31 @@ def mock_settings() -> MagicMock:
 
 def _make_debater_response_with_concerns() -> str:
     """Create a realistic debater response with structured JSON concerns."""
-    return """I've analyzed the thesis using independent sources.
-
-```json
-{
+    return """{
   "concerns": [
     {
       "id": "C1",
       "claim": "Revenue growth of 15% YoY",
-      "category": "financial",
+      "category": "fundamental",
       "challenge": "Yahoo Finance shows only 8.2% growth",
-      "severity": "CRITICAL",
+      "severity": "MAJOR",
       "evidence": "yfinance key_stats: revenue_growth = 0.082"
     },
     {
       "id": "C2",
       "claim": "Strong competitive moat",
-      "category": "news",
+      "category": "risk",
       "challenge": "New competitor launched similar product",
-      "severity": "MAJOR",
+      "severity": "MINOR",
       "evidence": "Web search: TechCo announced competing platform Q1 2026"
     }
   ]
-}
-```
-
-These findings suggest the thesis overstates growth and underestimates competition."""
+}"""
 
 
 def _make_rebuttal_response() -> str:
     """Create a realistic rebuttal response with structured JSON rebuttals."""
-    return """Defense against debater concerns:
-
-```json
-{
+    return """{
   "rebuttals": [
     {
       "concern_id": "C1",
@@ -91,10 +84,7 @@ def _make_rebuttal_response() -> str:
       "evidence": "Company overview shows 92% consumer revenue"
     }
   ]
-}
-```
-
-The growth concern is valid for trailing data but forward outlook remains strong."""
+}"""
 
 
 def _make_termination_response() -> str:
@@ -118,10 +108,10 @@ class TestStructuredConcernParsing:
         assert len(output.concerns) == 2
         assert output.terminated is False
         assert output.concerns[0].id == "C1"
-        assert output.concerns[0].severity == "CRITICAL"
-        assert output.concerns[0].category == "financial"
+        assert output.concerns[0].severity == "MAJOR"
+        assert output.concerns[0].category == "fundamental"
         assert output.concerns[1].id == "C2"
-        assert output.concerns[1].severity == "MAJOR"
+        assert output.concerns[1].severity == "MINOR"
 
     def test_detects_termination_signal(self) -> None:
         response = _make_termination_response()
@@ -130,12 +120,9 @@ class TestStructuredConcernParsing:
         assert output.terminated is True
         assert len(output.concerns) == 0
 
-    def test_handles_malformed_response_gracefully(self) -> None:
-        output = parse_debater_output("Some analysis without JSON")
-
-        assert len(output.concerns) == 0
-        assert output.terminated is False
-        assert output.raw_text == "Some analysis without JSON"
+    def test_malformed_response_raises_typed_error(self) -> None:
+        with pytest.raises(DebaterOutputValidationError):
+            parse_debater_output("Some analysis without JSON")
 
 
 # ===== Test: Structured Rebuttal Parsing =====
@@ -154,11 +141,9 @@ class TestStructuredRebuttalParsing:
         assert output.rebuttals[1].concern_id == "C2"
         assert output.rebuttals[1].status == "REFUTED"
 
-    def test_handles_missing_json_gracefully(self) -> None:
-        output = parse_rebuttal_output("Defense without structured output")
-
-        assert len(output.rebuttals) == 0
-        assert output.raw_text == "Defense without structured output"
+    def test_missing_json_raises_typed_error(self) -> None:
+        with pytest.raises(RebuttalOutputValidationError):
+            parse_rebuttal_output("Defense without structured output")
 
 
 # ===== Test: Fact Merging =====
@@ -172,17 +157,17 @@ class TestFactMerging:
             Concern(
                 id="C1",
                 claim="Revenue growth",
-                category="financial",
+                category="fundamental",
                 challenge="Only 8.2%",
-                severity="CRITICAL",
+                severity="MAJOR",
                 evidence="yfinance data",
             ),
             Concern(
                 id="C2",
                 claim="Competitive moat",
-                category="news",
+                category="risk",
                 challenge="New competitor",
-                severity="MAJOR",
+                severity="MINOR",
                 evidence="web search",
             ),
         ]
@@ -216,7 +201,7 @@ class TestFactMerging:
             Concern(
                 id="C1",
                 claim="test",
-                category="financial",
+                category="fundamental",
                 challenge="issue",
                 severity="MAJOR",
                 evidence="data",
@@ -240,9 +225,9 @@ class TestVerifiedFactsRendering:
             MergedFact(
                 id="C1",
                 claim="Revenue growth",
-                category="financial",
+                category="fundamental",
                 debater={
-                    "severity": "CRITICAL",
+                    "severity": "MAJOR",
                     "challenge": "Only 8.2%",
                     "evidence": "yfinance",
                 },
@@ -360,9 +345,9 @@ class TestDebateStateTransitions:
             Concern(
                 id="C1",
                 claim="Revenue growth",
-                category="financial",
+                category="fundamental",
                 challenge="Only 8.2%",
-                severity="CRITICAL",
+                severity="MAJOR",
                 evidence="yfinance",
             ),
         ]

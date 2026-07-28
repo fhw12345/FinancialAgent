@@ -33,19 +33,7 @@ For each claim, classify as:
 - CONTRADICTED: Independent sources show different data
 - OUTDATED: Was true but situation has changed
 
-### Step 4: Compile Report
-List claims with verification status and source references.
-
 ### Output Format
-FACT CHECK REPORT: [SYMBOL] Thesis
+Return one JSON object only, without Markdown fences:
 
-VERIFIED CLAIMS:
-- [Claim] - Source: [Yahoo Finance / Exa web search]
-
-QUESTIONABLE CLAIMS:
-? [Claim] - Issue: [what's wrong] - Source: [reference]
-
-CONTRADICTED CLAIMS:
-x [Claim] - Reality: [what independent sources show] - Source: [reference]
-
-ACCURACY SCORE: {verified}/{total} claims verified
+{"concerns":[{"id":"C1","claim":"Factual claim being challenged","category":"technical|fundamental|valuation|risk","challenge":"Independent verification result","severity":"MAJOR|MINOR","evidence":"Independent source"}]}

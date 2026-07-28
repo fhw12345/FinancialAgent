@@ -7,6 +7,7 @@ import pytest
 
 from src.database.repositories.message_repository import MessageRepository
 from src.models.message import MessageCreate, MessageMetadata
+from src.models.run_identity import message_id_for_run
 
 
 class _FakeRedis:
@@ -210,3 +211,10 @@ async def test_create_stores_english_when_translation_fails(
     inserted_doc = mock_collection.insert_one.await_args.args[0]
     assert inserted_doc["content"] == "Hello world"
     assert inserted_doc["content_zh"] is None
+
+
+def test_run_message_ids_preserve_distinct_uuid_entropy():
+    first = message_id_for_run("run_01234567-aaaa-bbbb-cccc-111111111111")
+    second = message_id_for_run("run_01234567-bbbb-cccc-dddd-222222222222")
+    assert first != second
+    assert first.endswith("run01234567aaaabbbbcccc111111111111")

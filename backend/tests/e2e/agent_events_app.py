@@ -101,20 +101,28 @@ class DeepAgent:
                 "type": "deep_verdict",
                 "seq": 2,
                 "timestamp": "2026-07-21T02:00:01Z",
-                "verdict_text": "DEEP_ENVELOPE_OK",
+                "verdict_text": "**Action**: BUY\n\nDEEP_ENVELOPE_OK",
                 "risk_level": "MODERATE",
                 "tool_count": 0,
                 "total_duration_ms": 10,
             }
         )
         return {
-            "final_answer": "DEEP_ENVELOPE_OK",
+            "final_answer": "**Action**: BUY\n\nDEEP_ENVELOPE_OK",
             "tool_executions": 0,
             "trace_id": "uaw009_deep",
             "research_context": {},
             "prompt_versions": {
-                "deep-debater": "deep-debater@2",
-                "deep-verdict": "deep-verdict@1",
+                "deep-debater": "deep-debater@3",
+                "deep-verdict": "deep-verdict@2",
+            },
+            "verdict": {
+                "report_markdown": "**Action**: BUY\n\nDEEP_ENVELOPE_OK",
+                "action": "BUY",
+                "conviction": "HIGH",
+                "risk_level": "MODERATE",
+                "key_insight": "Structured verdict survives persistence.",
+                "concern_assessments": [],
             },
         }
 

@@ -5,14 +5,12 @@ from __future__ import annotations
 import asyncio
 import uuid
 from collections.abc import AsyncGenerator
-from dataclasses import dataclass, field
 from typing import Any
 
 import structlog
 
 from ....core.utils.date_utils import utcnow
 from ....database.repositories.message_repository import MessageRepository
-from ....models.agent_run import ExecutionMode
 from ....models.message import Message, MessageMetadata
 from ....services.agent_run_service import AgentRunService
 from ....services.chat_service import ChatService
@@ -28,6 +26,8 @@ from .cancellation import (
     cancel_and_await,
     persist_cancelled_run,
 )
+from .contracts import ChatClarification, ChatCompletion, ChatFailure
+from .durable_tasks import await_task_through_cancellation
 from .helpers import (
     create_clarification_event,
     create_done_event,
@@ -38,41 +38,6 @@ from .helpers import (
 )
 
 logger = structlog.get_logger()
-
-
-@dataclass(frozen=True)
-class ChatCompletion:
-    content: str
-    execution_mode: ExecutionMode
-    agent_type: str
-    llm_title: str | None = None
-    update_final_title: bool = False
-    model: str | None = None
-    trace_id: str | None = None
-    tool_calls: int = 0
-    input_tokens: int = 0
-    output_tokens: int = 0
-    total_tokens: int | None = None
-    raw_data: dict[str, Any] | None = None
-    latency_metrics: dict[str, Any] = field(default_factory=dict)
-    done_data: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class ChatFailure:
-    execution_mode: ExecutionMode
-    error_code: str
-    error_message: str
-    client_message: str
-    include_error_code: bool = True
-
-
-@dataclass(frozen=True)
-class ChatClarification:
-    execution_mode: ExecutionMode
-    agent_type: str
-    content: str
-    payload: dict[str, Any]
 
 
 class ChatStreamLifecycle:
@@ -100,6 +65,7 @@ class ChatStreamLifecycle:
         self.current_message: Message | None = None
         self.prepared_context: PreparedConversationContext | None = None
         self.terminal_task: asyncio.Task[Any] | None = None
+        self.completed = False
         self.request_start = utcnow()
 
     def elapsed_ms(self) -> int:
@@ -210,16 +176,23 @@ class ChatStreamLifecycle:
                 ),
             )
         )
-        await asyncio.shield(self.terminal_task)
+        _, cancelled = await await_task_through_cancellation(self.terminal_task)
 
+        completed_run = None
         if self.run_service is not None:
-            try:
-                completed_run = await self.run_service.complete(
+            completion_task = asyncio.create_task(
+                self.run_service.complete(
                     self.run_id,
                     tool_calls=completion.tool_calls,
                     input_tokens=completion.input_tokens,
                     output_tokens=completion.output_tokens,
                 )
+            )
+            try:
+                completed_run, completion_cancelled = (
+                    await await_task_through_cancellation(completion_task)
+                )
+                cancelled = cancelled or completion_cancelled
             except Exception as exc:
                 logger.exception(
                     "Failed to persist completed run transition",
@@ -231,12 +204,26 @@ class ChatStreamLifecycle:
                 ):
                     yield event
                 return
-            if completed_run is not None:
-                yield create_run_state_event(
-                    self.run_id,
-                    "completed",
-                    completion.execution_mode,
-                )
+
+        durable_completed = self.run_service is None or completed_run is not None
+        if durable_completed:
+            self.completed = True
+            if completion.after_durable is not None:
+                await completion.after_durable()
+        else:
+            logger.warning(
+                "Completed run transition was rejected",
+                run_id=self.run_id,
+            )
+        if cancelled:
+            raise asyncio.CancelledError
+
+        if completed_run is not None:
+            yield create_run_state_event(
+                self.run_id,
+                "completed",
+                completion.execution_mode,
+            )
 
         if completion.update_final_title:
             await self._update_title(

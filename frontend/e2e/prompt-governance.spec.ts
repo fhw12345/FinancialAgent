@@ -53,8 +53,23 @@ test("prompt governance versions survive chat and Portfolio UI flows", async ({
   await page.getByRole("button", { name: /New Chat|新对话/ }).click();
   const deepRunId = await sendChat(page, "DEEP AAPL governed prompt");
   const deepRun = await fetchRun(page, deepRunId);
-  expect(deepRun.prompt_versions["deep-debater"]).toBe("deep-debater@2");
-  expect(deepRun.prompt_versions["deep-verdict"]).toBe("deep-verdict@1");
+  expect(deepRun.prompt_versions["deep-debater"]).toBe("deep-debater@3");
+  expect(deepRun.prompt_versions["deep-verdict"]).toBe("deep-verdict@2");
+  const deepChat = await page.evaluate(
+    async ({ url, chatId }) =>
+      (await fetch(`${url}/api/chat/chats/${chatId}`)).json(),
+    { url: backendUrl, chatId: deepRun.chat_id },
+  );
+  const deepAssistant = deepChat.messages.find(
+    (message: { role: string; metadata?: { run_id?: string } }) =>
+      message.role === "assistant" && message.metadata?.run_id === deepRunId,
+  );
+  expect(deepAssistant.metadata.raw_data.verdict).toMatchObject({
+    action: "BUY",
+    conviction: "HIGH",
+    risk_level: "MODERATE",
+    key_insight: "Structured verdict survives persistence.",
+  });
 
   if (updateEvidence) {
     await page.screenshot({

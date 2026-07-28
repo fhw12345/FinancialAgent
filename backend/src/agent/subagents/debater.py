@@ -27,24 +27,22 @@ if TYPE_CHECKING:
 TERMINATION_SIGNAL = "NO FURTHER CONCERNS"
 
 STRUCTURED_OUTPUT_INSTRUCTION = """
-RESPONSE FORMAT: You MUST include a JSON block in your response with this exact structure:
-
-```json
+Return exactly one JSON object with this structure:
 {{
   "concerns": [
     {{
       "id": "C1",
       "claim": "The specific claim from the thesis you are challenging",
-      "category": "technical|financial|news|valuation",
+      "category": "technical|fundamental|valuation|risk",
       "challenge": "Why this claim is wrong or incomplete",
-      "severity": "CRITICAL|MAJOR|MINOR",
+      "severity": "MAJOR|MINOR",
       "evidence": "Data from your independent source supporting the challenge"
     }}
   ]
 }}
-```
 
-List 3-5 concerns. Each concern MUST cite evidence from your tools (Yahoo Finance or web search).
+Do not include prose, commentary, or Markdown code fences outside the JSON object.
+List 3-5 concerns. Each concern MUST cite evidence from your tools.
 If you genuinely have no concerns after thorough review, respond with exactly: "{termination}"
 """
 

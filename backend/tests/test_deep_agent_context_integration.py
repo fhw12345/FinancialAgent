@@ -1,13 +1,44 @@
 """Integration test for context injection into real Deep LangGraph prompts."""
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
-from langchain_core.messages import AIMessage
 
+from src.agent.debate_types import DeepVerdict
 from src.agent.deep_react_agent import DeepReActAgent
 from src.agent.deep_research_context import DeepResearchContext
+
+
+def install_structured_verdict(
+    agent: DeepReActAgent,
+    report_markdown: str = "### Final Verdict\n- **Action**: Hold",
+    concern_ids: tuple[str, ...] = (),
+) -> SimpleNamespace:
+    structured = SimpleNamespace(
+        ainvoke=AsyncMock(
+            return_value=DeepVerdict(
+                report_markdown=report_markdown,
+                action="HOLD",
+                conviction="MEDIUM",
+                risk_level="MODERATE",
+                key_insight="Balanced upside and downside.",
+                concern_assessments=[
+                    {
+                        "concern_id": concern_id,
+                        "assessment": "VERIFIED",
+                        "reasoning": "The concern was assessed by the verdict.",
+                        "evidence": "Verified debate evidence.",
+                    }
+                    for concern_id in concern_ids
+                ],
+            )
+        )
+    )
+    agent.verdict_llm = SimpleNamespace(
+        with_structured_output=Mock(return_value=structured)
+    )
+    return structured
 
 
 @pytest.mark.asyncio
@@ -85,25 +116,25 @@ async def test_debate_prompts_receive_full_prior_context():
         prompts.append((subagent.config.name, prompt))
         if subagent.config.name == "debater":
             return (
-                """```json
-{"concerns":[{"id":"C1","claim":"Valuation is stretched","category":"valuation","challenge":"Test downside","severity":"MAJOR","evidence":"Peer multiples"}]}
-```""",
+                '{"concerns":[{"id":"C1","claim":"Valuation is stretched",'
+                '"category":"valuation","challenge":"Test downside",'
+                '"severity":"MAJOR","evidence":"Peer multiples"}]}',
                 0,
             )
         if "The debater raised concerns" in prompt:
             return (
-                """```json
-{"rebuttals":[{"concern_id":"C1","status":"PARTIALLY_VALID","defense":"Growth offsets part of the premium","evidence":"HBM demand"}]}
-```""",
+                '{"rebuttals":[{"concern_id":"R1-C1",'
+                '"status":"PARTIALLY_VALID",'
+                '"defense":"Growth offsets part of the premium",'
+                '"evidence":"HBM demand"}]}',
                 0,
             )
         return f"{subagent.config.name} report", 0
 
     agent._invoke_with_events = AsyncMock(side_effect=invoke)
-    agent.verdict_llm = SimpleNamespace(
-        ainvoke=AsyncMock(
-            return_value=AIMessage(content="### Final Verdict\n- **Action**: Hold")
-        )
+    structured_verdict = install_structured_verdict(
+        agent,
+        concern_ids=("R1-C1",),
     )
     context = DeepResearchContext.from_history(
         current_request="Now focus on downside and challenge the thesis.",
@@ -140,7 +171,7 @@ async def test_debate_prompts_receive_full_prior_context():
     rebuttal_prompt = next(
         prompt for _, prompt in prompts if "The debater raised concerns" in prompt
     )
-    verdict_prompt = agent.verdict_llm.ainvoke.await_args.args[0][0].content
+    verdict_prompt = structured_verdict.ainvoke.await_args.args[0][0].content
 
     assert len(specialist_prompts) == 3
     for prompt in specialist_prompts:
@@ -241,26 +272,22 @@ async def test_technical_only_debate_stays_with_technical_subagent():
         invoked.append(subagent.config.name)
         if "Review the following investment thesis" in prompt:
             return (
-                """```json
-{"concerns":[{"id":"C1","claim":"Momentum is weak","category":"technical","challenge":"Test support","severity":"MAJOR","evidence":"Price action"}]}
-```""",
+                '{"concerns":[{"id":"C1","claim":"Momentum is weak",'
+                '"category":"technical","challenge":"Test support",'
+                '"severity":"MAJOR","evidence":"Price action"}]}',
                 0,
             )
         if "The debater raised concerns" in prompt:
             return (
-                """```json
-{"rebuttals":[{"concern_id":"C1","status":"PARTIALLY_VALID","defense":"Support remains intact","evidence":"Price action"}]}
-```""",
+                '{"rebuttals":[{"concern_id":"R1-C1",'
+                '"status":"PARTIALLY_VALID",'
+                '"defense":"Support remains intact","evidence":"Price action"}]}',
                 0,
             )
         return "technical report", 0
 
     agent._invoke_with_events = AsyncMock(side_effect=invoke)
-    agent.verdict_llm = SimpleNamespace(
-        ainvoke=AsyncMock(
-            return_value=AIMessage(content="### Final Verdict\n- **Action**: Hold")
-        )
-    )
+    install_structured_verdict(agent, concern_ids=("R1-C1",))
     request = "Analyze SKHY using technical only and challenge the thesis."
     context = DeepResearchContext.from_history(
         current_request=request,

@@ -1,43 +1,25 @@
-"""
-Deep ReAct Agent with Hierarchical Sub-Agent Delegation.
+"""Deep ReAct agent with hierarchical research and adversarial debate."""
 
-Orchestrates specialist sub-agents (Technical, News, Financial)
-with optional adversarial debate loop. Supports structured event
-emission via on_event callback for real-time SSE streaming.
+from __future__ import annotations
 
-Flow: User → [Main Agent] → [Debate ↔ Rebuttal] → Verdict
-"""
-
-import operator
 import time
+import uuid
 from collections.abc import Callable
-from typing import Annotated, Any, TypedDict
+from typing import Any
 
 import structlog
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
-from langgraph.graph import END, START, StateGraph
 
-from ..api.schemas.deep_agent_events import (
-    DeepEventEmitter,
-    extract_risk_level,
-)
-from ..core.utils import message_content_to_text
+from ..api.schemas.deep_agent_events import DeepEventEmitter, extract_risk_level
 from ..core.utils.token_utils import extract_token_usage_from_messages
 from .context import AgentContext
-from .debate_types import (
-    Concern,
-    Rebuttal,
-    merge_facts,
-    parse_debater_output,
-    parse_rebuttal_output,
-    render_verified_facts_reminder,
-)
+from .debate_types import VerdictAction
 from .deep_research_context import DeepResearchContext
+from .deep_workflow import AnalysisState, build_deep_workflow
 from .llm_factory import get_llm
-from .prompt_registry import get_prompt, render_prompt
 from .subagent_invoker import invoke_subagent
-from .subagents.debater import TERMINATION_SIGNAL, create_debater_subagent
+from .subagents.debater import create_debater_subagent
 from .subagents.financial import create_financial_subagent
 from .subagents.news import create_news_subagent
 from .subagents.technical import create_technical_subagent
@@ -49,40 +31,8 @@ logger = structlog.get_logger()
 DEFAULT_MAX_DEBATE_ROUNDS = 2
 
 
-class AnalysisState(TypedDict, total=False):
-    """
-    Typed state for the analysis workflow.
-
-    Using TypedDict instead of dataclass for better LangGraph compatibility.
-    State flows between nodes; runtime config (dates, user_id) flows via RunnableConfig.
-    """
-
-    # Message history (accumulates via operator.add)
-    messages: Annotated[list[BaseMessage], operator.add]
-    # Target symbol for analysis
-    symbol: str
-    # Current debate round
-    round_count: int
-    # Research report from synthesis
-    research_report: str
-    # Whether debate loop is active
-    debate_active: bool
-    # Structured debate exchange (auto-accumulated via operator.add reducer)
-    all_concerns: Annotated[list, operator.add]  # Concern dicts from debater
-    all_rebuttals: Annotated[list, operator.add]  # Rebuttal dicts from defender
-    research_context: str
-    research_context_with_report: str
-    research_constraints: tuple[str, ...]
-    prompt_versions: dict[str, str]
-
-
 class DeepReActAgent:
-    """
-    Hierarchical agent with sub-agent delegation and optional debate loop.
-
-    This agent orchestrates specialist sub-agents, each of which uses
-    the Skills pattern for strategic tool usage.
-    """
+    """Orchestrate specialist sub-agents and an optional symmetric debate loop."""
 
     def __init__(
         self,
@@ -92,49 +42,38 @@ class DeepReActAgent:
         max_debate_rounds: int = DEFAULT_MAX_DEBATE_ROUNDS,
         order_repo: Any = None,
         data_manager: Any = None,
-    ):
-        """
-        Initialize the Deep ReAct Agent.
-
-        Args:
-            settings: Application settings with API keys
-            tools: List of all available tools
-            enable_debate: Whether to enable the adversarial debate loop
-            max_debate_rounds: Maximum number of debate iterations
-            order_repo: Optional PortfolioOrderRepository — when provided,
-                Buy/Hold/Sell verdicts are persisted as decision_type="signal"
-                rows so the decision tracker can mark them to market.
-            data_manager: Optional DataManager — used to capture decision_price
-                via get_quote at verdict time. Both must be set to enable
-                verdict persistence.
-        """
+    ) -> None:
         self.settings = settings
         self.enable_debate = enable_debate
         self.max_debate_rounds = max_debate_rounds
         self._order_repo = order_repo
         self._data_manager = data_manager
-
-        # Convert tools to dict for skill creation
         self.tools_dict = get_all_tools_dict(tools)
-
-        # Exa API key for debater's independent web search
         self.exa_api_key: str = getattr(settings, "exa_api_key", "")
 
-        # Initialize LLMs (W8: routed via Agent Maestro, per-role models)
-        # Main planner uses the strongest model; verdict synthesis uses sonnet.
         temperature = float(getattr(settings, "default_llm_temperature", 0.7))
         self.llm = get_llm("deep_planner", temperature=temperature, timeout=30)
         self.verdict_llm = get_llm("verdict", temperature=temperature, timeout=30)
-        # Per-subagent LLMs
         self._llm_technical = get_llm(
-            "sub_technical", temperature=temperature, timeout=30
+            "sub_technical",
+            temperature=temperature,
+            timeout=30,
         )
-        self._llm_news = get_llm("sub_news", temperature=temperature, timeout=30)
+        self._llm_news = get_llm(
+            "sub_news",
+            temperature=temperature,
+            timeout=30,
+        )
         self._llm_financial = get_llm(
-            "sub_financial", temperature=temperature, timeout=30
+            "sub_financial",
+            temperature=temperature,
+            timeout=30,
         )
-        self._llm_debater = get_llm("sub_debater", temperature=temperature, timeout=30)
-
+        self._llm_debater = get_llm(
+            "sub_debater",
+            temperature=temperature,
+            timeout=30,
+        )
         logger.info(
             "DeepReActAgent initialized",
             enable_debate=enable_debate,
@@ -147,19 +86,29 @@ class DeepReActAgent:
         context: AgentContext,
         cache: AnalysisToolCache | None = None,
     ) -> dict[str, Any]:
-        """Create all sub-agents with context and optional tool cache."""
         return {
             "technical": create_technical_subagent(
-                self.tools_dict, self._llm_technical, context, cache=cache
+                self.tools_dict,
+                self._llm_technical,
+                context,
+                cache=cache,
             ),
             "news": create_news_subagent(
-                self.tools_dict, self._llm_news, context, cache=cache
+                self.tools_dict,
+                self._llm_news,
+                context,
+                cache=cache,
             ),
             "financial": create_financial_subagent(
-                self.tools_dict, self._llm_financial, context, cache=cache
+                self.tools_dict,
+                self._llm_financial,
+                context,
+                cache=cache,
             ),
             "debater": create_debater_subagent(
-                model=self._llm_debater, context=context, exa_api_key=self.exa_api_key
+                model=self._llm_debater,
+                context=context,
+                exa_api_key=self.exa_api_key,
             ),
         }
 
@@ -169,567 +118,51 @@ class DeepReActAgent:
         cache: AnalysisToolCache,
         emitter: DeepEventEmitter | None = None,
         on_event: Callable[[dict[str, Any]], None] | None = None,
-    ) -> StateGraph:
-        """Build the LangGraph workflow with symmetric debate topology.
-
-        Graph topology (debate enabled):
-            START → main_agent → debate → should_continue
-                                   ↑            |
-                                   |    continue → main_agent (rebuttal)
-                                   |    end → verdict → END
-
-        Round semantics:
-        - round_count starts at 0
-        - main_agent_node does NOT increment (research or rebuttal)
-        - debate_node increments after challenging
-        - should_continue checks after debater
-
-        Args:
-            context: Agent context with session parameters
-            cache: Per-analysis tool result cache (created in analyze())
-            emitter: Event emitter for sequenced event creation
-            on_event: Callback to emit events to the streaming layer
-        """
-        subagents = self._create_subagents(context, cache=cache)
-
-        def _constraint_subagent_key(state: dict, default: str) -> str:
-            constraints = set(state.get("research_constraints", ()))
-            if "technical_focus" in constraints:
-                return "technical"
-            if {
-                "valuation_focus",
-                "fundamental_focus",
-                "exclude_news",
-            } & constraints:
-                return "financial"
-            return default
-
-        def _emit(event: dict[str, Any]) -> None:
-            """Safely emit an event via callback."""
-            if on_event is not None:
-                try:
-                    on_event(event)
-                except Exception:
-                    logger.warning("Failed to emit event", event_type=event.get("type"))
-
-        # ── main_agent_node ──────────────────────────────────────────────
-        async def main_agent_node(state: dict, config: RunnableConfig) -> dict:
-            """Run research (round 0) or rebuttal (round > 0).
-
-            First invocation: Sequential research across tech, news, financial.
-            Subsequent invocations: Targeted rebuttal addressing debater concerns.
-            """
-            symbol = state.get("symbol", context.symbol)
-            round_count = state.get("round_count", 0)
-            configurable = config.get("configurable", {})
-
-            if round_count == 0:
-                # ── RESEARCH PHASE ──
-                logger.info(
-                    "Starting research phase",
-                    symbol=symbol,
-                    session_id=configurable.get("session_id"),
-                    current_date=configurable.get("current_date"),
-                )
-
-                shared_context = state.get("research_context", "")
-                constraints = set(state.get("research_constraints", ()))
-                allowed_specialists = {"technical", "news", "financial"}
-                if "technical_focus" in constraints:
-                    allowed_specialists = {"technical"}
-                elif {
-                    "valuation_focus",
-                    "fundamental_focus",
-                } & constraints:
-                    allowed_specialists = {"financial"}
-                if "exclude_news" in constraints:
-                    allowed_specialists.discard("news")
-
-                research_tasks = [
-                    (
-                        "technical",
-                        f"{shared_context}\n\n"
-                        f"Analyze the technical setup for {symbol} in direct response "
-                        "to the current request above. "
-                        f"Focus on trend, Fibonacci levels, and momentum.",
-                    ),
-                    (
-                        "news",
-                        f"{shared_context}\n\n"
-                        f"Analyze recent news and sentiment for {symbol} in direct "
-                        "response to the current request above. "
-                        f"Include catalyst assessment and market mood.",
-                    ),
-                    (
-                        "financial",
-                        f"{shared_context}\n\n"
-                        f"Analyze the fundamentals of {symbol} in direct response "
-                        "to the current request above. "
-                        f"Focus on valuation, cash flow health, and earnings quality.",
-                    ),
-                ]
-                research_tasks = [
-                    task for task in research_tasks if task[0] in allowed_specialists
-                ]
-
-                reports: dict[str, str] = {}
-                for subagent_key, prompt in research_tasks:
-                    report, _ = await self._invoke_with_events(
-                        subagents[subagent_key],
-                        prompt,
-                        config=config,
-                        emitter=emitter,
-                        on_event=on_event,
-                        emit_fn=_emit,
-                    )
-                    reports[subagent_key] = report
-
-                # Only emit synthesis_start when debate is disabled (straight to END).
-                # When debate IS enabled, verdict_node emits synthesis_start instead.
-                if emitter and not self.enable_debate:
-                    _emit(emitter.synthesis_start())
-
-                report_sections = [
-                    (key, title)
-                    for key, title in (
-                        ("technical", "Technical Analysis"),
-                        ("news", "News & Sentiment Analysis"),
-                        ("financial", "Fundamental Analysis"),
-                    )
-                    if key in reports
-                ]
-                combined_report = "\n\n".join(
-                    f"## {title}\n{reports[key]}" for key, title in report_sections
-                )
-
-                logger.info(
-                    "Research phase complete",
-                    symbol=symbol,
-                    report_length=len(combined_report),
-                )
-
-                return {
-                    "messages": [AIMessage(content=combined_report, name="Researcher")],
-                    "research_report": combined_report,
-                    "round_count": round_count,
-                    # Empty lists — operator.add reducer accumulates automatically
-                    "all_concerns": [],
-                    "all_rebuttals": [],
-                }
-
-            # ── REBUTTAL PHASE ──
-            # Read accumulated concerns from state (populated by operator.add reducer)
-            all_concerns = state.get("all_concerns", [])
-
-            logger.info(
-                "Starting rebuttal phase",
-                round=round_count,
-                concern_count=len(all_concerns),
-            )
-
-            if emitter:
-                _emit(emitter.rebuttal_start(round_count))
-
-            rebuttal_start_time = time.perf_counter()
-
-            # Build targeted rebuttal from structured concerns
-            concern_lines = "\n".join(
-                f"- [{c.get('severity', 'MAJOR')}] {c.get('id', '?')}: "
-                f"{c.get('claim', '')} — {c.get('challenge', '')}"
-                for c in all_concerns
-            )
-
-            rebuttal_spec = get_prompt("deep-rebuttal")
-            _emit(
-                {
-                    "type": "prompt_used",
-                    "prompt_id": rebuttal_spec.prompt_id,
-                    "version": rebuttal_spec.versioned_id,
-                }
-            )
-            rebuttal_prompt = render_prompt(
-                "deep-rebuttal",
-                research_context=state.get("research_context_with_report", ""),
-                symbol=symbol,
-                concern_lines=concern_lines,
-            )
-
-            defense_parts: list[str] = []
-            total_tool_count = 0
-
-            subagent_key = _constraint_subagent_key(state, "financial")
-            defense, actual_tool_count = await self._invoke_with_events(
-                subagents[subagent_key],
-                rebuttal_prompt,
-                config=config,
-                emitter=emitter,
-                on_event=on_event,
-                emit_fn=_emit,
-                raise_on_error=False,
-            )
-            if defense:
-                defense_parts.append(defense)
-                total_tool_count += actual_tool_count
-            else:
-                logger.warning(
-                    "Rebuttal sub-agent failed",
-                    subagent=subagent_key,
-                )
-
-            combined_defense = "\n\n".join(defense_parts)
-            rebuttal_duration = int((time.perf_counter() - rebuttal_start_time) * 1000)
-
-            # Parse structured rebuttal output
-            rebuttal_output = parse_rebuttal_output(combined_defense)
-            new_rebuttals = [
-                {
-                    "concern_id": r.concern_id,
-                    "status": r.status,
-                    "defense": r.defense,
-                    "evidence": r.evidence,
-                }
-                for r in rebuttal_output.rebuttals
-            ]
-
-            if emitter:
-                _emit(
-                    emitter.rebuttal_result(
-                        current_round=round_count,
-                        defense_summary=combined_defense,
-                        tool_count=total_tool_count,
-                        duration_ms=rebuttal_duration,
-                        rebuttals=new_rebuttals,
-                    )
-                )
-
-            updated_report = (
-                f"{state.get('research_report', '')}"
-                f"\n\n## Defense (Round {round_count})\n{combined_defense}"
-            )
-
-            logger.info(
-                "Rebuttal phase complete",
-                round=round_count,
-                tool_count=total_tool_count,
-                parsed_rebuttals=len(new_rebuttals),
-                duration_ms=rebuttal_duration,
-            )
-
-            return {
-                "messages": [AIMessage(content=combined_defense, name="Defender")],
-                "research_report": updated_report,
-                "round_count": round_count,
-                # Only return NEW items — operator.add reducer handles accumulation
-                "all_concerns": [],
-                "all_rebuttals": new_rebuttals,
-                "prompt_versions": {
-                    **state.get("prompt_versions", {}),
-                    rebuttal_spec.prompt_id: rebuttal_spec.versioned_id,
-                },
-            }
-
-        # ── debate_node ──────────────────────────────────────────────────
-        async def debate_node(state: dict, config: RunnableConfig) -> dict:
-            """Run adversarial analysis with structured concern parsing.
-
-            Invokes the debater sub-agent (with independent yfinance + Exa tools)
-            and parses its structured JSON output into programmatic concerns.
-            """
-            report = state.get("research_report", "")
-            round_count = state.get("round_count", 0)
-            configurable = config.get("configurable", {})
-
-            logger.info(
-                "Starting debate phase",
-                round=round_count + 1,
-                session_id=configurable.get("session_id"),
-            )
-
-            if emitter:
-                _emit(emitter.debate_start(round_count + 1, self.max_debate_rounds))
-
-            # Truncate at sentence boundary to avoid cutting mid-word/mid-JSON
-            max_len = 3000
-            truncated_report = report[:max_len]
-            if len(report) > max_len:
-                last_period = truncated_report.rfind(".")
-                if last_period > max_len // 2:
-                    truncated_report = truncated_report[: last_period + 1]
-
-            debater_spec = get_prompt("deep-debater")
-            _emit(
-                {
-                    "type": "prompt_used",
-                    "prompt_id": debater_spec.prompt_id,
-                    "version": debater_spec.versioned_id,
-                }
-            )
-            critique_prompt = render_prompt(
-                "deep-debater",
-                research_context=state.get("research_context_with_report", ""),
-                report=truncated_report,
-                termination_signal=TERMINATION_SIGNAL,
-            )
-
-            critique_subagent_key = _constraint_subagent_key(state, "debater")
-            critique, _tool_count = await self._invoke_with_events(
-                subagents[critique_subagent_key],
-                critique_prompt,
-                config=config,
-                emitter=emitter,
-                on_event=on_event,
-                emit_fn=_emit,
-            )
-
-            # Parse structured debater output
-            debater_output = parse_debater_output(critique)
-            new_concerns = [
-                {
-                    "id": c.id,
-                    "claim": c.claim,
-                    "category": c.category,
-                    "challenge": c.challenge,
-                    "severity": c.severity,
-                    "evidence": c.evidence,
-                }
-                for c in debater_output.concerns
-            ]
-
-            has_concerns = not debater_output.terminated and len(new_concerns) > 0
-            new_round = round_count + 1
-
-            logger.info(
-                "Debate round complete",
-                round=new_round,
-                has_concerns=has_concerns,
-                parsed_concerns=len(new_concerns),
-                terminated=debater_output.terminated,
-            )
-
-            if emitter:
-                _emit(
-                    emitter.debate_round(
-                        new_round, has_concerns, critique, concerns=new_concerns
-                    )
-                )
-
-            return {
-                "messages": [AIMessage(content=critique, name="Debater")],
-                "round_count": new_round,
-                "research_report": report,
-                # Only return NEW concerns — operator.add reducer handles accumulation
-                "all_concerns": new_concerns,
-                "all_rebuttals": [],
-                "debate_active": has_concerns,
-                "prompt_versions": {
-                    **state.get("prompt_versions", {}),
-                    debater_spec.prompt_id: debater_spec.versioned_id,
-                },
-            }
-
-        # ── should_continue ──────────────────────────────────────────────
-        def should_continue(state: dict) -> str:
-            """Determine if debate should continue based on debater output.
-
-            Returns "continue" for normal rounds, "final_rebuttal" when max
-            rounds reached but debater still has concerns (ensures symmetric
-            defense-before-verdict), or "end" when debater is satisfied.
-            """
-            round_count = state.get("round_count", 1)
-            debate_active = state.get("debate_active", True)
-
-            if not debate_active:
-                logger.info("Debater satisfied, ending debate")
-                return "end"
-
-            if round_count >= self.max_debate_rounds:
-                logger.info(
-                    "Max debate rounds reached, routing to final rebuttal",
-                    rounds=round_count,
-                )
-                return "final_rebuttal"
-
-            logger.info("Continuing debate", round=round_count + 1)
-            return "continue"
-
-        def after_main_agent(state: dict) -> str:
-            """Route main_agent output to debate or verdict.
-
-            After the initial research (round_count=1), always go to debate.
-            After a final rebuttal (round_count >= max), go directly to verdict
-            to preserve symmetry: defense always responds before verdict.
-            """
-            round_count = state.get("round_count", 0)
-            if round_count >= self.max_debate_rounds:
-                logger.info("Final rebuttal complete, proceeding to verdict")
-                return "verdict"
-            return "debate"
-
-        # ── verdict_node ─────────────────────────────────────────────────
-        async def verdict_node(state: dict, config: RunnableConfig) -> dict:
-            """Synthesize debate into final verdict with verified facts.
-
-            Merges all structured concerns and rebuttals into verified facts,
-            injects them as a <system-reminder> JSON block, and generates
-            a final Buy/Hold/Sell recommendation with conviction level.
-            """
-            report = state.get("research_report", "")
-            round_count = state.get("round_count", 1)
-            all_concerns = state.get("all_concerns", [])
-            all_rebuttals = state.get("all_rebuttals", [])
-
-            # Merge structured facts for evidence-based verdict
-            concerns = [Concern(**c) for c in all_concerns] if all_concerns else []
-            rebuttals = [Rebuttal(**r) for r in all_rebuttals] if all_rebuttals else []
-            merged = merge_facts(concerns, rebuttals)
-            verified_facts_block = (
-                render_verified_facts_reminder(merged) if merged else ""
-            )
-
-            logger.info(
-                "Starting verdict phase",
-                round_count=round_count,
-                concern_count=len(all_concerns),
-                rebuttal_count=len(all_rebuttals),
-                merged_fact_count=len(merged),
-            )
-
-            if emitter:
-                _emit(emitter.synthesis_start())
-
-            # Extract original research (before defense appendages)
-            parts = report.split("\n\n## Defense (Round")
-            original_research = parts[0].strip()
-
-            verdict_spec = get_prompt("deep-verdict")
-            _emit(
-                {
-                    "type": "prompt_used",
-                    "prompt_id": verdict_spec.prompt_id,
-                    "version": verdict_spec.versioned_id,
-                }
-            )
-            verdict_prompt = render_prompt(
-                "deep-verdict",
-                verified_facts=verified_facts_block,
-                research_context=state.get("research_context_with_report", ""),
-                report=original_research[:6000],
-            )
-
-            verdict_response = await self.verdict_llm.ainvoke(
-                [HumanMessage(content=verdict_prompt)],
-                config=config,
-            )
-
-            verdict_text = message_content_to_text(verdict_response.content)
-            logger.info(
-                "Verdict phase complete",
-                verdict_length=len(verdict_text),
-            )
-
-            # Persist verdict as a decision row (best-effort, non-blocking).
-            await self._persist_verdict_decision(
-                symbol=state.get("symbol", ""),
-                verdict_text=str(verdict_text),
-                config=config,
-            )
-
-            return {
-                "messages": [AIMessage(content=verdict_text, name="Judge")],
-                "research_report": verdict_text,  # Becomes final_answer via adapter
-                "round_count": round_count,
-                # Empty — no new items; operator.add preserves accumulated state
-                "all_concerns": [],
-                "all_rebuttals": [],
-                "prompt_versions": {
-                    **state.get("prompt_versions", {}),
-                    verdict_spec.prompt_id: verdict_spec.versioned_id,
-                },
-            }
-
-        # ── Graph Assembly ───────────────────────────────────────────────
-        # Must use AnalysisState (not dict) so Annotated reducers are active.
-        # operator.add on messages/all_concerns/all_rebuttals requires this.
-        builder = StateGraph(AnalysisState)
-        builder.add_node("main_agent", main_agent_node)
-
-        if self.enable_debate:
-            builder.add_node("debate", debate_node)
-            builder.add_node("verdict", verdict_node)
-            builder.add_edge(START, "main_agent")
-            builder.add_conditional_edges(
-                "main_agent",
-                after_main_agent,
-                {
-                    "debate": "debate",  # Normal flow: research/rebuttal → debate
-                    "verdict": "verdict",  # Final rebuttal complete → verdict
-                },
-            )
-            builder.add_conditional_edges(
-                "debate",
-                should_continue,
-                {
-                    "continue": "main_agent",  # Rebuttal with evidence
-                    "final_rebuttal": "main_agent",  # Last rebuttal before verdict
-                    "end": "verdict",  # Debater satisfied, no concerns
-                },
-            )
-            builder.add_edge("verdict", END)
-        else:
-            builder.add_edge(START, "main_agent")
-            builder.add_edge("main_agent", END)
-
-        return builder.compile()
+    ) -> Any:
+        """Build the graph; build_deep_workflow uses StateGraph(AnalysisState)."""
+        return build_deep_workflow(
+            self,
+            context,
+            cache,
+            emitter=emitter,
+            on_event=on_event,
+        )
 
     async def _persist_verdict_decision(
         self,
         symbol: str,
-        verdict_text: str,
-        config: Any,
+        action: VerdictAction,
+        *,
+        chat_id: str,
+        run_id: str,
+        message_id: str,
     ) -> None:
-        """
-        Best-effort: extract Buy/Hold/Sell from verdict text, capture current
-        quote as the decision_price anchor, persist as decision_type="signal".
-
-        Failures are swallowed (this is observability, not user-facing).
-        """
+        """Persist a validated structured verdict action as a signal decision."""
+        if action not in {"BUY", "HOLD", "SELL"}:
+            raise ValueError(f"Unsupported structured verdict action: {action}")
         if not self._order_repo or not self._data_manager or not symbol:
             return
         try:
-            import re
-            import uuid as _uuid
-
             from ..core.utils.date_utils import utcnow
             from ..models.portfolio import PortfolioOrder
-
-            m = re.search(
-                r"\*\*Action\*\*\s*:\s*(buy|hold|sell)",
-                verdict_text,
-                re.IGNORECASE,
-            )
-            if not m:
-                logger.debug("verdict_persist_skipped_no_action", symbol=symbol)
-                return
-            side = m.group(1).lower()
 
             quote = await self._data_manager.get_quote(symbol)
             decision_price = float(getattr(quote, "price", 0.0) or 0.0)
             if decision_price <= 0:
                 return
 
-            cfg = getattr(config, "configurable", {}) or {}
-            session_id = cfg.get("session_id") or _uuid.uuid4().hex[:12]
-            user_id = cfg.get("user_id") or "anonymous"
-
+            analysis_id = f"deep_react_{symbol}_{run_id}"
             row = PortfolioOrder(
-                order_id=f"verdict_{_uuid.uuid4().hex[:12]}",
-                chat_id=cfg.get("chat_id", "deep_react"),
-                user_id=user_id,
-                message_id=cfg.get("message_id"),
-                analysis_id=f"deep_react_{symbol}_{session_id}",
+                order_id=(
+                    "verdict_"
+                    f"{uuid.uuid5(uuid.NAMESPACE_URL, f'deep-verdict:{run_id}').hex}"
+                ),
+                chat_id=chat_id,
+                message_id=message_id,
+                analysis_id=analysis_id,
                 symbol=symbol.upper(),
                 order_type="market",
-                side=side,
+                side=action.lower(),
                 quantity=0.0,
                 limit_price=None,
                 stop_price=None,
@@ -742,17 +175,26 @@ class DeepReActAgent:
                 created_at=utcnow(),
                 decision_price=decision_price,
                 decision_type="signal",
-                metadata={"source": "deep_react_verdict"},
+                metadata={
+                    "source": "deep_react_verdict",
+                    "run_id": run_id,
+                },
             )
-            await self._order_repo.create(row)
+            persisted = await self._order_repo.upsert(row)
             logger.info(
                 "verdict_decision_persisted",
                 symbol=symbol,
-                side=side,
-                decision_price=decision_price,
+                side=persisted.side,
+                decision_price=persisted.decision_price,
+                chat_id=chat_id,
+                run_id=run_id,
             )
-        except Exception as e:
-            logger.warning("verdict_persist_failed", symbol=symbol, error=str(e))
+        except Exception as exc:
+            logger.warning(
+                "verdict_persist_failed",
+                symbol=symbol,
+                error=str(exc),
+            )
 
     async def _invoke_subagent(
         self,
@@ -762,21 +204,14 @@ class DeepReActAgent:
         emitter: DeepEventEmitter | None = None,
         on_event: Callable[[dict[str, Any]], None] | None = None,
     ) -> tuple[str, int]:
-        """Invoke a deep sub-agent with retry logic.
-
-        The sub-agent's deepagents graph already includes the LLM model,
-        built-in tools, custom tools, and skills middleware.
-
-        Returns:
-            Tuple of (response_content, tool_count).
-        """
-        return await invoke_subagent(
+        result: tuple[str, int] = await invoke_subagent(
             subagent=subagent,
             prompt=prompt,
             config=config,
             emitter=emitter,
             on_event=on_event,
         )
+        return result
 
     async def _invoke_with_events(
         self,
@@ -789,29 +224,10 @@ class DeepReActAgent:
         emit_fn: Callable[[dict[str, Any]], None] | None = None,
         raise_on_error: bool = True,
     ) -> tuple[str, int]:
-        """Invoke a sub-agent with lifecycle event emission and timing.
-
-        Wraps _invoke_subagent with the common pattern of:
-        subagent_start → invoke → subagent_result (success/error).
-
-        Args:
-            subagent: The DeepSubAgent to invoke
-            prompt: Task prompt for the sub-agent
-            config: LangGraph RunnableConfig for tracing
-            emitter: Event factory for creating sequenced events
-            on_event: Raw callback for streaming events to SSE
-            emit_fn: Safe emit wrapper (captures on_event closure)
-            raise_on_error: If True, re-raise exceptions after emitting error event
-
-        Returns:
-            Tuple of (response_content, tool_count).
-        """
         subagent_name = subagent.config.name
-
         if emitter and emit_fn:
             emit_fn(emitter.subagent_start(subagent_name, subagent.get_tool_names()))
-
-        sa_start = time.perf_counter()
+        started = time.perf_counter()
         try:
             result, tool_count = await self._invoke_subagent(
                 subagent,
@@ -820,29 +236,27 @@ class DeepReActAgent:
                 emitter=emitter,
                 on_event=on_event,
             )
-            sa_duration = int((time.perf_counter() - sa_start) * 1000)
-
+            duration_ms = int((time.perf_counter() - started) * 1000)
             if emitter and emit_fn:
                 emit_fn(
                     emitter.subagent_result(
                         subagent_name=subagent_name,
                         status="success",
-                        duration_ms=sa_duration,
+                        duration_ms=duration_ms,
                         result_summary=result,
                         tool_count=tool_count,
                     )
                 )
             return result, tool_count
-
-        except Exception as e:
-            sa_duration = int((time.perf_counter() - sa_start) * 1000)
+        except Exception as exc:
+            duration_ms = int((time.perf_counter() - started) * 1000)
             if emitter and emit_fn:
                 emit_fn(
                     emitter.subagent_result(
                         subagent_name=subagent_name,
                         status="error",
-                        duration_ms=sa_duration,
-                        result_summary=str(e),
+                        duration_ms=duration_ms,
+                        result_summary=str(exc),
                     )
                 )
             if raise_on_error:
@@ -858,16 +272,6 @@ class DeepReActAgent:
         user_message: str | None = None,
         research_context: DeepResearchContext | None = None,
     ) -> dict[str, Any]:
-        """Run a full analysis for a symbol with optional event streaming.
-
-        Args:
-            symbol: Target ticker symbol
-            user_id: Authenticated user ID
-            enable_debate: Override debate setting (None = use default)
-            on_event: Callback for streaming lifecycle events
-            user_message: The user's actual question (used as initial state message)
-            research_context: Bounded prior conversation and research constraints
-        """
         context = AgentContext(
             symbol=symbol,
             user_id=user_id,
@@ -883,13 +287,14 @@ class DeepReActAgent:
                 enable_debate if enable_debate is not None else self.enable_debate
             ),
         )
-
         emitter = DeepEventEmitter() if on_event else None
         analysis_cache = AnalysisToolCache()
         workflow = self._build_workflow(
-            context, cache=analysis_cache, emitter=emitter, on_event=on_event
+            context,
+            cache=analysis_cache,
+            emitter=emitter,
+            on_event=on_event,
         )
-
         config = RunnableConfig(
             configurable=context.to_dict(),
             tags=[f"symbol:{symbol}", f"user:{user_id}"],
@@ -898,19 +303,11 @@ class DeepReActAgent:
                 "analysis_type": context.analysis_type,
             },
         )
-
-        # Use the real user message; fall back to a generic prompt for API-only usage
         initial_content = user_message or f"Analyze {symbol} comprehensively."
         research_context = research_context or DeepResearchContext.from_history(
             current_request=initial_content,
             conversation_history=[],
         )
-        rendered_context = research_context.render(
-            symbol=symbol,
-            previous_report_char_limit=600,
-        )
-        rendered_context_with_report = research_context.render(symbol=symbol)
-
         initial_state: AnalysisState = {
             "messages": [HumanMessage(content=initial_content)],
             "symbol": symbol,
@@ -919,31 +316,34 @@ class DeepReActAgent:
             "debate_active": context.enable_debate,
             "all_concerns": [],
             "all_rebuttals": [],
-            "research_context": rendered_context,
-            "research_context_with_report": rendered_context_with_report,
+            "research_context": research_context.render(
+                symbol=symbol,
+                previous_report_char_limit=600,
+            ),
+            "research_context_with_report": research_context.render(symbol=symbol),
             "research_constraints": research_context.constraints,
             "prompt_versions": {},
         }
 
-        def _safe_emit(event: dict[str, Any]) -> None:
-            """Safely emit an event via callback (outside workflow nodes).
-
-            Same logic as _emit() inside _build_workflow — both are closures
-            over on_event but in different scopes (analyze vs workflow nodes).
-            """
+        def safe_emit(event: dict[str, Any]) -> None:
             if on_event is not None:
                 try:
                     on_event(event)
                 except Exception:
-                    logger.warning("Failed to emit event", event_type=event.get("type"))
+                    logger.warning(
+                        "Failed to emit event",
+                        event_type=event.get("type"),
+                    )
 
         if emitter and on_event:
-            subagent_names = ["technical_analyst", "news_analyst", "financial_analyst"]
-            _safe_emit(
-                emitter.deep_start(symbol, subagent_names, context.enable_debate)
+            safe_emit(
+                emitter.deep_start(
+                    symbol,
+                    ["technical_analyst", "news_analyst", "financial_analyst"],
+                    context.enable_debate,
+                )
             )
-
-        start_time = time.perf_counter()
+        started = time.perf_counter()
         logger.info(
             "Starting analysis",
             symbol=symbol,
@@ -951,59 +351,57 @@ class DeepReActAgent:
             current_date=context.current_date,
             enable_debate=context.enable_debate,
         )
-
         try:
-            final_state = await workflow.ainvoke(initial_state, config=config)
-        except Exception as e:
-            duration_ms = int((time.perf_counter() - start_time) * 1000)
+            raw_final_state = await workflow.ainvoke(initial_state, config=config)
+        except Exception as exc:
             logger.error(
                 "Analysis failed",
                 symbol=symbol,
                 session_id=context.session_id,
-                error=str(e),
-                duration_ms=duration_ms,
+                error=str(exc),
+                duration_ms=int((time.perf_counter() - started) * 1000),
             )
             raise
         finally:
             analysis_cache.log_stats()
 
-        duration_ms = int((time.perf_counter() - start_time) * 1000)
-
-        all_messages = final_state.get("messages", [])
+        final_state: dict[str, Any] = dict(raw_final_state)
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        messages = final_state.get("messages", [])
         input_tokens, output_tokens, total_tokens = extract_token_usage_from_messages(
-            all_messages
+            messages
         )
-
+        final_state.update(
+            {
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "total_tokens": total_tokens,
+                "agent_duration_ms": duration_ms,
+            }
+        )
         logger.info(
             "Analysis complete",
             symbol=symbol,
             session_id=context.session_id,
             total_rounds=final_state.get("round_count", 0),
-            message_count=len(all_messages),
+            message_count=len(messages),
             duration_ms=duration_ms,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             total_tokens=total_tokens,
         )
-
-        final_state["input_tokens"] = input_tokens
-        final_state["output_tokens"] = output_tokens
-        final_state["total_tokens"] = total_tokens
-        final_state["agent_duration_ms"] = duration_ms
-
         if emitter and on_event:
             report = final_state.get("research_report", "")
-            risk_level = extract_risk_level(report)
-            tool_count = sum(
-                1 for m in all_messages if m.__class__.__name__ == "ToolMessage"
-            )
-            _safe_emit(
+            verdict = final_state.get("verdict", {})
+            safe_emit(
                 emitter.verdict(
                     verdict_text=report,
-                    risk_level=risk_level,
-                    tool_count=tool_count,
+                    risk_level=verdict.get("risk_level") or extract_risk_level(report),
+                    tool_count=sum(
+                        message.__class__.__name__ == "ToolMessage"
+                        for message in messages
+                    ),
                     total_duration_ms=duration_ms,
                 )
             )
-
         return final_state

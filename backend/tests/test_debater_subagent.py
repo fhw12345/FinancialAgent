@@ -1,5 +1,6 @@
 """Tests for debater sub-agent with independent tools."""
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from src.agent.subagents.debater import (
@@ -42,3 +43,17 @@ class TestDebaterSubagent:
 
     def test_termination_signal_unchanged(self) -> None:
         assert TERMINATION_SIGNAL == "NO FURTHER CONCERNS"
+
+    def test_all_debater_skills_require_unfenced_pure_json(self) -> None:
+        skills_root = Path(__file__).parents[1] / "src" / "agent" / "skills" / "debater"
+        for skill_name in (
+            "fact-checking",
+            "counter-evidence",
+            "risk-assessment",
+            "assumption-testing",
+        ):
+            content = (skills_root / skill_name / "SKILL.md").read_text(
+                encoding="utf-8"
+            )
+            assert "Return one JSON object only, without Markdown fences:" in content
+            assert "```" not in content

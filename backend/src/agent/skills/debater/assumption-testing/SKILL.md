@@ -38,19 +38,6 @@ If assumption is wrong, what happens to thesis?
 - Thesis invalidated? (critical assumption)
 
 ### Output Format
-ASSUMPTION TEST: [SYMBOL]
+Return one JSON object only, without Markdown fences:
 
-CRITICAL ASSUMPTIONS (thesis depends on these):
-1. Assumption: [Statement]
-   Supporting Evidence: [Independent data]
-   Contradicting Evidence: [Independent data]
-   If Wrong: [Impact on thesis]
-   Verdict: [SOLID/QUESTIONABLE/WEAK]
-
-SENSITIVE ASSUMPTIONS (would weaken thesis if wrong):
-[Same format]
-
-ROBUST ASSUMPTIONS (thesis valid even if wrong):
-[Same format]
-
-WEAKEST LINK: [Most questionable critical assumption]
+{"concerns":[{"id":"C1","claim":"Assumption being challenged","category":"technical|fundamental|valuation|risk","challenge":"Why independent evidence weakens the assumption","severity":"MAJOR|MINOR","evidence":"Independent source"}]}

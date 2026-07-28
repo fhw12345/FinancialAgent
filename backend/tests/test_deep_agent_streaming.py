@@ -1,5 +1,6 @@
 """Streaming regression tests for Deep Agent symbol clarification."""
 
+import asyncio
 import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
@@ -7,9 +8,11 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from src.api.chat.streaming.deep_agent import stream_with_deep_agent
+from src.api.chat.streaming.durable_tasks import await_task_through_cancellation
 from src.api.schemas.chat_models import ChatRequest
 from src.core.utils.date_utils import utcnow
 from src.models.message import Message
+from src.models.run_identity import message_id_for_run
 from src.models.symbol_resolution import SymbolCandidate, SymbolResolution
 
 
@@ -37,6 +40,28 @@ def context_manager() -> Mock:
     manager.calculate_context_tokens.return_value = 0
     manager.estimate_tokens.return_value = 1
     return manager
+
+
+@pytest.mark.asyncio
+async def test_shielded_persistence_finishes_after_cancellation():
+    started = asyncio.Event()
+    release = asyncio.Event()
+    completed = asyncio.Event()
+
+    async def persist() -> None:
+        started.set()
+        await release.wait()
+        completed.set()
+
+    persistence_task = asyncio.create_task(persist())
+    waiter = asyncio.create_task(await_task_through_cancellation(persistence_task))
+    await started.wait()
+    waiter.cancel()
+    release.set()
+
+    _, cancelled = await waiter
+    assert cancelled is True
+    assert completed.is_set()
 
 
 @pytest.mark.asyncio
@@ -172,6 +197,47 @@ async def test_resolved_symbol_continues_to_deep_agent():
         "Deeply analyze TSLA",
     )
     chat_service.get_chat_messages.return_value = []
+
+    persistence_order: list[str] = []
+
+    async def upsert_run_message(**kwargs):
+        persistence_order.append("message")
+        return None
+
+    chat_service.upsert_run_message.side_effect = upsert_run_message
+
+    async def analyze(on_event, **kwargs):
+        on_event(
+            {
+                "type": "prompt_used",
+                "prompt_id": "deep-debater",
+                "version": "deep-debater@3",
+            }
+        )
+        return {
+            "final_answer": "TSLA analysis",
+            "tool_executions": 0,
+            "trace_id": "deep_test",
+            "input_tokens": 10,
+            "output_tokens": 5,
+            "research_context": {
+                "confirmed_symbol": "TSLA",
+                "investment_horizon": "6 months",
+            },
+            "prompt_versions": {"deep-verdict": "deep-verdict@2"},
+            "verdict": {
+                "report_markdown": "**Action**: BUY\n\nTSLA analysis",
+                "action": "BUY",
+                "conviction": "HIGH",
+                "risk_level": "MODERATE",
+                "key_insight": "Structured verdict.",
+                "concern_assessments": [],
+            },
+        }
+
+    async def persist_verdict_decision(**kwargs):
+        persistence_order.append("signal")
+
     agent = SimpleNamespace(
         resolve_symbol=AsyncMock(
             return_value=SymbolResolution(
@@ -190,20 +256,10 @@ async def test_resolved_symbol_continues_to_deep_agent():
                 ],
             )
         ),
-        ainvoke=AsyncMock(
-            return_value={
-                "final_answer": "TSLA analysis",
-                "tool_executions": 0,
-                "trace_id": "deep_test",
-                "input_tokens": 10,
-                "output_tokens": 5,
-                "research_context": {
-                    "confirmed_symbol": "TSLA",
-                    "investment_horizon": "6 months",
-                },
-            }
-        ),
+        ainvoke=AsyncMock(side_effect=analyze),
+        persist_verdict_decision=AsyncMock(side_effect=persist_verdict_decision),
     )
+    run_service = AsyncMock()
 
     response = await stream_with_deep_agent(
         request=ChatRequest(
@@ -217,6 +273,8 @@ async def test_resolved_symbol_continues_to_deep_agent():
         agent=agent,
         context_manager=context_manager(),
         message_repo=AsyncMock(),
+        run_id="run_3",
+        run_service=run_service,
     )
 
     output = ""
@@ -240,3 +298,147 @@ async def test_resolved_symbol_continues_to_deep_agent():
     assistant_call = chat_service.upsert_run_message.await_args
     metadata = assistant_call.kwargs["metadata"]
     assert metadata.raw_data["research_context"]["confirmed_symbol"] == "TSLA"
+    recorded_versions = {
+        key: value
+        for call in run_service.record_prompt_versions.await_args_list
+        for key, value in call.args[1].items()
+    }
+    assert recorded_versions == {
+        "deep-debater": "deep-debater@3",
+        "deep-verdict": "deep-verdict@2",
+    }
+    agent.persist_verdict_decision.assert_awaited_once_with(
+        symbol="TSLA",
+        verdict={
+            "report_markdown": "**Action**: BUY\n\nTSLA analysis",
+            "action": "BUY",
+            "conviction": "HIGH",
+            "risk_level": "MODERATE",
+            "key_insight": "Structured verdict.",
+            "concern_assessments": [],
+        },
+        chat_id="chat_3",
+        run_id="run_3",
+        message_id=message_id_for_run("run_3"),
+    )
+    assert persistence_order == ["message", "signal"]
+
+
+@pytest.mark.asyncio
+async def test_failure_persists_request_local_prompt_versions():
+    chat_service = AsyncMock()
+    chat_service.get_chat.return_value = SimpleNamespace(chat_id="chat_failure")
+    chat_service.add_message.return_value = current_user_message(
+        "chat_failure",
+        "Deeply analyze AAPL",
+    )
+    chat_service.get_chat_messages.return_value = []
+
+    async def fail(on_event, **kwargs):
+        on_event(
+            {
+                "type": "prompt_used",
+                "prompt_id": "deep-rebuttal",
+                "version": "deep-rebuttal@2",
+            }
+        )
+        raise ValueError("invalid rebuttal output")
+
+    agent = SimpleNamespace(
+        resolve_symbol=AsyncMock(
+            return_value=SymbolResolution(
+                status="resolved",
+                source="explicit_ticker",
+                reason_code="resolved_explicit_ticker",
+                symbol="AAPL",
+                confidence=1.0,
+            )
+        ),
+        ainvoke=AsyncMock(side_effect=fail),
+    )
+    run_service = AsyncMock()
+    response = await stream_with_deep_agent(
+        request=ChatRequest(
+            message="Deeply analyze AAPL",
+            chat_id="chat_failure",
+            agent_version="v4-deep",
+            language="en",
+        ),
+        user_id="local",
+        chat_service=chat_service,
+        agent=agent,
+        context_manager=context_manager(),
+        message_repo=AsyncMock(),
+        run_id="run_failure",
+        run_service=run_service,
+    )
+
+    async for _ in response.body_iterator:
+        pass
+
+    run_service.record_prompt_versions.assert_any_await(
+        "run_failure",
+        {"deep-rebuttal": "deep-rebuttal@2"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_cancellation_persists_request_local_prompt_versions():
+    chat_service = AsyncMock()
+    chat_service.get_chat.return_value = SimpleNamespace(chat_id="chat_cancel")
+    chat_service.add_message.return_value = current_user_message(
+        "chat_cancel",
+        "Deeply analyze AAPL",
+    )
+    chat_service.get_chat_messages.return_value = []
+
+    async def wait_for_cancel(on_event, **kwargs):
+        on_event(
+            {
+                "type": "prompt_used",
+                "prompt_id": "deep-debater",
+                "version": "deep-debater@3",
+            }
+        )
+        await asyncio.Event().wait()
+
+    agent = SimpleNamespace(
+        resolve_symbol=AsyncMock(
+            return_value=SymbolResolution(
+                status="resolved",
+                source="explicit_ticker",
+                reason_code="resolved_explicit_ticker",
+                symbol="AAPL",
+                confidence=1.0,
+            )
+        ),
+        ainvoke=AsyncMock(side_effect=wait_for_cancel),
+    )
+    run_service = AsyncMock()
+    client_request = SimpleNamespace(
+        is_disconnected=AsyncMock(side_effect=[False, True])
+    )
+    response = await stream_with_deep_agent(
+        request=ChatRequest(
+            message="Deeply analyze AAPL",
+            chat_id="chat_cancel",
+            agent_version="v4-deep",
+            language="en",
+        ),
+        user_id="local",
+        chat_service=chat_service,
+        agent=agent,
+        context_manager=context_manager(),
+        message_repo=AsyncMock(),
+        client_request=client_request,
+        run_id="run_cancel",
+        run_service=run_service,
+    )
+
+    async for _ in response.body_iterator:
+        pass
+
+    run_service.record_prompt_versions.assert_any_await(
+        "run_cancel",
+        {"deep-debater": "deep-debater@3"},
+    )

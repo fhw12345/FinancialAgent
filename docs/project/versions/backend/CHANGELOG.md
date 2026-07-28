@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.0] - 2026-07-28
+
+### Deep structured decisions
+
+- Replaced regex/code-fence debate parsing with strict Pydantic JSON models.
+- Added typed failures for invalid concerns and rebuttals.
+- Added structured verdict output while preserving final Markdown.
+- Validates displayed and persisted actions are consistent.
+- Persists complete verdict action, conviction, risk, insight, and assessments.
+- Aligned debater skill output contracts and added browser persistence proof.
+- Namespaces multi-round concern IDs and requires exact rebuttal and assessment
+  coverage.
+- Rejects conflicting, qualified, or negated Markdown action fields.
+- Persists verdict signals only after durable chat completion with real
+  chat/run/message provenance.
+- Shields committed lifecycle transitions through cancellation.
+- Uses deterministic full-entropy message IDs and atomic signal upserts.
+
 ## [0.47.1] - 2026-07-27
 
 ### Prompt governance evidence and provenance

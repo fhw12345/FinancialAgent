@@ -1,9 +1,4 @@
-"""
-Deep agent streaming handler (v4-deep).
-
-Streaming response logic for the Deep ReAct Agent with hierarchical
-sub-agents (Technical, News, Financial, Debater) and optional debate loop.
-"""
+"""Deep ReAct streaming with hierarchical research and optional debate."""
 
 import asyncio
 import os
@@ -28,6 +23,7 @@ from .cancellation import (
     await_task_or_disconnect,
     raise_if_disconnected,
 )
+from .deep_verdict_persistence import persist_completed_verdict
 from .helpers import (
     create_chunk_event,
     create_done_event,
@@ -420,6 +416,17 @@ async def stream_with_deep_agent(
                 yield create_chunk_event(final_answer)
 
             await await_disconnect_grace(client_request)
+            verdict = result.get("verdict")
+
+            async def persist_verdict_after_durable_completion() -> None:
+                await persist_completed_verdict(
+                    agent=agent,
+                    symbol=resolution.symbol,
+                    verdict=verdict,
+                    chat_id=lifecycle.require_chat_id(),
+                    run_id=lifecycle.run_id,
+                )
+
             async for event in lifecycle.complete(
                 ChatCompletion(
                     content=final_answer,
@@ -437,6 +444,7 @@ async def stream_with_deep_agent(
                         "deep_events": collected_events,
                         "route_selected": route_metadata,
                         "research_context": result.get("research_context"),
+                        "verdict": result.get("verdict"),
                     },
                     latency_metrics={
                         "tool_executions": tool_executions,
@@ -447,6 +455,7 @@ async def stream_with_deep_agent(
                         "tool_executions": tool_executions,
                         "trace_id": trace_id,
                     },
+                    after_durable=persist_verdict_after_durable_completion,
                 )
             ):
                 yield event

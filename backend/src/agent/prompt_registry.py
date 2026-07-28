@@ -93,22 +93,22 @@ Your job is to DEFEND the thesis by addressing each concern with evidence:
 2. If the concern is valid, acknowledge it and explain why the thesis still holds
 3. If the concern is wrong, provide evidence that disproves it
 
-RESPONSE FORMAT: Include a JSON block with a `rebuttals` array containing
-the exact structure:
-```json
+Return exactly one JSON object with a `rebuttals` array using this structure:
 {{
   "rebuttals": [
     {{
-      "concern_id": "C1",
+     "concern_id": "Copy the exact displayed ID, for example R1-C1",
       "status": "REFUTED|PARTIALLY_VALID|CONCEDED",
       "defense": "Your defense with specific data",
       "evidence": "Source of your evidence"
     }}
   ]
 }}
-```
 
-Be concise — focus on DATA, not rhetoric."""
+Do not include prose, commentary, or Markdown code fences outside the JSON object.
+Return exactly one rebuttal for every concern shown above, preserving each
+displayed concern ID exactly. Every rebuttal must cite specific evidence.
+Be concise and focus on data."""
 DEEP_DEBATER_TEMPLATE = """{research_context}
 
 Review the following investment thesis and challenge it:
@@ -120,9 +120,7 @@ Your job is to:
 2. Search for counter-evidence and contradicting data
 3. Identify overlooked risks and stress-test assumptions
 
-RESPONSE FORMAT: Include a JSON block with a `concerns` array containing id,
-the exact structure:
-```json
+Return exactly one JSON object with a `concerns` array using this structure:
 {{
   "concerns": [
     {{
@@ -135,9 +133,9 @@ the exact structure:
     }}
   ]
 }}
-```
 
-Be aggressive but fair. Use real evidence, not speculation.
+Do not include prose, commentary, or Markdown code fences outside the JSON object.
+Every concern must cite real evidence. Be aggressive but fair, not speculative.
 
 If after thorough review you genuinely have no concerns, respond with:
 "{termination_signal}"
@@ -151,20 +149,20 @@ DEEP_VERDICT_TEMPLATE = """You are a Senior Investment Committee Judge deliverin
 ## Research Report
 {report}
 
-For EACH concern raised by the Debater, categorize it:
-- ✅ **VERIFIED**: [concern] — [1-sentence reasoning citing specific data]
-- ⚠️ **NEEDS MORE EVIDENCE**: [concern] — [what data is missing]
-- ❌ **CONTRADICTED**: [concern] — [evidence that disproves it]
+Produce the registered structured verdict:
+- report_markdown: a self-contained final Markdown investment report
+- action: BUY, HOLD, or SELL
+- conviction: HIGH, MEDIUM, or LOW
+- risk_level: HIGH, MODERATE, or LOW
+- key_insight: the most important takeaway in 1-2 sentences
+- concern_assessments: one entry per concern with concern_id, assessment
+  (VERIFIED, NEEDS_MORE_EVIDENCE, or CONTRADICTED), reasoning, and evidence
 
-Then provide:
-
-### Final Verdict
-- **Action**: Buy / Hold / Sell
-- **Conviction**: High / Medium / Low
-- **Risk Level**: HIGH / MODERATE / LOW
-- **Key Insight**: 1-2 sentences on the most important takeaway
-
-Be decisive. Use evidence from both sides. Do not hedge excessively."""
+The Markdown report must explain each concern assessment and the final action,
+conviction, risk level, and key insight. It must include an explicit Action or
+Recommendation field whose value is exactly one BUY, HOLD, or SELL token and
+matches `action`; do not negate or qualify that field value.
+Be decisive, use evidence from both sides, and do not hedge excessively."""
 CONSISTENCY_GATE_TEMPLATE = """You are a research-quality gate. You will receive:
 
 1. A market-research report for a single stock symbol.
@@ -194,9 +192,9 @@ _PROMPTS = {
             FINANCIAL_SYSTEM_TEMPLATE,
             ("chat", "react", "tools"),
         ),
-        PromptSpec("deep-rebuttal", 1, DEEP_REBUTTAL_TEMPLATE, ("deep", "debate")),
-        PromptSpec("deep-debater", 2, DEEP_DEBATER_TEMPLATE, ("deep", "debate")),
-        PromptSpec("deep-verdict", 1, DEEP_VERDICT_TEMPLATE, ("deep", "verdict")),
+        PromptSpec("deep-rebuttal", 2, DEEP_REBUTTAL_TEMPLATE, ("deep", "debate")),
+        PromptSpec("deep-debater", 3, DEEP_DEBATER_TEMPLATE, ("deep", "debate")),
+        PromptSpec("deep-verdict", 2, DEEP_VERDICT_TEMPLATE, ("deep", "verdict")),
         PromptSpec(
             "consistency-gate",
             2,
