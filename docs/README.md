@@ -50,6 +50,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [Chart Volume Lifecycle Case Study](case-studies/2026-07-30-data-refetch-recreated-chart.md)
 - [Standard Agent Event Case Study](case-studies/2026-07-21-one-stream-many-event-shapes.md)
 - [Request Idempotency Case Study](case-studies/2026-07-21-one-click-two-expensive-runs.md)
 - [Agent Evaluation Case Study](case-studies/2026-07-21-evaluation-first-found-router-gaps.md)

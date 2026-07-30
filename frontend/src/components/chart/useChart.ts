@@ -12,6 +12,7 @@ import {
   ISeriesApi,
   MouseEventParams,
   CandlestickData,
+  HistogramData,
   LineData,
   IPriceLine,
 } from "lightweight-charts";
@@ -38,14 +39,7 @@ interface FibonacciAnalysisData {
   raw_data?: any;
 }
 
-interface PriceDataPoint {
-  time: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-}
+let nextChartInstanceId = 0;
 
 export const useChart = (
   chartContainerRef: React.RefObject<HTMLDivElement>,
@@ -54,34 +48,14 @@ export const useChart = (
   setTooltip?: (tooltip: any) => void,
   interval?: string,
   fibonacciAnalysis?: FibonacciAnalysisData | null,
-  originalData?: PriceDataPoint[],
 ) => {
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Line" | "Candlestick"> | null>(null);
+  const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const fibonacciLinesRef = useRef<IPriceLine[]>([]);
   const onDateRangeSelectRef = useRef(onDateRangeSelect);
   const setTooltipRef = useRef(setTooltip);
   const lastTooltipRef = useRef<any>(null);
-
-  // Build timestamp → volume map for O(1) lookups (performance optimization)
-  const volumeMapRef = useRef<Map<string, number>>(new Map());
-
-  // Update volume map when data changes
-  useEffect(() => {
-    if (!originalData) {
-      volumeMapRef.current.clear();
-      return;
-    }
-
-    const newVolumeMap = new Map<string, number>();
-    for (const point of originalData) {
-      const dateKey = point.time.includes("T")
-        ? point.time.split("T")[0]
-        : point.time;
-      newVolumeMap.set(dateKey, point.volume);
-    }
-    volumeMapRef.current = newVolumeMap;
-  }, [originalData]);
 
   // Update refs when props change
   useEffect(() => {
@@ -90,17 +64,22 @@ export const useChart = (
   }, [onDateRangeSelect, setTooltip]);
 
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    const chartContainer = chartContainerRef.current;
+    if (!chartContainer) return;
 
-    const chart = createChart(chartContainerRef.current, {
+    const chart = createChart(chartContainer, {
       layout: {
         background: { color: "#ffffff" },
         textColor: "#333",
       },
-      width: chartContainerRef.current.clientWidth,
+      width: chartContainer.clientWidth,
       height: 400,
       rightPriceScale: {
         borderColor: "#cccccc",
+        scaleMargins: {
+          top: 0.05,
+          bottom: 0.25,
+        },
       },
       timeScale: {
         borderColor: "#cccccc",
@@ -136,6 +115,22 @@ export const useChart = (
         wickDownColor: "#ef5350",
       });
     }
+    volumeSeriesRef.current = chart.addHistogramSeries({
+      priceScaleId: "volume",
+      priceFormat: { type: "volume" },
+      priceLineVisible: false,
+      lastValueVisible: false,
+    });
+    chart.priceScale("volume").applyOptions({
+      visible: false,
+      scaleMargins: {
+        top: 0.78,
+        bottom: 0,
+      },
+    });
+    chartContainer.dataset.chartInstance = String(++nextChartInstanceId);
+    chartContainer.dataset.volumeOverlay = "ready";
+    chartContainer.dataset.volumeBars = "0";
 
     const handleResize = () => {
       if (chartContainerRef.current) {
@@ -146,7 +141,13 @@ export const useChart = (
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      delete chartContainer.dataset.volumeOverlay;
+      delete chartContainer.dataset.volumeBars;
+      delete chartContainer.dataset.chartInstance;
       chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
+      volumeSeriesRef.current = null;
     };
   }, [chartType, chartContainerRef]);
 
@@ -219,15 +220,11 @@ export const useChart = (
       const low = "low" in data ? data.low : undefined;
       const close = "close" in data ? data.close : undefined;
 
-      // Look up volume from pre-built map (O(1) instead of O(n))
-      let volume: number | undefined = undefined;
-      if (param.time) {
-        const timeDate =
-          typeof param.time === "number"
-            ? new Date(param.time * 1000).toISOString().split("T")[0]
-            : String(param.time);
-        volume = volumeMapRef.current.get(timeDate);
-      }
+      const volumeData = volumeSeriesRef.current
+        ? param.seriesData.get(volumeSeriesRef.current)
+        : undefined;
+      const volume =
+        volumeData && "value" in volumeData ? volumeData.value : undefined;
 
       let timeStr: string;
       if (typeof param.time === "number") {
@@ -284,7 +281,7 @@ export const useChart = (
         chartRef.current.unsubscribeCrosshairMove(handleCrosshairMove);
       }
     };
-  }, [interval]);
+  }, [chartType, interval]);
 
   // Effect to handle Fibonacci analysis updates
   useEffect(() => {
@@ -363,14 +360,23 @@ export const useChart = (
         fibonacciLinesRef.current.push(line);
       }
     });
-  }, [fibonacciAnalysis]);
+  }, [chartType, fibonacciAnalysis]);
 
-  const setChartData = useCallback((data: (LineData | CandlestickData)[]) => {
-    if (seriesRef.current) {
-      seriesRef.current.setData(data);
-      chartRef.current?.timeScale().fitContent();
-    }
-  }, []); // Empty deps - refs are stable
+  const setChartData = useCallback(
+    (data: (LineData | CandlestickData)[], volumeData: HistogramData[]) => {
+      if (seriesRef.current && volumeSeriesRef.current) {
+        seriesRef.current.setData(data);
+        volumeSeriesRef.current.setData(volumeData);
+        if (chartContainerRef.current) {
+          chartContainerRef.current.dataset.volumeBars = String(
+            volumeData.length,
+          );
+        }
+        chartRef.current?.timeScale().fitContent();
+      }
+    },
+    [chartContainerRef],
+  );
 
-  return { chartRef, seriesRef, setChartData };
+  return { chartRef, seriesRef, volumeSeriesRef, setChartData };
 };

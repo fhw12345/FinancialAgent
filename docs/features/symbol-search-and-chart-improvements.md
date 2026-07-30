@@ -1,8 +1,8 @@
 ---
 title: Symbol Search and Chart Visualization Improvements
 status: in-progress
-version: backend@0.48.0, frontend@0.29.0
-last_updated: 2026-07-28
+version: backend@0.49.0, frontend@0.30.0
+last_updated: 2026-07-30
 owner: maintainer
 related_paths:
   - backend/src/api/market/search.py
@@ -19,7 +19,45 @@ related_paths:
 > Phase 1 (deduplication, match_type ranking, OHLC tooltip) shipped. Phase 2
 > backend date-range support (`start_date` / `end_date` in analysis endpoints)
 > and frontend `DateRangePicker` shipped in backend `0.49.0` and frontend
-> `0.29.0`. Phase 3 candlestick / volume overlay remains planning.
+> `0.29.0`. Phase 3 volume histogram overlay is implemented and browser
+> verified for frontend `0.30.0`; the shipment record follows the
+> implementation commit.
+
+## Current Delivery Slice (2026-07-30)
+
+This iteration closes the remaining chart-visualization scope:
+
+- add a Lightweight Charts histogram series on an independent bottom scale;
+- use the exact same converted `Time` values as the price series;
+- color regular-session volume by candle direction and distinguish pre/post
+  market bars;
+- replace volume data atomically whenever symbol, interval, or date range
+  changes;
+- clear both price and volume series during empty/error transitions;
+- expose stable DOM evidence for initialized series and rendered bar count;
+- preserve tooltip volume, Fibonacci overlays, resizing, and cleanup.
+
+### Acceptance Criteria
+
+- [x] Every rendered price bar has the matching volume timestamp.
+- [x] Volume bars update without recreating the chart on data-only changes.
+- [x] Old symbol/range volume bars cannot survive a new query result.
+- [x] Pre-market, regular, post-market, and closed bars are visually distinct.
+- [x] Playwright proves synchronization before and after a date-range change.
+- [x] Curated screenshots are stored under
+      `docs/features/assets/chart-volume-overlay/`.
+
+## Phase 3 Delivery
+
+- Added a histogram series with a hidden independent price scale.
+- Built price and volume arrays from one sorted converted-time sequence.
+- Colored regular bars by candle direction and extended-hours bars by session.
+- Read tooltip volume from the exact histogram series point.
+- Kept prior same-symbol data mounted while range and interval queries refetch.
+- Added stable chart-instance and volume-count browser evidence.
+- Added unit coverage for paired clearing, timestamp alignment, and colors.
+- Added Playwright coverage for range and interval replacement with two
+  curated screenshots.
 
 ## Current Delivery Slice (2026-07-28)
 
@@ -94,7 +132,10 @@ candlestick volume overlays are still planned.
   lint/type-check passed. Full-repository mypy retains 311 pre-existing errors,
   while the new market-calendar and endpoint modules pass focused mypy.
 
-## Context
+## Historical Context
+
+The sections below preserve the original problem statement and proposal. The
+delivery sections above are authoritative for the shipped chart scope.
 
 The current symbol search and chart visualization have several UX issues:
 1. Search returns duplicates (AAPL appears multiple times)
@@ -124,7 +165,7 @@ User types "apple"
 
 ### Chart Visualization Issues
 
-**Current Limitations:**
+**Baseline Limitations:**
 - Tooltip only shows: `"Jul 17, 2025 | $209.78"`
 - No OHLC (Open, High, Low, Close) information
 - No volume data
@@ -133,7 +174,11 @@ User types "apple"
 - No custom date range selection
 - Analysis buttons use backend defaults, not user selection
 
-## Proposed Solution
+## Historical Plan and Deferred Follow-Up
+
+The chart tooltip, explicit date ranges, and volume overlay are delivered.
+FMP integration, alias administration, and broader search-service replacement
+remain optional follow-up work rather than blockers for this feature.
 
 ### Phase 1: Quick Wins (2-3 days)
 
@@ -209,7 +254,10 @@ User types "apple"
 
 ---
 
-## Implementation Roadmap
+## Historical Implementation Roadmap
+
+This checklist records the original planning estimate. Actual delivery status
+is recorded in the Phase 2 and Phase 3 delivery sections above.
 
 ### Week 1: Quick Wins
 

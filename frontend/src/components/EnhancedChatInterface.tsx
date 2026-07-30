@@ -279,6 +279,8 @@ export function EnhancedChatInterface() {
         end_date: selectedDateRange.end || undefined,
       }),
     enabled: !!currentSymbol,
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[1] === currentSymbol ? previousData : undefined,
     staleTime: 30000,
     refetchInterval: 60000,
     retry: false,

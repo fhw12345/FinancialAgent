@@ -1,6 +1,6 @@
 {
   "name": "financial-agent-frontend",
-  "version": "0.29.0",
+  "version": "0.30.0",
   "type": "module",
   "description": "Financial Agent frontend (personal local fork)",
   "scripts": {
@@ -27,7 +27,8 @@
     "test:e2e:uaw-009": "playwright test e2e/uaw-009-agent-events.spec.ts",
     "test:e2e:uaw-010": "playwright test e2e/uaw-010-request-idempotency.spec.ts",
     "test:e2e:prompt-governance": "playwright test e2e/prompt-governance.spec.ts",
-    "test:e2e:symbol-date-range": "playwright test e2e/symbol-date-range.spec.ts"
+    "test:e2e:symbol-date-range": "playwright test e2e/symbol-date-range.spec.ts",
+    "test:e2e:chart-volume-overlay": "playwright test e2e/chart-volume-overlay.spec.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.0",

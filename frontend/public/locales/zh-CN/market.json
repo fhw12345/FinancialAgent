@@ -94,7 +94,8 @@
         "tooLong": "最大日期范围为五年。",
         "intradayTooLong": "分时数据仅支持最近 30 天。"
       }
-    }
+    },
+    "volumeOverlay": "{{count}} 根成交量柱已与价格图同步"
   },
   "news": {
     "title": "新闻资讯",

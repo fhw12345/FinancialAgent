@@ -94,7 +94,8 @@
         "tooLong": "The maximum range is five years.",
         "intradayTooLong": "Intraday data is limited to the most recent 30 days."
       }
-    }
+    },
+    "volumeOverlay": "{{count}} volume bars synchronized with the price chart"
   },
   "news": {
     "title": "News",

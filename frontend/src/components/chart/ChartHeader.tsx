@@ -71,6 +71,7 @@ export const ChartHeader: React.FC<ChartHeaderProps> = ({
               <button
                 key={key}
                 onClick={() => onIntervalChange?.(key)}
+                data-testid={`chart-interval-${key}`}
                 className={`px-3 py-1 text-sm rounded transition-colors ${
                   interval === key
                     ? "bg-blue-500 text-white"

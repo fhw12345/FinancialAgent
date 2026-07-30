@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-07-30
+
+### Synchronized chart volume overlay
+
+- Adds a Lightweight Charts histogram series on an independent bottom scale.
+- Uses the same converted timestamps for price and volume bars.
+- Distinguishes up, down, pre-market, post-market, and closed-session volume.
+- Preserves the chart instance while date-range and interval queries refetch.
+- Reads tooltip volume from the exact histogram point instead of a daily map.
+- Adds unit and Playwright coverage with curated browser screenshots.
+
 ## [0.29.0] - 2026-07-28
 
 ### Chart and technical-analysis date ranges

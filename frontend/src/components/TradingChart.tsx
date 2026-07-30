@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { PriceDataPoint, TimeInterval } from "../services/market";
 import { ChartHeader } from "./chart/ChartHeader";
 import { ChartTooltip } from "./chart/ChartTooltip";
@@ -69,6 +70,7 @@ export const TradingChart: React.FC<TradingChartProps> = ({
   fibonacciAnalysis,
   className = "",
 }) => {
+  const { t } = useTranslation("market");
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [selectedTimezone, setSelectedTimezone] =
     useState<SupportedTimezone>("US/Eastern");
@@ -91,7 +93,6 @@ export const TradingChart: React.FC<TradingChartProps> = ({
     setTooltip,
     interval,
     fibonacciAnalysis,
-    data,
   );
   const { convertToChartData } = useChartData(
     data,
@@ -100,8 +101,8 @@ export const TradingChart: React.FC<TradingChartProps> = ({
   );
 
   React.useEffect(() => {
-    const chartData = convertToChartData();
-    setChartData(chartData);
+    const { priceData, volumeData } = convertToChartData();
+    setChartData(priceData, volumeData);
   }, [data, convertToChartData, setChartData]);
 
   return (
@@ -117,7 +118,11 @@ export const TradingChart: React.FC<TradingChartProps> = ({
         <div
           ref={chartContainerRef}
           className="w-full h-96 border rounded-lg"
+          data-testid="trading-chart-container"
         />
+        <span className="sr-only" data-testid="volume-overlay-summary">
+          {t("chart.volumeOverlay", { count: data.length })}
+        </span>
         <ChartTooltip
           tooltipData={tooltip}
           chartContainerRef={chartContainerRef}

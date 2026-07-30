@@ -13,6 +13,7 @@ can decide whether the case is relevant before reading the Chinese body.
 
 | Date       | Title                                                                                       | Stack                   | Topic                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-30 | [A Data Refetch Recreated the Entire Chart](2026-07-30-data-refetch-recreated-chart.md) | React Query / Lightweight Charts / Playwright | Preserving one chart instance while synchronizing price, volume, ranges, intervals, and exact tooltip data |
 | 2026-07-28 | [Date Ranges Need Provider Contracts](2026-07-28-date-ranges-need-provider-contracts.md) | React / FastAPI / yfinance / Redis / Playwright | End-to-end date range semantics across provider limits, caches, timezones, analysis, and persistence |
 | 2026-07-27 | [Markdown and Machine Decisions Could Diverge](2026-07-27-markdown-and-machine-decisions-diverged.md) | Pydantic / LangGraph / Playwright | Strict debate JSON and consistency between displayed and persisted verdict actions |
 | 2026-07-27 | [Backend Tests Are Not Browser Evidence](2026-07-27-backend-tests-are-not-browser-evidence.md) | Playwright / Workflow / Documentation | Reopening shipped work to restore mandatory browser evidence |
