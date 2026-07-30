@@ -1,6 +1,6 @@
 ---
 title: Symbol Search and Chart Visualization Improvements
-status: in-progress
+status: shipped
 version: backend@0.49.0, frontend@0.30.0
 last_updated: 2026-07-30
 owner: maintainer
@@ -19,9 +19,7 @@ related_paths:
 > Phase 1 (deduplication, match_type ranking, OHLC tooltip) shipped. Phase 2
 > backend date-range support (`start_date` / `end_date` in analysis endpoints)
 > and frontend `DateRangePicker` shipped in backend `0.49.0` and frontend
-> `0.29.0`. Phase 3 volume histogram overlay is implemented and browser
-> verified for frontend `0.30.0`; the shipment record follows the
-> implementation commit.
+> `0.29.0`. Phase 3 volume histogram overlay shipped in frontend `0.30.0`.
 
 ## Current Delivery Slice (2026-07-30)
 
@@ -48,6 +46,10 @@ This iteration closes the remaining chart-visualization scope:
       `docs/features/assets/chart-volume-overlay/`.
 
 ## Phase 3 Delivery
+
+Phase 3 shipped in implementation commit `10bf834` and frontend `0.30.0`.
+This closes the chart-visualization scope; broader FMP and alias work remains
+deferred follow-up.
 
 - Added a histogram series with a hidden independent price scale.
 - Built price and volume arrays from one sorted converted-time sequence.
