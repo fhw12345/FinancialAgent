@@ -603,7 +603,7 @@ ten bilingual Prompt Injection symbol-override cases; reports enforce quality,
 execution-mode, symbol-safety, injection-safety, latency, cost-policy, and
 no-live-model gates; CLI comparison records metric deltas, prompt/model route
 changes, and case regressions. Financial outcome evaluation remains Phase 6
-work.
+work. Implementation shipped in commit `2540bbf`.
 
 ## 9. Priority 1: Prompt, Model, and Cost Governance
 

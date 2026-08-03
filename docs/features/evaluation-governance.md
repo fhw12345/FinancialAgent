@@ -1,6 +1,6 @@
 ---
 title: Evaluation Governance
-status: in-progress
+status: shipped
 version: backend@0.50.0, frontend@0.31.0
 last_updated: 2026-08-03
 owner: maintainer
@@ -74,6 +74,5 @@ explicitly out of scope for this delivery slice.
 
 ## Delivery
 
-The implementation and real-browser workflow are complete for backend
-`0.50.0` and frontend `0.31.0`. Suite v2 passes all 80 cases with no live model
-calls. The shipment commit is recorded after the implementation commit exists.
+Shipped in implementation commit `2540bbf`, backend `0.50.0`, and frontend
+`0.31.0`. Suite v2 passes all 80 cases with no live model calls.
