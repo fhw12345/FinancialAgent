@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.50.0] - 2026-08-03
+
+### Evaluation governance
+
+- Adds the versioned 80-case evaluation suite v2 with ten bilingual Prompt
+  Injection symbol-override cases.
+- Adds executable quality, execution-mode, symbol-safety, injection-safety,
+  latency, cost-policy, and no-live-model gates.
+- Records exact prompt registry versions and deterministic model routes.
+- Compares current reports with legacy or current baselines and detects
+  regressed and improved case IDs.
+- Preserves loading of reports written before the expanded schema.
+- Exposes the deterministic suite through a local admin evaluation endpoint.
+- Fixes English concept routing, Chinese ticker boundaries, and bilingual Deep
+  Research intent markers found by the new gates.
+
 ## [0.49.0] - 2026-07-28
 
 ### Explicit market-data date ranges

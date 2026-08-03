@@ -2,6 +2,7 @@ import { useState } from "react";
 import { HelpCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { EnhancedChatInterface } from "./components/EnhancedChatInterface";
+import EvaluationPage from "./pages/EvaluationPage";
 import HealthPage from "./pages/HealthPage";
 import InsightsPage from "./pages/InsightsPage";
 import PortfolioDashboard from "./pages/PortfolioDashboard";
@@ -11,7 +12,7 @@ import { LanguageSwitcher } from "./components/LanguageSwitcher";
 function App() {
   const { t } = useTranslation("common");
   const [activeTab, setActiveTab] = useState<
-    "health" | "chat" | "portfolio" | "insights"
+    "health" | "chat" | "portfolio" | "insights" | "evaluation"
   >("portfolio");
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
@@ -76,6 +77,17 @@ function App() {
                 {t("navigation.portfolio")}
               </button>
               <button
+                data-testid="nav-evaluation"
+                onClick={() => setActiveTab("evaluation")}
+                className={`px-3 sm:px-5 py-1.5 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl transition-all duration-200 ${
+                  activeTab === "evaluation"
+                    ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/30"
+                    : "text-gray-700 hover:bg-gray-100/80"
+                }`}
+              >
+                {t("navigation.evaluation")}
+              </button>
+              <button
                 onClick={() => setActiveTab("insights")}
                 className={`px-3 sm:px-5 py-1.5 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl transition-all duration-200 ${
                   activeTab === "insights"
@@ -101,6 +113,8 @@ function App() {
         {activeTab === "chat" && <EnhancedChatInterface />}
 
         {activeTab === "portfolio" && <PortfolioDashboard />}
+
+        {activeTab === "evaluation" && <EvaluationPage />}
 
         {activeTab === "insights" && <InsightsPage />}
       </main>

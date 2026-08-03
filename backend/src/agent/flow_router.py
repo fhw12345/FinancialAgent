@@ -26,7 +26,14 @@ class RouteClassification(BaseModel):
 
 DEEP_MARKERS = (
     "deep analysis",
+    "deeply analyze",
     "deep dive",
+    "deep research",
+    "full investment research",
+    "comprehensive research",
+    "financial perspectives",
+    "bull and bear thesis",
+    "investment verdict",
     "comprehensive investment analysis",
     "full investment analysis",
     "investment committee",
@@ -36,7 +43,12 @@ DEEP_MARKERS = (
     "debate",
     "investment thesis",
     "深度分析",
+    "深度研究",
     "深入分析",
+    "完整投资研究",
+    "财务角度研究",
+    "多空投资论点",
+    "完整投资结论",
     "全面投资分析",
     "完整投资分析",
     "完整研究",
@@ -96,12 +108,14 @@ TOOL_MARKERS = (
 
 CONCEPT_MARKERS = (
     "what is",
+    "what does",
     "explain",
     "define",
     "difference between",
     "how does",
     "summarize",
     "什么是",
+    "是什么",
     "解释",
     "定义",
     "概念",
@@ -170,7 +184,7 @@ FINANCIAL_CONTEXT_MARKERS = (
     )
 )
 
-TICKER_RE = re.compile(r"\b[A-Z]{2,5}(?:[.-][A-Z])?\b")
+TICKER_RE = re.compile(r"(?<![A-Z0-9])[A-Z]{2,5}(?:[.-][A-Z])?(?![A-Z0-9])")
 TICKER_STOP_WORDS = {"AI", "US", "CEO", "CFO", "ETF", "IPO", "GDP", "CPI"}
 
 

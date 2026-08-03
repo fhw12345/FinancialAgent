@@ -28,6 +28,7 @@ from .api.analysis import router as analysis_router
 from .api.chat import router as chat_router
 from .api.dependencies.rate_limit import limiter
 from .api.dependencies.timing_middleware import TimingMiddleware
+from .api.evaluations import router as evaluations_router
 from .api.health import router as health_router
 from .api.insights import router as insights_router
 from .api.market_data import router as market_data_router
@@ -431,6 +432,7 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(health_router, prefix="/api", tags=["health"])
     app.include_router(admin_router)  # Admin-only monitoring endpoints
+    app.include_router(evaluations_router)  # Deterministic agent evaluation
     app.include_router(analysis_router)
     app.include_router(market_data_router)
     app.include_router(chat_router)  # Persistent MongoDB-based chat

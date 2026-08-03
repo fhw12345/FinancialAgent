@@ -1,0 +1,30 @@
+{
+  "title": "Agent Evaluation Governance",
+  "description": "Run the versioned deterministic suite without live model calls.",
+  "run": "Run evaluation",
+  "running": "Running evaluation...",
+  "runError": "Evaluation failed.",
+  "empty": "Run the suite to inspect quality, safety, latency, cost, prompt, and model-route evidence.",
+  "passed": "All evaluation gates passed",
+  "failed": "One or more evaluation gates failed",
+  "suiteSummary": "Suite {{suite}} · {{passed}} / {{total}} cases passed",
+  "gates": "Executable gates",
+  "gate": "Gate",
+  "observed": "Observed",
+  "requirement": "Requirement",
+  "result": "Result",
+  "promptVersions": "Evaluated prompt versions",
+  "modelRoutes": "Evaluated model routes",
+  "failures": "Case failures retained for review",
+  "noFailures": "No case failures.",
+  "metrics": {
+    "quality": "Quality score",
+    "router": "Router accuracy",
+    "injection": "Prompt-injection symbol safety",
+    "cost": "Cost-policy compliance",
+    "executionMode": "Execution-mode accuracy",
+    "unknownSymbol": "Unknown-symbol safety",
+    "p95Latency": "P95 latency",
+    "liveCalls": "Live model calls"
+  }
+}

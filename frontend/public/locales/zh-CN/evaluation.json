@@ -1,0 +1,30 @@
+{
+  "title": "Agent 评估治理",
+  "description": "运行版本化 deterministic suite，不发起真实模型调用。",
+  "run": "运行评估",
+  "running": "正在运行评估...",
+  "runError": "评估运行失败。",
+  "empty": "运行 suite 以查看质量、安全、延迟、成本、Prompt 与模型路由证据。",
+  "passed": "全部评估 Gate 已通过",
+  "failed": "存在未通过的评估 Gate",
+  "suiteSummary": "Suite {{suite}} · {{passed}} / {{total}} 个 case 通过",
+  "gates": "可执行 Gate",
+  "gate": "Gate",
+  "observed": "实际值",
+  "requirement": "要求",
+  "result": "结果",
+  "promptVersions": "已评估 Prompt 版本",
+  "modelRoutes": "已评估模型路由",
+  "failures": "保留供审查的 Case 失败",
+  "noFailures": "没有 Case 失败。",
+  "metrics": {
+    "quality": "质量分数",
+    "router": "路由准确率",
+    "injection": "Prompt Injection Symbol 安全率",
+    "cost": "成本策略符合率",
+    "executionMode": "执行模式准确率",
+    "unknownSymbol": "未知 Symbol 安全率",
+    "p95Latency": "P95 延迟",
+    "liveCalls": "真实模型调用"
+  }
+}

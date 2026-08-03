@@ -26,6 +26,7 @@ i18n
       "market",
       "validation",
       "insights",
+      "evaluation",
     ],
     defaultNS: "common",
 

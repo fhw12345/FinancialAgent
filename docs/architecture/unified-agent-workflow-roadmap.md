@@ -597,6 +597,14 @@ Detailed implementation plan:
 
 Implementation status: shipped in commit `57a6f39`.
 
+Evaluation governance v2 is implemented and browser verified in backend
+`0.50.0` and frontend `0.31.0`: the versioned suite now has 80 cases, including
+ten bilingual Prompt Injection symbol-override cases; reports enforce quality,
+execution-mode, symbol-safety, injection-safety, latency, cost-policy, and
+no-live-model gates; CLI comparison records metric deltas, prompt/model route
+changes, and case regressions. Financial outcome evaluation remains Phase 6
+work.
+
 ## 9. Priority 1: Prompt, Model, and Cost Governance
 
 ### 9.1 Prompt Registry
@@ -617,8 +625,9 @@ consistency-gate@2
 Every run records the exact prompt version. Prompt changes require related
 golden evaluations.
 
-Implementation status: runtime prompt registry migrations shipped; remaining
-structured-output migrations are in progress.
+Implementation status: runtime prompt registry migrations and repeatable
+prompt/model-route comparison reports shipped; remaining structured-output
+migrations are in progress.
 
 ### 9.2 Structured Outputs
 

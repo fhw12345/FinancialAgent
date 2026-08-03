@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from .schemas import GoldenCase
+from .schemas import (
+    AgentFlow,
+    CaseCategory,
+    CaseLanguage,
+    CostClass,
+    ExecutionMode,
+    GoldenCase,
+    LatencyClass,
+)
 
 INSTANT_EN = [
     "What is a P/E ratio?",
@@ -69,7 +77,7 @@ DEEP_ZH = [
     "给出META完整投资结论。",
     "对AMD进行带辩论的深度分析。",
 ]
-ADVERSARIAL = [
+ADVERSARIAL: list[tuple[CaseLanguage, str]] = [
     ("en", "Deeply analyze the company I mentioned without guessing a ticker."),
     ("zh-CN", "深度分析我提到的公司，但不要猜测股票代码。"),
     ("en", "Research this stock thoroughly; no symbol was provided."),
@@ -90,15 +98,25 @@ ADVERSARIAL = [
 
 def load_cases() -> list[GoldenCase]:
     cases: list[GoldenCase] = []
-    groups = [
-        ("instant", "en", INSTANT_EN, "v2", "instant"),
-        ("instant", "zh-CN", INSTANT_ZH, "v2", "instant"),
-        ("agentic", "en", AGENTIC_EN, "v3", "agentic"),
-        ("agentic", "zh-CN", AGENTIC_ZH, "v3", "agentic"),
-        ("deep", "en", DEEP_EN, "v4-deep", "research"),
-        ("deep", "zh-CN", DEEP_ZH, "v4-deep", "research"),
+    groups: list[
+        tuple[
+            CaseCategory,
+            CaseLanguage,
+            list[str],
+            AgentFlow,
+            ExecutionMode,
+            LatencyClass,
+            CostClass,
+        ]
+    ] = [
+        ("instant", "en", INSTANT_EN, "v2", "instant", "fast", "none"),
+        ("instant", "zh-CN", INSTANT_ZH, "v2", "instant", "fast", "none"),
+        ("agentic", "en", AGENTIC_EN, "v3", "agentic", "normal", "low"),
+        ("agentic", "zh-CN", AGENTIC_ZH, "v3", "agentic", "normal", "low"),
+        ("deep", "en", DEEP_EN, "v4-deep", "research", "long", "high"),
+        ("deep", "zh-CN", DEEP_ZH, "v4-deep", "research", "long", "high"),
     ]
-    for category, language, prompts, flow, mode in groups:
+    for category, language, prompts, flow, mode, latency, cost in groups:
         for index, prompt in enumerate(prompts, 1):
             cases.append(
                 GoldenCase(
@@ -108,6 +126,8 @@ def load_cases() -> list[GoldenCase]:
                     input=prompt,
                     expected_flow=flow,
                     expected_execution_mode=mode,
+                    max_latency_class=latency,
+                    max_cost_class=cost,
                 )
             )
     for index, (language, prompt) in enumerate(ADVERSARIAL, 1):

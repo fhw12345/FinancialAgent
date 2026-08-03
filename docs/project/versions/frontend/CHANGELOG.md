@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-08-03
+
+### Evaluation governance dashboard
+
+- Adds a local Evaluation navigation tab and deterministic suite runner.
+- Displays quality, safety, latency, cost, and no-live-model gate evidence.
+- Shows evaluated prompt versions and deterministic model routes.
+- Retains case-level failures even when aggregate gates pass.
+- Adds bilingual copy and real-browser screenshot evidence.
+
 ## [0.30.0] - 2026-07-30
 
 ### Synchronized chart volume overlay

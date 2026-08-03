@@ -30,6 +30,7 @@ All current documentation describes the local single-user application.
 - [Standard Agent Event Envelope](features/standard-agent-event-envelope.md)
 - [Request Idempotency](features/request-idempotency.md)
 - [Agent Evaluation Framework](features/agent-evaluation-framework.md)
+- [Evaluation Governance](features/evaluation-governance.md)
 - [Prompt Registry Foundation](features/prompt-registry-foundation.md)
 - [Runtime-Linked Prompt Migrations](features/runtime-linked-prompt-migrations.md)
 - [Deep Prompt Governance](features/deep-prompt-governance.md)
@@ -50,6 +51,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [Evaluation Gates Case Study](case-studies/2026-08-03-aggregate-gates-can-hide-router-gaps.md)
 - [Chart Volume Lifecycle Case Study](case-studies/2026-07-30-data-refetch-recreated-chart.md)
 - [Standard Agent Event Case Study](case-studies/2026-07-21-one-stream-many-event-shapes.md)
 - [Request Idempotency Case Study](case-studies/2026-07-21-one-click-two-expensive-runs.md)
