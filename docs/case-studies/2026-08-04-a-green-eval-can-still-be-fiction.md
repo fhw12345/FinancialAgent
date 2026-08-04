@@ -93,6 +93,8 @@ evaluation layer must classify the output and require source identity.
 - Added backend capability discovery and run-aware browser polling.
 - Added detailed localized UI evidence and three Playwright screenshots.
 
+The implementation shipped in commit `4530fb3`.
+
 ## 5. Lessons
 
 - A green evaluator is trustworthy only when it exercises the production

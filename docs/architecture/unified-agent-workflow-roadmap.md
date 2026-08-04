@@ -611,7 +611,7 @@ Prompts, model routes, autonomous replay-tool selection, deterministic
 rubrics, an independent structured Judge, token/cost accounting, hard budget
 stops, run-history persistence, and detailed browser evidence. Real-provider
 smoke remains separately opt-in, while financial-outcome evaluation remains
-Phase 6 work.
+Phase 6 work. Implementation shipped in commit `4530fb3`.
 
 ## 9. Priority 1: Prompt, Model, and Cost Governance
 

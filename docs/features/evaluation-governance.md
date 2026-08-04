@@ -310,3 +310,8 @@ Initial replay suite:
 Deterministic governance v2 shipped in implementation commit `2540bbf`,
 backend `0.50.0`, and frontend `0.31.0`. This document is reopened for the
 live Prompt/tool/output/cost evaluation extension.
+
+## Shipment
+
+The layered live evaluation extension shipped in implementation commit
+`4530fb3`, backend `0.51.0`, and frontend `0.32.0`.
