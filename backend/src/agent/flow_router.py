@@ -184,7 +184,7 @@ FINANCIAL_CONTEXT_MARKERS = (
     )
 )
 
-TICKER_RE = re.compile(r"(?<![A-Z0-9])[A-Z]{2,5}(?:[.-][A-Z])?(?![A-Z0-9])")
+TICKER_RE = re.compile(r"(?<![A-Za-z0-9])[A-Z]{2,5}(?:[.-][A-Z])?(?![A-Za-z0-9])")
 TICKER_STOP_WORDS = {"AI", "US", "CEO", "CFO", "ETF", "IPO", "GDP", "CPI"}
 
 

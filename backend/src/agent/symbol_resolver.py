@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, cast
+from typing import Any, Protocol
 
 import structlog
 from langchain_core.messages import HumanMessage
@@ -16,16 +16,27 @@ from ..models.symbol_resolution import (
     SymbolResolution,
     SymbolResolutionSource,
 )
-from ..services.symbol_search_service import SymbolSearchService
 from .llm_factory import get_llm
 from .prompt_registry import get_prompt, render_prompt
 from .symbol_tokens import (
     extract_explicit_symbols,
     has_explicit_symbol_intent,
+    is_untrusted_symbol_override,
     normalize_symbol,
+    strip_untrusted_evidence,
 )
 
 logger = structlog.get_logger()
+
+
+class SymbolSearchBackend(Protocol):
+    async def exact(self, symbol: str) -> SymbolCandidate | None: ...
+
+    async def search(
+        self,
+        query: str,
+        limit: int = 5,
+    ) -> list[SymbolCandidate]: ...
 
 
 class LLMSymbolCandidates(BaseModel):
@@ -40,7 +51,7 @@ class SymbolResolver:
 
     def __init__(
         self,
-        search_service: SymbolSearchService,
+        search_service: SymbolSearchBackend,
         *,
         settings: Settings | None = None,
         llm: Any | None = None,
@@ -63,8 +74,15 @@ class SymbolResolver:
     ) -> SymbolResolution:
         """Resolve one request without ever selecting an unvalidated default."""
         started = time.perf_counter()
+        trusted_message = strip_untrusted_evidence(message)
 
-        explicit_symbols = self._extract_explicit_symbols(message)
+        extracted_symbols = self._extract_explicit_symbols(trusted_message)
+        explicit_symbols = [
+            symbol
+            for symbol in extracted_symbols
+            if not is_untrusted_symbol_override(trusted_message, symbol)
+        ]
+        blocked_overrides = set(extracted_symbols) - set(explicit_symbols)
         if explicit_symbols:
             validated = await self._validate_candidates(explicit_symbols)
             if len(validated) == 1:
@@ -82,7 +100,7 @@ class SymbolResolver:
                     started=started,
                 )
             if current_symbol is None or has_explicit_symbol_intent(
-                message,
+                trusted_message,
                 explicit_symbols,
             ):
                 return self._unresolved(
@@ -90,6 +108,12 @@ class SymbolResolver:
                     reason_code="symbol_not_found",
                     started=started,
                 )
+        elif blocked_overrides and current_symbol is None:
+            return self._unresolved(
+                source="explicit_ticker",
+                reason_code="untrusted_symbol_override",
+                started=started,
+            )
 
         if current_symbol:
             selected = self.normalize_symbol(current_symbol)
@@ -103,7 +127,10 @@ class SymbolResolver:
                         started=started,
                     )
 
-        deterministic = await self._search_service.search(message.strip(), limit=5)
+        deterministic = await self._search_service.search(
+            trusted_message.strip(),
+            limit=5,
+        )
         deterministic_decision = self._ranked_decision(
             deterministic,
             source="local_directory",
@@ -120,7 +147,9 @@ class SymbolResolver:
                 started=started,
             )
 
-        llm_candidates, prompt_versions = await self._propose_candidates(message)
+        llm_candidates, prompt_versions = await self._propose_candidates(
+            trusted_message
+        )
         validated = await self._validate_candidates(llm_candidates.candidates)
         if len(validated) == 1:
             return self._resolved(
@@ -150,11 +179,8 @@ class SymbolResolver:
                 started=started,
             )
             if searched_decision is not None:
-                return cast(
-                    SymbolResolution,
-                    searched_decision.model_copy(
-                        update={"prompt_versions": prompt_versions}
-                    ),
+                return searched_decision.model_copy(
+                    update={"prompt_versions": prompt_versions}
                 )
 
         return self._unresolved(
@@ -168,10 +194,10 @@ class SymbolResolver:
     @staticmethod
     def normalize_symbol(value: str) -> str | None:
         """Normalize case and whitespace while rejecting invalid punctuation."""
-        return cast(str | None, normalize_symbol(value))
+        return normalize_symbol(value)
 
     def _extract_explicit_symbols(self, message: str) -> list[str]:
-        return cast(list[str], extract_explicit_symbols(message))
+        return extract_explicit_symbols(message)
 
     async def _validate_candidates(
         self,

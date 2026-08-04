@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from langchain_anthropic import ChatAnthropic
+from pydantic import SecretStr
 
 from ..core.config import Settings, get_settings
 from ..core.exceptions import ConfigurationError
@@ -25,6 +26,7 @@ ROLE_MODEL_FIELDS: dict[str, str] = {
     "sub_news": "model_sub_news",
     "summary": "model_summary",
     "router": "model_router",
+    "eval_judge": "model_eval_judge",
 }
 
 COPILOT_REVERSE_MODELS: dict[str, str] = {
@@ -40,6 +42,7 @@ COPILOT_REVERSE_MODELS: dict[str, str] = {
     "sub_news": "claude-sonnet-5",
     "summary": "gpt-5.4-mini",
     "router": "claude-haiku-4.5",
+    "eval_judge": "gpt-5.4-mini",
 }
 
 
@@ -137,7 +140,7 @@ def get_llm(
         temperature=temperature,
         max_tokens_to_sample=max_tokens,
         streaming=streaming,
-        anthropic_api_url=route.base_url.rstrip("/"),
-        anthropic_api_key=route.api_key,
+        base_url=route.base_url.rstrip("/"),
+        api_key=SecretStr(route.api_key),
         **kwargs,
     )

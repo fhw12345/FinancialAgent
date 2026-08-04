@@ -85,6 +85,7 @@ class Settings(BaseSettings):
     model_sub_news: str = "gemini-3.5-flash"
     model_summary: str = "gemini-3.5-flash"
     model_router: str = "claude-haiku-4.5"
+    model_eval_judge: str = "gemini-3.5-flash"
 
     default_llm_temperature: float = 0.7
     symbol_resolution_llm_enabled: bool = True

@@ -3,6 +3,7 @@
 from unittest.mock import patch
 
 import pytest
+from pydantic import SecretStr
 
 from src.agent.llm_factory import (
     get_llm,
@@ -98,8 +99,8 @@ def test_get_llm_constructs_anthropic_compatible_client():
         temperature=0.7,
         max_tokens_to_sample=1234,
         streaming=True,
-        anthropic_api_url="http://localhost:8765/cc",
-        anthropic_api_key="dummy",
+        base_url="http://localhost:8765/cc",
+        api_key=SecretStr("dummy"),
     )
 
 

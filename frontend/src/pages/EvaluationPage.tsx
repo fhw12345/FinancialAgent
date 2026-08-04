@@ -1,9 +1,19 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Gauge, Play, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { EvaluationHistory } from "../components/evaluation/EvaluationHistory";
+import { LiveEvaluationResults } from "../components/evaluation/LiveEvaluationResults";
 import {
+  EvaluationRunSummary,
   EvaluationReport,
+  getLiveEvaluation,
+  getLiveEvaluationCapabilities,
+  listLiveEvaluations,
+  LiveEvaluationCapabilities,
+  LiveEvaluationLane,
+  LiveEvaluationReport,
   runEvaluation,
+  startLiveEvaluation,
 } from "../services/evaluations";
 
 function percentage(value: number): string {
@@ -13,16 +23,121 @@ function percentage(value: number): string {
 export default function EvaluationPage() {
   const { t } = useTranslation("evaluation");
   const [report, setReport] = useState<EvaluationReport | null>(null);
+  const [liveReport, setLiveReport] = useState<LiveEvaluationReport | null>(
+    null,
+  );
+  const [history, setHistory] = useState<EvaluationRunSummary[]>([]);
+  const [mode, setMode] = useState<"deterministic" | "live">("deterministic");
+  const [liveLane, setLiveLane] =
+    useState<LiveEvaluationLane>("replay_live");
+  const [capabilities, setCapabilities] =
+    useState<LiveEvaluationCapabilities>({
+      fake_live_available: false,
+      provider_smoke_available: false,
+    });
+  const [maxCostUsd, setMaxCostUsd] = useState(0.25);
+  const [caseLimit, setCaseLimit] = useState(8);
+  const [liveConsent, setLiveConsent] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const pollControllerRef = useRef<AbortController | null>(null);
+
+  const refreshHistory = async () => {
+    try {
+      setHistory(await listLiveEvaluations());
+      setHistoryError(null);
+    } catch {
+      setHistoryError(t("live.historyError"));
+    }
+  };
+
+  useEffect(() => {
+    void refreshHistory();
+    void getLiveEvaluationCapabilities()
+      .then((available) => {
+        setCapabilities(available);
+        if (
+          available.fake_live_available &&
+          new URLSearchParams(window.location.search).has("evalFake")
+        ) {
+          setLiveLane("fake_live");
+        }
+      })
+      .catch(() => setHistoryError(t("live.capabilitiesError")));
+    return () => pollControllerRef.current?.abort();
+  }, []);
+
+  const pollLiveRun = async (runId: string) => {
+    pollControllerRef.current?.abort();
+    const controller = new AbortController();
+    pollControllerRef.current = controller;
+    for (;;) {
+      const current = await getLiveEvaluation(runId, controller.signal);
+      setLiveReport(current);
+      if (current.status !== "running") return current;
+      await new Promise((resolve) => window.setTimeout(resolve, 1000));
+    }
+  };
 
   const handleRun = async () => {
     setIsRunning(true);
     setError(null);
     try {
-      setReport(await runEvaluation());
+      if (mode === "deterministic") {
+        setReport(await runEvaluation());
+        setLiveReport(null);
+      } else {
+        if (!liveConsent) {
+          throw new Error(t("live.consentRequired"));
+        }
+        if (!Number.isFinite(maxCostUsd) || maxCostUsd <= 0 || maxCostUsd > 25) {
+          throw new Error(t("live.invalidBudget"));
+        }
+        if (
+          !Number.isInteger(caseLimit) ||
+          caseLimit < 1 ||
+          caseLimit > 20
+        ) {
+          throw new Error(t("live.invalidCaseLimit"));
+        }
+        const started = await startLiveEvaluation({
+          lane: liveLane,
+          enabled: true,
+          max_cost_usd: maxCostUsd,
+          case_limit: caseLimit,
+        });
+        setReport(null);
+        await pollLiveRun(started.run_id);
+        await refreshHistory();
+      }
     } catch (caught) {
+      if (
+        caught instanceof Error &&
+        ["AbortError", "CanceledError"].includes(caught.name)
+      ) {
+        return;
+      }
       setError(caught instanceof Error ? caught.message : t("runError"));
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  const handleSelectHistory = async (runId: string) => {
+    setMode("live");
+    setError(null);
+    setIsRunning(true);
+    try {
+      await pollLiveRun(runId);
+    } catch (caught) {
+      if (
+        caught instanceof Error &&
+        ["AbortError", "CanceledError"].includes(caught.name)
+      ) {
+        return;
+      }
+      setError(t("live.selectionError"));
     } finally {
       setIsRunning(false);
     }
@@ -50,6 +165,90 @@ export default function EvaluationPage() {
           </button>
         </div>
 
+        <section className="rounded-xl bg-white p-5 shadow">
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="evaluation-mode"
+                checked={mode === "deterministic"}
+                onChange={() => setMode("deterministic")}
+              />
+              {t("modes.deterministic")}
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                data-testid="evaluation-mode-live"
+                type="radio"
+                name="evaluation-mode"
+                checked={mode === "live"}
+                onChange={() => setMode("live")}
+              />
+              {t("modes.live")}
+            </label>
+          </div>
+
+          {mode === "live" && (
+            <div className="mt-5 grid gap-4 md:grid-cols-4">
+              <label className="text-sm text-gray-700">
+                {t("live.lane")}
+                <select
+                  data-testid="live-evaluation-lane"
+                  value={liveLane}
+                  onChange={(event) =>
+                    setLiveLane(event.target.value as LiveEvaluationLane)
+                  }
+                  className="mt-1 block w-full rounded border border-gray-300 px-3 py-2"
+                >
+                  <option value="replay_live">{t("live.replay")}</option>
+                  {capabilities.provider_smoke_available && (
+                    <option value="provider_smoke">{t("live.smoke")}</option>
+                  )}
+                  {capabilities.fake_live_available && (
+                    <option value="fake_live">{t("live.fake")}</option>
+                  )}
+                </select>
+              </label>
+              <label className="text-sm text-gray-700">
+                {t("live.budget")}
+                <input
+                  data-testid="live-evaluation-budget"
+                  type="number"
+                  min="0.000001"
+                  max="25"
+                  step="0.01"
+                  value={maxCostUsd}
+                  onChange={(event) =>
+                    setMaxCostUsd(Number(event.target.value))
+                  }
+                  className="mt-1 block w-full rounded border border-gray-300 px-3 py-2"
+                />
+              </label>
+              <label className="text-sm text-gray-700">
+                {t("live.caseLimit")}
+                <input
+                  data-testid="live-evaluation-case-limit"
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={caseLimit}
+                  onChange={(event) => setCaseLimit(Number(event.target.value))}
+                  className="mt-1 block w-full rounded border border-gray-300 px-3 py-2"
+                />
+              </label>
+              <label className="flex items-center gap-2 self-end rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
+                <input
+                  data-testid="live-evaluation-consent"
+                  type="checkbox"
+                  checked={liveConsent}
+                  onChange={(event) => setLiveConsent(event.target.checked)}
+                />
+                {t("live.consent")}
+              </label>
+            </div>
+          )}
+        </section>
+
         {error && (
           <div
             data-testid="evaluation-error"
@@ -59,14 +258,24 @@ export default function EvaluationPage() {
           </div>
         )}
 
-        {!report && !error && (
+        {historyError && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            {historyError}
+          </div>
+        )}
+
+        {!report && !liveReport && !error && (
           <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center text-gray-500">
             <Gauge className="mx-auto mb-3 h-10 w-10 text-indigo-500" />
             {t("empty")}
           </div>
         )}
 
-        {report && (
+        {mode === "live" && liveReport && (
+          <LiveEvaluationResults report={liveReport} />
+        )}
+
+        {mode === "deterministic" && report && (
           <>
             <div
               data-testid="evaluation-status"
@@ -170,14 +379,21 @@ export default function EvaluationPage() {
               </div>
             </section>
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid gap-6 lg:grid-cols-3">
               <VersionList
-                title={t("promptVersions")}
-                values={report.evaluated_prompt_versions}
+                title={t("usedPromptVersions")}
+                values={report.used_prompt_versions}
+                emptyValue={t("live.results.none")}
+              />
+              <VersionList
+                title={t("configuredPromptVersions")}
+                values={report.configured_prompt_versions}
+                emptyValue={t("live.results.none")}
               />
               <VersionList
                 title={t("modelRoutes")}
                 values={report.evaluated_model_routes}
+                emptyValue={t("live.results.none")}
               />
             </div>
 
@@ -204,6 +420,11 @@ export default function EvaluationPage() {
             </section>
           </>
         )}
+
+        <EvaluationHistory
+          runs={history}
+          onSelect={(runId) => void handleSelectHistory(runId)}
+        />
       </div>
     </div>
   );
@@ -229,23 +450,29 @@ function MetricCard({
 function VersionList({
   title,
   values,
+  emptyValue,
 }: {
   title: string;
   values: Record<string, string>;
+  emptyValue: string;
 }) {
   return (
     <section className="rounded-xl bg-white p-5 shadow">
       <h2 className="font-semibold text-gray-900">{title}</h2>
       <dl className="mt-3 space-y-2 text-sm">
-        {Object.entries(values).map(([name, version]) => (
-          <div
-            key={name}
-            className="flex items-center justify-between gap-4 rounded bg-gray-50 px-3 py-2"
-          >
-            <dt className="font-mono text-gray-700">{name}</dt>
-            <dd className="font-mono text-indigo-700">{version}</dd>
-          </div>
-        ))}
+        {Object.keys(values).length === 0 ? (
+          <p className="text-gray-500">{emptyValue}</p>
+        ) : (
+          Object.entries(values).map(([name, version]) => (
+            <div
+              key={name}
+              className="flex items-center justify-between gap-4 rounded bg-gray-50 px-3 py-2"
+            >
+              <dt className="font-mono text-gray-700">{name}</dt>
+              <dd className="font-mono text-indigo-700">{version}</dd>
+            </div>
+          ))
+        )}
       </dl>
     </section>
   );

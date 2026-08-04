@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.0] - 2026-08-04
+
+### Layered live Agent evaluation
+
+- Adds opt-in replay-live evaluation against production Prompt and model
+  routes with deterministic replay tools.
+- Adds an independent structured Judge with exact failed-criterion evidence.
+- Records target, Judge, router, tool, Prompt, token, latency, provider,
+  source, pricing-catalog, and estimated-cost provenance.
+- Enforces per-case and run budgets before calls, stops unaffordable multi-step
+  ReAct calls, and retains usage from invalid structured responses.
+- Separates real-provider smoke cases from replay-only fixture contracts.
+- Rejects provider failure-shaped tool output and supports canonical tool
+  capability aliases.
+- Persists running progress after every case and expires interrupted stale
+  runs without discarding retained evidence or cost.
+- Exposes live-run capabilities, history, and detailed reports through the
+  local evaluation API.
+- Exercises Prompt Injection cases through the production symbol-resolution
+  trust boundary using valid ticker fixtures.
+
 ## [0.50.0] - 2026-08-03
 
 ### Evaluation governance

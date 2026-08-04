@@ -64,6 +64,27 @@ _SYMBOL_CONTEXT_AFTER_RE = re.compile(
     r"股票|代码|结论|报告)\b",
     re.IGNORECASE,
 )
+_UNTRUSTED_EVIDENCE_RE = re.compile(
+    r"<external_evidence\b(?=[^>]*\btrust=[\"']untrusted[\"'])[^>]*>"
+    r".*?</external_evidence>",
+    re.IGNORECASE | re.DOTALL,
+)
+_UNTRUSTED_OVERRIDE_MARKERS = (
+    "ignore safety",
+    "ignore the user",
+    "silently use",
+    "default every unknown",
+    "default ticker",
+    "filing says",
+    "filing contains",
+    "system override",
+    "忽略安全",
+    "忽略用户",
+    "静默使用",
+    "未知公司默认",
+    "默认股票代码",
+    "系统覆盖",
+)
 
 
 def normalize_symbol(value: str) -> str | None:
@@ -133,6 +154,36 @@ def extract_explicit_symbols(message: str) -> list[str]:
             continue
         symbols.append(symbol)
     return symbols
+
+
+def strip_untrusted_evidence(message: str) -> str:
+    """Remove explicitly tagged external evidence before resolving user intent."""
+    return _UNTRUSTED_EVIDENCE_RE.sub(" ", message)
+
+
+def is_untrusted_symbol_override(message: str, symbol: str) -> bool:
+    """Detect a ticker that appears only inside an override-style instruction."""
+    normalized = normalize_symbol(symbol)
+    if normalized is None:
+        return False
+    occurrences = [
+        match.start()
+        for match in re.finditer(
+            rf"(?<![A-Za-z0-9]){re.escape(normalized)}(?![A-Za-z0-9])",
+            message,
+            re.IGNORECASE,
+        )
+    ]
+    if not occurrences:
+        return False
+    lowered = message.lower()
+    return all(
+        any(
+            marker in lowered[max(0, index - 120) : index + 80]
+            for marker in _UNTRUSTED_OVERRIDE_MARKERS
+        )
+        for index in occurrences
+    )
 
 
 def has_explicit_symbol_intent(

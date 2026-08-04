@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-08-04
+
+### Live evaluation governance
+
+- Adds explicit replay-live and provider-smoke controls with consent, case,
+  and cost budgets.
+- Renders tool arguments, outputs, provider/source identity, latency,
+  deterministic criteria, Judge evidence, model tokens, and cost source.
+- Adds persisted live-run history and run-aware polling for long evaluations.
+- Loads backend lane capabilities so test-only fake evaluation is not exposed
+  by a normal development API.
+- Distinguishes completed, failed, skipped, and budget-exhausted states without
+  false-green status.
+- Adds complete English and Chinese evaluation copy.
+- Adds Playwright coverage and curated screenshots for deterministic,
+  fake-live quality/cost, and budget-exhaustion scenarios.
+
 ## [0.31.0] - 2026-08-03
 
 ### Evaluation governance dashboard

@@ -63,7 +63,9 @@ async def test_v2_suite_passes_quality_latency_cost_and_injection_gates():
     assert report.live_model_calls == 0
     assert report.p95_latency_ms <= report.thresholds.p95_latency_ms
     assert all(gate.passed for gate in report.gates)
-    assert report.evaluated_prompt_versions["router"] == "router@1"
+    assert report.used_prompt_versions == {}
+    assert report.evaluated_prompt_versions == {}
+    assert report.configured_prompt_versions["router"] == "router@1"
     assert report.evaluated_model_routes["router"].endswith("no-live-model")
 
 
@@ -98,11 +100,16 @@ async def test_reports_render_gates_comparison_and_load_legacy_json(tmp_path: Pa
     payload = json.loads(json_path.read_text(encoding="utf-8"))
     for key in (
         "execution_mode_accuracy",
+        "case_pass_rate",
+        "critical_case_failures",
         "prompt_injection_safety",
         "quality_score",
         "cost_policy_compliance",
+        "latency_policy_compliance",
         "p95_latency_ms",
         "gates",
+        "configured_prompt_versions",
+        "used_prompt_versions",
         "evaluated_model_routes",
         "comparison",
     ):

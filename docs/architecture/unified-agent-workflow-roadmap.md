@@ -2,7 +2,7 @@
 title: Unified Agent Workflow Improvement Roadmap
 status: in-progress
 version: n/a
-last_updated: 2026-07-28
+last_updated: 2026-08-04
 owner: maintainer
 related_paths:
   - backend/src/agent/
@@ -605,6 +605,14 @@ no-live-model gates; CLI comparison records metric deltas, prompt/model route
 changes, and case regressions. Financial outcome evaluation remains Phase 6
 work. Implementation shipped in commit `2540bbf`.
 
+Layered live evaluation is implemented and browser verified in backend
+`0.51.0` and frontend `0.32.0`. Replay-live runs now exercise production
+Prompts, model routes, autonomous replay-tool selection, deterministic
+rubrics, an independent structured Judge, token/cost accounting, hard budget
+stops, run-history persistence, and detailed browser evidence. Real-provider
+smoke remains separately opt-in, while financial-outcome evaluation remains
+Phase 6 work.
+
 ## 9. Priority 1: Prompt, Model, and Cost Governance
 
 ### 9.1 Prompt Registry
@@ -1048,6 +1056,10 @@ structured run metadata to investigate a failed execution without Langfuse.
 - add prompt registry;
 - add model/prompt comparison reports;
 - enforce quality, latency, and cost gates.
+
+Implementation status: shipped for deterministic and replay-live governance;
+real-provider smoke is opt-in and Portfolio outcome calibration remains Phase
+6 work.
 
 ### Phase 6: Portfolio Consolidation
 

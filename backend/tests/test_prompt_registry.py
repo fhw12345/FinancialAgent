@@ -14,7 +14,7 @@ from src.agent.prompt_registry import (
 def test_registry_has_stable_versioned_prompt_ids():
     snapshot = prompt_registry_snapshot()
     assert snapshot["router"] == "router@1"
-    assert snapshot["financial-system"] == "financial-system@3"
+    assert snapshot["financial-system"] == "financial-system@4"
     assert snapshot["symbol-extraction"] == "symbol-extraction@2"
     assert snapshot["deep-debater"] == "deep-debater@3"
     assert snapshot["deep-rebuttal"] == "deep-rebuttal@2"

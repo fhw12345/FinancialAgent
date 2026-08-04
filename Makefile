@@ -1,7 +1,7 @@
 # Financial Agent Development Makefile
 # Following the coding guide requirements for fmt, test, lint commands
 
-.PHONY: help dev build test eval test-e2e test-e2e-real test-e2e-uaw002 test-e2e-uaw003 test-e2e-uaw004 test-e2e-uaw005 test-e2e-uaw006 test-e2e-uaw007 test-e2e-uaw008 test-e2e-uaw009 test-e2e-uaw010 test-e2e-prompt-governance test-e2e-symbol-date-range test-e2e-chart-volume-overlay test-e2e-evaluation-governance lint fmt clean up down logs copilot-reverse
+.PHONY: help dev build test eval eval-live test-e2e test-e2e-real test-e2e-uaw002 test-e2e-uaw003 test-e2e-uaw004 test-e2e-uaw005 test-e2e-uaw006 test-e2e-uaw007 test-e2e-uaw008 test-e2e-uaw009 test-e2e-uaw010 test-e2e-prompt-governance test-e2e-symbol-date-range test-e2e-chart-volume-overlay test-e2e-evaluation-governance lint fmt clean up down logs copilot-reverse
 
 # Default target
 help:
@@ -19,6 +19,7 @@ help:
 	@echo "  lint         Lint code (backend: ruff+mypy, frontend: eslint)"
 	@echo "  test         Run all tests"
 	@echo "  eval         Run deterministic agent golden evaluation"
+	@echo "  eval-live    Run opt-in live model evaluation (uses EVAL_MAX_COST_USD)"
 	@echo "  test-e2e     Run deterministic Playwright browser tests"
 	@echo "  test-e2e-real Run real-stack Playwright browser tests"
 	@echo "  test-e2e-uaw002 Run Mongo-authority restart E2E"
@@ -107,6 +108,9 @@ test: test-backend test-frontend
 
 eval:
 	docker compose run --rm --no-deps backend python scripts/run_agent_eval.py --out artifacts/evals
+
+eval-live:
+	docker compose run --rm --no-deps backend python scripts/run_agent_eval.py --lane replay_live --enable-live --max-cost-usd $${EVAL_MAX_COST_USD:-0.25} --case-limit $${EVAL_CASE_LIMIT:-8} --out artifacts/evals
 
 test-e2e:
 	docker compose --profile e2e run --rm e2e sh -c "until curl -fsS http://host.docker.internal:18081/api/health; do sleep 2; done; npm run test:e2e"
@@ -212,6 +216,8 @@ test-e2e-chart-volume-overlay:
 	docker compose --profile e2e run --rm --no-deps -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:3008 e2e sh -c "until curl -fsS http://host.docker.internal:18089/api/health; do sleep 2; done; until curl -fsS http://host.docker.internal:3008; do sleep 2; done; UPDATE_E2E_EVIDENCE=true npm run test:e2e:chart-volume-overlay"
 
 test-e2e-evaluation-governance:
+	docker compose exec mongodb mongosh --quiet --eval 'db.getSiblingDB("financial_agent_events_e2e").dropDatabase()'
+	docker compose exec redis redis-cli -n 8 FLUSHDB
 	docker compose --profile e2e restart backend-events-e2e frontend-events-e2e
 	docker compose --profile e2e run --rm --no-deps -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:3008 e2e sh -c "until curl -fsS http://host.docker.internal:18089/api/health; do sleep 2; done; until curl -fsS http://host.docker.internal:3008; do sleep 2; done; UPDATE_E2E_EVIDENCE=true npm run test:e2e:evaluation-governance"
 
