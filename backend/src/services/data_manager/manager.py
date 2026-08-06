@@ -15,6 +15,8 @@ Key Features:
 """
 
 import asyncio
+import typing
+from collections.abc import Awaitable
 from datetime import UTC, datetime
 from typing import Any
 
@@ -183,7 +185,7 @@ class DataManager:
         redis_cache: Any,
         alpha_vantage_service: Any,
         finnhub_service: Any = None,
-    ):
+    ) -> None:
         """
         Initialize the Data Manager.
 
@@ -199,6 +201,13 @@ class DataManager:
             "data_manager_initialized",
             finnhub_enabled=finnhub_service is not None,
         )
+
+    @staticmethod
+    def _cached_records(cached: object) -> list[dict[str, Any]]:
+        """Validate cached collection shape before domain deserialization."""
+        if not isinstance(cached, list):
+            return []
+        return [dict(item) for item in cached if isinstance(item, dict)]
 
     # =========================================================================
     # Market Data (OHLCV)
@@ -297,7 +306,7 @@ class DataManager:
         if cached is None:
             raise DataFetchError(f"Failed to fetch OHLCV for {symbol}", "market")
 
-        return [OHLCVData.from_dict(d) for d in cached]
+        return [OHLCVData.from_dict(d) for d in self._cached_records(cached)]
 
     async def _fetch_ohlcv(
         self,
@@ -441,7 +450,7 @@ class DataManager:
         maturity_normalized = maturity.lower().replace("year", "y")
         cache_key = CacheKeys.treasury(maturity_normalized)
 
-        async def fetch_func():
+        async def fetch_func() -> list[dict[str, Any]]:
             data = await self._fetch_treasury(maturity, interval)
             return [d.to_dict() for d in data]
 
@@ -452,7 +461,7 @@ class DataManager:
         if cached is None:
             raise DataFetchError(f"Failed to fetch treasury {maturity}", "macro")
 
-        return [TreasuryData.from_dict(d) for d in cached]
+        return [TreasuryData.from_dict(d) for d in self._cached_records(cached)]
 
     async def _fetch_treasury(self, maturity: str, interval: str) -> list[TreasuryData]:
         """Internal: Fetch treasury yield. FRED is the primary source (no daily
@@ -568,7 +577,7 @@ class DataManager:
         """
         cache_key = CacheKeys.ipo_calendar()
 
-        async def fetch_func():
+        async def fetch_func() -> list[dict[str, Any]]:
             data = await self._fetch_ipo_calendar()
             return [d.to_dict() for d in data]
 
@@ -577,7 +586,7 @@ class DataManager:
         if cached is None:
             return []  # IPO calendar can be empty
 
-        return [IPOData.from_dict(d) for d in cached]
+        return [IPOData.from_dict(d) for d in self._cached_records(cached)]
 
     async def _fetch_ipo_calendar(self) -> list[IPOData]:
         """Internal: Fetch IPO calendar from Alpha Vantage."""
@@ -658,7 +667,7 @@ class DataManager:
         """
         cache_key = CacheKeys.news_sentiment(topic or "general")
 
-        async def fetch_func():
+        async def fetch_func() -> list[dict[str, Any]]:
             data = await self._fetch_news_sentiment(topic, tickers)
             return [d.to_dict() for d in data]
 
@@ -667,7 +676,7 @@ class DataManager:
         if cached is None:
             return []
 
-        return [NewsData.from_dict(d) for d in cached]
+        return [NewsData.from_dict(d) for d in self._cached_records(cached)]
 
     async def _fetch_news_sentiment(
         self,
@@ -873,7 +882,12 @@ class DataManager:
         # Provider 1: Finnhub (primary if configured — fastest + most accurate)
         if self._finnhub_service is not None:
             try:
-                return await self._finnhub_service.fetch_quote(symbol)
+                raw_quote = await self._finnhub_service.fetch_quote(symbol)
+                if isinstance(raw_quote, QuoteData):
+                    return raw_quote
+                if isinstance(raw_quote, dict):
+                    return QuoteData.from_dict(raw_quote)
+                raise DataFetchError("Finnhub returned an invalid quote", "finnhub")
             except Exception as e:
                 logger.warning(
                     "quote_provider_failed",
@@ -997,23 +1011,32 @@ class DataManager:
         symbol = symbol.upper()
         cache_key = CacheKeys.company_news(symbol, from_date, to_date)
 
-        async def fetch_func():
+        async def fetch_func() -> list[dict[str, Any]]:
             data = await self._fetch_company_news(symbol, from_date, to_date)
             return [d.to_dict() for d in data]
 
         cached = await self._cache.get_with_fetch(cache_key, fetch_func, self.TTL_NEWS)
         if cached is None:
             return []
-        return [NewsData.from_dict(d) for d in cached]
+        return [NewsData.from_dict(d) for d in self._cached_records(cached)]
 
     async def _fetch_company_news(
         self, symbol: str, from_date: str, to_date: str
     ) -> list[NewsData]:
         if self._finnhub_service is not None:
             try:
-                return await self._finnhub_service.fetch_company_news(
+                raw_news = await self._finnhub_service.fetch_company_news(
                     symbol, from_date, to_date
                 )
+                return [
+                    (
+                        item
+                        if isinstance(item, NewsData)
+                        else NewsData.from_dict(dict(item))
+                    )
+                    for item in raw_news
+                    if isinstance(item, NewsData | dict)
+                ]
             except Exception as e:
                 logger.warning(
                     "news_provider_failed",
@@ -1087,16 +1110,19 @@ class DataManager:
         symbol = symbol.upper()
         cache_key = CacheKeys.insider_trades(symbol)
 
-        async def fetch_func():
+        async def fetch_func() -> list[dict[str, Any]]:
             return await self._fetch_insider_trades(symbol)
 
         cached = await self._cache.get_with_fetch(cache_key, fetch_func, self.TTL_NEWS)
-        return cached or []
+        return self._cached_records(cached)
 
     async def _fetch_insider_trades(self, symbol: str) -> list[dict[str, Any]]:
         if self._finnhub_service is not None:
             try:
-                return await self._finnhub_service.fetch_insider_transactions(symbol)
+                raw_transactions = (
+                    await self._finnhub_service.fetch_insider_transactions(symbol)
+                )
+                return self._cached_records(raw_transactions)
             except Exception as e:
                 logger.warning(
                     "insider_provider_failed",
@@ -1110,9 +1136,9 @@ class DataManager:
             if hasattr(self._av_service, "get_insider_transactions"):
                 data = await self._av_service.get_insider_transactions(symbol)
                 if isinstance(data, dict) and "data" in data:
-                    return list(data["data"])
+                    return self._cached_records(data["data"])
                 if isinstance(data, list):
-                    return data
+                    return self._cached_records(data)
         except Exception as e:
             logger.warning(
                 "insider_provider_failed",
@@ -1139,7 +1165,8 @@ class DataManager:
             df = yf.Ticker(symbol).insider_transactions
             if df is None or df.empty:
                 return []
-            return df.to_dict(orient="records")
+            records = df.to_dict(orient="records")
+            return [dict(record) for record in records]
 
         return await asyncio.to_thread(_sync)
 
@@ -1166,7 +1193,7 @@ class DataManager:
         target_day = target_date.date()
 
         # Provider 1: Alpha Vantage via the OHLCV pipeline (cached)
-        bars: list = []
+        bars: list[typing.Any] = []
         try:
             bars = await self.get_ohlcv(symbol, "daily", outputsize="full")
         except DataFetchError as e:
@@ -1393,15 +1420,21 @@ class DataManager:
             )
 
             # Handle errors
-            if isinstance(quote, Exception):
+            if isinstance(quote, asyncio.CancelledError):
+                raise quote
+            if isinstance(quote, BaseException):
                 logger.warning("pcr_quote_failed", symbol=symbol, error=str(quote))
                 return None
 
-            if isinstance(options, Exception) or not options:
+            if isinstance(options, asyncio.CancelledError):
+                raise options
+            if isinstance(options, BaseException) or not options:
                 logger.warning(
                     "pcr_options_failed",
                     symbol=symbol,
-                    error=str(options) if isinstance(options, Exception) else "empty",
+                    error=(
+                        str(options) if isinstance(options, BaseException) else "empty"
+                    ),
                 )
                 return None
 
@@ -1508,7 +1541,7 @@ class DataManager:
 
     async def get_insights(
         self, category_id: str, suffix: str = "latest"
-    ) -> dict | None:
+    ) -> dict[str, typing.Any] | None:
         """
         Get computed insight data from cache.
 
@@ -1520,12 +1553,13 @@ class DataManager:
             Cached insight data or None
         """
         cache_key = CacheKeys.insights(category_id, suffix)
-        return await self._cache.get(cache_key)
+        cached = await self._cache.get(cache_key)
+        return dict(cached) if isinstance(cached, dict) else None
 
     async def set_insights(
         self,
         category_id: str,
-        data: dict,
+        data: dict[str, typing.Any],
         suffix: str = "latest",
         ttl: int | None = None,
     ) -> bool:
@@ -1580,8 +1614,8 @@ class DataManager:
             SharedDataContext with all fetched data
         """
         context = SharedDataContext()
-        tasks = []
-        task_keys = []
+        tasks: list[Awaitable[Any]] = []
+        task_keys: list[tuple[str, str]] = []
 
         # Queue OHLCV tasks
         for symbol in symbols or []:
@@ -1616,7 +1650,9 @@ class DataManager:
 
             # Process results
             for (data_type, key), result in zip(task_keys, results, strict=False):
-                if isinstance(result, Exception):
+                if isinstance(result, asyncio.CancelledError):
+                    raise result
+                if isinstance(result, BaseException):
                     context.errors[f"{data_type}:{key}"] = str(result)
                     logger.warning(
                         "prefetch_task_failed",

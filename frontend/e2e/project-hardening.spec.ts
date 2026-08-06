@@ -14,7 +14,7 @@ test("loopback-bound real stack remains healthy @project-hardening @real-stack",
 }) => {
   await openEnglishApp(page);
   await page.getByTestId("nav-health").click();
-  await expect(page.getByText("v0.51.1", { exact: true })).toBeVisible({
+  await expect(page.getByText(/^v0\.51\.\d+$/, { exact: true })).toBeVisible({
     timeout: 15_000,
   });
   await expect(page.getByText("HEALTHY", { exact: true })).toBeVisible();

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 import structlog
 
 from src.agent.portfolio.risk_calculator import (
+    SymbolMeta,
     compute_portfolio_risk,
     render_risk_block_for_prompt,
 )
@@ -16,6 +17,9 @@ from ...models.message import MessageCreate, MessageMetadata
 from ...models.trading_decision import SymbolAnalysisResult
 
 if TYPE_CHECKING:
+    from ...database.repositories.chat_repository import ChatRepository
+    from ...database.repositories.message_repository import MessageRepository
+    from ..langgraph_react_agent import FinancialAnalysisReActAgent
     from ..portfolio_phase2_prompt import GovernedPortfolioDecisionList
 
 
@@ -25,11 +29,15 @@ logger = structlog.get_logger()
 class Phase2DecisionsMixin:
     """Mixin providing Phase 2 decision-making capabilities."""
 
-    async def _fetch_symbol_meta_for_risk(self, symbol: str) -> dict[str, Any]:
+    react_agent: "FinancialAnalysisReActAgent"
+    chat_repo: "ChatRepository"
+    message_repo: "MessageRepository"
+
+    async def _fetch_symbol_meta_for_risk(self, symbol: str) -> SymbolMeta:
         """Fetch best-effort sector and beta metadata without blocking."""
         import asyncio
 
-        def _sync() -> dict[str, Any]:
+        def _sync() -> SymbolMeta:
             try:
                 import yfinance as yf
 
@@ -153,10 +161,13 @@ class Phase2DecisionsMixin:
         try:
             from ..portfolio_phase2_prompt import GovernedPortfolioDecisionList
 
-            decision_result = await self.react_agent.ainvoke_structured(
+            raw_decision_result = await self.react_agent.ainvoke_structured(
                 prompt=decision_prompt,
                 schema=GovernedPortfolioDecisionList,
                 context=None,  # Context is embedded in prompt
+            )
+            decision_result = GovernedPortfolioDecisionList.model_validate(
+                raw_decision_result
             )
             decision_result.record_prompt_version(
                 phase2_prompt.prompt_id,

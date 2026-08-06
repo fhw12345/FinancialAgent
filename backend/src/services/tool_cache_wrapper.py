@@ -10,6 +10,7 @@ Wraps agent tools to provide:
 """
 
 import asyncio
+import typing
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import datetime
@@ -431,7 +432,7 @@ class ToolCacheWrapper:
         message_id: str | None,
         tool_name: str,
         tool_source: str,
-        input_params: dict,
+        input_params: dict[str, typing.Any],
         output_result: Any,
         status: str,
         started_at: datetime,

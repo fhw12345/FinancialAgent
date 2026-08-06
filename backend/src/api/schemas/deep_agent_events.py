@@ -8,6 +8,7 @@ Events follow a hierarchical pattern: deep_start -> subagent_start -> tool_start
 Each event includes a monotonically increasing `seq` field for frontend ordering.
 """
 
+import typing
 from datetime import UTC, datetime
 from typing import Any, Literal, TypedDict
 
@@ -99,7 +100,7 @@ class DeepDebateRoundEvent(TypedDict):
     round: int
     has_concerns: bool
     summary: str  # Full text (frontend handles truncation/expand)
-    concerns: list[dict]  # Structured concerns from debater
+    concerns: list[dict[str, typing.Any]]  # Structured concerns from debater
 
 
 class DeepRebuttalStartEvent(TypedDict):
@@ -121,7 +122,7 @@ class DeepRebuttalResultEvent(TypedDict):
     defense_summary: str
     tool_count: int
     duration_ms: int
-    rebuttals: list[dict]  # Structured rebuttals from defender
+    rebuttals: list[dict[str, typing.Any]]  # Structured rebuttals from defender
 
 
 class DeepSynthesisStartEvent(TypedDict):
@@ -342,7 +343,7 @@ class DeepEventEmitter:
         current_round: int,
         has_concerns: bool,
         summary: str = "",
-        concerns: list[dict] | None = None,
+        concerns: list[dict[str, typing.Any]] | None = None,
     ) -> dict[str, Any]:
         """Create a deep_debate_round event."""
         return {
@@ -366,7 +367,7 @@ class DeepEventEmitter:
         defense_summary: str,
         tool_count: int,
         duration_ms: int,
-        rebuttals: list[dict] | None = None,
+        rebuttals: list[dict[str, typing.Any]] | None = None,
     ) -> dict[str, Any]:
         """Create a deep_rebuttal_result event."""
         return {

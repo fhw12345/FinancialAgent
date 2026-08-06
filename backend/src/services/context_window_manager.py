@@ -42,6 +42,7 @@ class ContextWindowManager:
         self.tail_keep = settings.tail_messages_keep  # 3 messages
 
         # cl100k_base provides a stable approximation across Maestro models.
+        self.tokenizer: tiktoken.Encoding | None
         try:
             self.tokenizer = tiktoken.get_encoding("cl100k_base")
         except Exception as e:

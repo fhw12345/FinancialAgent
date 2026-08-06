@@ -253,6 +253,19 @@ class TestCreateSnapshot:
         assert result["run_id"].startswith("snapshot_")
 
     @pytest.mark.asyncio
+    async def test_create_snapshot_rejects_missing_composite(
+        self, snapshot_service, mock_registry
+    ):
+        """Metrics without a composite score are an invalid category contract."""
+        mock_category = mock_registry.get_category_instance.return_value
+        mock_category.get_category_data.return_value.composite = None
+
+        result = await snapshot_service.create_snapshot(category_id="ai_sector_risk")
+
+        assert result["status"] == "error"
+        assert "without a composite score" in result["error"]
+
+    @pytest.mark.asyncio
     async def test_create_snapshot_handles_exception(
         self, snapshot_service, mock_registry
     ):

@@ -12,6 +12,7 @@ Key Features:
 """
 
 import asyncio
+import typing
 from typing import Any
 from uuid import UUID
 
@@ -44,7 +45,7 @@ class ToolExecutionCallback(AsyncCallbackHandler):
 
     def __init__(
         self,
-        event_queue: asyncio.Queue,
+        event_queue: asyncio.Queue[typing.Any],
         language: SupportedLanguage = DEFAULT_LANGUAGE,
     ):
         """

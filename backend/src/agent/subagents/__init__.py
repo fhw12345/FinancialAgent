@@ -19,6 +19,7 @@ Architecture:
     -> Returns analysis to Main Agent
 """
 
+import typing
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -60,7 +61,7 @@ class DeepSubAgent:
     def __init__(
         self,
         config: SubAgentConfig,
-        graph: "CompiledStateGraph",
+        graph: "CompiledStateGraph[typing.Any, typing.Any, typing.Any, typing.Any]",
         tool_names: list[str],
     ):
         self.config = config
@@ -81,7 +82,7 @@ class DeepSubAgent:
 def create_deep_subagent(
     config: SubAgentConfig,
     model: Any,
-    tools: list[Callable],
+    tools: list[Callable[..., typing.Any]],
     skills_dir: str,
 ) -> DeepSubAgent:
     """

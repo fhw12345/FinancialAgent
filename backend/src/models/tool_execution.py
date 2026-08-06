@@ -7,6 +7,7 @@ Enables:
 3. Audit trail: See what data informed each decision
 """
 
+import typing
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -43,8 +44,12 @@ class ToolExecution(BaseModel):
     )
 
     # Execution details
-    input_params: dict = Field(..., description="Tool input parameters")
-    output_result: str | dict | list = Field(..., description="Tool output")
+    input_params: dict[str, typing.Any] = Field(
+        ..., description="Tool input parameters"
+    )
+    output_result: str | dict[str, typing.Any] | list[typing.Any] = Field(
+        ..., description="Tool output"
+    )
 
     # Status
     status: str = Field(..., description="success | error | timeout")

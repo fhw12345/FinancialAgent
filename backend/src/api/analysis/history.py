@@ -5,6 +5,7 @@ Provides access to historical analysis data and message timelines
 for portfolio tracking and analysis review.
 """
 
+import typing
 from typing import Any
 
 import structlog
@@ -49,7 +50,7 @@ async def get_analysis_history(
         )
 
         # Group by analysis_id
-        analysis_sessions: dict[str, list] = {}
+        analysis_sessions: dict[str, list[typing.Any]] = {}
         for msg in messages:
             aid = msg.metadata.analysis_id or "unknown"
             if aid not in analysis_sessions:

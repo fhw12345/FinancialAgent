@@ -7,6 +7,7 @@ Provides AI agent access to per-symbol PCR calculations with:
 - Rich output including price, ATM zone, notionals, interpretation
 """
 
+import typing
 from typing import TYPE_CHECKING
 
 import structlog
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 logger = structlog.get_logger()
 
 
-def create_pcr_tools(data_manager: "DataManager") -> list:
+def create_pcr_tools(data_manager: "DataManager") -> list[typing.Any]:
     """
     Create Put/Call Ratio tools for the LLM agent.
 

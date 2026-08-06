@@ -37,7 +37,7 @@ async def _momentum_30d(symbol: str, data_manager: Any) -> float:
         old = bars[min(len(bars) - 1, 21)].close  # ~30 calendar days back
         if old <= 0:
             return float("-inf")
-        return (recent - old) / old
+        return float((recent - old) / old)
     except Exception as e:
         logger.debug("momentum_failed", symbol=symbol, error=str(e))
         return float("-inf")

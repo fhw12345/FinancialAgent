@@ -437,7 +437,7 @@ class FundamentalsMixin(AlphaVantageBase):
                 ipo_count=len(ipos),
             )
 
-            return ipos
+            return [dict(record) for record in ipos]
 
         except Exception as e:
             logger.error("IPO calendar fetch failed", error=str(e))

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import typing
 from datetime import UTC, datetime
 
 import structlog
@@ -20,16 +21,17 @@ _SOURCE_PREFIX = {
 def _quote_source_id(source: str | None, symbol: str, asof: datetime | None) -> str:
     """Stable footnote ID for a quote (W3.2 / W3.16).
 
-    Mirrors ``alpha_vantage.quotes._quote_source_id`` so both quote tools
-    emit the same footnote-token shape regardless of which one the ReAct
-    agent picks. Format: ``{PREFIX}-Q-{SYMBOL}-{YYYY-MM-DD}``.
+    import typing
+        Mirrors ``alpha_vantage.quotes._quote_source_id`` so both quote tools
+        emit the same footnote-token shape regardless of which one the ReAct
+        agent picks. Format: ``{PREFIX}-Q-{SYMBOL}-{YYYY-MM-DD}``.
     """
     prefix = _SOURCE_PREFIX.get((source or "").lower(), (source or "src").upper())
     asof_day = (asof or datetime.now(UTC)).strftime("%Y-%m-%d")
     return f"{prefix}-Q-{symbol.upper()}-{asof_day}"
 
 
-def create_finnhub_quote_tool(data_manager: object) -> list:
+def create_finnhub_quote_tool(data_manager: object) -> list[typing.Any]:
     """Build the finnhub_quote LangChain tool."""
 
     @tool

@@ -6,6 +6,8 @@ on watchlist symbols every 5 minutes.
 """
 
 import asyncio
+import typing
+from typing import Any
 
 import structlog
 from motor.motor_asyncio import AsyncIOMotorCollection
@@ -28,16 +30,16 @@ class WatchlistAnalyzer:
 
     def __init__(
         self,
-        watchlist_collection: AsyncIOMotorCollection,
-        messages_collection: AsyncIOMotorCollection,
-        chats_collection: AsyncIOMotorCollection,
+        watchlist_collection: AsyncIOMotorCollection[dict[str, typing.Any]],
+        messages_collection: AsyncIOMotorCollection[dict[str, typing.Any]],
+        chats_collection: AsyncIOMotorCollection[dict[str, typing.Any]],
         redis_cache: RedisCache,
-        market_service,  # AlphaVantageMarketDataService for market data
+        market_service: Any,  # AlphaVantageMarketDataService for market data
         settings: Settings,  # Application settings for context management
-        agent=None,  # LLM agent for analysis
-        order_repository=None,  # Repository for persisting orders to MongoDB
-        data_manager=None,  # Singleton DataManager for cached OHLCV access
-    ):
+        agent: Any | None = None,  # LLM agent for analysis
+        order_repository: Any | None = None,
+        data_manager: Any | None = None,
+    ) -> None:
         """Initialize watchlist analyzer."""
         self.watchlist_repo = WatchlistRepository(watchlist_collection)
         self.message_repo = MessageRepository(messages_collection, redis_cache)
@@ -86,7 +88,7 @@ class WatchlistAnalyzer:
         """
         return await self.analysis_engine.analyze_symbol(symbol, user_id, analysis_id)
 
-    async def run_analysis_cycle(self, force: bool = False):
+    async def run_analysis_cycle(self, force: bool = False) -> None:
         """
         Run one analysis cycle for all watchlist items.
 
@@ -96,7 +98,7 @@ class WatchlistAnalyzer:
         """
         await self.analysis_engine.run_analysis_cycle(force)
 
-    async def start(self):
+    async def start(self) -> None:
         """Start the automated analysis scheduler (runs every 5 minutes)."""
         if self.is_running:
             logger.warning("Watchlist analyzer already running")
@@ -124,7 +126,7 @@ class WatchlistAnalyzer:
                 # Wait a bit before retrying on error
                 await asyncio.sleep(30)
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Stop the automated analysis scheduler."""
         logger.info("Stopping watchlist analyzer")
         self.is_running = False

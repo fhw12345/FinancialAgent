@@ -38,7 +38,7 @@ async def cancel_and_await(task: asyncio.Task[Any] | None) -> None:
             await task
 
 
-async def await_task_completion(task: asyncio.Task[Any] | None) -> None:
+async def await_task_completion(task: asyncio.Future[Any] | None) -> None:
     """Await a shielded task without cancelling its underlying operation."""
     if task is None:
         return

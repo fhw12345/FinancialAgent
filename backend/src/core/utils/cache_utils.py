@@ -5,11 +5,13 @@ Provides consistent cache key generation and TTL strategies
 for all registered agent tools.
 """
 
+import typing
+
 
 def generate_tool_cache_key(
     tool_source: str,
     tool_name: str,
-    params: dict,
+    params: dict[str, typing.Any],
 ) -> str:
     """
     Generate consistent cache key for ANY tool call.

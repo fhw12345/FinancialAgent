@@ -65,22 +65,22 @@ def search_local_symbols(query: str, limit: int = 10) -> list[SymbolCandidate]:
             )
         )
 
-    for row in load_directory():
-        key = symbol_comparison_key(row.symbol)
+    for directory_row in load_directory():
+        key = symbol_comparison_key(directory_row.symbol)
         if key in seen:
             continue
-        match = score(row.symbol, row.name)
+        match = score(directory_row.symbol, directory_row.name)
         if match is None:
             continue
         match_type, confidence = match
         scored.append(
             (
                 confidence,
-                row.symbol.upper(),
+                directory_row.symbol.upper(),
                 SymbolCandidate(
-                    symbol=row.symbol.upper(),
-                    name=row.name,
-                    exchange=row.exchange,
+                    symbol=directory_row.symbol.upper(),
+                    name=directory_row.name,
+                    exchange=directory_row.exchange,
                     type="Equity",
                     match_type=match_type,
                     confidence=confidence,

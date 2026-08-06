@@ -7,6 +7,7 @@ Includes direct holdings management and price refresh endpoints.
 """
 
 import asyncio
+import typing
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -296,7 +297,7 @@ async def delete_holding(
 async def refresh_holding_prices(
     request: Request,
     holding_repo: HoldingRepository = Depends(get_holding_repository),
-) -> dict:
+) -> dict[str, typing.Any]:
     """Manually refresh current_price + market_value + P&L for every holding.
 
     Same logic as the nightly cron (`scripts/refresh_holding_prices.py`),

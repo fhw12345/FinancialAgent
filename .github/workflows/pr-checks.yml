@@ -81,11 +81,12 @@ jobs:
           npm run dev -- --host 127.0.0.1 > /tmp/financial-agent-vite.log 2>&1 &
           PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npm run test:e2e:project-hardening
 
-      - name: Lint Backend
+      - name: Lint and Type Check Backend
         run: |
           cd backend
           python -m ruff check src/
           python -m black --check src/
+          python -m mypy src/
 
       - name: Lint and Build Frontend
         run: |

@@ -12,6 +12,7 @@ do not need to change. The api_key argument is accepted but ignored.
 import asyncio
 import json
 import re
+import typing
 from urllib.parse import quote_plus
 
 import structlog
@@ -30,13 +31,13 @@ def _try_extract_ticker(query: str) -> str | None:
     blacklist = {"AI", "CEO", "USA", "US", "EU", "IPO", "SEC", "FED", "CSAM"}
     for c in candidates:
         if c not in blacklist:
-            return c
+            return str(c)
     return None
 
 
-def _search_sync(query: str, num_results: int = 5) -> list[dict]:
+def _search_sync(query: str, num_results: int = 5) -> list[dict[str, typing.Any]]:
     """Search news via yfinance (if ticker detected) or Google News RSS."""
-    results: list[dict] = []
+    results: list[dict[str, typing.Any]] = []
     ticker = _try_extract_ticker(query)
     if ticker:
         try:
@@ -77,7 +78,7 @@ def _search_sync(query: str, num_results: int = 5) -> list[dict]:
     return results[:num_results]
 
 
-def create_exa_tools(api_key: str = "") -> list:
+def create_exa_tools(api_key: str = "") -> list[typing.Any]:
     """Create web search tools (free yfinance + RSS implementation).
 
     Args:

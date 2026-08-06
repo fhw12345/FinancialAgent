@@ -1,5 +1,6 @@
 """Repository for local portfolio decisions and order suggestions."""
 
+import typing
 from datetime import datetime
 from typing import Any
 
@@ -17,7 +18,7 @@ logger = structlog.get_logger()
 class PortfolioOrderRepository:
     """Repository for portfolio order data access operations."""
 
-    def __init__(self, collection: AsyncIOMotorCollection):
+    def __init__(self, collection: AsyncIOMotorCollection[dict[str, typing.Any]]):
         """
         Initialize portfolio order repository.
 

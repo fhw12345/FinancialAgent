@@ -251,13 +251,18 @@ def _prepend_route_event(
                 for event in parse_sse_data(chunk):
                     yield sequencer.format_sse(event)
             inner_started = True
-            async for chunk in response.body_iterator:
+            async for raw_chunk in response.body_iterator:
+                chunk = (
+                    raw_chunk
+                    if isinstance(raw_chunk, str)
+                    else bytes(raw_chunk).decode("utf-8")
+                )
                 for event in parse_sse_data(chunk):
                     yield sequencer.format_sse(event)
             stream_finished = True
         except Exception as exc:
             if on_stream_failure is not None:
-                failure_task = asyncio.create_task(on_stream_failure(exc))
+                failure_task = asyncio.ensure_future(on_stream_failure(exc))
                 try:
                     await asyncio.shield(failure_task)
                 except asyncio.CancelledError:

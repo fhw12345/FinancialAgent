@@ -5,7 +5,7 @@ This module orchestrates order execution via OrderOptimizer.
 """
 
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
@@ -13,11 +13,21 @@ from ...core.utils.date_utils import utcnow
 from ...models.portfolio import PortfolioOrder
 from ...models.trading_decision import SymbolAnalysisResult, TradingAction
 
+if TYPE_CHECKING:
+    from ...database.repositories.portfolio_order_repository import (
+        PortfolioOrderRepository,
+    )
+    from ..optimizer import OrderOptimizer
+
 logger = structlog.get_logger()
 
 
 class Phase3ExecutionMixin:
     """Mixin providing Phase 3 execution capabilities."""
+
+    order_repo: "PortfolioOrderRepository"
+    order_optimizer: "OrderOptimizer"
+    react_agent: Any
 
     async def _resolve_decision_price(self, symbol: str) -> float | None:
         """Best-effort current quote for HOLD anchor. Uses DataManager fallback chain."""

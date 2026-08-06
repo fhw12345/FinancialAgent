@@ -5,10 +5,19 @@ Separates API layer from domain models for clean architecture.
 """
 
 from datetime import UTC, datetime
+from typing import overload
 
 from pydantic import BaseModel, Field
 
 from ...models.holding import Holding
+
+
+@overload
+def _as_utc(dt: datetime) -> datetime: ...
+
+
+@overload
+def _as_utc(dt: None) -> None: ...
 
 
 def _as_utc(dt: datetime | None) -> datetime | None:

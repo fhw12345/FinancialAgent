@@ -7,17 +7,19 @@ Handles LLM agent invocation, fallback Fibonacci analysis, and analysis cycles.
 import asyncio
 import re
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import structlog
 
 from src.core.utils.date_utils import utcnow
 
+from ...core.config import Settings
 from ...core.financial_analysis import FibonacciAnalyzer
 from ...core.local_user import LOCAL_USER_ID
 from ...database.repositories.message_repository import MessageRepository
 from ...database.repositories.watchlist_repository import WatchlistRepository
-from ...models.message import MessageCreate, MessageMetadata
+from ...models.message import Message, MessageCreate, MessageMetadata
 from ..context_window_manager import ContextWindowManager
 from .chat_manager import ChatManager
 from .context_handler import ContextHandler
@@ -35,12 +37,12 @@ class AnalysisEngine:
         message_repo: MessageRepository,
         chat_manager: ChatManager,
         context_manager: ContextWindowManager,
-        market_service,
-        settings,
-        data_manager=None,
-        agent=None,
-        order_repository=None,
-    ):
+        market_service: Any,
+        settings: Settings,
+        data_manager: Any | None = None,
+        agent: Any | None = None,
+        order_repository: Any | None = None,
+    ) -> None:
         """
         Initialize analysis engine.
 
@@ -231,7 +233,7 @@ POSITION_SIZE: [percentage if BUY/SELL, or N/A if HOLD]
 REASONING: [your analysis]
 """
 
-    def _parse_agent_response(self, response) -> tuple[str, int | None, str]:
+    def _parse_agent_response(self, response: object) -> tuple[str, int | None, str]:
         """
         Parse agent response to extract decision, position size, and response text.
 
@@ -279,7 +281,7 @@ REASONING: [your analysis]
         position_size: int | None,
         analysis_id: str,
         response_text: str,
-    ):
+    ) -> Message:
         """
         Create and persist analysis message.
 
@@ -389,7 +391,7 @@ REASONING: [your analysis]
             logger.error("Fallback analysis failed", symbol=symbol, error=str(e))
             return False
 
-    async def run_analysis_cycle(self, force: bool = False):
+    async def run_analysis_cycle(self, force: bool = False) -> None:
         """
         Run one analysis cycle for all watchlist items.
 

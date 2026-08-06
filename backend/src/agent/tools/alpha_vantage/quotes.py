@@ -4,6 +4,7 @@ Stock Quote and Symbol Search Tools.
 Provides tools for getting current stock prices and searching ticker symbols.
 """
 
+import typing
 from datetime import UTC, datetime
 from typing import Any
 
@@ -38,7 +39,7 @@ def _quote_source_id(source: str | None, symbol: str, asof: datetime | None) -> 
 def create_quote_tools(
     service: AlphaVantageMarketDataService,
     data_manager: Any | None = None,
-) -> list:
+) -> list[typing.Any]:
     """
     Create quote and symbol search tools.
 

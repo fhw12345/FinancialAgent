@@ -1,5 +1,6 @@
 """Portfolio models for local decisions, suggestions, and positions."""
 
+import typing
 from datetime import datetime
 from enum import StrEnum
 
@@ -92,7 +93,7 @@ class PortfolioOrder(BaseModel):
         "order",
         description="'order' for executable BUY/SELL, 'signal' for HOLD recommendations or Deep ReAct verdicts",
     )
-    pnl_snapshots: dict = Field(
+    pnl_snapshots: dict[str, typing.Any] = Field(
         default_factory=dict,
         description="Ex-post P&L snapshots keyed by horizon (e.g. '7d', '30d', '90d') — see services/pnl_service",
     )
@@ -107,7 +108,7 @@ class PortfolioOrder(BaseModel):
     )
 
     # Metadata
-    metadata: dict = Field(
+    metadata: dict[str, typing.Any] = Field(
         default_factory=dict,
         description="Additional data: stop_price, limit_price, time_in_force",
     )

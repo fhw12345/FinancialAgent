@@ -25,6 +25,7 @@ import asyncio
 from datetime import UTC, datetime
 from typing import Any
 
+import pandas as pd
 import structlog
 
 logger = structlog.get_logger(__name__)
@@ -128,7 +129,7 @@ async def fetch_cash_flow_yf(
 ) -> str | None:
     """Cash flow via yfinance.Ticker.cashflow / quarterly_cashflow."""
 
-    def _sync():
+    def _sync() -> pd.DataFrame | None:
         import yfinance as yf
 
         try:
@@ -178,7 +179,7 @@ async def fetch_balance_sheet_yf(
 ) -> str | None:
     """Balance sheet via yfinance.Ticker.balance_sheet / quarterly_balance_sheet."""
 
-    def _sync():
+    def _sync() -> pd.DataFrame | None:
         import yfinance as yf
 
         try:
@@ -228,7 +229,7 @@ async def fetch_balance_sheet_yf(
 async def fetch_earnings_yf(symbol: str, limit: int = 8) -> str | None:
     """Earnings history via yfinance.Ticker.earnings_dates."""
 
-    def _sync():
+    def _sync() -> pd.DataFrame | None:
         import yfinance as yf
 
         try:
@@ -273,7 +274,7 @@ async def fetch_insider_yf(symbol: str, limit: int = 50) -> str | None:
     SEC EDGAR Form 4 footnote parsing, which is W3.8/W3.9.
     """
 
-    def _sync():
+    def _sync() -> pd.DataFrame | None:
         import yfinance as yf
 
         try:

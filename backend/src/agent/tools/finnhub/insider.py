@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import typing
 from datetime import UTC, datetime
 from typing import Any
 
@@ -26,11 +27,12 @@ def _row_date_str(row: dict[str, Any]) -> str:
 def _parse_row_date(raw: str) -> datetime | None:
     """Best-effort parse of mixed-shape provider date strings.
 
-    Finnhub returns ``YYYY-MM-DD``; AV's premium INSIDER_TRANSACTIONS
-    endpoint can return either ``YYYY-MM-DD`` or ISO with seconds;
-    yfinance renders datetimes via ``DataFrame.to_dict()`` which can
-    yield ``YYYY-MM-DDTHH:MM:SS``. Bad / empty values yield ``None`` so
-    a single bad row never kills the footnote.
+    import typing
+        Finnhub returns ``YYYY-MM-DD``; AV's premium INSIDER_TRANSACTIONS
+        endpoint can return either ``YYYY-MM-DD`` or ISO with seconds;
+        yfinance renders datetimes via ``DataFrame.to_dict()`` which can
+        yield ``YYYY-MM-DDTHH:MM:SS``. Bad / empty values yield ``None`` so
+        a single bad row never kills the footnote.
     """
     if not raw:
         return None
@@ -72,7 +74,7 @@ def _insider_source_id(provider: str, symbol: str, asof: datetime | None) -> str
     return f"{prefix}-INS-{symbol.upper()}-{asof_day}"
 
 
-def create_finnhub_insider_tool(data_manager: object) -> list:
+def create_finnhub_insider_tool(data_manager: object) -> list[typing.Any]:
     """Build the finnhub_insider_trades LangChain tool."""
 
     @tool

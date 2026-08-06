@@ -3,7 +3,7 @@ Fibonacci level calculation and pressure zone analysis.
 Handles computation of retracement levels, key ratios, and golden pressure zones.
 """
 
-from typing import Any, Literal, cast
+from typing import Any, Literal
 
 import structlog
 
@@ -131,21 +131,21 @@ class LevelCalculator:
         self, primary_trend: dict[str, Any], current_price: float
     ) -> MarketStructure:
         """Create market structure analysis from primary trend."""
-        trend_direction = cast(
-            Literal["uptrend", "downtrend", "sideways"],
-            "uptrend" if "Uptrend" in primary_trend["Trend Type"] else "downtrend",
+        trend_direction: Literal["uptrend", "downtrend", "sideways"] = (
+            "uptrend" if "Uptrend" in primary_trend["Trend Type"] else "downtrend"
         )
 
         # Assess structure quality based on magnitude and price
         magnitude = primary_trend["Magnitude"]
         magnitude_pct = (magnitude / current_price) * 100
 
+        structure_quality: Literal["high", "medium", "low"]
         if magnitude_pct > 20:
-            structure_quality = cast(Literal["high", "medium", "low"], "high")
+            structure_quality = "high"
         elif magnitude_pct > 10:
-            structure_quality = cast(Literal["high", "medium", "low"], "medium")
+            structure_quality = "medium"
         else:
-            structure_quality = cast(Literal["high", "medium", "low"], "low")
+            structure_quality = "low"
 
         # Determine current market phase
         high_price = primary_trend["Absolute High"]

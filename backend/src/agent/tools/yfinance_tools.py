@@ -8,6 +8,7 @@ genuine cross-verification in the debate.
 
 import asyncio
 import json
+import typing
 
 import structlog
 import yfinance as yf
@@ -16,7 +17,7 @@ from langchain_core.tools import tool
 logger = structlog.get_logger()
 
 
-def create_yfinance_tools() -> list:
+def create_yfinance_tools() -> list[typing.Any]:
     """Create Yahoo Finance tools for independent data verification."""
 
     @tool
@@ -34,7 +35,7 @@ def create_yfinance_tools() -> list:
             JSON string with news headlines and key financial stats
         """
 
-        def _fetch_sync(sym: str) -> dict:
+        def _fetch_sync(sym: str) -> dict[str, typing.Any]:
             """Synchronous yfinance fetch — runs in thread pool."""
             ticker = yf.Ticker(sym)
             raw_news = ticker.news or []

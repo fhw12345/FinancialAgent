@@ -7,6 +7,8 @@ Frontend dashboard hits this to render "Was the AI right?" tables / charts.
 
 from __future__ import annotations
 
+import typing
+
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
@@ -33,7 +35,7 @@ async def list_decisions(
     ),
     limit: int = Query(100, ge=1, le=500),
     order_repo: PortfolioOrderRepository = Depends(get_portfolio_order_repository),
-) -> dict:
+) -> dict[str, typing.Any]:
     """List AI decisions newest-first with their P&L snapshots."""
     try:
         decisions = await order_repo.list_decisions(

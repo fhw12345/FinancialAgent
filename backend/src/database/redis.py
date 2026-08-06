@@ -4,6 +4,8 @@ Following Factor 3: External Dependencies as Services.
 """
 
 import json
+import typing
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 import redis.asyncio as redis
@@ -60,7 +62,7 @@ class RedisCache:
             logger.error("Redis health check failed", error=str(e))
             return {"connected": False, "error": str(e)}
 
-    async def get_cache_stats(self) -> dict:
+    async def get_cache_stats(self) -> dict[str, typing.Any]:
         """
         Get comprehensive Redis cache statistics for monitoring.
 
@@ -289,7 +291,7 @@ class RedisCache:
     async def get_with_dedup(
         self,
         cache_key: str,
-        fetch_func,
+        fetch_func: Callable[[], Awaitable[Any]],
         ttl_seconds: int = 3600,
         lock_ttl_seconds: int = 30,
         wait_timeout_seconds: float = 5.0,

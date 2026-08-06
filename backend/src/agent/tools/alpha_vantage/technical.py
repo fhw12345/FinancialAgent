@@ -4,6 +4,7 @@ Technical Analysis and Market Data Tools.
 Provides tools for market movers, commodities, and technical indicators.
 """
 
+import typing
 from datetime import UTC, datetime
 
 import structlog
@@ -23,7 +24,7 @@ async def _resolve_indicator_df(
     interval: str,
     time_period: int | None,
     av_series_type: str | None = "close",
-):
+) -> tuple[typing.Any, str]:
     """yfinance-first → AV fallback. Returns (df, data_source) so the
     formatter can render which path served the response."""
     try:
@@ -56,7 +57,7 @@ async def _resolve_indicator_df(
 
 def create_technical_tools(
     service: AlphaVantageMarketDataService, formatter: AlphaVantageResponseFormatter
-) -> list:
+) -> list[typing.Any]:
     """
     Create technical analysis and market data tools.
 

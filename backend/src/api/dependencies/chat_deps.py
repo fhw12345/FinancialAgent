@@ -130,8 +130,9 @@ def get_react_agent(
     from ...main import app
 
     # Prefer the pre-initialized agent from app state.
-    if hasattr(app.state, "react_agent"):
-        return app.state.react_agent
+    state_agent = getattr(app.state, "react_agent", None)
+    if isinstance(state_agent, FinancialAnalysisReActAgent):
+        return state_agent
 
     # Fallback: create the same local agent lazily.
     # NOTE: This fallback path should rarely execute since main.py initializes

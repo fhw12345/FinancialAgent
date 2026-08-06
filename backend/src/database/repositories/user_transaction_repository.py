@@ -5,6 +5,7 @@ Hard-deletes; updated_at bumped on each write.
 
 from __future__ import annotations
 
+import typing
 import uuid
 from typing import Any
 
@@ -25,7 +26,7 @@ logger = structlog.get_logger()
 class UserTransactionRepository:
     """CRUD for user_transactions."""
 
-    def __init__(self, collection: AsyncIOMotorCollection):
+    def __init__(self, collection: AsyncIOMotorCollection[dict[str, typing.Any]]):
         self.collection = collection
 
     async def ensure_indexes(self) -> None:

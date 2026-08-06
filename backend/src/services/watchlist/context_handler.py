@@ -4,10 +4,13 @@ Context window management for watchlist analysis.
 Handles conversation history preparation and context compaction.
 """
 
+from typing import Any
+
 import structlog
 
+from ...core.config import Settings
 from ...database.repositories.message_repository import MessageRepository
-from ...models.message import MessageCreate, MessageMetadata
+from ...models.message import Message, MessageCreate, MessageMetadata
 from ..context_window_manager import ContextWindowManager
 
 logger = structlog.get_logger()
@@ -20,9 +23,9 @@ class ContextHandler:
         self,
         message_repo: MessageRepository,
         context_manager: ContextWindowManager,
-        settings,
-        agent,
-    ):
+        settings: Settings,
+        agent: Any,
+    ) -> None:
         """
         Initialize context handler.
 
@@ -38,8 +41,8 @@ class ContextHandler:
         self.agent = agent
 
     async def prepare_conversation_history(
-        self, historical_messages, chat_id: str, symbol: str
-    ) -> list:
+        self, historical_messages: list[Message], chat_id: str, symbol: str
+    ) -> list[dict[str, str]]:
         """
         Prepare conversation history with context management.
 
@@ -126,7 +129,7 @@ class ContextHandler:
 
     async def _persist_summary(
         self, chat_id: str, symbol: str, summary_text: str, body_count: int
-    ):
+    ) -> None:
         """
         Persist summary message and delete old messages.
 

@@ -4,12 +4,14 @@ All tools call DataManager so the Finnhub → Alpha Vantage → yfinance fallbac
 chain applies; tools never call FinnhubService directly.
 """
 
+import typing
+
 from .insider import create_finnhub_insider_tool
 from .news import create_finnhub_news_tool
 from .quotes import create_finnhub_quote_tool
 
 
-def create_finnhub_tools(data_manager: object) -> list:
+def create_finnhub_tools(data_manager: object) -> list[typing.Any]:
     """Aggregate all Finnhub-backed tools (quote + news + insider)."""
     return [
         *create_finnhub_quote_tool(data_manager),

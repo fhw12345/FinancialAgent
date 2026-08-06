@@ -115,7 +115,7 @@ async def mark_order_executed(
     # Step 2: create transaction (with back-pointer)
     tx_payload = UserTransactionCreate(
         symbol=order.symbol,
-        side=order.side,  # type: ignore[arg-type]
+        side=order.side,
         quantity=filled_qty,
         price=filled_avg_price,
         total_amount=total,

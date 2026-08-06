@@ -4,6 +4,7 @@ Portfolio orders endpoint.
 Orders are sourced from the local ``portfolio_orders`` collection.
 """
 
+import typing
 from datetime import datetime
 from typing import Literal
 
@@ -45,7 +46,7 @@ async def get_portfolio_orders(
     limit: int = 50,
     status: str | None = None,
     order_repo: PortfolioOrderRepository = Depends(get_portfolio_order_repository),
-) -> dict:
+) -> dict[str, typing.Any]:
     """List portfolio orders from MongoDB (suggested orders, manual execution required)."""
     try:
         orders = await order_repo.list_by_user(

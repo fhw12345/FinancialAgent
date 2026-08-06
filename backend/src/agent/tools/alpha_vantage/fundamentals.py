@@ -23,6 +23,7 @@ Per-field codes: ``OV`` = company_overview, ``CF`` = cash_flow,
 ``BS`` = balance_sheet, ``EAR`` = earnings, ``INS`` = insider.
 """
 
+import typing
 from datetime import UTC, datetime
 from typing import Any
 
@@ -120,7 +121,7 @@ def _append_source_footnote(
 
 def create_fundamental_tools(
     service: AlphaVantageMarketDataService, formatter: AlphaVantageResponseFormatter
-) -> list:
+) -> list[typing.Any]:
     """
     Create fundamental analysis tools.
 

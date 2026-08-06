@@ -9,7 +9,9 @@ Provides a thin abstraction over Redis operations with:
 """
 
 import json
-from typing import Any
+import typing
+from collections.abc import Awaitable, Callable
+from typing import Any, cast
 
 import structlog
 
@@ -35,7 +37,7 @@ class CacheOperations:
         """
         self._redis = redis_cache
 
-    async def get(self, key: str) -> dict | list | None:
+    async def get(self, key: str) -> dict[str, typing.Any] | list[typing.Any] | None:
         """
         Get cached value by key.
 
@@ -61,17 +63,24 @@ class CacheOperations:
             # Try to parse JSON string
             if isinstance(value, str):
                 try:
-                    return json.loads(value)
+                    parsed: object = json.loads(value)
                 except json.JSONDecodeError:
-                    return value
+                    logger.warning("cache_invalid_json", key=key)
+                    return None
+                return parsed if isinstance(parsed, dict | list) else None
 
-            return value
+            return None
 
         except Exception as e:
             logger.warning("cache_get_error", key=key, error=str(e))
             return None
 
-    async def set(self, key: str, value: dict | list, ttl_seconds: int) -> bool:
+    async def set(
+        self,
+        key: str,
+        value: dict[str, typing.Any] | list[typing.Any],
+        ttl_seconds: int,
+    ) -> bool:
         """
         Set cached value with TTL.
 
@@ -110,7 +119,7 @@ class CacheOperations:
             True if key was deleted, False otherwise
         """
         try:
-            result = await self._redis.delete(key)
+            result = int(await self._redis.delete(key))
             logger.debug("cache_delete", key=key, deleted=result > 0)
             return result > 0
         except Exception as e:
@@ -128,7 +137,7 @@ class CacheOperations:
             True if key exists, False otherwise
         """
         try:
-            return await self._redis.exists(key)
+            return bool(await self._redis.exists(key))
         except Exception as e:
             logger.warning("cache_exists_error", key=key, error=str(e))
             return False
@@ -173,9 +182,11 @@ class CacheOperations:
     async def get_with_fetch(
         self,
         key: str,
-        fetch_func,
+        fetch_func: Callable[
+            [], Awaitable[dict[str, typing.Any] | list[typing.Any] | None]
+        ],
         ttl_seconds: int,
-    ) -> dict | list | None:
+    ) -> dict[str, typing.Any] | list[typing.Any] | None:
         """
         Get cached value or fetch and cache if missing.
 
@@ -206,7 +217,9 @@ class CacheOperations:
             if not str(type(get_with_dedup).__module__).startswith("unittest.mock"):
                 try:
                     result = await get_with_dedup(key, fetch_func, ttl_seconds)
-                    return result
+                    if isinstance(result, dict | list):
+                        return cast(dict[str, Any] | list[Any], result)
+                    return None
                 except Exception:
                     pass  # Fall back to simple fetch
 

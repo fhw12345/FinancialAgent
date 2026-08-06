@@ -13,4 +13,5 @@ async def await_task_through_cancellation[
         return await asyncio.shield(task), False
     except asyncio.CancelledError:
         with anyio.CancelScope(shield=True):
-            return await task, True
+            result = await task
+        return result, True

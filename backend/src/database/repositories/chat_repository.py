@@ -7,6 +7,7 @@ ignored parameter so existing call sites stay valid; queries no longer
 filter by user_id.
 """
 
+import typing
 import uuid
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
@@ -37,7 +38,7 @@ class ChatRepository:
 
     def __init__(
         self,
-        collection: AsyncIOMotorCollection,
+        collection: AsyncIOMotorCollection[dict[str, typing.Any]],
         redis_cache: "RedisCache",
     ):
         self.collection = collection

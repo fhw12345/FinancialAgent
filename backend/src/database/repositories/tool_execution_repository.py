@@ -4,6 +4,7 @@ Tool execution repository for tracking all tool calls.
 Stores execution records for registered agent tools.
 """
 
+import typing
 from datetime import datetime
 from typing import Any
 
@@ -18,7 +19,7 @@ logger = structlog.get_logger()
 class ToolExecutionRepository:
     """Repository for tool execution data access operations."""
 
-    def __init__(self, collection: AsyncIOMotorCollection):
+    def __init__(self, collection: AsyncIOMotorCollection[dict[str, typing.Any]]):
         """
         Initialize tool execution repository.
 
@@ -144,11 +145,11 @@ class ToolExecutionRepository:
     async def get_cost_summary(
         self,
         user_id: str | None = None,
-        start_date: datetime = None,
-        end_date: datetime = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> dict[str, Any]:
         """Get cost summary within date range. user_id ignored."""
-        pipeline = [
+        pipeline: list[dict[str, Any]] = [
             {
                 "$match": {
                     "started_at": {"$gte": start_date, "$lte": end_date},
@@ -233,7 +234,7 @@ class ToolExecutionRepository:
             }
         """
         # Aggregation pipeline for tool performance
-        pipeline = [
+        pipeline: list[dict[str, Any]] = [
             {
                 "$match": {
                     "started_at": {"$gte": start_date, "$lte": end_date},
@@ -354,7 +355,7 @@ class ToolExecutionRepository:
         Returns:
             List of tools sorted by avg_duration_ms descending
         """
-        pipeline = [
+        pipeline: list[dict[str, Any]] = [
             {
                 "$match": {
                     "started_at": {"$gte": start_date, "$lte": end_date},

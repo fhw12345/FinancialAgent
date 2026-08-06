@@ -26,7 +26,7 @@ class AlphaVantageResponseFormatter:
     while maintaining backward compatibility with the original interface.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize formatter components."""
         self._fundamentals = FundamentalsFormatter()
         self._market = MarketFormatter()

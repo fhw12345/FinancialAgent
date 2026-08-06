@@ -4,6 +4,7 @@ Market data formatting for Alpha Vantage responses.
 Handles news sentiment, market movers, insider transactions, and ETF profiles.
 """
 
+import typing
 from datetime import datetime
 from typing import Any
 
@@ -94,7 +95,9 @@ class MarketFormatter:
         return "\n".join(output)
 
     @staticmethod
-    def _format_news_article(output: list[str], article: dict, sentiment_label: str):
+    def _format_news_article(
+        output: list[str], article: dict[str, typing.Any], sentiment_label: str
+    ) -> None:
         """Format a single news article."""
         score = article.get("overall_sentiment_score", 0)
         title = article.get("title", "")

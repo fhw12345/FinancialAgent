@@ -9,6 +9,7 @@ Uses deepagents with SKILL.md files for progressive disclosure:
 
 from __future__ import annotations
 
+import typing
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
 
 
 def create_technical_subagent(
-    tools: dict[str, Callable],
+    tools: dict[str, Callable[..., typing.Any]],
     model: BaseChatModel,
     context: AgentContext | None = None,
     cache: AnalysisToolCache | None = None,

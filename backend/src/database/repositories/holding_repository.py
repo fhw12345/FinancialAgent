@@ -2,6 +2,7 @@
 Holding repository for portfolio management.
 """
 
+import typing
 from datetime import UTC, datetime
 from typing import Any
 
@@ -18,7 +19,7 @@ logger = structlog.get_logger()
 class HoldingRepository:
     """Repository for holding data access operations."""
 
-    def __init__(self, collection: AsyncIOMotorCollection):
+    def __init__(self, collection: AsyncIOMotorCollection[dict[str, typing.Any]]):
         """
         Initialize holding repository.
 
@@ -38,10 +39,17 @@ class HoldingRepository:
         logger.info("Holding indexes ensured")
 
     async def create(
-        self, user_id: str | None = None, holding_create: HoldingCreate = None
+        self,
+        user_id: str | None = None,
+        holding_create: HoldingCreate | None = None,
     ) -> Holding:
         """Create a new holding. user_id ignored."""
         import uuid
+
+        if holding_create is None:
+            raise ValueError("holding_create is required")
+        if holding_create.avg_price is None:
+            raise ValueError("avg_price must be resolved before persistence")
 
         holding_id = f"holding_{uuid.uuid4().hex[:12]}"
         cost_basis = holding_create.quantity * holding_create.avg_price
@@ -208,7 +216,7 @@ class HoldingRepository:
 
         # Update in database
         now = datetime.now(UTC)
-        update_dict: dict = {
+        update_dict: dict[str, typing.Any] = {
             "current_price": current_price,
             "last_price_update": now,
             "updated_at": now,

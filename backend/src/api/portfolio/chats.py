@@ -7,6 +7,7 @@ Provides:
 - DELETE /chats/{chat_id}: Delete portfolio chat (admin only)
 """
 
+import typing
 from datetime import UTC, datetime
 
 import structlog
@@ -35,7 +36,7 @@ async def get_portfolio_chat_history(
         str | None
     ) = None,  # Optional: "individual" (symbol research), "portfolio" (decisions), or None for all
     mongodb: MongoDB = Depends(get_mongodb),
-) -> dict:
+) -> dict[str, typing.Any]:
     """
     Get portfolio agent's chat history grouped by symbol.
 
@@ -89,7 +90,7 @@ async def get_portfolio_chat_history(
                 ) from e
 
         # Get all portfolio-agent style chats (identified by title pattern)
-        chat_query: dict = {
+        chat_query: dict[str, typing.Any] = {
             "$or": [
                 {"title": {"$regex": r"\sAnalysis$", "$options": "i"}},
                 {"title": "Portfolio Decisions"},
@@ -138,7 +139,7 @@ async def get_portfolio_chat_history(
         #
         # The DELETE /chats/{chat_id} route below was updated alongside this
         # to interpret chat_id as a message_id when it starts with "msg_".
-        result_chats: list[dict] = []
+        result_chats: list[dict[str, typing.Any]] = []
 
         for chat in portfolio_chats:
             chat_id = chat["chat_id"]
@@ -146,7 +147,7 @@ async def get_portfolio_chat_history(
             is_portfolio_decisions_chat = title == "Portfolio Decisions"
 
             # Build message query
-            message_query: dict = {"chat_id": chat_id}
+            message_query: dict[str, typing.Any] = {"chat_id": chat_id}
             if date_start and date_end:
                 message_query["timestamp"] = {"$gte": date_start, "$lt": date_end}
             elif date_start:
@@ -278,7 +279,7 @@ async def get_portfolio_chat_detail(
     limit: int | None = None,
     chat_service: ChatService = Depends(get_chat_service),
     mongodb: MongoDB = Depends(get_mongodb),
-) -> dict:
+) -> dict[str, typing.Any]:
     """
     Get portfolio analysis card detail.
 

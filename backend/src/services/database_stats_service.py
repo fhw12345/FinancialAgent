@@ -2,6 +2,8 @@
 Database statistics service for monitoring collection sizes and document counts.
 """
 
+import typing
+
 import structlog
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -13,7 +15,7 @@ logger = structlog.get_logger()
 class DatabaseStatsService:
     """Service for collecting MongoDB collection statistics."""
 
-    def __init__(self, db: AsyncIOMotorDatabase):
+    def __init__(self, db: AsyncIOMotorDatabase[dict[str, typing.Any]]):
         """
         Initialize database statistics service.
 

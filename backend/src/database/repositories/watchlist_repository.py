@@ -3,6 +3,7 @@ Watchlist repository for managing watched stocks.
 Handles CRUD operations for watchlist collection.
 """
 
+import typing
 from datetime import datetime
 
 import structlog
@@ -20,7 +21,7 @@ WATCHLIST_COLLECTION = "watchlist"
 class WatchlistRepository:
     """Repository for watchlist data access operations."""
 
-    def __init__(self, collection: AsyncIOMotorCollection):
+    def __init__(self, collection: AsyncIOMotorCollection[dict[str, typing.Any]]):
         """
         Initialize watchlist repository.
 

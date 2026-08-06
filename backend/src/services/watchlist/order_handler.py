@@ -12,6 +12,8 @@ import structlog
 from src.core.utils.date_utils import utcnow
 
 from ...database.repositories.message_repository import MessageRepository
+from ...database.repositories.portfolio_order_repository import PortfolioOrderRepository
+from ...models.message import Message
 from ...models.portfolio import PortfolioOrder
 
 logger = structlog.get_logger()
@@ -23,8 +25,8 @@ class OrderHandler:
     def __init__(
         self,
         message_repo: MessageRepository,
-        order_repository,
-    ):
+        order_repository: PortfolioOrderRepository | None,
+    ) -> None:
         self.message_repo = message_repo
         self.order_repository = order_repository
 
@@ -36,8 +38,8 @@ class OrderHandler:
         analysis_id: str,
         chat_id: str,
         user_id: str,
-        message,
-    ):
+        message: Message | None,
+    ) -> None:
         """Persist a *suggested* order (no broker call)."""
         if not self.order_repository:
             logger.warning(

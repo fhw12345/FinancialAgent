@@ -34,13 +34,16 @@ Design Philosophy:
 import asyncio
 import random
 import time
+import typing
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import structlog
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
+from pydantic import BaseModel
 
 from ..core.analysis.fibonacci.analyzer import FibonacciAnalyzer
 from ..core.analysis.stochastic_analyzer import StochasticAnalyzer
@@ -75,16 +78,17 @@ if TYPE_CHECKING:
 import os as _os
 
 LANGFUSE_AVAILABLE = False
-Langfuse = None
-LangfuseCallbackHandler = None
+Langfuse: Any = None
+LangfuseCallbackHandler: Any = None
+ModelT = TypeVar("ModelT", bound=BaseModel)
 
 if _os.getenv("LANGFUSE_ENABLED", "false").lower() == "true":
     try:
-        from langfuse import Langfuse  # type: ignore[no-redef]
-        from langfuse.langchain import (  # type: ignore[no-redef]
-            CallbackHandler as LangfuseCallbackHandler,
-        )
+        from langfuse import Langfuse as _Langfuse
+        from langfuse.langchain import CallbackHandler as _LangfuseCallbackHandler
 
+        Langfuse = _Langfuse
+        LangfuseCallbackHandler = _LangfuseCallbackHandler
         LANGFUSE_AVAILABLE = True
     except ImportError:
         logger.info(
@@ -109,16 +113,16 @@ class FinancialAnalysisReActAgent:
     def __init__(
         self,
         settings: Settings,
-        market_service,  # AlphaVantageMarketDataService for market data
+        market_service: Any,  # AlphaVantageMarketDataService for market data
         tool_cache_wrapper: ToolCacheWrapper | None = None,
-        redis_cache=None,  # RedisCache for insights caching
+        redis_cache: Any | None = None,  # RedisCache for insights caching
         snapshot_service: (
             InsightsSnapshotService | None
         ) = None,  # Story 2.5: Cache-first insights
         data_manager: (
             DataManager | None
         ) = None,  # Singleton DataManager for cached OHLCV
-    ):
+    ) -> None:
         """
         Initialize the ReAct agent with local LangChain tools.
 
@@ -167,6 +171,8 @@ class FinancialAnalysisReActAgent:
         self.data_manager = data_manager
 
         # Initialize analysis tools using DataManager for cached OHLCV access
+        self.fibonacci_analyzer: FibonacciAnalyzer | None
+        self.stochastic_analyzer: StochasticAnalyzer | None
         if self.data_manager:
             self.fibonacci_analyzer = FibonacciAnalyzer(self.data_manager)
             self.stochastic_analyzer = StochasticAnalyzer(self.data_manager)
@@ -292,6 +298,8 @@ class FinancialAnalysisReActAgent:
         Focus: 61.5%-61.8% golden ratio zone (the key Fibonacci level).
         """
         analyzer = self.fibonacci_analyzer
+        if analyzer is None:
+            raise RuntimeError("Fibonacci analyzer requires DataManager")
 
         @tool
         async def fibonacci_analysis_tool(
@@ -341,6 +349,8 @@ class FinancialAnalysisReActAgent:
                 # Golden zone (61.5%-61.8%) - the key level
                 pz = result.pressure_zone
                 current = result.current_price
+                if pz is None:
+                    return f"Fibonacci: {symbol} - No pressure zone available"
                 zone_upper = pz["upper_bound"]
                 zone_lower = pz["lower_bound"]
 
@@ -416,6 +426,8 @@ range_position: {range_position}{stale_warning}"""
         Returns tool that outputs 2-3 line summary instead of full result dict.
         """
         analyzer = self.stochastic_analyzer
+        if analyzer is None:
+            raise RuntimeError("Stochastic analyzer requires DataManager")
 
         @tool
         async def stochastic_analysis_tool(
@@ -710,7 +722,7 @@ Summary: {result.analysis_summary}"""
         user_message: str,
         conversation_history: list[dict[str, str]] | None = None,
         debug: bool = False,
-        additional_callbacks: list | None = None,
+        additional_callbacks: list[typing.Any] | None = None,
         language: SupportedLanguage = DEFAULT_LANGUAGE,
         chat_id: str | None = None,
     ) -> dict[str, Any]:
@@ -770,7 +782,7 @@ Summary: {result.analysis_summary}"""
         )
 
         # Prepare messages
-        messages = []
+        messages: list[BaseMessage] = []
 
         # Add conversation history if provided
         if conversation_history:
@@ -792,12 +804,12 @@ Summary: {result.analysis_summary}"""
         langfuse_handler = self._get_langfuse_handler()
 
         # Invoke agent with config
-        config = {
+        config: RunnableConfig = {
             "recursion_limit": 50,  # Allow up to 50 tool calls for complex analyses (default: 25)
         }
 
         # Build callbacks list
-        callbacks = []
+        callbacks: list[Any] = []
         if additional_callbacks:
             callbacks.extend(additional_callbacks)
         if langfuse_handler:
@@ -1084,9 +1096,9 @@ Summary: {result.analysis_summary}"""
     async def ainvoke_structured(
         self,
         prompt: str,
-        schema: type,
+        schema: type[ModelT],
         context: str | None = None,
-    ):
+    ) -> ModelT:
         """
         Invoke LLM with structured output using with_structured_output().
 
@@ -1139,10 +1151,11 @@ Summary: {result.analysis_summary}"""
                 "service unavailable",
             ]
 
-            last_exception = None
+            last_exception: Exception | None = None
+            raw_result: object | None = None
             for attempt in range(max_retries):
                 try:
-                    result = await structured_llm.ainvoke(full_prompt)
+                    raw_result = await structured_llm.ainvoke(full_prompt)
                     if attempt > 0:
                         logger.info(
                             "Structured output retry succeeded",
@@ -1187,9 +1200,12 @@ Summary: {result.analysis_summary}"""
                     )
                     await asyncio.sleep(delay)
 
-            if last_exception and not result:
-                raise last_exception
+            if raw_result is None:
+                if last_exception is not None:
+                    raise last_exception
+                raise ValueError("Structured output returned no result")
 
+            result = schema.model_validate(raw_result)
             logger.info(
                 "Structured output invocation completed",
                 schema=schema.__name__,

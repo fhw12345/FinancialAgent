@@ -213,7 +213,7 @@ async def get_balance_sheet(symbol: str) -> dict[str, Any]:
 _vader_analyzer = None
 
 
-def _get_vader():
+def _get_vader() -> Any:
     """Lazy-load VADER (downloads NLTK lexicon on first use)."""
     global _vader_analyzer
     if _vader_analyzer is None:

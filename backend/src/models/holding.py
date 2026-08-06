@@ -4,6 +4,7 @@ Holding model for portfolio management.
 Represents a stock position in user's portfolio.
 """
 
+import typing
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -144,7 +145,9 @@ class HoldingWithAnalysis(Holding):
     Extends Holding with analysis information.
     """
 
-    latest_analysis: dict | None = Field(None, description="Latest analysis result")
+    latest_analysis: dict[str, typing.Any] | None = Field(
+        None, description="Latest analysis result"
+    )
     recommendation: str | None = Field(None, description="Buy/Sell/Hold recommendation")
 
     class Config:

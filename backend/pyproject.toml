@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "financial-agent-backend"
-version = "0.51.1"
+version = "0.51.2"
 description = "AI-Enhanced Financial Analysis Platform Backend"
 authors = []
 # readme = "README.md"
@@ -103,6 +103,7 @@ ignore = [
 "src/agent/experiments/*.py" = ["E402"]
 
 [tool.mypy]
+plugins = ["pydantic.mypy"]
 python_version = "3.12"
 check_untyped_defs = true
 disallow_any_generics = true
@@ -130,6 +131,10 @@ module = [
     "langchain_core.*",
     "deepagents.*",
     "yfinance.*",
+    "feedparser.*",
+    "langfuse.*",
+    "pandas_ta_classic.*",
+    "vaderSentiment.*",
 ]
 ignore_missing_imports = true
 

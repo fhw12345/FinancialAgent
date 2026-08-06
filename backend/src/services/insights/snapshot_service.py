@@ -10,6 +10,7 @@ Architecture:
 """
 
 import time
+import typing
 from datetime import UTC, datetime
 from typing import Any
 
@@ -56,8 +57,8 @@ class InsightsSnapshotService:
         self,
         mongodb: MongoDB,
         redis_cache: RedisCache,
-        data_manager: DataManager,
-        settings: Settings,
+        data_manager: DataManager | None,
+        settings: Settings | None,
         registry: InsightsCategoryRegistry | None = None,
     ) -> None:
         """Initialize snapshot service.
@@ -79,6 +80,8 @@ class InsightsSnapshotService:
     def registry(self) -> InsightsCategoryRegistry:
         """Get or create insights registry."""
         if self._registry is None:
+            if self.settings is None:
+                raise RuntimeError("Settings are required to create the registry")
             # Create FRED service if API key is available
             fred_service = None
             if self.settings.fred_api_key:
@@ -91,7 +94,9 @@ class InsightsSnapshotService:
             )
         return self._registry
 
-    def _get_snapshots_collection(self) -> AsyncIOMotorCollection:
+    def _get_snapshots_collection(
+        self,
+    ) -> AsyncIOMotorCollection[dict[str, typing.Any]]:
         """Get MongoDB collection for snapshots."""
         return self.mongodb.get_collection(SNAPSHOTS_COLLECTION)
 
@@ -163,6 +168,10 @@ class InsightsSnapshotService:
             category_data = await category.get_category_data(force_refresh=True)
             metrics = category_data.metrics
             composite = category_data.composite
+            if composite is None:
+                raise ValueError(
+                    f"Category {category_id} returned metrics without a composite score"
+                )
             phase2_duration = time.time() - phase2_start
 
             logger.info(
@@ -247,6 +256,8 @@ class InsightsSnapshotService:
         # SharedDataContext.errors. Do not catch programming errors here: a
         # caller/signature mismatch must fail loudly instead of masquerading as
         # ordinary provider degradation.
+        if self.data_manager is None:
+            raise RuntimeError("DataManager is required for snapshot prefetch")
         symbols = ["NVDA", "MSFT", "AMD", "PLTR"]
         treasury_maturities = ["2y", "10y"]
         shared_context = await self.data_manager.prefetch_shared(
@@ -360,12 +371,12 @@ class InsightsSnapshotService:
         # Try Redis first
         cache_key = CacheKeys.insights(category_id, "latest")
         cached = await self.redis_cache.get(cache_key)
-        if cached:
+        if isinstance(cached, dict):
             logger.debug(
                 "Snapshot cache HIT",
                 category_id=category_id,
             )
-            return cached
+            return dict(cached)
 
         # Fall back to MongoDB
         collection = self._get_snapshots_collection()

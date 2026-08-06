@@ -4,6 +4,7 @@ News Sentiment Analysis Tools.
 Provides tools for fetching news articles with sentiment analysis.
 """
 
+import typing
 from datetime import UTC, datetime
 from typing import Any
 
@@ -40,7 +41,7 @@ def _av_news_latest_asof(data: dict[str, Any]) -> datetime | None:
 
 def create_news_tools(
     service: AlphaVantageMarketDataService, formatter: AlphaVantageResponseFormatter
-) -> list:
+) -> list[typing.Any]:
     """
     Create news sentiment analysis tools.
 

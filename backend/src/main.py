@@ -305,26 +305,34 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # Initialize cache warming service and run startup warming in background
         from .services.cache_warming_service import CacheWarmingService
 
-        cache_warming_service = CacheWarmingService(
-            redis_cache=redis_cache,
-            market_service=market_service,
-            watchlist_collection=mongodb.get_collection(WATCHLIST_COLLECTION),
-            settings=settings,
-        )
-        app.state.cache_warming_service = cache_warming_service
+        app.state.cache_warming_service = None
+        if market_service is not None:
+            cache_warming_service = CacheWarmingService(
+                redis_cache=redis_cache,
+                market_service=market_service,
+                watchlist_collection=mongodb.get_collection(WATCHLIST_COLLECTION),
+                settings=settings,
+            )
+            app.state.cache_warming_service = cache_warming_service
 
-        # Run cache warming in background task (non-blocking)
-        async def warm_cache_background() -> None:
-            """Background task to warm cache on startup."""
-            try:
-                # Small delay to let other startup tasks complete first
-                await asyncio.sleep(2)
-                await cache_warming_service.warm_startup_cache()
-            except Exception as e:
-                logger.warning("Background cache warming failed", error=str(e))
+            # Run cache warming in background task (non-blocking)
+            async def warm_cache_background() -> None:
+                """Background task to warm cache on startup."""
+                try:
+                    # Small delay to let other startup tasks complete first
+                    await asyncio.sleep(2)
+                    await cache_warming_service.warm_startup_cache()
+                except Exception as e:
+                    logger.warning("Background cache warming failed", error=str(e))
 
-        asyncio.create_task(warm_cache_background())
-        logger.info("Cache warming service initialized (background warming started)")
+            asyncio.create_task(warm_cache_background())
+            logger.info(
+                "Cache warming service initialized (background warming started)"
+            )
+        else:
+            logger.warning(
+                "Cache warming disabled because market service is unavailable"
+            )
 
         logger.info("Database connections started")
 

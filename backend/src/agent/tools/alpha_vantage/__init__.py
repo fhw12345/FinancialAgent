@@ -11,6 +11,7 @@ This module is organized into the following submodules:
 - technical: Market movers, commodities, and technical indicators
 """
 
+import typing
 from typing import Any
 
 from src.services.alphavantage_market_data import AlphaVantageMarketDataService
@@ -28,7 +29,7 @@ def create_alpha_vantage_tools(
     service: AlphaVantageMarketDataService,
     formatter: AlphaVantageResponseFormatter,
     data_manager: Any | None = None,
-) -> list:
+) -> list[typing.Any]:
     """
     Create Alpha Vantage agent tools with service dependency injection.
 

@@ -39,7 +39,10 @@ def get_insights_registry(request: Request) -> InsightsCategoryRegistry:
     The registry is initialized once at application startup in main.py lifespan,
     ensuring consistent caching and avoiding per-request instantiation overhead.
     """
-    return request.app.state.insights_registry
+    registry = request.app.state.insights_registry
+    if not isinstance(registry, InsightsCategoryRegistry):
+        raise RuntimeError("Insights registry not initialized")
+    return registry
 
 
 @router.get("/categories", response_model=CategoriesListResponse)
@@ -144,7 +147,7 @@ async def get_category(
                     name=m.name,
                     score=m.score,
                     status=m.status.value,
-                    explanation=m.explanation.model_dump(),  # type: ignore
+                    explanation=m.explanation.model_dump(),
                     data_sources=m.data_sources,
                     last_updated=m.last_updated,
                     raw_data=m.raw_data,
@@ -391,7 +394,7 @@ async def get_metric(
             name=metric.name,
             score=metric.score,
             status=metric.status.value,
-            explanation=metric.explanation.model_dump(),  # type: ignore
+            explanation=metric.explanation.model_dump(),
             data_sources=metric.data_sources,
             last_updated=metric.last_updated,
             raw_data=metric.raw_data,

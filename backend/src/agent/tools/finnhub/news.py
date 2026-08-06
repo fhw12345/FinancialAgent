@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import typing
 from datetime import UTC, datetime, timedelta
 
 import structlog
@@ -13,10 +14,11 @@ logger = structlog.get_logger()
 def _news_source_id(provider: str, symbol: str, asof: datetime | None) -> str:
     """W3.4 stable footnote ID — ``{PREFIX}-N-{SYMBOL}-{YYYY-MM-DD}``.
 
-    News is unique among the W3.x source-wrapped tools in that the asof
-    is the date of the *latest headline*, not when the tool ran. That
-    way a 5-day-old news bucket is still recognizable as 5 days old in
-    the footnote even if the LLM cites it tomorrow.
+    import typing
+        News is unique among the W3.x source-wrapped tools in that the asof
+        is the date of the *latest headline*, not when the tool ran. That
+        way a 5-day-old news bucket is still recognizable as 5 days old in
+        the footnote even if the LLM cites it tomorrow.
     """
     prefix = {"finnhub": "FH", "alphavantage": "AV", "yfinance": "YF"}.get(
         provider.lower(), provider.upper()
@@ -25,7 +27,7 @@ def _news_source_id(provider: str, symbol: str, asof: datetime | None) -> str:
     return f"{prefix}-N-{symbol.upper()}-{asof_day}"
 
 
-def create_finnhub_news_tool(data_manager: object) -> list:
+def create_finnhub_news_tool(data_manager: object) -> list[typing.Any]:
     """Build the finnhub_news LangChain tool."""
 
     @tool

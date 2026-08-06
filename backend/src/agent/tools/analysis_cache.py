@@ -13,6 +13,7 @@ Usage:
 
 import asyncio
 import json
+import typing
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import wraps
@@ -53,7 +54,7 @@ class AnalysisToolCache:
 
     def _wrap_single(self, tool: Any) -> Any:
         """Wrap a single LangChain tool with caching."""
-        original_fn: Callable = tool.coroutine or tool.func
+        original_fn: Callable[..., typing.Any] = tool.coroutine or tool.func
         is_async = asyncio.iscoroutinefunction(original_fn)
         cache = self
 
@@ -66,8 +67,9 @@ class AnalysisToolCache:
                 return cache._cache[key]
             cache._misses += 1
             result = await original_fn(**kwargs) if is_async else original_fn(**kwargs)
-            cache._cache[key] = result
-            return result
+            text_result = str(result)
+            cache._cache[key] = text_result
+            return text_result
 
         return StructuredTool(
             name=tool.name,

@@ -10,7 +10,9 @@ Supports:
 - Background refresh for stale entries
 """
 
+import typing
 from datetime import UTC, datetime
+from typing import Any
 
 import structlog
 from motor.motor_asyncio import AsyncIOMotorCollection
@@ -43,7 +45,9 @@ class CacheWarmingService:
         self,
         redis_cache: RedisCache,
         market_service: AlphaVantageMarketDataService,
-        watchlist_collection: AsyncIOMotorCollection | None = None,
+        watchlist_collection: (
+            AsyncIOMotorCollection[dict[str, typing.Any]] | None
+        ) = None,
         settings: Settings | None = None,
     ) -> None:
         """Initialize cache warming service.
@@ -60,7 +64,9 @@ class CacheWarmingService:
         self.settings = settings
         self._warming_in_progress = False
 
-    async def warm_startup_cache(self, symbols: list[str] | None = None) -> dict:
+    async def warm_startup_cache(
+        self, symbols: list[str] | None = None
+    ) -> dict[str, typing.Any]:
         """Warm cache on application startup.
 
         Pre-populates cache with data for common symbols to reduce
@@ -78,7 +84,12 @@ class CacheWarmingService:
 
         self._warming_in_progress = True
         symbols = symbols or self.DEFAULT_SYMBOLS
-        results = {"total": len(symbols), "success": 0, "errors": [], "skipped": 0}
+        results: dict[str, Any] = {
+            "total": len(symbols),
+            "success": 0,
+            "errors": [],
+            "skipped": 0,
+        }
 
         logger.info(
             "Starting startup cache warming",
@@ -110,7 +121,7 @@ class CacheWarmingService:
 
         return results
 
-    async def warm_user_watchlist(self, user_id: str) -> dict:
+    async def warm_user_watchlist(self, user_id: str) -> dict[str, typing.Any]:
         """Warm cache for a specific user's watchlist.
 
         Pre-populates cache with data for all symbols in a user's watchlist.
@@ -124,7 +135,12 @@ class CacheWarmingService:
         if not self.watchlist_collection:
             return {"status": "error", "reason": "watchlist_collection_not_configured"}
 
-        results = {"user_id": user_id, "success": 0, "errors": [], "symbols": []}
+        results: dict[str, Any] = {
+            "user_id": user_id,
+            "success": 0,
+            "errors": [],
+            "symbols": [],
+        }
 
         try:
             # Get user's watchlist symbols
@@ -132,7 +148,11 @@ class CacheWarmingService:
                 {"user_id": user_id}
             ).to_list(length=100)
 
-            symbols = [doc.get("symbol") for doc in watchlist_docs if doc.get("symbol")]
+            symbols = [
+                symbol
+                for doc in watchlist_docs
+                if isinstance((symbol := doc.get("symbol")), str)
+            ]
             results["symbols"] = symbols
 
             if not symbols:
@@ -169,7 +189,7 @@ class CacheWarmingService:
 
         return results
 
-    async def warm_market_movers(self) -> dict:
+    async def warm_market_movers(self) -> dict[str, typing.Any]:
         """Warm cache with current market movers data.
 
         Fetches and caches top gainers, losers, and most active stocks.
@@ -177,7 +197,11 @@ class CacheWarmingService:
         Returns:
             dict with warming results
         """
-        results = {"success": 0, "errors": [], "symbols_warmed": []}
+        results: dict[str, Any] = {
+            "success": 0,
+            "errors": [],
+            "symbols_warmed": [],
+        }
 
         try:
             logger.info("Fetching market movers for cache warming")
@@ -275,7 +299,7 @@ class CacheWarmingService:
                 error=str(e),
             )
 
-    async def get_warming_status(self) -> dict:
+    async def get_warming_status(self) -> dict[str, typing.Any]:
         """Get current cache warming status.
 
         Returns:

@@ -13,6 +13,7 @@ Categories:
 - independent: Yahoo Finance, Exa web search (debater-only verification)
 """
 
+import typing
 from collections.abc import Callable
 
 # Tool name to category mapping
@@ -50,7 +51,9 @@ TOOL_CATEGORIES: dict[str, str] = {
 }
 
 
-def categorize_tools(tools: list[Callable]) -> dict[str, list[Callable]]:
+def categorize_tools(
+    tools: list[Callable[..., typing.Any]]
+) -> dict[str, list[Callable[..., typing.Any]]]:
     """
     Categorize a list of tools by domain.
 
@@ -60,7 +63,7 @@ def categorize_tools(tools: list[Callable]) -> dict[str, list[Callable]]:
     Returns:
         Dictionary mapping category names to lists of tools
     """
-    categories: dict[str, list[Callable]] = {
+    categories: dict[str, list[Callable[..., typing.Any]]] = {
         "technical": [],
         "news": [],
         "financial": [],
@@ -79,7 +82,9 @@ def categorize_tools(tools: list[Callable]) -> dict[str, list[Callable]]:
     return categories
 
 
-def tools_to_dict(tools: list[Callable]) -> dict[str, Callable]:
+def tools_to_dict(
+    tools: list[Callable[..., typing.Any]],
+) -> dict[str, Callable[..., typing.Any]]:
     """
     Convert a list of tools to a dictionary keyed by tool name.
 
@@ -93,9 +98,9 @@ def tools_to_dict(tools: list[Callable]) -> dict[str, Callable]:
 
 
 def get_tools_for_subagent(
-    tools: list[Callable],
+    tools: list[Callable[..., typing.Any]],
     subagent_type: str,
-) -> dict[str, Callable]:
+) -> dict[str, Callable[..., typing.Any]]:
     """
     Get the subset of tools appropriate for a specific sub-agent type.
 
@@ -118,7 +123,7 @@ def get_tools_for_subagent(
 
     allowed_categories = subagent_categories.get(subagent_type, [])
 
-    result: dict[str, Callable] = {}
+    result: dict[str, Callable[..., typing.Any]] = {}
     for category in allowed_categories:
         for tool in categorized.get(category, []):
             tool_name = getattr(tool, "name", str(tool))
@@ -127,7 +132,9 @@ def get_tools_for_subagent(
     return result
 
 
-def get_all_tools_dict(tools: list[Callable]) -> dict[str, Callable]:
+def get_all_tools_dict(
+    tools: list[Callable[..., typing.Any]],
+) -> dict[str, Callable[..., typing.Any]]:
     """
     Get all tools as a dictionary for skill creation.
 
@@ -142,7 +149,7 @@ def get_all_tools_dict(tools: list[Callable]) -> dict[str, Callable]:
     return tools_to_dict(tools)
 
 
-def log_tool_categories(tools: list[Callable]) -> dict[str, int]:
+def log_tool_categories(tools: list[Callable[..., typing.Any]]) -> dict[str, int]:
     """
     Get tool counts by category for logging.
 

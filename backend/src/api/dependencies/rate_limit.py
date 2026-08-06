@@ -4,6 +4,9 @@ Rate limiting dependencies for API endpoints.
 Uses SlowAPI's in-process storage for the local single-user service.
 """
 
+from collections.abc import Callable
+from typing import cast
+
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -14,7 +17,7 @@ limiter = Limiter(
 
 
 # Rate limit decorators for different endpoint types
-def rate_limit_standard(func):
+def rate_limit_standard[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     """
     Standard rate limit for read operations.
 
@@ -26,10 +29,10 @@ def rate_limit_standard(func):
         async def endpoint():
             pass
     """
-    return limiter.limit("60/minute")(func)
+    return cast(Callable[P, R], limiter.limit("60/minute")(func))
 
 
-def rate_limit_expensive(func):
+def rate_limit_expensive[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     """
     Restrictive rate limit for expensive operations (external API calls).
 
@@ -41,10 +44,10 @@ def rate_limit_expensive(func):
         async def get_portfolio_history():
             pass
     """
-    return limiter.limit("10/minute")(func)
+    return cast(Callable[P, R], limiter.limit("10/minute")(func))
 
 
-def rate_limit_critical(func):
+def rate_limit_critical[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     """
     Very restrictive rate limit for critical operations (LLM, trading).
 
@@ -56,10 +59,10 @@ def rate_limit_critical(func):
         async def trigger_analysis():
             pass
     """
-    return limiter.limit("2/minute")(func)
+    return cast(Callable[P, R], limiter.limit("2/minute")(func))
 
 
-def rate_limit_write(func):
+def rate_limit_write[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     """
     Moderate rate limit for write operations.
 
@@ -71,4 +74,4 @@ def rate_limit_write(func):
         async def add_to_watchlist():
             pass
     """
-    return limiter.limit("30/minute")(func)
+    return cast(Callable[P, R], limiter.limit("30/minute")(func))

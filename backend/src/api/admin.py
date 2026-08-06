@@ -2,6 +2,8 @@
 Admin-only API endpoints for system monitoring and health checks.
 """
 
+from typing import Any
+
 import structlog
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
 
@@ -11,9 +13,10 @@ from ..core.config import get_settings
 from ..database.mongodb import MongoDB
 from ..database.redis import RedisCache
 from ..database.repositories.tool_execution_repository import ToolExecutionRepository
+from ..services.cache_warming_service import CacheWarmingService
 from ..services.data_manager import DataManager
 from ..services.database_stats_service import DatabaseStatsService
-from ..services.insights import InsightsSnapshotService
+from ..services.insights import InsightsCategoryRegistry, InsightsSnapshotService
 from .dependencies.storage import get_mongodb, get_redis_cache
 from .dependencies.timing_middleware import TimingMiddleware
 from .schemas.admin_models import DatabaseStats, HealthResponse, SystemMetrics
@@ -27,6 +30,8 @@ def get_database_stats_service(
     mongodb: MongoDB = Depends(get_mongodb),
 ) -> DatabaseStatsService:
     """Get database statistics service instance."""
+    if mongodb.database is None:
+        raise RuntimeError("MongoDB database is not initialized")
     return DatabaseStatsService(mongodb.database)
 
 
@@ -104,12 +109,18 @@ async def get_timing_metrics() -> dict[str, dict[str, float | None]]:
 
 def get_data_manager(request: Request) -> DataManager:
     """Get DataManager from app state."""
-    return getattr(request.app.state, "data_manager", None)
+    manager = getattr(request.app.state, "data_manager", None)
+    if not isinstance(manager, DataManager):
+        raise RuntimeError("DataManager not initialized")
+    return manager
 
 
-def get_insights_registry(request: Request):
+def get_insights_registry(request: Request) -> InsightsCategoryRegistry:
     """Get insights registry from app state."""
-    return getattr(request.app.state, "insights_registry", None)
+    registry = getattr(request.app.state, "insights_registry", None)
+    if not isinstance(registry, InsightsCategoryRegistry):
+        raise RuntimeError("Insights registry not initialized")
+    return registry
 
 
 @router.post("/insights/trigger-snapshot", status_code=202)
@@ -118,7 +129,7 @@ async def trigger_insights_snapshot(
     request: Request,
     mongodb: MongoDB = Depends(get_mongodb),
     redis_cache: RedisCache = Depends(get_redis_cache),
-):
+) -> dict[str, Any]:
     """
     Trigger local insights snapshot creation.
 
@@ -168,9 +179,9 @@ async def run_insights_snapshot_background(
     mongodb: MongoDB,
     redis_cache: RedisCache,
     data_manager: DataManager,
-    insights_registry,
+    insights_registry: InsightsCategoryRegistry,
     run_id: str,
-):
+) -> None:
     """
     Background task for insights snapshot creation.
 
@@ -242,16 +253,19 @@ async def run_insights_snapshot_background(
 # =============================================================================
 
 
-def get_cache_warming_service(request: Request):
+def get_cache_warming_service(request: Request) -> CacheWarmingService:
     """Get cache warming service from app state."""
-    return getattr(request.app.state, "cache_warming_service", None)
+    service = getattr(request.app.state, "cache_warming_service", None)
+    if not isinstance(service, CacheWarmingService):
+        raise RuntimeError("Cache warming service not initialized")
+    return service
 
 
 @router.post("/cache/warm")
 async def warm_cache(
     request: Request,
     background_tasks: BackgroundTasks,
-):
+) -> dict[str, Any]:
     """
     Trigger cache warming for common symbols.
 
@@ -284,7 +298,7 @@ async def warm_cache(
 async def warm_market_movers_cache(
     request: Request,
     background_tasks: BackgroundTasks,
-):
+) -> dict[str, Any]:
     """
     Trigger cache warming for current market movers.
 
@@ -314,7 +328,7 @@ async def warm_market_movers_cache(
 @router.get("/cache/warming-status")
 async def get_cache_warming_status(
     request: Request,
-):
+) -> dict[str, Any]:
     """
     Get current cache warming status.
 
@@ -334,7 +348,7 @@ async def get_cache_warming_status(
 @router.get("/cache/stats")
 async def get_cache_stats(
     redis_cache: RedisCache = Depends(get_redis_cache),
-):
+) -> dict[str, Any]:
     """
     Get comprehensive Redis cache statistics.
 
@@ -378,7 +392,7 @@ async def get_tool_performance_metrics(
     days: int = 7,
     limit: int = 50,
     tool_repo: ToolExecutionRepository = Depends(get_tool_execution_repository),
-):
+) -> dict[str, Any]:
     """
     Get LLM tool execution performance metrics.
 
@@ -426,7 +440,7 @@ async def get_slowest_tools(
     days: int = 7,
     limit: int = 10,
     tool_repo: ToolExecutionRepository = Depends(get_tool_execution_repository),
-):
+) -> dict[str, Any]:
     """
     Get the slowest tools by average execution time.
 
@@ -468,7 +482,7 @@ async def get_slowest_tools(
 async def get_token_usage_metrics(
     days: int = 7,
     mongodb: MongoDB = Depends(get_mongodb),
-):
+) -> dict[str, Any]:
     """
     Get token usage metrics aggregated from message metadata.
 
@@ -500,7 +514,7 @@ async def get_token_usage_metrics(
         messages_collection = mongodb.get_collection("messages")
 
         # Aggregation pipeline for token usage from message metadata
-        pipeline = [
+        pipeline: list[dict[str, Any]] = [
             {
                 "$match": {
                     "timestamp": {"$gte": start_date, "$lte": end_date},

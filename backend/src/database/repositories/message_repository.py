@@ -3,6 +3,7 @@ Message repository for conversation history.
 Handles CRUD operations for message collection.
 """
 
+import typing
 import uuid
 from typing import TYPE_CHECKING
 
@@ -31,7 +32,7 @@ class MessageRepository:
 
     def __init__(
         self,
-        collection: AsyncIOMotorCollection,
+        collection: AsyncIOMotorCollection[dict[str, typing.Any]],
         redis_cache: "RedisCache",
     ):
         """

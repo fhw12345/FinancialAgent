@@ -6,7 +6,7 @@ This module handles concurrent research for individual symbols without portfolio
 
 import asyncio
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
@@ -16,6 +16,14 @@ from src.core.utils.date_utils import utcnow
 from ...models.chat import ChatCreate
 from ...models.message import MessageCreate, MessageMetadata
 from ...models.trading_decision import SymbolAnalysisResult
+
+if TYPE_CHECKING:
+    from ...core.config import Settings
+    from ...database.repositories.chat_repository import ChatRepository
+    from ...database.repositories.message_repository import MessageRepository
+    from ...database.repositories.watchlist_repository import WatchlistRepository
+    from ...services.context_window_manager import ContextWindowManager
+    from ..langgraph_react_agent import FinancialAnalysisReActAgent
 
 logger = structlog.get_logger()
 
@@ -46,6 +54,13 @@ def _phase1_language_directive() -> str:
 
 class Phase1ResearchMixin:
     """Mixin providing Phase 1 research capabilities."""
+
+    message_repo: "MessageRepository"
+    context_manager: "ContextWindowManager"
+    react_agent: "FinancialAnalysisReActAgent"
+    chat_repo: "ChatRepository"
+    settings: "Settings"
+    watchlist_repo: "WatchlistRepository"
 
     async def _analyze_symbol(
         self,
@@ -466,7 +481,9 @@ prose. You MUST:
 
                     for idx, result in enumerate(results):
                         symbol = positions[i + idx].symbol
-                        if isinstance(result, Exception):
+                        if isinstance(result, asyncio.CancelledError):
+                            raise result
+                        if isinstance(result, BaseException):
                             logger.error(
                                 "Failed to research holding",
                                 symbol=symbol,
@@ -523,7 +540,9 @@ prose. You MUST:
 
                     for idx, result in enumerate(results):
                         watchlist_item = unique_watchlist_items[i + idx]
-                        if isinstance(result, Exception):
+                        if isinstance(result, asyncio.CancelledError):
+                            raise result
+                        if isinstance(result, BaseException):
                             logger.error(
                                 "Failed to research watchlist item",
                                 symbol=watchlist_item.symbol,

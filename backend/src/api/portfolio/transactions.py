@@ -5,6 +5,8 @@ Provides:
 - GET /transactions: Fetch transaction history from MongoDB (includes failed orders)
 """
 
+import typing
+
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
 
@@ -25,7 +27,7 @@ async def get_portfolio_transactions(
     offset: int = 0,
     status: str | None = None,  # "success", "failed", or None for all
     mongodb: MongoDB = Depends(get_mongodb),
-) -> dict:
+) -> dict[str, typing.Any]:
     """
     Get portfolio transactions from MongoDB (includes failed orders).
 
@@ -46,7 +48,7 @@ async def get_portfolio_transactions(
         # Exclude HOLD signals (decision_type="signal") — those are AI
         # recommendations, not transactions. Real BUY/SELL orders have
         # decision_type="order" or no decision_type field at all (legacy).
-        query: dict = {"decision_type": {"$ne": "signal"}}
+        query: dict[str, typing.Any] = {"decision_type": {"$ne": "signal"}}
 
         if status == "success":
             query["status"] = {

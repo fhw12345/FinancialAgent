@@ -3,6 +3,8 @@ MongoDB connection and operations.
 Following Factor 3: External Dependencies as Services.
 """
 
+import typing
+
 import structlog
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
@@ -19,8 +21,8 @@ class MongoDB:
     """MongoDB connection manager with async support."""
 
     def __init__(self) -> None:
-        self.client: AsyncIOMotorClient | None = None
-        self.database: AsyncIOMotorDatabase | None = None
+        self.client: AsyncIOMotorClient[dict[str, typing.Any]] | None = None
+        self.database: AsyncIOMotorDatabase[dict[str, typing.Any]] | None = None
 
     async def connect(self, mongodb_url: str) -> None:
         """Establish connection to MongoDB."""
@@ -113,7 +115,9 @@ class MongoDB:
             logger.error("MongoDB health check failed", error=str(e))
             return {"connected": False, "error": str(e)}
 
-    def get_collection(self, collection_name: str) -> AsyncIOMotorCollection:
+    def get_collection(
+        self, collection_name: str
+    ) -> AsyncIOMotorCollection[dict[str, typing.Any]]:
         """Get a MongoDB collection."""
         if self.database is None:
             raise DatabaseError(

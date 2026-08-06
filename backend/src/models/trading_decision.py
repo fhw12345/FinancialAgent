@@ -327,6 +327,8 @@ class TradingDecision(BaseModel):
 
         if self.intent == OrderIntent.HOLD:
             return self
+        if self.intent is None:
+            raise ValueError(f"decision={self.decision.value} requires an order intent")
 
         e, s, t = self.entry_price, self.stop_loss, self.take_profit
         if e is None or s is None or t is None:

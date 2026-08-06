@@ -91,14 +91,16 @@ class PortfolioService:
         try:
             current_price = await self.ticker_service.get_current_price(holding.symbol)
             if current_price and current_price > 0:
-                holding = await self.holding_repo.update_price(
+                updated = await self.holding_repo.update_price(
                     holding.holding_id, current_price
                 )
-                logger.info(
-                    "Holding price initialized",
-                    symbol=holding.symbol,
-                    current_price=current_price,
-                )
+                if updated is not None:
+                    holding = updated
+                    logger.info(
+                        "Holding price initialized",
+                        symbol=holding.symbol,
+                        current_price=current_price,
+                    )
             elif current_price is not None:
                 logger.warning(
                     "Invalid price received (<=0)",
@@ -230,9 +232,9 @@ class PortfolioService:
         """
         # Verify ownership
         holding = await self.holding_repo.get(holding_id)
-        if not holding or holding.user_id != user_id:
+        if not holding:
             logger.warning(
-                "Holding not found or access denied",
+                "Holding not found",
                 user_id=user_id,
                 holding_id=holding_id,
             )
@@ -258,9 +260,9 @@ class PortfolioService:
         """
         # Verify ownership
         holding = await self.holding_repo.get(holding_id)
-        if not holding or holding.user_id != user_id:
+        if not holding:
             logger.warning(
-                "Holding not found or access denied",
+                "Holding not found",
                 user_id=user_id,
                 holding_id=holding_id,
             )

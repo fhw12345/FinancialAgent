@@ -9,6 +9,7 @@ Story 2.5: Redis Integration
 """
 
 import time
+import typing
 from typing import TYPE_CHECKING
 
 import structlog
@@ -25,7 +26,7 @@ logger = structlog.get_logger()
 def create_insights_tools(
     registry: InsightsCategoryRegistry,
     snapshot_service: "InsightsSnapshotService | None" = None,
-) -> list:
+) -> list[typing.Any]:
     """
     Create Market Insights tools for the LLM agent.
 
@@ -329,7 +330,7 @@ def _get_status_emoji(status: str) -> str:
     }.get(status, "⚪")
 
 
-def _format_cached_insight(category_id: str, cached_data: dict) -> str:
+def _format_cached_insight(category_id: str, cached_data: dict[str, typing.Any]) -> str:
     """Format cached insight data for display.
 
     Args:
@@ -400,7 +401,9 @@ def _get_trend_direction(change: float) -> tuple[str, str]:
         return "→", "Stable"
 
 
-def _format_trend_response(category_id: str, snapshots: list[dict], days: int) -> str:
+def _format_trend_response(
+    category_id: str, snapshots: list[dict[str, typing.Any]], days: int
+) -> str:
     """Format trend response with direction indicators.
 
     Args:
