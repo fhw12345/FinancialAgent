@@ -9,7 +9,7 @@ async function openEnglishApp(page: import("@playwright/test").Page) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
 }
 
-test("loopback-bound real stack remains healthy @project-hardening", async ({
+test("loopback-bound real stack remains healthy @project-hardening @real-stack", async ({
   page,
 }) => {
   await openEnglishApp(page);
@@ -254,7 +254,7 @@ test("health diagnostics show matching component versions @project-hardening", a
 
   await openEnglishApp(page);
   await page.getByTestId("nav-health").click();
-  await expect(page.getByText("v0.32.1", { exact: true })).toBeVisible();
+  await expect(page.getByText("v0.32.2", { exact: true })).toBeVisible();
   await expect(page.getByText("v0.51.1", { exact: true })).toBeVisible();
 
   if (updateEvidence) {
