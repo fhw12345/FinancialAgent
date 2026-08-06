@@ -62,6 +62,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [Strict Types Found Runtime Contract Failures](case-studies/2026-08-06-strict-types-found-runtime-contracts.md)
 - [Green Tests Hid a Broken Shared-Data Contract](case-studies/2026-08-06-green-tests-hidden-contract-drift.md)
 - [Live Evaluation Trust Case Study](case-studies/2026-08-04-a-green-eval-can-still-be-fiction.md)
 - [Evaluation Gates Case Study](case-studies/2026-08-03-aggregate-gates-can-hide-router-gaps.md)

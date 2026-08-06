@@ -1,7 +1,7 @@
 ---
 title: CI Agent Quality and Browser Gates
 status: in-progress
-version: backend@0.51.1, frontend@0.32.2
+version: backend@0.51.2, frontend@0.32.2
 last_updated: 2026-08-06
 owner: maintainer
 related_paths:
@@ -89,9 +89,10 @@ CI run URL/hash when shipped.
 
 PR workflow now validates loopback bindings, runs deterministic Agent eval,
 runs the project-hardening Playwright smoke, enforces the current 435-warning
-ceiling, type-checks, builds, and uploads eval/Playwright reports. Mypy is not
-yet enabled because PH-003 remains red; therefore this task is not complete and
-must not be marked shipped.
+ceiling, type-checks, builds, and uploads eval/Playwright reports. PH-003 now
+passes strict mypy across all backend source and the PR workflow executes the
+same blocking command. This task remains in progress until the frontend warning
+budget, coverage floors, and CI-hosted evidence are complete.
 
 Local deterministic eval and all four project-hardening Playwright scenarios
 passed for implementation commit `960d29a`. CI smoke isolation was corrected in commit `1d2615e`; CI-hosted evidence remains outstanding.

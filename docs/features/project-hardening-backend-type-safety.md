@@ -1,7 +1,7 @@
 ---
 title: Backend Type Safety and Contract Convergence
-status: planning
-version: backend@0.51.1
+status: shipped
+version: backend@0.51.2
 last_updated: 2026-08-06
 owner: maintainer
 related_paths:
@@ -55,7 +55,7 @@ Commit in bounded slices by category, keeping tests green after each slice.
 6. Add narrow mypy overrides only for genuinely untyped third-party modules.
 7. Remove stale multi-user arguments or formally retain them in models; do not
    rely on Pydantic silently ignoring extras.
-8. Run strict mypy over all 274 backend source files.
+8. Run strict mypy over all 275 backend source files.
 9. Add mypy to CI after zero is reached.
 
 ## Test Plan
@@ -93,13 +93,41 @@ scenarios and commits in this document.
 
 ## Acceptance Criteria
 
-- [ ] `mypy src/` returns zero errors.
-- [ ] No blanket module-wide ignore is introduced for project code.
-- [ ] Every real contract defect has a regression test.
-- [ ] Full backend suite passes.
-- [ ] Affected browser workflows pass.
-- [ ] CI executes the same mypy command.
-- [ ] Type-error baseline artifact is removed or shows zero.
+- [x] `mypy src/` returns zero errors across 275 source files.
+- [x] No blanket module-wide ignore was introduced for project code.
+- [x] Real contract defects have focused and full-suite regression coverage.
+- [x] Full backend suite passes: 1,944 tests, 27 live integrations deselected.
+- [x] Affected browser workflows pass.
+- [x] CI executes the same mypy command.
+- [x] Temporary type-error baseline artifacts were removed.
+
+## Implementation and Test Record
+
+The pass enabled the official Pydantic plugin and reduced the strict baseline
+from 297 errors in 81 files to zero across all 275 source files. It repaired
+provider/cache shape validation, gathered BaseException and cancellation
+handling, optional startup services and analyzers, Motor and collection
+generics, Portfolio mixin dependencies, local Holding ownership assumptions,
+and structured-output validation. No project module received a blanket ignore.
+
+Validation completed on 2026-08-06:
+
+- Ruff, Black, and strict mypy passed;
+- the complete backend suite passed with 1,944 tests and 66% aggregate coverage;
+- deterministic Agent evaluation passed;
+- UAW-009 proved ordered Direct, ReAct, and Deep envelopes;
+- prompt-governance proved the Portfolio browser flow;
+- UAW-004 proved watchlist analysis persistence after backend readiness;
+- the project-hardening Insights refresh scenario passed.
+
+After the ReAct assertion passed, Playwright captured
+[`assets/ph-003/01-agent-envelope-after-type-safety.png`](assets/ph-003/01-agent-envelope-after-type-safety.png)
+using the deterministic real frontend-to-backend UAW-009 stack. The first
+watchlist attempt started before its backend was ready and failed at loading;
+a readiness-confirmed rerun passed, preserving the failure as lifecycle
+feedback rather than hiding it.
+
+Implementation commit: `6344fd4`.
 
 ## Risks
 

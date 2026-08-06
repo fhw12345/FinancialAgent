@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.2] - 2026-08-06
+
+### Strict backend type safety
+
+- Enables the official Pydantic mypy plugin and enforces strict checking across all 275 backend source files.
+- Resolves 297 type errors spanning provider payload validation, heterogeneous async results, optional startup services, repository contracts, and portfolio mixin dependencies.
+- Separates cancellation from ordinary gathered failures and prevents invalid cached/provider payloads from entering domain models.
+- Adds blocking backend mypy validation to pull-request CI.
+
 ## [0.51.1] - 2026-08-06
 
 ### Project hardening foundation
