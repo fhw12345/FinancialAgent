@@ -1,7 +1,7 @@
 ---
 title: Authoritative Runtime Version Metadata
 status: in-progress
-version: backend@0.51.1, frontend@0.32.1
+version: backend@0.51.1, frontend@0.32.2
 last_updated: 2026-08-06
 owner: maintainer
 related_paths:
@@ -63,7 +63,7 @@ Scenario `ph-010-version-diagnostics`:
 
 1. Start the real local stack from the tested commit.
 2. Open the visible Health or Help diagnostics.
-3. Assert frontend `0.32.1` baseline/updated version and backend
+3. Assert frontend `0.32.2` baseline/updated version and backend
    `0.51.1` baseline/updated version match package metadata.
 4. Assert the backend health response reports the same backend version.
 5. Capture `docs/features/assets/ph-010/01-version-diagnostics.png`.
@@ -89,7 +89,7 @@ Health UI displays both component versions. A real restarted backend reported
 `0.51.1`, replacing the stale image metadata value.
 
 Playwright scenario `health diagnostics show matching component versions`
-asserted frontend `0.32.1` and backend `0.51.1` before capturing
+asserted frontend `0.32.2` and backend `0.51.1` before capturing
 [`assets/ph-010/01-version-diagnostics.png`](assets/ph-010/01-version-diagnostics.png).
 The screenshot used deterministic API fixtures; PH-001 separately proves the
 real backend Health page. The tested implementation commit is `960d29a`.

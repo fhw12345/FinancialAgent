@@ -1,7 +1,7 @@
 ---
 title: CI Agent Quality and Browser Gates
 status: in-progress
-version: backend@0.51.1, frontend@0.32.1
+version: backend@0.51.1, frontend@0.32.2
 last_updated: 2026-08-06
 owner: maintainer
 related_paths:
@@ -94,7 +94,7 @@ yet enabled because PH-003 remains red; therefore this task is not complete and
 must not be marked shipped.
 
 Local deterministic eval and all four project-hardening Playwright scenarios
-passed for implementation commit `960d29a`. CI-hosted evidence remains outstanding.
+passed for implementation commit `960d29a`. CI smoke isolation was corrected in commit `1d2615e`; CI-hosted evidence remains outstanding.
 
 ## Risks
 

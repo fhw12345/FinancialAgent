@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.32.2] - 2026-08-06
+
+### CI smoke isolation
+
+- Separates the Docker-backed loopback Health scenario from deterministic PR browser smoke so CI does not require an unstarted backend process.
+
 ## [0.32.1] - 2026-08-06
 
 ### Project hardening foundation
