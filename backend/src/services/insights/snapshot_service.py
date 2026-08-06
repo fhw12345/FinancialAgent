@@ -243,40 +243,35 @@ class InsightsSnapshotService:
         Returns:
             Shared data context dict
         """
-        # Define what we need for AI Sector Risk metrics
-        symbols = ["NVDA", "MSFT", "AMD", "PLTR"]  # AI basket
-        indicators = ["treasury_2y", "treasury_10y"]
+        # DataManager already captures individual provider failures in
+        # SharedDataContext.errors. Do not catch programming errors here: a
+        # caller/signature mismatch must fail loudly instead of masquerading as
+        # ordinary provider degradation.
+        symbols = ["NVDA", "MSFT", "AMD", "PLTR"]
+        treasury_maturities = ["2y", "10y"]
+        shared_context = await self.data_manager.prefetch_shared(
+            symbols=symbols,
+            treasury_maturities=treasury_maturities,
+            include_news=True,
+            include_ipo=True,
+        )
 
-        try:
-            # Use DML prefetch_shared for parallel fetching
-            shared_context = await self.data_manager.prefetch_shared(
-                symbols=symbols,
-                indicators=indicators,
-                include_news=True,
-                include_ipo=True,
-            )
+        logger.info(
+            "Shared data prefetched",
+            ohlcv_count=len(shared_context.ohlcv),
+            treasury_count=len(shared_context.treasury),
+            has_news=len(shared_context.news) > 0,
+            has_ipo=len(shared_context.ipo) > 0,
+            error_count=len(shared_context.errors),
+        )
 
-            logger.info(
-                "Shared data prefetched",
-                ohlcv_count=len(shared_context.ohlcv),
-                treasury_count=len(shared_context.treasury),
-                has_news=len(shared_context.news) > 0,
-                has_ipo=len(shared_context.ipo) > 0,
-            )
-
-            return {
-                "ohlcv": shared_context.ohlcv,
-                "treasury": shared_context.treasury,
-                "news": shared_context.news,
-                "ipo": shared_context.ipo,
-            }
-
-        except Exception as e:
-            logger.warning(
-                "Prefetch partial failure, continuing with available data",
-                error=str(e),
-            )
-            return {}
+        return {
+            "ohlcv": shared_context.ohlcv,
+            "treasury": shared_context.treasury,
+            "news": shared_context.news,
+            "ipo": shared_context.ipo,
+            "errors": shared_context.errors,
+        }
 
     async def _persist_snapshot(
         self,

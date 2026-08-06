@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from src.api.health import get_mongodb, get_redis, router
 from src.core.config import get_settings
+from src.core.version import BACKEND_VERSION
 
 # ===== Fixtures =====
 
@@ -74,6 +75,7 @@ class TestHealthCheck:
         data = response.json()
         assert data["status"] == "ok"
         assert data["environment"] == "test"
+        assert data["version"] == BACKEND_VERSION
         assert "dependencies" in data
         assert "configuration" in data
 

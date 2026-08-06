@@ -18,19 +18,33 @@ interface SystemMetrics {
   health_status: string;
 }
 
+interface BackendHealth {
+  status: "ok" | "degraded";
+  version: string;
+}
+
 export default function HealthPage() {
   const { i18n } = useTranslation();
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
+  const [backendHealth, setBackendHealth] = useState<BackendHealth | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/admin/health`);
-        if (!response.ok) {
+        const [metricsResponse, healthResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/admin/health`),
+          fetch(`${API_BASE_URL}/api/health`),
+        ]);
+        if (!metricsResponse.ok || !healthResponse.ok) {
           throw new Error("Failed to fetch system metrics");
         }
-        setMetrics(await response.json());
+        const metricsPayload = (await metricsResponse.json()) as SystemMetrics;
+        const healthPayload = (await healthResponse.json()) as BackendHealth;
+        setMetrics(metricsPayload);
+        setBackendHealth(healthPayload);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
       }
@@ -43,7 +57,7 @@ export default function HealthPage() {
     return <div className="p-8 text-red-600">Error: {error}</div>;
   }
 
-  if (!metrics) {
+  if (!metrics || !backendHealth) {
     return <div className="p-8 text-gray-500">Loading system metrics...</div>;
   }
 
@@ -66,28 +80,53 @@ export default function HealthPage() {
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <MetricCard label="Status" value={metrics.health_status.toUpperCase()} />
-          <MetricCard label="Documents" value={totalDocuments.toLocaleString()} />
-          <MetricCard label="Database size" value={`${totalSize.toFixed(2)} MB`} />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <MetricCard
+            label="Status"
+            value={metrics.health_status.toUpperCase()}
+          />
+          <MetricCard
+            label="Documents"
+            value={totalDocuments.toLocaleString()}
+          />
+          <MetricCard
+            label="Database size"
+            value={`${totalSize.toFixed(2)} MB`}
+          />
+          <MetricCard label="Frontend" value={`v${__APP_VERSION__}`} />
+          <MetricCard label="Backend" value={`v${backendHealth.version}`} />
         </div>
 
         <div className="overflow-hidden rounded-lg bg-white shadow">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Collection</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600">Documents</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600">Size</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600">Average document</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">
+                  Collection
+                </th>
+                <th className="px-4 py-3 text-right font-medium text-gray-600">
+                  Documents
+                </th>
+                <th className="px-4 py-3 text-right font-medium text-gray-600">
+                  Size
+                </th>
+                <th className="px-4 py-3 text-right font-medium text-gray-600">
+                  Average document
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {metrics.database.map((stat) => (
                 <tr key={stat.collection}>
-                  <td className="px-4 py-3 font-mono text-gray-900">{stat.collection}</td>
-                  <td className="px-4 py-3 text-right">{stat.document_count.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right">{stat.size_mb.toFixed(2)} MB</td>
+                  <td className="px-4 py-3 font-mono text-gray-900">
+                    {stat.collection}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {stat.document_count.toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {stat.size_mb.toFixed(2)} MB
+                  </td>
                   <td className="px-4 py-3 text-right">
                     {stat.avg_document_size_bytes.toLocaleString()} B
                   </td>

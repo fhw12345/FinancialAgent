@@ -9,7 +9,6 @@ import React, { useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
 import { Loader2 } from "lucide-react";
 import type { ChatMessage, SymbolCandidate } from "../../types/api";
 import { ToolMessageWrapper } from "./ToolMessageWrapper";
@@ -151,7 +150,6 @@ const MessageBubble = React.memo<{
           ) : (
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeRaw]}
               components={{
                 h1: ({ children }) => (
                   <h1 className="text-xl font-bold mb-3 text-gray-900">
@@ -190,6 +188,16 @@ const MessageBubble = React.memo<{
                   <strong className="font-semibold text-gray-900">
                     {children}
                   </strong>
+                ),
+                a: ({ href, children }) => (
+                  <a
+                    className="text-blue-600 underline hover:text-blue-800"
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {children}
+                  </a>
                 ),
                 code: ({ className, children, ...props }) => {
                   const isInline = !className;

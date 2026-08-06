@@ -10,6 +10,7 @@ import structlog
 from fastapi import APIRouter, Depends, Request
 
 from ..core.config import Settings, get_settings
+from ..core.version import BACKEND_VERSION
 from ..database.mongodb import MongoDB
 from ..database.redis import RedisCache
 
@@ -62,7 +63,7 @@ async def health_check(
     health_response = {
         "status": "ok" if all_healthy else "degraded",
         "environment": settings.environment,
-        "version": "0.1.0",
+        "version": BACKEND_VERSION,
         "timestamp": datetime.now(UTC).isoformat(),
         "dependencies": {
             "mongodb": mongodb_status,

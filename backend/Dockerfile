@@ -10,14 +10,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set working directory
 WORKDIR /app
 
-# Copy dependency files
-COPY pyproject.toml .
+# Install the exact production dependency graph recorded from the supported
+# Linux/Python 3.12 runtime, then install this package without re-resolving it.
+COPY pyproject.toml requirements.lock ./
+COPY src/ ./src/
 
-# Install dependencies
 # hadolint ignore=DL3013
-# Force rebuild: 2025-11-22 - Added tiktoken for context management
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir .
+RUN pip install --no-cache-dir -r requirements.lock && \
+    pip install --no-cache-dir --no-deps .
 
 # Production stage
 FROM python:3.12-slim AS production

@@ -5,12 +5,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  AlertCircle,
-  ChevronRight,
-  RefreshCw,
-  TrendingUp,
-} from "lucide-react";
+import { AlertCircle, ChevronRight, RefreshCw, TrendingUp } from "lucide-react";
 
 import {
   CompositeScoreCard,
@@ -18,7 +13,12 @@ import {
   MetricCard,
   MetricCardSkeleton,
 } from "../components/insights";
-import { useCategories, useCategory, useInsightTrend, useRefreshCategory } from "../hooks/useInsights";
+import {
+  useCategories,
+  useCategory,
+  useInsightTrend,
+  useRefreshCategory,
+} from "../hooks/useInsights";
 import { formatTimestamp } from "../utils/timeFormatter";
 
 /** Available days options for trend history */
@@ -35,11 +35,16 @@ function CategoryDetail({
   const { t, i18n } = useTranslation(["insights", "common"]);
   const { data: category, isLoading, isError } = useCategory(categoryId);
   const refreshMutation = useRefreshCategory();
-  const [expandedMetrics, setExpandedMetrics] = useState<Set<string>>(new Set());
+  const [expandedMetrics, setExpandedMetrics] = useState<Set<string>>(
+    new Set(),
+  );
   const [trendDays, setTrendDays] = useState<number>(30);
 
   // Fetch trend data for sparklines
-  const { data: trendData, isLoading: trendLoading } = useInsightTrend(categoryId, trendDays);
+  const { data: trendData, isLoading: trendLoading } = useInsightTrend(
+    categoryId,
+    trendDays,
+  );
 
   const toggleMetric = (metricId: string) => {
     setExpandedMetrics((prev) => {
@@ -55,7 +60,9 @@ function CategoryDetail({
 
   // Handle swipe for more history
   const handleLoadMoreHistory = () => {
-    const currentIndex = DAYS_OPTIONS.indexOf(trendDays as typeof DAYS_OPTIONS[number]);
+    const currentIndex = DAYS_OPTIONS.indexOf(
+      trendDays as (typeof DAYS_OPTIONS)[number],
+    );
     if (currentIndex < DAYS_OPTIONS.length - 1) {
       setTrendDays(DAYS_OPTIONS[currentIndex + 1]);
     }
@@ -110,6 +117,7 @@ function CategoryDetail({
           </div>
         </div>
         <button
+          data-testid="refresh-insight-category"
           onClick={() => refreshMutation.mutate(categoryId)}
           disabled={refreshMutation.isPending}
           className="px-4 py-2.5 text-sm font-medium bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm"
@@ -195,10 +203,14 @@ function CategoryListCard({
           <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
             {name}
           </h3>
-          <p className="text-sm text-gray-600 mt-1 line-clamp-2">{description}</p>
+          <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+            {description}
+          </p>
           <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
             <TrendingUp className="w-4 h-4" />
-            <span>{metricCount} {t("insights:category.metrics").toLowerCase()}</span>
+            <span>
+              {metricCount} {t("insights:category.metrics").toLowerCase()}
+            </span>
           </div>
         </div>
         <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-1 transition-all flex-shrink-0 mt-2" />

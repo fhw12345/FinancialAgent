@@ -96,6 +96,7 @@ def mock_data_manager():
     mock_context.treasury = {"treasury_2y": Mock()}
     mock_context.news = [Mock()]
     mock_context.ipo = [Mock()]
+    mock_context.errors = {}
 
     dm.prefetch_shared = AsyncMock(return_value=mock_context)
     return dm
@@ -281,16 +282,23 @@ class TestPrefetchSharedData:
         assert "treasury" in result
         assert "news" in result
         assert "ipo" in result
-        mock_data_manager.prefetch_shared.assert_called_once()
+        assert "errors" in result
+        mock_data_manager.prefetch_shared.assert_awaited_once_with(
+            symbols=["NVDA", "MSFT", "AMD", "PLTR"],
+            treasury_maturities=["2y", "10y"],
+            include_news=True,
+            include_ipo=True,
+        )
 
     @pytest.mark.asyncio
-    async def test_prefetch_handles_error(self, snapshot_service, mock_data_manager):
-        """Test prefetch handles errors gracefully."""
-        mock_data_manager.prefetch_shared.side_effect = Exception("Fetch failed")
+    async def test_prefetch_does_not_hide_programming_errors(
+        self, snapshot_service, mock_data_manager
+    ):
+        """Programming errors must not look like provider degradation."""
+        mock_data_manager.prefetch_shared.side_effect = TypeError("bad contract")
 
-        result = await snapshot_service._prefetch_shared_data()
-
-        assert result == {}
+        with pytest.raises(TypeError, match="bad contract"):
+            await snapshot_service._prefetch_shared_data()
 
 
 # ===== _persist_snapshot Tests =====

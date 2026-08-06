@@ -4,7 +4,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     env_file:
       - ./backend/.env.development # Load all config from gitignored file
     environment:
@@ -26,7 +26,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       - VITE_API_URL=http://localhost:8000
     volumes:
@@ -40,7 +40,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
     environment:
       - VITE_API_URL=${E2E_API_URL:-http://host.docker.internal:18081}
     extra_hosts:
@@ -56,7 +56,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3002:3000"
+      - "127.0.0.1:3002:3000"
     environment:
       - VITE_API_URL=http://host.docker.internal:18083
     extra_hosts:
@@ -69,7 +69,7 @@ services:
     profiles: ["e2e"]
     image: financialagent-frontend-deep-e2e:latest
     ports:
-      - "3003:3000"
+      - "127.0.0.1:3003:3000"
     environment:
       - VITE_API_URL=http://host.docker.internal:18084
     extra_hosts:
@@ -82,7 +82,7 @@ services:
     profiles: ["e2e"]
     image: financialagent-frontend-deep-e2e:latest
     ports:
-      - "3004:3000"
+      - "127.0.0.1:3004:3000"
     environment:
       - VITE_API_URL=http://host.docker.internal:18085
     extra_hosts:
@@ -95,7 +95,7 @@ services:
     profiles: ["e2e"]
     image: financialagent-frontend-deep-e2e:latest
     ports:
-      - "3005:3000"
+      - "127.0.0.1:3005:3000"
     environment:
       - VITE_API_URL=http://host.docker.internal:18086
     extra_hosts:
@@ -108,7 +108,7 @@ services:
     profiles: ["e2e"]
     image: financialagent-frontend-deep-e2e:latest
     ports:
-      - "3006:3000"
+      - "127.0.0.1:3006:3000"
     environment:
       - VITE_API_URL=http://host.docker.internal:18087
     extra_hosts:
@@ -121,7 +121,7 @@ services:
     profiles: ["e2e"]
     image: financialagent-frontend-deep-e2e:latest
     ports:
-      - "3007:3000"
+      - "127.0.0.1:3007:3000"
     environment:
       - VITE_API_URL=http://host.docker.internal:18088
     extra_hosts:
@@ -134,7 +134,7 @@ services:
     profiles: ["e2e"]
     image: financialagent-frontend-deep-e2e:latest
     ports:
-      - "3008:3000"
+      - "127.0.0.1:3008:3000"
     environment:
       - VITE_API_URL=http://host.docker.internal:18089
     extra_hosts:
@@ -149,7 +149,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "18081:8000"
+      - "127.0.0.1:18081:8000"
     environment:
       - ENVIRONMENT=test
       - MONGODB_URL=mongodb://mongodb:27017/financial_agent_e2e
@@ -175,7 +175,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "18082:8080"
+      - "127.0.0.1:18082:8080"
     volumes:
       - ./backend:/app
     command: >
@@ -188,7 +188,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "18083:8000"
+      - "127.0.0.1:18083:8000"
     environment:
       - ENVIRONMENT=test
       - MONGODB_URL=mongodb://mongodb:27017/financial_agent_deep_e2e
@@ -216,7 +216,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "18084:8000"
+      - "127.0.0.1:18084:8000"
     environment:
       - ENVIRONMENT=test
       - MONGODB_URL=mongodb://mongodb:27017/financial_agent_watchlist_e2e
@@ -244,7 +244,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "18085:8000"
+      - "127.0.0.1:18085:8000"
     environment:
       - ENVIRONMENT=test
       - MONGODB_URL=mongodb://mongodb:27017/financial_agent_cancel_e2e
@@ -272,7 +272,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "18086:8000"
+      - "127.0.0.1:18086:8000"
     environment:
       - ENVIRONMENT=test
       - MONGODB_URL=mongodb://mongodb:27017/financial_agent_streaming_e2e
@@ -300,7 +300,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "18087:8000"
+      - "127.0.0.1:18087:8000"
     environment:
       - ENVIRONMENT=test
       - MONGODB_URL=mongodb://mongodb:27017/financial_agent_run_e2e
@@ -328,7 +328,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "18088:8000"
+      - "127.0.0.1:18088:8000"
     environment:
       - ENVIRONMENT=test
       - MONGODB_URL=mongodb://mongodb:27017/financial_agent_lifecycle_e2e
@@ -356,7 +356,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "18089:8000"
+      - "127.0.0.1:18089:8000"
     environment:
       - ENVIRONMENT=test
       - MONGODB_URL=mongodb://mongodb:27017/financial_agent_events_e2e
@@ -400,7 +400,7 @@ services:
   mongodb:
     image: mongo:7.0
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     environment:
       - MONGO_INITDB_DATABASE=financial_agent
     volumes:
@@ -410,7 +410,7 @@ services:
   redis:
     image: redis:7.2-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     restart: unless-stopped

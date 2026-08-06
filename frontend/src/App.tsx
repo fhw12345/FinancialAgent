@@ -45,6 +45,7 @@ function App() {
             {/* Navigation - stacks vertically on mobile */}
             <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <button
+                data-testid="nav-health"
                 onClick={() => setActiveTab("health")}
                 className={`px-3 sm:px-5 py-1.5 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl transition-all duration-200 ${
                   activeTab === "health"
@@ -88,6 +89,7 @@ function App() {
                 {t("navigation.evaluation")}
               </button>
               <button
+                data-testid="nav-insights"
                 onClick={() => setActiveTab("insights")}
                 className={`px-3 sm:px-5 py-1.5 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl transition-all duration-200 ${
                   activeTab === "insights"

@@ -39,6 +39,7 @@ from .api.translate import router as translate_router
 from .api.watchlist import router as watchlist_router
 from .core.config import get_settings
 from .core.exceptions import AppError
+from .core.version import BACKEND_VERSION
 from .database.mongodb import MongoDB
 from .database.redis import RedisCache
 
@@ -348,7 +349,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Financial Agent API",
         description="AI-Enhanced Financial Analysis Platform",
-        version="0.1.0",
+        version=BACKEND_VERSION,
         docs_url="/docs" if settings.environment == "development" else None,
         redoc_url="/redoc" if settings.environment == "development" else None,
         lifespan=lifespan,
@@ -448,7 +449,7 @@ def create_app() -> FastAPI:
         """Root endpoint for basic connectivity check."""
         return {
             "message": "Financial Agent API",
-            "version": "0.1.0",
+            "version": BACKEND_VERSION,
             "environment": settings.environment,
         }
 

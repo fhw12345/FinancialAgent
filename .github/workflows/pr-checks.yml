@@ -43,6 +43,9 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Validate Local-Only Compose Bindings
+        run: python scripts/check-compose-loopback.py
+
       - name: Install Backend Dependencies
         run: |
           cd backend
@@ -61,10 +64,22 @@ jobs:
           cd backend
           python -m pytest tests/ -v --tb=short
 
+      - name: Run Deterministic Agent Evaluation
+        run: |
+          cd backend
+          python scripts/run_agent_eval.py --out artifacts/evals
+
       - name: Run Frontend Tests
         run: |
           cd frontend
           npm test -- --passWithNoTests
+
+      - name: Run Project Hardening Browser Smoke
+        run: |
+          cd frontend
+          npx playwright install --with-deps chromium
+          npm run dev -- --host 127.0.0.1 > /tmp/financial-agent-vite.log 2>&1 &
+          PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npm run test:e2e:project-hardening
 
       - name: Lint Backend
         run: |
@@ -72,8 +87,20 @@ jobs:
           python -m ruff check src/
           python -m black --check src/
 
-      - name: Lint Frontend
+      - name: Lint and Build Frontend
         run: |
           cd frontend
-          npm run lint
+          npm run lint -- --max-warnings 435
           npm run type-check
+          npm run build
+
+      - name: Upload Evaluation and Browser Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-quality-reports
+          path: |
+            backend/artifacts/evals/
+            frontend/playwright-report/
+            frontend/test-results/
+          if-no-files-found: ignore

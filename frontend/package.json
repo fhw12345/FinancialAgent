@@ -1,6 +1,6 @@
 {
   "name": "financial-agent-frontend",
-  "version": "0.32.0",
+  "version": "0.32.1",
   "type": "module",
   "description": "Financial Agent frontend (personal local fork)",
   "scripts": {
@@ -29,7 +29,8 @@
     "test:e2e:prompt-governance": "playwright test e2e/prompt-governance.spec.ts",
     "test:e2e:symbol-date-range": "playwright test e2e/symbol-date-range.spec.ts",
     "test:e2e:chart-volume-overlay": "playwright test e2e/chart-volume-overlay.spec.ts",
-    "test:e2e:evaluation-governance": "playwright test e2e/evaluation-governance.spec.ts"
+    "test:e2e:evaluation-governance": "playwright test e2e/evaluation-governance.spec.ts",
+    "test:e2e:project-hardening": "playwright test e2e/project-hardening.spec.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.0",
