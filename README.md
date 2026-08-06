@@ -16,6 +16,11 @@ docker compose up -d
 Open <http://localhost:3000>. The backend API and OpenAPI docs are available at
 <http://localhost:8000> and <http://localhost:8000/docs>.
 
+All published Compose ports bind to `127.0.0.1` by default. MongoDB, Redis, and
+the unauthenticated local API must not be exposed to a LAN. Remote access
+requires an explicit Compose override plus an appropriate authentication and
+network-security review; changing the bindings to `0.0.0.0` alone is unsafe.
+
 ## LLM Provider
 
 Set `LLM_PROVIDER` in `backend/.env.development`:

@@ -260,6 +260,20 @@ Feature is complete when:
 
 Browse existing feature specs in this directory for examples:
 
+### Active Hardening Program
+
+- **[Project Hardening Program](project-hardening-program.md)** — parallel work packages, merge order, and shared completion rules
+- **[PH-001 Local Network Perimeter](project-hardening-local-network-perimeter.md)** — bind the local stack to loopback and prove connectivity
+- **[PH-002 Insights Prefetch Contract](project-hardening-insights-prefetch-contract.md)** — repair and test the Insights/DataManager shared-data boundary
+- **[PH-003 Backend Type Safety](project-hardening-backend-type-safety.md)** — converge strict mypy and runtime domain contracts
+- **[PH-004 CI Agent Quality Gates](project-hardening-ci-agent-quality-gates.md)** — enforce eval, typing, security, and browser smoke in PR CI
+- **[PH-005 Untrusted Markdown Safety](project-hardening-markdown-safety.md)** — sanitize the LLM-to-browser rendering boundary
+- **[PH-006 Frontend Type and Lint Quality](project-hardening-frontend-quality.md)** — validate API/SSE input and restore lint signal
+- **[PH-007 Agent Orchestration Coverage](project-hardening-agent-orchestration-coverage.md)** — test real internal workflow composition and persistence invariants
+- **[PH-008 Reproducible Runtime Builds](project-hardening-reproducible-builds.md)** — lock dependencies and validate non-root clean builds
+- **[PH-009 Source Decomposition](project-hardening-source-decomposition.md)** — split oversized production modules after functional hardening
+- **[PH-010 Version Metadata](project-hardening-version-metadata.md)** — unify package, runtime, UI, and documentation versions
+
 ### Architecture & Refactoring
 - **[Portfolio Agent Architecture](portfolio-agent-architecture-refactor.md)** — 3-phase analysis (research → decisions → execution)
 

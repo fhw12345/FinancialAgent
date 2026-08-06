@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.32.1] - 2026-08-06
+
+### Project hardening foundation
+
+- Removes raw HTML parsing from untrusted assistant Markdown and isolates external links.
+- Displays authoritative frontend and backend versions on the Health page.
+- Adds real-browser hardening coverage for local-stack health, Insights refresh, Markdown safety, and version diagnostics.
+- Runs the frontend image as a non-root user and validates its installed dependency tree.
+
 ## [0.32.0] - 2026-08-04
 
 ### Live evaluation governance

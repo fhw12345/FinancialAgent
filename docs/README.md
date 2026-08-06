@@ -17,6 +17,17 @@ All current documentation describes the local single-user application.
 
 ## Agent and Features
 
+- [Project Hardening Program](features/project-hardening-program.md)
+  - [PH-001 Local Network Perimeter](features/project-hardening-local-network-perimeter.md)
+  - [PH-002 Insights Prefetch Contract](features/project-hardening-insights-prefetch-contract.md)
+  - [PH-003 Backend Type Safety](features/project-hardening-backend-type-safety.md)
+  - [PH-004 CI Agent Quality Gates](features/project-hardening-ci-agent-quality-gates.md)
+  - [PH-005 Untrusted Markdown Safety](features/project-hardening-markdown-safety.md)
+  - [PH-006 Frontend Type and Lint Quality](features/project-hardening-frontend-quality.md)
+  - [PH-007 Agent Orchestration Coverage](features/project-hardening-agent-orchestration-coverage.md)
+  - [PH-008 Reproducible Runtime Builds](features/project-hardening-reproducible-builds.md)
+  - [PH-009 Source Decomposition](features/project-hardening-source-decomposition.md)
+  - [PH-010 Version Metadata](features/project-hardening-version-metadata.md)
 - [Agent 12-Factors](architecture/agent-12-factors.md)
 - [Unified Agent Workflow Improvement Roadmap](architecture/unified-agent-workflow-roadmap.md)
 - [Deep Agent Symbol Clarification](features/deep-agent-symbol-clarification.md)
@@ -51,6 +62,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [Green Tests Hid a Broken Shared-Data Contract](case-studies/2026-08-06-green-tests-hidden-contract-drift.md)
 - [Live Evaluation Trust Case Study](case-studies/2026-08-04-a-green-eval-can-still-be-fiction.md)
 - [Evaluation Gates Case Study](case-studies/2026-08-03-aggregate-gates-can-hide-router-gaps.md)
 - [Chart Volume Lifecycle Case Study](case-studies/2026-07-30-data-refetch-recreated-chart.md)

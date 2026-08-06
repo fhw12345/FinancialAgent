@@ -1,8 +1,8 @@
 ---
 title: Architecture Overview
 status: shipped
-version: backend@0.32.x, frontend@0.25.x
-last_updated: 2026-07-15
+version: backend@0.51.1, frontend@0.32.1
+last_updated: 2026-08-06
 owner: maintainer
 related_paths:
   - backend/src/main.py

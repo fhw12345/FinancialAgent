@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.1] - 2026-08-06
+
+### Project hardening foundation
+
+- Binds all default Compose ports to loopback and adds an executable binding check.
+- Repairs the Insights shared-prefetch Treasury contract and stops hiding programming errors as provider degradation.
+- Sources FastAPI, root, and Health versions from authoritative project metadata.
+- Adds a locked production dependency graph and deterministic Agent evaluation to PR validation.
+
 ## [0.51.0] - 2026-08-04
 
 ### Layered live Agent evaluation
