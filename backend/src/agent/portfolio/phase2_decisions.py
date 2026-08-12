@@ -493,7 +493,7 @@ class Phase2DecisionsMixin:
                 chat_id=chat_id,
                 role="assistant",
                 content=message_content,
-                source="system",
+                source="llm",
                 metadata=metadata,
             )
             await self.message_repo.create(message_create)

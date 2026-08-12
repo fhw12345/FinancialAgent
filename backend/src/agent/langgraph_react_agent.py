@@ -869,6 +869,9 @@ Summary: {result.analysis_summary}"""
                     result = await self.agent.ainvoke(
                         {"messages": messages}, config=config
                     )
+                    # A previous transient failure must not survive a successful
+                    # retry and get re-raised by the post-loop guard.
+                    last_exception = None
                     # Success - break out of retry loop
                     if attempt > 0:
                         logger.info(

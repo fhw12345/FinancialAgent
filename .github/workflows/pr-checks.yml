@@ -62,7 +62,9 @@ jobs:
           REDIS_URL: redis://localhost:6379
         run: |
           cd backend
-          python -m pytest tests/ -v --tb=short
+          python -m pytest tests/ -v --tb=short --cov-report=json:coverage.json
+          cd ..
+          python scripts/check-critical-coverage.py
 
       - name: Run Deterministic Agent Evaluation
         run: |
