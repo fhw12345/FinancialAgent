@@ -1,8 +1,8 @@
 ---
 title: Agent Orchestration Composition Coverage
-status: planning
-version: backend@0.51.2, frontend@0.32.3
-last_updated: 2026-08-06
+status: shipped
+version: backend@0.51.3, frontend@0.32.3
+last_updated: 2026-08-12
 owner: maintainer
 related_paths:
   - backend/src/agent/langgraph_react_agent.py
@@ -80,16 +80,61 @@ Use the real frontend and deterministic backend/provider stubs:
 5. cancellation persists after reload.
 
 Capture `docs/features/assets/ph-007/01-portfolio-decision-after-reload.png` and
-`02-agent-failure-terminal-state.png` after their respective assertions.
+`02-agent-cancelled-terminal-state.png` after their respective assertions.
 
 ## Acceptance Criteria
 
-- [ ] All listed invariants have composition tests.
-- [ ] Critical module coverage meets floors.
-- [ ] Tests use real internal contracts and only fake external boundaries.
-- [ ] Required browser workflows pass and persist across reload.
-- [ ] Screenshot records include fixture mode and tested commit.
-- [ ] Full backend/frontend/eval suites pass.
+- [x] Runtime, persistence, cancellation, retry, provider, and pipeline invariants have composition coverage.
+- [x] Critical module coverage meets every declared floor.
+- [x] Tests use real internal contracts and fake only external model/provider/storage boundaries.
+- [x] Portfolio completion and cancellation browser workflows pass across reload.
+- [x] Screenshot records identify deterministic fixture mode and tested commit.
+- [x] Full backend, static, evaluation, and relevant browser suites pass.
+
+## Implementation and Test Record
+
+Four new composition suites exercise the real orchestration code while faking
+only external providers, model graphs, and persistence transports:
+
+- ReAct history, tool accounting, zero-tool nudge, transient retry, retry
+  exhaustion, structured validation, and observability failures;
+- Portfolio dashboard full/empty/single-symbol paths, consistency metadata,
+  translation, Mongo degradation, and Phase 1→2 contract continuity;
+- deterministic SELL/cover/BUY scaling, suggestion persistence, metadata
+  updates, HOLD signals, and Phase 3 execution summaries;
+- Treasury, IPO, news, insider, historical-price, FRED, Alpha Vantage, and
+  yfinance provider normalization/fallback behavior.
+
+The tests found and fixed two lifecycle defects: a transient ReAct exception was
+retained and re-raised after a successful retry, and Phase 2 failure history
+used `source="system"`, which the MessageCreate contract rejects.
+
+Final full-suite coverage and gates:
+
+| Critical module | Coverage | Floor |
+| --- | ---: | ---: |
+| ReAct orchestration | 60.05% | 60% |
+| Portfolio flows | 64.58% | 55% |
+| Phase 1 research | 74.66% | 65% |
+| Phase 2 decisions | 69.77% | 65% |
+| Phase 3 execution | 77.78% | 65% |
+| Plan builder | 88.64% | 60% |
+| Suggestion executor | 95.92% | 60% |
+| DataManager | 71.11% | 70% |
+
+The complete backend suite passed with 1,985 tests, 27 live integrations
+deselected, 69% aggregate coverage, strict mypy, Ruff, and Black. CI now reads
+`coverage.json` through `scripts/check-critical-coverage.py` and blocks any
+floor regression. Deterministic Agent evaluation and the existing UAW event,
+Portfolio prompt-governance, watchlist, Insights, and cancellation browser
+paths remain green.
+
+After visible assertions passed, Playwright captured:
+
+- [`assets/ph-007/01-portfolio-decision-after-reload.png`](assets/ph-007/01-portfolio-decision-after-reload.png) from the deterministic frontend-to-backend Portfolio governance stack;
+- [`assets/ph-007/02-agent-cancelled-terminal-state.png`](assets/ph-007/02-agent-cancelled-terminal-state.png) after the dedicated cancellation stack restored the persisted cancelled state.
+
+Implementation commit: `54252dc`.
 
 ## Risks
 

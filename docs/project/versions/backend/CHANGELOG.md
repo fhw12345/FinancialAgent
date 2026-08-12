@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.3] - 2026-08-12
+
+### Agent orchestration composition gates
+
+- Adds real internal composition tests for ReAct retry/tool/structured-output lifecycles, Portfolio Phase 1→2→3, deterministic order optimization, persistence degradation, and DataManager provider normalization.
+- Fixes a stale transient exception that was re-raised after a successful ReAct retry.
+- Fixes Phase 2 failure-message persistence using an invalid `system` source value.
+- Raises aggregate backend coverage to 69% and enforces risk-based per-module floors in CI.
+- Adds browser evidence for Portfolio completion and cancellation persistence.
+
 ## [0.51.2] - 2026-08-06
 
 ### Strict backend type safety

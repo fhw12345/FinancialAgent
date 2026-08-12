@@ -1,8 +1,8 @@
 ---
 title: Authoritative Runtime Version Metadata
 status: in-progress
-version: backend@0.51.2, frontend@0.32.3
-last_updated: 2026-08-06
+version: backend@0.51.3, frontend@0.32.3
+last_updated: 2026-08-12
 owner: maintainer
 related_paths:
   - backend/pyproject.toml

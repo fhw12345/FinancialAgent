@@ -2,7 +2,7 @@
 title: Untrusted Agent Markdown Rendering Safety
 status: in-progress
 version: frontend@0.32.3
-last_updated: 2026-08-06
+last_updated: 2026-08-12
 owner: maintainer
 related_paths:
   - frontend/src/components/chat/ChatMessages.tsx

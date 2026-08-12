@@ -1,8 +1,8 @@
 ---
 title: CI Agent Quality and Browser Gates
 status: in-progress
-version: backend@0.51.2, frontend@0.32.3
-last_updated: 2026-08-06
+version: backend@0.51.3, frontend@0.32.3
+last_updated: 2026-08-12
 owner: maintainer
 related_paths:
   - .github/workflows/pr-checks.yml
@@ -93,7 +93,9 @@ plus the isolated 131-warning test/E2E ceiling, type-checks, builds, and uploads
 eval/Playwright reports. PH-003 now
 passes strict mypy across all backend source and the PR workflow executes the
 same blocking command. This task remains in progress until the frontend warning
-test/E2E warning debt, coverage floors, and CI-hosted evidence are complete.
+test/E2E warning debt and CI-hosted evidence are complete. PH-007 now enforces
+all declared critical orchestration coverage floors through
+`scripts/check-critical-coverage.py`.
 
 Local deterministic eval and all four project-hardening Playwright scenarios
 passed for implementation commit `960d29a`. CI smoke isolation was corrected in commit `1d2615e`; CI-hosted evidence remains outstanding.

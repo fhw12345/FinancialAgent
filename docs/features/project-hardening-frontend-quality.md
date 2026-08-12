@@ -2,7 +2,7 @@
 title: Frontend API Boundary and Lint Quality
 status: shipped
 version: frontend@0.32.3
-last_updated: 2026-08-06
+last_updated: 2026-08-12
 owner: maintainer
 related_paths:
   - frontend/src/services/
