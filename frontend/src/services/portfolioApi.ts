@@ -21,7 +21,7 @@ export async function getHoldings(): Promise<Holding[]> {
  */
 export async function getPortfolioSummary(): Promise<PortfolioSummary> {
   const response = await apiClient.get<PortfolioSummary>(
-    "/api/portfolio/summary"
+    "/api/portfolio/summary",
   );
   return response.data;
 }
@@ -61,9 +61,7 @@ export function formatPL(pl: number | null, plPct: number | null): string {
  * @param pl - Profit/loss amount
  * @returns Color for styling: "green" (profit), "red" (loss), "gray" (neutral)
  */
-export function getPLColor(
-  pl: number | null
-): "green" | "red" | "gray" {
+export function getPLColor(pl: number | null): "green" | "red" | "gray" {
   if (pl === null) return "gray";
   if (pl > 0) return "green";
   if (pl < 0) return "red";
@@ -79,7 +77,7 @@ export function getPLColor(
 export async function addHolding(holding: NewHolding): Promise<Holding> {
   const response = await apiClient.post<Holding>(
     "/api/portfolio/holdings",
-    holding
+    holding,
   );
   return response.data;
 }
@@ -93,11 +91,11 @@ export async function addHolding(holding: NewHolding): Promise<Holding> {
  */
 export async function updateHolding(
   holdingId: string,
-  update: UpdateHolding
+  update: UpdateHolding,
 ): Promise<Holding> {
   const response = await apiClient.patch<Holding>(
     `/api/portfolio/holdings/${holdingId}`,
-    update
+    update,
   );
   return response.data;
 }
@@ -116,6 +114,10 @@ export async function refreshHoldingPrices(): Promise<{
   failed: number;
   total: number;
 }> {
-  const { data } = await apiClient.post("/api/portfolio/holdings/refresh-prices");
+  const { data } = await apiClient.post<{
+    refreshed: number;
+    failed: number;
+    total: number;
+  }>("/api/portfolio/holdings/refresh-prices");
   return data;
 }

@@ -8,34 +8,21 @@
  */
 
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Save, AlertCircle, CheckCircle } from "lucide-react";
 import { apiClient } from "../../services/api";
-
-export interface PortfolioSettings {
-  cash_balance: number;
-  risk_tolerance: "conservative" | "moderate" | "aggressive";
-  max_position_pct: number;
-}
-
-const SETTINGS_PATH = "/api/admin/portfolio/settings";
-
-async function fetchSettings(): Promise<PortfolioSettings | null> {
-  const { data } = await apiClient.get<PortfolioSettings | null>(SETTINGS_PATH);
-  return data;
-}
+import {
+  PORTFOLIO_SETTINGS_PATH,
+  usePortfolioSettings,
+  type PortfolioSettings,
+} from "../../hooks/usePortfolioSettings";
 
 async function saveSettings(s: PortfolioSettings): Promise<PortfolioSettings> {
-  const { data } = await apiClient.put<PortfolioSettings>(SETTINGS_PATH, s);
+  const { data } = await apiClient.put<PortfolioSettings>(
+    PORTFOLIO_SETTINGS_PATH,
+    s,
+  );
   return data;
-}
-
-export function usePortfolioSettings() {
-  return useQuery({
-    queryKey: ["portfolio-settings"],
-    queryFn: fetchSettings,
-    staleTime: 60_000,
-  });
 }
 
 interface Props {
@@ -107,10 +94,14 @@ export function SettingsPanel({ onSaved }: Props) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="portfolio-cash"
+              className="block text-xs font-medium text-gray-700 mb-1"
+            >
               Cash to Deploy ($)
             </label>
             <input
+              id="portfolio-cash"
               type="number"
               step="100"
               min="1"
@@ -120,15 +111,21 @@ export function SettingsPanel({ onSaved }: Props) {
               className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
             />
             {touched && !cashValid && (
-              <p className="mt-1 text-xs text-red-600">Enter a positive number</p>
+              <p className="mt-1 text-xs text-red-600">
+                Enter a positive number
+              </p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="portfolio-risk"
+              className="block text-xs font-medium text-gray-700 mb-1"
+            >
               Risk Tolerance
             </label>
             <select
+              id="portfolio-risk"
               value={risk}
               onChange={(e) =>
                 setRisk(e.target.value as PortfolioSettings["risk_tolerance"])
@@ -172,7 +169,7 @@ export function SettingsPanel({ onSaved }: Props) {
             {mut.error && (
               <p className="mt-1 text-xs text-red-600 inline-flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
-                {(mut.error).message}
+                {mut.error.message}
               </p>
             )}
           </div>

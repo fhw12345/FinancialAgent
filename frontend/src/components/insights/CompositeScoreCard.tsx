@@ -5,8 +5,12 @@
 
 import { useTranslation } from "react-i18next";
 import { formatScore } from "../../services/insightsApi";
+import { getRecordValue } from "../../utils/safeRecord";
 import type { CompositeScore, TrendDataPoint } from "../../types/insights";
-import { ExpandedTrendChart, ExpandedTrendChartSkeleton } from "./ExpandedTrendChart";
+import {
+  ExpandedTrendChart,
+  ExpandedTrendChartSkeleton,
+} from "./ExpandedTrendChart";
 import { StatusBadge } from "./StatusBadge";
 
 interface CompositeScoreCardProps {
@@ -62,22 +66,27 @@ export function CompositeScoreCard({
             Score Breakdown
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {Object.entries(composite.breakdown).map(([metric, contribution]) => {
-              const weight = composite.weights[metric] ?? 0;
-              return (
-                <div key={metric} className="text-center p-3 bg-white/5 rounded-lg">
-                  <div className="text-xs text-blue-200 mb-1 capitalize truncate">
-                    {metric.replace(/_/g, " ")}
+            {Object.entries(composite.breakdown).map(
+              ([metric, contribution]) => {
+                const weight = getRecordValue(composite.weights, metric) ?? 0;
+                return (
+                  <div
+                    key={metric}
+                    className="text-center p-3 bg-white/5 rounded-lg"
+                  >
+                    <div className="text-xs text-blue-200 mb-1 capitalize truncate">
+                      {metric.replace(/_/g, " ")}
+                    </div>
+                    <div className="text-xl font-semibold mb-0.5">
+                      {contribution.toFixed(1)}
+                    </div>
+                    <div className="text-xs text-blue-300">
+                      weight: {(weight * 100).toFixed(0)}%
+                    </div>
                   </div>
-                  <div className="text-xl font-semibold mb-0.5">
-                    {contribution.toFixed(1)}
-                  </div>
-                  <div className="text-xs text-blue-300">
-                    weight: {(weight * 100).toFixed(0)}%
-                  </div>
-                </div>
-              );
-            })}
+                );
+              },
+            )}
           </div>
         </div>
 
@@ -90,13 +99,9 @@ export function CompositeScoreCard({
             <div className="bg-white/5 rounded-lg p-2 overflow-visible">
               {trendLoading ? (
                 <ExpandedTrendChartSkeleton height={100} darkTheme />
-              ) : (
-                <ExpandedTrendChart
-                  data={trendData!}
-                  height={100}
-                  darkTheme
-                />
-              )}
+              ) : trendData ? (
+                <ExpandedTrendChart data={trendData} height={100} darkTheme />
+              ) : null}
             </div>
           </div>
         )}

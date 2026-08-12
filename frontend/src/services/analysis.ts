@@ -61,6 +61,15 @@ export interface MarketStructure {
   phase: string;
 }
 
+export interface FibonacciTrend {
+  type: string;
+  period: string;
+  magnitude: number;
+  low: number;
+  high: number;
+  fibonacci_levels?: FibonacciLevel[];
+}
+
 export interface FibonacciAnalysisResponse {
   symbol: string;
   start_date?: string;
@@ -74,7 +83,10 @@ export interface FibonacciAnalysisResponse {
   trend_strength: string;
   analysis_summary: string;
   key_insights: string[];
-  raw_data: Record<string, any>;
+  raw_data: {
+    top_trends?: FibonacciTrend[];
+    [key: string]: unknown;
+  };
 }
 
 export interface StochasticLevel {
@@ -97,10 +109,14 @@ export interface StochasticAnalysisResponse {
   current_d: number;
   current_signal: "overbought" | "oversold" | "neutral";
   stochastic_levels: StochasticLevel[];
-  signal_changes: Array<Record<string, any>>;
+  signal_changes: Array<{
+    type: string;
+    description: string;
+    [key: string]: unknown;
+  }>;
   analysis_summary: string;
   key_insights: string[];
-  raw_data: Record<string, any>;
+  raw_data: Record<string, unknown>;
 }
 
 export interface MacroSentimentResponse {
@@ -223,7 +239,7 @@ export interface ChartGenerationResponse {
   symbol: string;
   chart_type: string;
   chart_url?: string;
-  chart_data: Record<string, any>;
+  chart_data: Record<string, unknown>;
   generation_date: string;
   success: boolean;
   error_message?: string;
@@ -275,9 +291,9 @@ export const analysisService = {
   /**
    * Get company overview with key metrics and ownership data
    */
-  async companyOverview(
-    request: { symbol: string },
-  ): Promise<CompanyOverviewResponse> {
+  async companyOverview(request: {
+    symbol: string;
+  }): Promise<CompanyOverviewResponse> {
     const response = await apiClient.post<CompanyOverviewResponse>(
       "/api/analysis/company-overview",
       request,
@@ -315,9 +331,7 @@ export const analysisService = {
   /**
    * Get cash flow statement
    */
-  async cashFlow(
-    request: { symbol: string },
-  ): Promise<CashFlowResponse> {
+  async cashFlow(request: { symbol: string }): Promise<CashFlowResponse> {
     const response = await apiClient.post<CashFlowResponse>(
       "/api/analysis/cash-flow",
       request,
@@ -328,9 +342,9 @@ export const analysisService = {
   /**
    * Get balance sheet
    */
-  async balanceSheet(
-    request: { symbol: string },
-  ): Promise<BalanceSheetResponse> {
+  async balanceSheet(request: {
+    symbol: string;
+  }): Promise<BalanceSheetResponse> {
     const response = await apiClient.post<BalanceSheetResponse>(
       "/api/analysis/balance-sheet",
       request,
@@ -341,9 +355,9 @@ export const analysisService = {
   /**
    * Get news sentiment
    */
-  async newsSentiment(
-    request: { symbol: string },
-  ): Promise<NewsSentimentResponse> {
+  async newsSentiment(request: {
+    symbol: string;
+  }): Promise<NewsSentimentResponse> {
     const response = await apiClient.post<NewsSentimentResponse>(
       "/api/analysis/news-sentiment",
       request,

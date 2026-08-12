@@ -28,6 +28,16 @@ describe("agent event envelopes", () => {
     expect(isAgentEventEnvelope(legacy)).toBe(false);
   });
 
+  it("rejects malformed event fields before dispatch", () => {
+    expect(() =>
+      normalizeAgentStreamEvent({
+        type: "tool_start",
+        tool_name: 42,
+        inputs: "invalid",
+      }),
+    ).toThrow("Malformed agent stream event");
+  });
+
   it("accepts older v1 envelopes without stream_id", () => {
     const normalized = normalizeAgentStreamEvent({
       schema_version: "1.0",

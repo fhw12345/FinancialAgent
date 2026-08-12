@@ -125,15 +125,28 @@ export function ResizableColumn({
       style={{ width: `${width}px` }}
     >
       {children}
-      <div
-        role="separator"
-        aria-orientation="vertical"
+      <button
+        type="button"
+        aria-label={`Resize ${side} column, currently ${Math.round(width)} pixels`}
+        tabIndex={0}
         onMouseDown={onMouseDown}
+        onKeyDown={(event) => {
+          if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+          event.preventDefault();
+          const direction = event.key === "ArrowRight" ? 1 : -1;
+          const sideDirection = side === "left" ? direction : -direction;
+          setWidth((current) =>
+            Math.min(
+              maxWidth,
+              Math.max(minWidth, current + sideDirection * 10),
+            ),
+          );
+        }}
         className="absolute z-20 cursor-col-resize group"
         style={{ ...handleStyle, width: `${SIDEBAR_DRAG_HANDLE_PX}px` }}
       >
-        <div className="h-full w-full transition-colors group-hover:bg-blue-400/60" />
-      </div>
+        <span className="block h-full w-full transition-colors group-hover:bg-blue-400/60" />
+      </button>
     </div>
   );
 }

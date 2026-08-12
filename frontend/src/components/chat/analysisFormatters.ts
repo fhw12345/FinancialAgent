@@ -29,12 +29,12 @@ export function formatFibonacciResponse(
 ### 📊 Key Trends Identified
 
 ${trends
-  .map((trend: any, index: number) => {
+  .map((trend, index: number) => {
     const trendEmoji = trend.type.includes("Uptrend") ? "📈" : "📉";
 
     // Calculate Golden Zone (61.8% retracement area) for this trend
-    const fibLevels = trend.fibonacci_levels || [];
-    const goldenLevel = fibLevels.find((l: any) => l.percentage === "61.8%");
+    const fibLevels = trend.fibonacci_levels ?? [];
+    const goldenLevel = fibLevels.find((level) => level.percentage === "61.8%");
     let goldenZone = "";
     if (goldenLevel) {
       // Golden Zone is typically around 61.8% level (use a small range)
@@ -53,7 +53,7 @@ ${trends
 
 | Level | Price |
 |-------|-------|
-${fibLevels.map((level: any) => `| ${level.percentage} | $${level.price.toFixed(2)} |`).join("\n")}
+${fibLevels.map((level) => `| ${level.percentage} | $${level.price.toFixed(2)} |`).join("\n")}
 
 </details>`
         : "";
@@ -280,9 +280,7 @@ ${result.week_52_low ? `| 52W Low | $${result.week_52_low.toFixed(2)} |` : ""}
 `;
 }
 
-export function formatCashFlowResponse(
-  result: CashFlowResponse,
-): string {
+export function formatCashFlowResponse(result: CashFlowResponse): string {
   // Use backend-generated markdown if available
   if (result.formatted_markdown) {
     return result.formatted_markdown;

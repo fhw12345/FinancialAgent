@@ -62,6 +62,7 @@ test("untrusted assistant HTML stays inert @project-hardening", async ({
     ].join("\n");
     const events = [
       { type: "chat_created", chat_id: "chat_security" },
+      { type: "tool_start", tool_name: 42, inputs: "malformed" },
       { type: "chunk", content },
       { type: "done", chat_id: "chat_security", message_count: 2 },
     ];
@@ -100,7 +101,7 @@ test("untrusted assistant HTML stays inert @project-hardening", async ({
   expect(externalRequests).toEqual([]);
 
   if (updateEvidence) {
-    const dir = path.resolve(
+    const securityDir = path.resolve(
       process.cwd(),
       "..",
       "docs",
@@ -108,9 +109,21 @@ test("untrusted assistant HTML stays inert @project-hardening", async ({
       "assets",
       "ph-005",
     );
-    mkdirSync(dir, { recursive: true });
+    const typedStreamDir = path.resolve(
+      process.cwd(),
+      "..",
+      "docs",
+      "features",
+      "assets",
+      "ph-006",
+    );
+    mkdirSync(securityDir, { recursive: true });
+    mkdirSync(typedStreamDir, { recursive: true });
     await page.screenshot({
-      path: path.join(dir, "01-sanitized-agent-markdown.png"),
+      path: path.join(securityDir, "01-sanitized-agent-markdown.png"),
+    });
+    await page.screenshot({
+      path: path.join(typedStreamDir, "01-typed-stream-recovery.png"),
     });
   }
 });
@@ -248,14 +261,14 @@ test("health diagnostics show matching component versions @project-hardening", a
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ status: "ok", version: "0.51.1" }),
+      body: JSON.stringify({ status: "ok", version: "0.51.2" }),
     }),
   );
 
   await openEnglishApp(page);
   await page.getByTestId("nav-health").click();
-  await expect(page.getByText("v0.32.2", { exact: true })).toBeVisible();
-  await expect(page.getByText("v0.51.1", { exact: true })).toBeVisible();
+  await expect(page.getByText("v0.32.3", { exact: true })).toBeVisible();
+  await expect(page.getByText("v0.51.2", { exact: true })).toBeVisible();
 
   if (updateEvidence) {
     const dir = path.resolve(

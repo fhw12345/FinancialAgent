@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Gauge, Play, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { EvaluationHistory } from "../components/evaluation/EvaluationHistory";
@@ -28,13 +28,11 @@ export default function EvaluationPage() {
   );
   const [history, setHistory] = useState<EvaluationRunSummary[]>([]);
   const [mode, setMode] = useState<"deterministic" | "live">("deterministic");
-  const [liveLane, setLiveLane] =
-    useState<LiveEvaluationLane>("replay_live");
-  const [capabilities, setCapabilities] =
-    useState<LiveEvaluationCapabilities>({
-      fake_live_available: false,
-      provider_smoke_available: false,
-    });
+  const [liveLane, setLiveLane] = useState<LiveEvaluationLane>("replay_live");
+  const [capabilities, setCapabilities] = useState<LiveEvaluationCapabilities>({
+    fake_live_available: false,
+    provider_smoke_available: false,
+  });
   const [maxCostUsd, setMaxCostUsd] = useState(0.25);
   const [caseLimit, setCaseLimit] = useState(8);
   const [liveConsent, setLiveConsent] = useState(false);
@@ -43,14 +41,14 @@ export default function EvaluationPage() {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const pollControllerRef = useRef<AbortController | null>(null);
 
-  const refreshHistory = async () => {
+  const refreshHistory = useCallback(async () => {
     try {
       setHistory(await listLiveEvaluations());
       setHistoryError(null);
     } catch {
       setHistoryError(t("live.historyError"));
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     void refreshHistory();
@@ -66,7 +64,7 @@ export default function EvaluationPage() {
       })
       .catch(() => setHistoryError(t("live.capabilitiesError")));
     return () => pollControllerRef.current?.abort();
-  }, []);
+  }, [refreshHistory, t]);
 
   const pollLiveRun = async (runId: string) => {
     pollControllerRef.current?.abort();
@@ -91,14 +89,14 @@ export default function EvaluationPage() {
         if (!liveConsent) {
           throw new Error(t("live.consentRequired"));
         }
-        if (!Number.isFinite(maxCostUsd) || maxCostUsd <= 0 || maxCostUsd > 25) {
+        if (
+          !Number.isFinite(maxCostUsd) ||
+          maxCostUsd <= 0 ||
+          maxCostUsd > 25
+        ) {
           throw new Error(t("live.invalidBudget"));
         }
-        if (
-          !Number.isInteger(caseLimit) ||
-          caseLimit < 1 ||
-          caseLimit > 20
-        ) {
+        if (!Number.isInteger(caseLimit) || caseLimit < 1 || caseLimit > 20) {
           throw new Error(t("live.invalidCaseLimit"));
         }
         const started = await startLiveEvaluation({
@@ -406,7 +404,10 @@ export default function EvaluationPage() {
               ) : (
                 <ul className="mt-3 space-y-2 text-sm">
                   {failures.slice(0, 12).map((failure) => (
-                    <li key={failure.case_id} className="rounded bg-gray-50 p-3">
+                    <li
+                      key={failure.case_id}
+                      className="rounded bg-gray-50 p-3"
+                    >
                       <span className="font-mono font-semibold">
                         {failure.case_id}
                       </span>

@@ -67,9 +67,11 @@ export const MarketMovers: React.FC<MarketMoversProps> = ({
       setLosers(response.top_losers.slice(0, 10));
       setActive(response.most_actively_traded.slice(0, 10));
       setLastUpdated(new Date());
-    } catch (err: any) {
-      console.error("Failed to fetch market movers:", err);
-      setError(err?.message || "Failed to load market movers");
+    } catch (error: unknown) {
+      console.error("Failed to fetch market movers:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to load market movers",
+      );
     } finally {
       setLoading(false);
     }
@@ -126,7 +128,9 @@ export const MarketMovers: React.FC<MarketMoversProps> = ({
         {/* Change */}
         <div className="flex items-center gap-2">
           {activeTab !== "active" && (
-            <div className={`flex items-center gap-1 ${bgClass} px-2 py-1 rounded`}>
+            <div
+              className={`flex items-center gap-1 ${bgClass} px-2 py-1 rounded`}
+            >
               {isPositive ? (
                 <TrendingUp className={`h-3 w-3 ${colorClass}`} />
               ) : (
@@ -201,7 +205,9 @@ export const MarketMovers: React.FC<MarketMoversProps> = ({
     <div className={`bg-white border border-gray-200 rounded-lg ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900">{t("market:movers.title")}</h3>
+        <h3 className="text-lg font-semibold text-gray-900">
+          {t("market:movers.title")}
+        </h3>
         <button
           onClick={handleRefresh}
           disabled={loading}
@@ -273,14 +279,18 @@ export const MarketMovers: React.FC<MarketMoversProps> = ({
             ) : (
               <div className="text-center py-8">
                 <Activity className="h-12 w-12 mx-auto text-gray-400 mb-3" />
-                <p className="text-sm text-gray-600">{t("market:movers.noData")}</p>
+                <p className="text-sm text-gray-600">
+                  {t("market:movers.noData")}
+                </p>
               </div>
             )}
 
             {/* Footer */}
             {lastUpdated && getCurrentData().length > 0 && (
               <div className="text-xs text-gray-500 text-center mt-4 pt-4 border-t border-gray-200">
-                {t("market:movers.lastUpdated", { time: formatTime(lastUpdated, i18n.language) })}
+                {t("market:movers.lastUpdated", {
+                  time: formatTime(lastUpdated, i18n.language),
+                })}
               </div>
             )}
           </div>

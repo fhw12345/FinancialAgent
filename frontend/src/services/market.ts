@@ -3,6 +3,7 @@
  * Provides symbol search and price data with granularity controls
  */
 
+import axios from "axios";
 import { apiClient } from "./api";
 
 // Symbol search types
@@ -13,6 +14,52 @@ export interface SymbolSearchResult {
   type: string;
   match_type?: string;
   confidence?: number;
+}
+
+export type SymbolSuggestion = SymbolSearchResult | string;
+
+export class PriceDataError extends Error {
+  constructor(
+    message: string,
+    readonly suggestions: SymbolSuggestion[] = [],
+    readonly original?: unknown,
+  ) {
+    super(message);
+    this.name = "PriceDataError";
+  }
+}
+
+interface PriceErrorDetail {
+  message?: unknown;
+  suggestions?: unknown;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isPriceErrorDetail(value: unknown): value is PriceErrorDetail {
+  return isRecord(value);
+}
+
+function getErrorDetail(error: unknown): unknown {
+  if (axios.isAxiosError<{ detail?: unknown }>(error)) {
+    return error.response?.data?.detail;
+  }
+  if (!isRecord(error) || !isRecord(error.response)) return undefined;
+  const data = error.response.data;
+  return isRecord(data) ? data.detail : undefined;
+}
+
+function isSymbolSearchResult(value: unknown): value is SymbolSearchResult {
+  if (value === null || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.symbol === "string" &&
+    typeof candidate.name === "string" &&
+    typeof candidate.exchange === "string" &&
+    typeof candidate.type === "string"
+  );
 }
 
 export interface SymbolSearchResponse {
@@ -136,25 +183,26 @@ export const marketService = {
         `/api/market/price/${symbol}?${params}`,
       );
       return response.data;
-    } catch (err: any) {
-      const detail = err?.response?.data?.detail;
-      if (detail) {
-        // Handle both object and string error details
-        if (typeof detail === "object") {
-          throw {
-            message: detail.message || "Price data fetch failed",
-            suggestions: detail.suggestions || [],
-            original: err,
-          };
-        } else if (typeof detail === "string") {
-          throw {
-            message: detail,
-            suggestions: [],
-            original: err,
-          };
-        }
+    } catch (error: unknown) {
+      const detail = getErrorDetail(error);
+      if (typeof detail === "string") {
+        throw new PriceDataError(detail, [], error);
       }
-      throw err;
+      if (isPriceErrorDetail(detail)) {
+        throw new PriceDataError(
+          typeof detail.message === "string"
+            ? detail.message
+            : "Price data fetch failed",
+          Array.isArray(detail.suggestions)
+            ? detail.suggestions.filter(
+                (item): item is SymbolSuggestion =>
+                  typeof item === "string" || isSymbolSearchResult(item),
+              )
+            : [],
+          error,
+        );
+      }
+      throw error;
     }
   },
 
@@ -205,19 +253,21 @@ export const marketService = {
    * Get chart time intervals based on selected period
    */
   getRecommendedInterval(period: TimePeriod): TimeInterval {
-    const intervalMap: Record<TimePeriod, TimeInterval> = {
-      "1d": "5m",
-      "5d": "15m",
-      "1mo": "60m",
-      "3mo": "1d",
-      "6mo": "1d",
-      "1y": "1d",
-      "2y": "1w",
-      "5y": "1w",
-      ytd: "1d",
-      max: "1mo",
-    };
-    return intervalMap[period] || "1d";
+    switch (period) {
+      case "1d":
+        return "5m";
+      case "5d":
+        return "15m";
+      case "1mo":
+        return "60m";
+      case "2y":
+      case "5y":
+        return "1w";
+      case "max":
+        return "1mo";
+      default:
+        return "1d";
+    }
   },
 
   /**

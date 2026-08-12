@@ -23,23 +23,6 @@ export interface ToolExecutionProgressProps {
   durationMs?: number;
 }
 
-/**
- * Map tool names to user-friendly display names.
- * Fallback to titleized tool_name if not in map.
- */
-const DEFAULT_TOOL_METADATA: Record<
-  string,
-  { displayName: string; icon: string }
-> = {
-  search_ticker: { displayName: "Search Ticker", icon: "🔍" },
-  get_company_overview: { displayName: "Company Overview", icon: "🏢" },
-  get_news_sentiment: { displayName: "News Sentiment", icon: "📰" },
-  get_financial_statements: { displayName: "Financial Statements", icon: "📊" },
-  get_market_movers: { displayName: "Market Movers", icon: "📈" },
-  fibonacci_analysis_tool: { displayName: "Fibonacci Analysis", icon: "📐" },
-  stochastic_analysis_tool: { displayName: "Stochastic Analysis", icon: "📉" },
-};
-
 export function ToolExecutionProgress({
   displayName,
   icon,
@@ -50,34 +33,31 @@ export function ToolExecutionProgress({
   durationMs,
 }: ToolExecutionProgressProps) {
   const { t } = useTranslation(["chat", "common"]);
-  // Get status icon and color
-  const StatusIcon = {
-    running: Loader2,
-    success: CheckCircle,
-    error: XCircle,
-    cancelled: XCircle,
-  }[status];
-
-  const statusColor = {
-    running: "text-blue-500",
-    success: "text-green-500",
-    error: "text-red-500",
-    cancelled: "text-amber-500",
-  }[status];
-
-  const bgColor = {
-    running: "bg-blue-50 dark:bg-blue-900/10",
-    success: "bg-green-50 dark:bg-green-900/10",
-    error: "bg-red-50 dark:bg-red-900/10",
-    cancelled: "bg-amber-50 dark:bg-amber-900/10",
-  }[status];
-
-  const borderColor = {
-    running: "border-blue-200 dark:border-blue-800",
-    success: "border-green-200 dark:border-green-800",
-    error: "border-red-200 dark:border-red-800",
-    cancelled: "border-amber-200 dark:border-amber-800",
-  }[status];
+  const isRunning = status === "running";
+  const isSuccess = status === "success";
+  const isCancelled = status === "cancelled";
+  const StatusIcon = isRunning ? Loader2 : isSuccess ? CheckCircle : XCircle;
+  const statusColor = isRunning
+    ? "text-blue-500"
+    : isSuccess
+      ? "text-green-500"
+      : isCancelled
+        ? "text-amber-500"
+        : "text-red-500";
+  const bgColor = isRunning
+    ? "bg-blue-50 dark:bg-blue-900/10"
+    : isSuccess
+      ? "bg-green-50 dark:bg-green-900/10"
+      : isCancelled
+        ? "bg-amber-50 dark:bg-amber-900/10"
+        : "bg-red-50 dark:bg-red-900/10";
+  const borderColor = isRunning
+    ? "border-blue-200 dark:border-blue-800"
+    : isSuccess
+      ? "border-green-200 dark:border-green-800"
+      : isCancelled
+        ? "border-amber-200 dark:border-amber-800"
+        : "border-red-200 dark:border-red-800";
 
   // Format duration
   const formattedDuration = durationMs
@@ -162,23 +142,5 @@ export function ToolExecutionProgress({
         </div>
       )}
     </div>
-  );
-}
-
-/**
- * Helper function to get tool metadata from tool name.
- * Used when backend doesn't provide display_name/icon in event.
- */
-export function getToolMetadata(toolName: string): {
-  displayName: string;
-  icon: string;
-} {
-  return (
-    DEFAULT_TOOL_METADATA[toolName] || {
-      displayName: toolName
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (l) => l.toUpperCase()),
-      icon: "🔧",
-    }
   );
 }

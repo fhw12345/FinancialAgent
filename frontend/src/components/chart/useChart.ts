@@ -16,27 +16,13 @@ import {
   LineData,
   IPriceLine,
 } from "lightweight-charts";
+import type { FibonacciTrend } from "../../services/analysis";
+import type { TooltipData } from "./ChartTooltip";
 
 type ChartType = "line" | "candlestick";
 
-interface FibonacciLevel {
-  level: number;
-  price: number;
-  percentage: string;
-  is_key_level: boolean;
-}
-
-interface PressureZone {
-  center_price: number;
-  upper_bound: number;
-  lower_bound: number;
-  zone_width: number;
-}
-
 interface FibonacciAnalysisData {
-  fibonacci_levels: FibonacciLevel[];
-  pressure_zone: PressureZone | null;
-  raw_data?: any;
+  raw_data?: { top_trends?: FibonacciTrend[] };
 }
 
 let nextChartInstanceId = 0;
@@ -45,7 +31,7 @@ export const useChart = (
   chartContainerRef: React.RefObject<HTMLDivElement>,
   chartType: ChartType,
   onDateRangeSelect?: (startDate: string, endDate: string) => void,
-  setTooltip?: (tooltip: any) => void,
+  setTooltip?: (tooltip: TooltipData) => void,
   interval?: string,
   fibonacciAnalysis?: FibonacciAnalysisData | null,
 ) => {
@@ -55,7 +41,7 @@ export const useChart = (
   const fibonacciLinesRef = useRef<IPriceLine[]>([]);
   const onDateRangeSelectRef = useRef(onDateRangeSelect);
   const setTooltipRef = useRef(setTooltip);
-  const lastTooltipRef = useRef<any>(null);
+  const lastTooltipRef = useRef<TooltipData | null>(null);
 
   // Update refs when props change
   useEffect(() => {
@@ -194,8 +180,15 @@ export const useChart = (
         !setTooltipRef.current
       ) {
         if (lastTooltipRef.current?.visible !== false) {
-          lastTooltipRef.current = { visible: false };
-          setTooltipRef.current?.({ visible: false });
+          const hiddenTooltip: TooltipData = {
+            visible: false,
+            x: 0,
+            y: 0,
+            time: "",
+            price: 0,
+          };
+          lastTooltipRef.current = hiddenTooltip;
+          setTooltipRef.current?.(hiddenTooltip);
         }
         return;
       }
@@ -203,8 +196,15 @@ export const useChart = (
       const data = param.seriesData.get(seriesRef.current);
       if (!data) {
         if (lastTooltipRef.current?.visible !== false) {
-          lastTooltipRef.current = { visible: false };
-          setTooltipRef.current?.({ visible: false });
+          const hiddenTooltip: TooltipData = {
+            visible: false,
+            x: 0,
+            y: 0,
+            time: "",
+            price: 0,
+          };
+          lastTooltipRef.current = hiddenTooltip;
+          setTooltipRef.current?.(hiddenTooltip);
         }
         return;
       }
@@ -224,7 +224,11 @@ export const useChart = (
         ? param.seriesData.get(volumeSeriesRef.current)
         : undefined;
       const volume =
-        volumeData && "value" in volumeData ? volumeData.value : undefined;
+        volumeData &&
+        "value" in volumeData &&
+        typeof volumeData.value === "number"
+          ? volumeData.value
+          : undefined;
 
       let timeStr: string;
       if (typeof param.time === "number") {
@@ -310,9 +314,9 @@ export const useChart = (
       const mainTrend = topTrends[0];
 
       // Calculate 61.8% level for the biggest trend
-      const high = mainTrend["high"];
-      const low = mainTrend["low"];
-      const isUptrend = mainTrend["type"].includes("Uptrend");
+      const high = mainTrend.high;
+      const low = mainTrend.low;
+      const isUptrend = mainTrend.type.includes("Uptrend");
 
       // Calculate 61.8% retracement level
       const level618Price = isUptrend
@@ -335,18 +339,18 @@ export const useChart = (
     }
 
     // For trends #2 and #3: show only 61.8% level calculated for each trend
-    topTrends.slice(1, 3).forEach((trend: any, index: number) => {
+    topTrends.slice(1, 3).forEach((trend, index: number) => {
       const trendNumber = index + 2; // 2 or 3
 
       // Calculate 61.8% retracement level for this specific trend
-      const high = trend["high"]; // Use correct field name from backend
-      const low = trend["low"]; // Use correct field name from backend
-      const level618Price = trend["type"].includes("Uptrend")
+      const high = trend.high;
+      const low = trend.low;
+      const level618Price = trend.type.includes("Uptrend")
         ? high - (high - low) * 0.618 // Retracement from high in uptrend
         : low + (high - low) * 0.618; // Extension from low in downtrend
 
       if (seriesRef.current) {
-        const arrow = trend["type"].includes("Uptrend") ? "↑" : "↓";
+        const arrow = trend.type.includes("Uptrend") ? "↑" : "↓";
         // Different colors for trends 2 and 3
         const color = trendNumber === 2 ? "#4CAF50" : "#FF9800"; // Green for trend 2, Orange for trend 3
         const line = seriesRef.current.createPriceLine({

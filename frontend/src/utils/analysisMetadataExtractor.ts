@@ -27,7 +27,7 @@ export interface FibonacciMetadata {
   swing_low: { price: number; date: string };
   trend_direction: "uptrend" | "downtrend";
   confidence_score?: number;
-  raw_data?: Record<string, any>; // Includes top_trends for chart visualization
+  raw_data?: FibonacciAnalysisResponse["raw_data"];
 }
 
 /**
@@ -79,12 +79,18 @@ export function extractFibonacciMetadata(
  * Extract compact metadata from Stochastic analysis.
  * Stores only latest values, not full time series.
  */
+function numberArray(value: unknown): number[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is number => typeof item === "number")
+    : [];
+}
+
 export function extractStochasticMetadata(
   analysis: StochasticAnalysisResponse,
 ): StochasticMetadata {
-  // Defensive: Check if arrays exist - arrays might be in raw_data
-  const kArray = (analysis.raw_data?.stochastic_k as number[]) || [];
-  const dArray = (analysis.raw_data?.stochastic_d as number[]) || [];
+  // Defensive: arrays can arrive in raw_data from older backend responses.
+  const kArray = numberArray(analysis.raw_data.stochastic_k);
+  const dArray = numberArray(analysis.raw_data.stochastic_d);
 
   // Get latest K and D values
   const latestK = kArray.length > 0 ? kArray[kArray.length - 1] : 50;

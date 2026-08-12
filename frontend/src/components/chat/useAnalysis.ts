@@ -29,7 +29,7 @@ import {
 } from "../../utils/analysisMetadataExtractor";
 import {
   createToolCall,
-  TOOL_REGISTRY,
+  getToolInfo,
   type ToolName,
 } from "../../constants/toolRegistry";
 import type {
@@ -38,8 +38,30 @@ import type {
   ResponseStreamModeEvent,
   RunStateEvent,
   RouteSelectedEvent,
+  ChatMessage,
 } from "../../types/api";
 import i18n from "../../i18n";
+import axios from "axios";
+
+type AnalysisType =
+  | "fibonacci"
+  | "macro"
+  | "company_overview"
+  | "stochastic"
+  | "cash_flow"
+  | "balance_sheet"
+  | "news_sentiment"
+  | "market_movers";
+
+interface AnalysisMutationResult {
+  type: string;
+  content: string;
+  analysis_data?: Record<string, unknown>;
+}
+
+type MessageUpdater = (
+  updater: (messages: ChatMessage[]) => ChatMessage[],
+) => void;
 
 // Formatting functions moved to analysisFormatters.ts
 
@@ -47,7 +69,7 @@ import i18n from "../../i18n";
 export const useAnalysis = (
   currentSymbol: string | null, // Used for symbol context injection (takes priority over DB)
   _selectedDateRange: { start: string; end: string },
-  setMessages: (updater: (prevMessages: any[]) => any[]) => void,
+  setMessages: MessageUpdater,
   _setSelectedDateRange: (range: { start: string; end: string }) => void,
   _selectedInterval?: string,
   chatId?: string | null,
@@ -106,7 +128,7 @@ export const useAnalysis = (
       let accumulatedContent = "";
 
       // Stream response using persistent MongoDB endpoint
-      return new Promise((resolve, reject) => {
+      return new Promise<AnalysisMutationResult>((resolve, reject) => {
         abortActiveRef.current = chatService.sendMessageStreamPersistent(
           userMessage,
           chatId || null,
@@ -117,7 +139,7 @@ export const useAnalysis = (
             // Use flushSync to force immediate render of each chunk
             flushSync(() => {
               setMessages((prev) =>
-                prev.map((msg: any) =>
+                prev.map((msg) =>
                   msg._id === assistantMessageId
                     ? { ...msg, content: accumulatedContent }
                     : msg,
@@ -157,7 +179,7 @@ export const useAnalysis = (
             }
             console.error("❌ Streaming error:", error);
             setMessages((prev) =>
-              prev.map((msg: any) =>
+              prev.map((msg) =>
                 msg._id === assistantMessageId
                   ? {
                       ...msg,
@@ -256,7 +278,7 @@ export const useAnalysis = (
             onClarificationRequired: (event: ClarificationRequiredEvent) => {
               accumulatedContent = event.message;
               setMessages((prev) =>
-                prev.map((msg: any) =>
+                prev.map((msg) =>
                   msg._id === assistantMessageId
                     ? {
                         ...msg,
@@ -282,7 +304,7 @@ export const useAnalysis = (
                 ? `${accumulatedContent.trim()}\n\n${cancelledText}`
                 : cancelledText;
               setMessages((prev) =>
-                prev.map((msg: any) => {
+                prev.map((msg) => {
                   if (msg._id === assistantMessageId) {
                     return {
                       ...msg,
@@ -339,7 +361,7 @@ export const useAnalysis = (
 export const useButtonAnalysis = (
   currentSymbol: string | null,
   selectedDateRange: { start: string; end: string },
-  setMessages: (updater: (prevMessages: any[]) => any[]) => void,
+  setMessages: MessageUpdater,
   _setSelectedDateRange: (range: { start: string; end: string }) => void,
   selectedInterval?: string,
   chatId?: string | null,
@@ -348,7 +370,7 @@ export const useButtonAnalysis = (
 ) => {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<AnalysisMutationResult | undefined, Error, AnalysisType>({
     // Note: Single mutation instance handles all analysis types
     // Deduplication happens automatically via isPending state
     mutationKey: [
@@ -358,32 +380,10 @@ export const useButtonAnalysis = (
       selectedDateRange.start,
       selectedDateRange.end,
     ],
-    mutationFn: async (
-      analysisType:
-        | "fibonacci"
-        | "macro"
-        | "company_overview"
-        | "stochastic"
-        | "cash_flow"
-        | "balance_sheet"
-        | "news_sentiment"
-        | "market_movers",
-    ) => {
-      let response;
+    mutationFn: async (analysisType) => {
+      let response: AnalysisMutationResult | undefined;
 
-      // Title mapping for different analysis types
-      const titleMap = {
-        fibonacci: "Fibonacci Analysis",
-        macro: "Macro Sentiment",
-        company_overview: "Company Overview",
-        stochastic: "Stochastic Analysis",
-        cash_flow: "Cash Flow",
-        balance_sheet: "Balance Sheet",
-        news_sentiment: "News Sentiment",
-        market_movers: "Market Movers",
-      };
-
-      const analysisTitle = titleMap[analysisType];
+      const analysisTitle = getToolInfo(analysisType).title;
       const chatTitle = currentSymbol
         ? `${currentSymbol} ${analysisTitle}`
         : analysisTitle;
@@ -413,7 +413,7 @@ export const useButtonAnalysis = (
             type: "fibonacci",
             content: formatFibonacciResponse(result),
             // Store only compact metadata, not full price history
-            analysis_data: extractFibonacciMetadata(result),
+            analysis_data: { ...extractFibonacciMetadata(result) },
           };
           break;
         }
@@ -460,7 +460,7 @@ export const useButtonAnalysis = (
             type: "stochastic",
             content: formatStochasticResponse(result, i18n.language),
             // Store only compact metadata, not full K/D arrays
-            analysis_data: extractStochasticMetadata(result),
+            analysis_data: { ...extractStochasticMetadata(result) },
           };
           break;
         }
@@ -516,11 +516,11 @@ export const useButtonAnalysis = (
 
       // Save to MongoDB using streaming endpoint (analysis sources skip LLM)
       if (response) {
-        return new Promise((resolve, reject) => {
+        return new Promise<AnalysisMutationResult>((resolve, reject) => {
           // Get tool metadata for user message
-          const toolInfo = TOOL_REGISTRY[analysisType as ToolName];
-          const toolTitle = toolInfo?.title || analysisType;
-          const toolIcon = toolInfo?.icon || "🔧";
+          const toolInfo = getToolInfo(analysisType);
+          const toolTitle = toolInfo.title;
+          const toolIcon = toolInfo.icon;
 
           // Create user message describing the action
           const userMessage = currentSymbol
@@ -630,7 +630,7 @@ export const useButtonAnalysis = (
 
       return response;
     },
-    onSuccess: (response: any) => {
+    onSuccess: (response) => {
       console.log("✅ Button analysis complete:", {
         type: response?.type,
         hasAnalysisData: !!response?.analysis_data,
@@ -640,9 +640,10 @@ export const useButtonAnalysis = (
       // Add both user message and assistant response to frontend messages
       if (response) {
         // Get tool metadata
-        const toolInfo = TOOL_REGISTRY[response.type as ToolName];
-        const toolTitle = toolInfo?.title || response.type;
-        const toolIcon = toolInfo?.icon || "🔧";
+        const toolName = response.type as ToolName;
+        const toolInfo = getToolInfo(toolName);
+        const toolTitle = toolInfo.title;
+        const toolIcon = toolInfo.icon;
 
         // Create user message
         const userMessage = currentSymbol
@@ -674,9 +675,12 @@ export const useButtonAnalysis = (
         console.log("📝 User message and assistant response added to state");
       }
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const detail = axios.isAxiosError<{ detail?: string }>(error)
+        ? error.response?.data?.detail
+        : undefined;
       const errorContent =
-        error?.response?.data?.detail || error.message || "Unknown error";
+        detail ?? (error instanceof Error ? error.message : "Unknown error");
       setMessages((prev) => [
         ...prev,
         {

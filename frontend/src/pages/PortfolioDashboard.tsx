@@ -20,16 +20,13 @@ import { WatchlistPanel } from "../components/portfolio/WatchlistPanel";
 import { AnalysisRunner } from "../components/portfolio/AnalysisRunner";
 import { RecentTransactions } from "../components/portfolio/RecentTransactions";
 import { DecisionTracker } from "../components/portfolio/DecisionTracker";
-import {
-  SettingsPanel,
-  usePortfolioSettings,
-} from "../components/portfolio/SettingsPanel";
+import { SettingsPanel } from "../components/portfolio/SettingsPanel";
+import { usePortfolioSettings } from "../hooks/usePortfolioSettings";
 import { AnalysisButtons } from "../components/portfolio/AnalysisButtons";
 import { MarketMovers } from "../components/MarketMovers";
 import { ChatSidebar } from "../components/chat/ChatSidebar";
 import { ChatMessages } from "../components/chat/ChatMessages";
 import { formatPL, getPLColor } from "../services/portfolioApi";
-
 
 export default function PortfolioDashboard() {
   const { t } = useTranslation(["portfolio", "common"]);

@@ -12,6 +12,7 @@ import { ChatSidebar } from "./chat/ChatSidebar";
 import { useChatRestoration } from "../hooks/useChatRestoration";
 import { useUIStateSync } from "../hooks/useUIStateSync";
 import type { FibonacciMetadata } from "../utils/analysisMetadataExtractor";
+import { getRecordValue } from "../utils/safeRecord";
 import {
   calculateDateRangeForSymbol,
   getPeriodForInterval,
@@ -57,7 +58,7 @@ function routeReasonKey(reasonCode: string): string {
     explicit_override: "chat:routing.reasons.explicitOverride",
     restored_deep: "chat:routing.reasons.restoredDeep",
   };
-  return keys[reasonCode] ?? "chat:routing.reasons.default";
+  return getRecordValue(keys, reasonCode) ?? "chat:routing.reasons.default";
 }
 
 export function EnhancedChatInterface() {
@@ -209,7 +210,8 @@ export function EnhancedChatInterface() {
     // Iterate backwards without creating array copy for better performance
     let fibMessage = null;
     for (let i = messages.length - 1; i >= 0; i--) {
-      const msg = messages[i];
+      const msg = messages.at(i);
+      if (!msg) continue;
       if (
         msg.role === "assistant" &&
         msg.analysis_data &&

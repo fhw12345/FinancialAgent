@@ -6,13 +6,13 @@ import type {
   ChatDetailResponse,
   UpdateUIStateRequest,
   Chat,
-  StreamEvent,
   DeepStreamEvent,
   RouteSelectedEvent,
   ResponseStreamModeEvent,
   RunStateEvent,
   AgentRun,
   MarketStatus,
+  ToolCall,
 } from "../types/api";
 import {
   isAgentEventEnvelope,
@@ -54,7 +54,10 @@ export const healthService = {
     connected: boolean;
     [key: string]: unknown;
   }> {
-    const response = await api.get("/api/health/mongodb");
+    const response = await api.get<{
+      connected: boolean;
+      [key: string]: unknown;
+    }>("/api/health/mongodb");
     return response.data;
   },
 
@@ -62,17 +65,26 @@ export const healthService = {
     connected: boolean;
     [key: string]: unknown;
   }> {
-    const response = await api.get("/api/health/redis");
+    const response = await api.get<{
+      connected: boolean;
+      [key: string]: unknown;
+    }>("/api/health/redis");
     return response.data;
   },
 
   async getReadiness(): Promise<{ ready: boolean; [key: string]: unknown }> {
-    const response = await api.get("/api/health/ready");
+    const response = await api.get<{
+      ready: boolean;
+      [key: string]: unknown;
+    }>("/api/health/ready");
     return response.data;
   },
 
   async getLiveness(): Promise<{ alive: boolean; [key: string]: unknown }> {
-    const response = await api.get("/api/health/live");
+    const response = await api.get<{
+      alive: boolean;
+      [key: string]: unknown;
+    }>("/api/health/live");
     return response.data;
   },
 };
@@ -193,8 +205,8 @@ export const chatService = {
       title?: string;
       role?: string;
       source?: string;
-      metadata?: any; // Analysis metadata for overlays
-      tool_call?: any; // Tool invocation metadata for collapsible UI wrapper
+      metadata?: Record<string, unknown>;
+      tool_call?: ToolCall;
       // Agent Configuration
       agent_version?: "auto" | "v2" | "v3" | "v4-deep";
       onRouteSelected?: (event: RouteSelectedEvent) => void;
@@ -250,7 +262,7 @@ export const chatService = {
       let buffer = "";
       const lastSequenceByStream = new Map<string, number>();
 
-      while (true) {
+      for (;;) {
         const { done, value } = await reader.read();
 
         if (done) {
@@ -276,7 +288,13 @@ export const chatService = {
                 parsed.sequence,
               );
             }
-            const data = normalizeAgentStreamEvent(parsed as StreamEvent);
+            let data;
+            try {
+              data = normalizeAgentStreamEvent(parsed);
+            } catch {
+              console.warn("Ignored malformed SSE event");
+              continue;
+            }
 
             if (data.type === "route_selected") {
               options?.onRouteSelected?.(data);

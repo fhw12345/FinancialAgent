@@ -332,8 +332,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     // Find the last user message - iterate backwards WITHOUT array copy
     let lastUserMessage: ChatMessage | null = null;
     for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === "user") {
-        lastUserMessage = messages[i];
+      const message = messages.at(i);
+      if (message?.role === "user") {
+        lastUserMessage = message;
         break;
       }
     }
@@ -441,7 +442,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   // Compute last user message index against visibleMessages (used for accordion placement)
   const lastUserIdx = useMemo(() => {
     for (let i = visibleMessages.length - 1; i >= 0; i--) {
-      if (visibleMessages[i].role === "user") {
+      if (visibleMessages.at(i)?.role === "user") {
         return i;
       }
     }

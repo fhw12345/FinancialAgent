@@ -3,8 +3,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+import { apiClient } from "../services/api";
 
 export interface PortfolioOrder {
   order_id: string;
@@ -27,7 +26,7 @@ interface PortfolioOrdersResponse {
 
 async function fetchPortfolioOrders(
   limit: number = 50,
-  status?: string
+  status?: string,
 ): Promise<PortfolioOrdersResponse> {
   const params = new URLSearchParams({
     limit: limit.toString(),
@@ -37,13 +36,10 @@ async function fetchPortfolioOrders(
     params.append("status", status);
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/portfolio/orders?${params}`);
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch portfolio orders: ${response.statusText}`);
-  }
-
-  return response.json();
+  const response = await apiClient.get<PortfolioOrdersResponse>(
+    `/api/portfolio/orders?${params}`,
+  );
+  return response.data;
 }
 
 export function usePortfolioOrders(limit: number = 50, status?: string) {

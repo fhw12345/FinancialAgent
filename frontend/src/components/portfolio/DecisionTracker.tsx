@@ -35,12 +35,17 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useDecisions, useMarkOrderExecuted, type DecisionRow } from "../../hooks/useDecisions";
-import { usePortfolioSettings } from "./SettingsPanel";
+import {
+  useDecisions,
+  useMarkOrderExecuted,
+  type DecisionRow,
+} from "../../hooks/useDecisions";
+import { usePortfolioSettings } from "../../hooks/usePortfolioSettings";
 import { IntentBadge } from "./IntentBadge";
 import { ResearchPanel } from "./ResearchPanel";
 import { useHoldings } from "../../hooks/usePortfolio";
 import { formatDate } from "../../utils/timeFormatter";
+import { getRecordValue, setRecordValue } from "../../utils/safeRecord";
 
 const HORIZONS = ["7d", "30d", "90d"] as const;
 type Horizon = (typeof HORIZONS)[number];
@@ -93,7 +98,16 @@ function PnlCell({
         : "text-gray-600";
   const sign = pct > 0 ? "+" : "";
   return (
-    <span className={cls} title={right === true ? "AI was right" : right === false ? "AI was wrong" : "neutral"}>
+    <span
+      className={cls}
+      title={
+        right === true
+          ? "AI was right"
+          : right === false
+            ? "AI was wrong"
+            : "neutral"
+      }
+    >
       {sign}
       {pct.toFixed(2)}%
     </span>
@@ -101,24 +115,24 @@ function PnlCell({
 }
 
 function SideBadge({ side }: { side: DecisionRow["side"] }) {
-  const map = {
-    buy: {
-      Icon: ArrowUpCircle,
-      cls: "bg-green-100 text-green-800",
-      label: "BUY",
-    },
-    sell: {
-      Icon: ArrowDownCircle,
-      cls: "bg-red-100 text-red-800",
-      label: "SELL",
-    },
-    hold: {
-      Icon: CircleDot,
-      cls: "bg-yellow-100 text-yellow-800",
-      label: "HOLD",
-    },
-  } as const;
-  const { Icon, cls, label } = map[side] ?? map.hold;
+  const { Icon, cls, label } =
+    side === "buy"
+      ? {
+          Icon: ArrowUpCircle,
+          cls: "bg-green-100 text-green-800",
+          label: "BUY",
+        }
+      : side === "sell"
+        ? {
+            Icon: ArrowDownCircle,
+            cls: "bg-red-100 text-red-800",
+            label: "SELL",
+          }
+        : {
+            Icon: CircleDot,
+            cls: "bg-yellow-100 text-yellow-800",
+            label: "HOLD",
+          };
   return (
     <span
       className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium ${cls}`}
@@ -142,9 +156,11 @@ function buildSeries(latestPerSymbol: DecisionRow[]): {
   const data: SeriesPoint[] = HORIZONS.map((h) => {
     const point: SeriesPoint = { horizon: h };
     for (const d of latestPerSymbol) {
-      const snap = d.pnl_snapshots?.[h];
+      const snap = d.pnl_snapshots
+        ? getRecordValue(d.pnl_snapshots, h)
+        : undefined;
       if (snap?.pnl_pct !== undefined) {
-        point[d.symbol] = snap.pnl_pct;
+        setRecordValue<string, string | number>(point, d.symbol, snap.pnl_pct);
       }
     }
     return point;
@@ -228,12 +244,14 @@ function computeKpis(decisions: DecisionRow[]): Kpis {
   for (const d of decisions) {
     let scored = false;
     for (const h of HORIZONS) {
-      const pct = d.pnl_snapshots?.[h]?.pnl_pct;
+      const pct = d.pnl_snapshots
+        ? getRecordValue(d.pnl_snapshots, h)?.pnl_pct
+        : undefined;
       const right = decisionWasRight(d.side, pct);
       if (right === null) continue;
       scored = true;
-      hits[h].push(right ? 1 : 0);
-      if (typeof pct === "number") pnls[h].push(pct);
+      getRecordValue(hits, h)?.push(right ? 1 : 0);
+      if (typeof pct === "number") getRecordValue(pnls, h)?.push(pct);
     }
     if (scored) scoredCount += 1;
 
@@ -319,11 +337,16 @@ function KpiBar({ kpis }: { kpis: Kpis }) {
         value={`${kpis.scoredCount}`}
         tooltip="Decisions with at least one P&L snapshot"
       />
-      <div className="flex flex-col" title="BUY right if up, SELL right if down, HOLD right if |Δ| < 2%">
+      <div
+        className="flex flex-col"
+        title="BUY right if up, SELL right if down, HOLD right if |Δ| < 2%"
+      >
         <span className="text-[10px] uppercase tracking-wider text-gray-500">
           Hit 7d
         </span>
-        <span className={`text-sm font-semibold tabular-nums ${hitColor(kpis.hitRate7d)}`}>
+        <span
+          className={`text-sm font-semibold tabular-nums ${hitColor(kpis.hitRate7d)}`}
+        >
           {fmtHit(kpis.hitRate7d)}
         </span>
       </div>
@@ -331,7 +354,9 @@ function KpiBar({ kpis }: { kpis: Kpis }) {
         <span className="text-[10px] uppercase tracking-wider text-gray-500">
           Hit 30d
         </span>
-        <span className={`text-sm font-semibold tabular-nums ${hitColor(kpis.hitRate30d)}`}>
+        <span
+          className={`text-sm font-semibold tabular-nums ${hitColor(kpis.hitRate30d)}`}
+        >
           {fmtHit(kpis.hitRate30d)}
         </span>
       </div>
@@ -339,7 +364,9 @@ function KpiBar({ kpis }: { kpis: Kpis }) {
         <span className="text-[10px] uppercase tracking-wider text-gray-500">
           Hit 90d
         </span>
-        <span className={`text-sm font-semibold tabular-nums ${hitColor(kpis.hitRate90d)}`}>
+        <span
+          className={`text-sm font-semibold tabular-nums ${hitColor(kpis.hitRate90d)}`}
+        >
           {fmtHit(kpis.hitRate90d)}
         </span>
       </div>
@@ -354,9 +381,13 @@ function KpiBar({ kpis }: { kpis: Kpis }) {
           Conf calib (≥7 / ≤5)
         </span>
         <span className="text-sm font-semibold tabular-nums">
-          <span className={hitColor(kpis.highConfHitRate)}>{fmtHit(kpis.highConfHitRate)}</span>
+          <span className={hitColor(kpis.highConfHitRate)}>
+            {fmtHit(kpis.highConfHitRate)}
+          </span>
           <span className="text-gray-400"> / </span>
-          <span className={hitColor(kpis.lowConfHitRate)}>{fmtHit(kpis.lowConfHitRate)}</span>
+          <span className={hitColor(kpis.lowConfHitRate)}>
+            {fmtHit(kpis.lowConfHitRate)}
+          </span>
         </span>
       </div>
     </div>
@@ -544,18 +575,23 @@ function DecisionRows({
               </span>
             )}
             {Array.isArray(
-              (d.metadata?.data_quality as { degraded_fields?: unknown[] } | undefined)
-                ?.degraded_fields,
+              (
+                d.metadata?.data_quality as
+                  { degraded_fields?: unknown[] } | undefined
+              )?.degraded_fields,
             ) &&
-              ((d.metadata?.data_quality as { degraded_fields: unknown[] }).degraded_fields
-                .length ?? 0) > 0 && (
+              ((d.metadata?.data_quality as { degraded_fields: unknown[] })
+                .degraded_fields.length ?? 0) > 0 && (
                 <span
                   data-testid="data-quality-degraded"
                   title={
                     "数据降级：相关字段已无法从主源拿到或已过期\n• " +
                     (
-                      (d.metadata?.data_quality as { degraded_fields: string[] })
-                        .degraded_fields ?? []
+                      (
+                        d.metadata?.data_quality as {
+                          degraded_fields: string[];
+                        }
+                      ).degraded_fields ?? []
                     ).join("\n• ")
                   }
                   className="inline-flex items-center rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200"
@@ -570,17 +606,17 @@ function DecisionRows({
         </td>
         <td className="py-2 pr-3 text-gray-700 font-mono text-xs">
           {d.metadata?.entry_price != null
-            ? `$${(d.metadata.entry_price).toFixed(2)}`
+            ? `$${d.metadata.entry_price.toFixed(2)}`
             : "—"}
         </td>
         <td className="py-2 pr-3 text-red-600 font-mono text-xs">
           {d.metadata?.stop_loss != null
-            ? `$${(d.metadata.stop_loss).toFixed(2)}`
+            ? `$${d.metadata.stop_loss.toFixed(2)}`
             : "—"}
         </td>
         <td className="py-2 pr-3 text-green-600 font-mono text-xs">
           {d.metadata?.take_profit != null
-            ? `$${(d.metadata.take_profit).toFixed(2)}`
+            ? `$${d.metadata.take_profit.toFixed(2)}`
             : "—"}
         </td>
         <td className="py-2 pr-3 text-gray-700 text-xs">
@@ -600,7 +636,8 @@ function DecisionRows({
         </td>
         <td className="py-2 pr-3 text-xs text-gray-500">{d.decision_type}</td>
         <td className="py-2 pr-3" onClick={(e) => e.stopPropagation()}>
-          {d.decision_type === "order" && (d.side === "buy" || d.side === "sell") ? (
+          {d.decision_type === "order" &&
+          (d.side === "buy" || d.side === "sell") ? (
             d.status === "filled" ? (
               <span
                 className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700"
@@ -638,10 +675,7 @@ function DecisionRows({
               </span>
               <Translated
                 text={reasoning}
-                precomputed={
-                  (d.metadata?.reasoning_zh) ??
-                  null
-                }
+                precomputed={d.metadata?.reasoning_zh ?? null}
               />
               {d.metadata?.position_size_percent != null && (
                 <span className="ml-3 text-xs text-gray-500">
@@ -656,8 +690,7 @@ function DecisionRows({
                       onOpenResearch({
                         symbol: d.symbol,
                         text: String(d.metadata?.full_research || ""),
-                        text_zh:
-                          (d.metadata?.full_research_zh) ?? null,
+                        text_zh: d.metadata?.full_research_zh ?? null,
                       });
                     }}
                     className="inline-flex items-center gap-1 rounded border border-blue-300 bg-white px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
@@ -682,9 +715,12 @@ export function DecisionTracker() {
   const [expandedReasoning, setExpandedReasoning] = useState<Set<string>>(
     new Set(),
   );
-  const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
-  const [researchModal, setResearchModal] =
-    useState<ResearchModalState | null>(null);
+  const [expandedHistory, setExpandedHistory] = useState<Set<string>>(
+    new Set(),
+  );
+  const [researchModal, setResearchModal] = useState<ResearchModalState | null>(
+    null,
+  );
   const [markModal, setMarkModal] = useState<MarkExecutedModalState | null>(
     null,
   );
@@ -697,12 +733,11 @@ export function DecisionTracker() {
     100,
   );
 
-  const decisions = data?.decisions ?? [];
+  const decisions = useMemo(() => data?.decisions ?? [], [data?.decisions]);
 
   const openMarkModal = (d: DecisionRow) => {
-    const entry = (d.metadata?.entry_price) ?? null;
-    const sizePct =
-      (d.metadata?.position_size_percent) ?? null;
+    const entry = d.metadata?.entry_price ?? null;
+    const sizePct = d.metadata?.position_size_percent ?? null;
     const cash = settings?.cash_balance ?? 0;
     const px = entry ?? d.decision_price ?? 0;
     let qty = 0;
@@ -751,7 +786,13 @@ export function DecisionTracker() {
 
   const showChart =
     chartSymbols.length > 0 &&
-    chartData.some((p) => chartSymbols.some((s) => typeof p[s] === "number"));
+    chartData.some((point) =>
+      chartSymbols.some(
+        (symbol) =>
+          typeof getRecordValue<string, string | number>(point, symbol) ===
+          "number",
+      ),
+    );
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 mt-6">
@@ -803,7 +844,7 @@ export function DecisionTracker() {
         )}
         {error && (
           <div className="text-sm text-red-600">
-            Failed to load decisions: {(error).message}
+            Failed to load decisions: {error.message}
           </div>
         )}
 
@@ -911,7 +952,7 @@ export function DecisionTracker() {
                         key={sym}
                         type="monotone"
                         dataKey={sym}
-                        stroke={PALETTE[i % PALETTE.length]}
+                        stroke={PALETTE.at(i % PALETTE.length) ?? "#2563eb"}
                         strokeWidth={2}
                         dot
                         connectNulls
@@ -932,13 +973,16 @@ export function DecisionTracker() {
       {researchModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setResearchModal(null);
-          }}
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-3xl max-h-[80vh] flex flex-col rounded-lg bg-white shadow-xl">
+          <button
+            type="button"
+            aria-label="Close full research dialog"
+            className="absolute inset-0 cursor-default"
+            onClick={() => setResearchModal(null)}
+          />
+          <div className="relative w-full max-w-3xl max-h-[80vh] flex flex-col rounded-lg bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
               <h3 className="text-base font-semibold text-gray-900">
                 Full Research — {researchModal.symbol}
@@ -1023,22 +1067,24 @@ function MarkExecutedModal({
     Number.isFinite(qty) && Number.isFinite(price) ? qty * price : 0;
   const valid = qty > 0 && price > 0;
   const sideLabel = decision.side === "buy" ? "BUY" : "SELL";
-  const sideClass =
-    decision.side === "buy" ? "text-green-700" : "text-red-700";
+  const sideClass = decision.side === "buy" ? "text-green-700" : "text-red-700";
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !isPending) onClose();
-      }}
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+      <button
+        type="button"
+        aria-label="Close execution dialog"
+        className="absolute inset-0 cursor-default"
+        disabled={isPending}
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-md rounded-lg bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
           <h3 className="text-base font-semibold text-gray-900">
-            Mark Executed —{" "}
-            <span className={sideClass}>{sideLabel}</span>{" "}
+            Mark Executed — <span className={sideClass}>{sideLabel}</span>{" "}
             <span className="font-mono">{decision.symbol}</span>
           </h3>
           <button
@@ -1054,17 +1100,21 @@ function MarkExecutedModal({
           <div className="text-xs text-gray-500">
             LLM suggested:{" "}
             {decision.metadata?.entry_price != null
-              ? `entry $${(decision.metadata.entry_price).toFixed(2)}`
+              ? `entry $${decision.metadata.entry_price.toFixed(2)}`
               : "no entry price"}
             {decision.metadata?.position_size_percent != null
               ? ` · size ${decision.metadata.position_size_percent}%`
               : ""}
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="executed-quantity"
+              className="block text-xs font-medium text-gray-700 mb-1"
+            >
               Filled Quantity
             </label>
             <input
+              id="executed-quantity"
               type="number"
               min="0"
               step="any"
@@ -1075,10 +1125,14 @@ function MarkExecutedModal({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="executed-price"
+              className="block text-xs font-medium text-gray-700 mb-1"
+            >
               Fill Price (USD)
             </label>
             <input
+              id="executed-price"
               type="number"
               min="0"
               step="0.01"
@@ -1095,8 +1149,8 @@ function MarkExecutedModal({
             </span>
             <span className="text-gray-400">
               {" "}
-              (cash will{" "}
-              {decision.side === "buy" ? "decrease" : "increase"} by this amount)
+              (cash will {decision.side === "buy" ? "decrease" : "increase"} by
+              this amount)
             </span>
           </div>
           {error && (

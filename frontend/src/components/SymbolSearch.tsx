@@ -10,7 +10,13 @@
  * - Clean, accessible UI
  */
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Search, Building2, TrendingUp, CornerDownLeft } from "lucide-react";
 import { marketService, SymbolSearchResult } from "../services/market";
@@ -44,7 +50,6 @@ export const SymbolSearch: React.FC<SymbolSearchProps> = ({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Sync internal query state with external value prop
   useEffect(() => {
@@ -55,9 +60,19 @@ export const SymbolSearch: React.FC<SymbolSearchProps> = ({
   }, [value, companyName]);
 
   // Debounced search function
-  const debouncedSearch = useCallback(
-    marketService.createDebouncedSearch(300),
+  const debouncedSearch = useMemo(
+    () => marketService.createDebouncedSearch(300),
     [],
+  );
+
+  const handleResultSelect = useCallback(
+    (result: SymbolSearchResult) => {
+      setQuery(`${result.symbol} - ${result.name}`);
+      setIsOpen(false);
+      setResults([]);
+      onSymbolSelect(result.symbol, result.name);
+    },
+    [onSymbolSelect],
   );
 
   // Search function. When `autoSelectOnReady` is true, the top high-confidence
@@ -82,8 +97,8 @@ export const SymbolSearch: React.FC<SymbolSearchProps> = ({
           setIsLoading(false);
 
           if (autoSelectOnReady && searchResults.results.length > 0) {
-            const top = searchResults.results[0];
-            if (top.confidence && top.confidence >= 0.85) {
+            const top = searchResults.results.at(0);
+            if (top?.confidence && top.confidence >= 0.85) {
               handleResultSelect(top);
             }
           }
@@ -95,7 +110,7 @@ export const SymbolSearch: React.FC<SymbolSearchProps> = ({
         setIsLoading(false);
       }
     },
-    [debouncedSearch],
+    [debouncedSearch, handleResultSelect],
   );
 
   // Handle input change (just update query, don't search)
@@ -103,14 +118,6 @@ export const SymbolSearch: React.FC<SymbolSearchProps> = ({
     const newQuery = e.target.value;
     setQuery(newQuery);
     // Don't trigger search on every keystroke - only on Enter key
-  };
-
-  // Handle result selection
-  const handleResultSelect = (result: SymbolSearchResult) => {
-    setQuery(`${result.symbol} - ${result.name}`);
-    setIsOpen(false);
-    setResults([]);
-    onSymbolSelect(result.symbol, result.name);
   };
 
   // Handle keyboard navigation
@@ -131,11 +138,12 @@ export const SymbolSearch: React.FC<SymbolSearchProps> = ({
         // If dropdown is open with results, select the highlighted item
         if (results.length > 0) {
           if (selectedIndex >= 0 && selectedIndex < results.length) {
-            handleResultSelect(results[selectedIndex]);
+            const selected = results.at(selectedIndex);
+            if (selected) handleResultSelect(selected);
           } else {
             // Auto-select top result if high confidence
-            const top = results[0];
-            if (top.confidence && top.confidence >= 0.85) {
+            const top = results.at(0);
+            if (top?.confidence && top.confidence >= 0.85) {
               handleResultSelect(top);
             }
           }
@@ -178,15 +186,6 @@ export const SymbolSearch: React.FC<SymbolSearchProps> = ({
       inputRef.current.focus();
     }
   }, [autoFocus]);
-
-  // Clear timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, []);
 
   return (
     <div className={`relative ${className}`}>

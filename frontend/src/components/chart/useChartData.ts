@@ -37,16 +37,13 @@ const convertTimezone = (
     return easternDate;
   }
 
-  const timezoneOffsets = {
-    UTC: 0,
-    "US/Eastern": -5, // EST
-    "Asia/Shanghai": 8,
-    "Europe/London": 0, // GMT
-    "Asia/Tokyo": 9,
-  };
-
   const easternOffset = -5; // EST hours
-  const targetOffset = timezoneOffsets[targetTimezone];
+  const targetOffset =
+    targetTimezone === "Asia/Shanghai"
+      ? 8
+      : targetTimezone === "Asia/Tokyo"
+        ? 9
+        : 0;
   const offsetDiff = targetOffset - easternOffset;
 
   return new Date(easternDate.getTime() + offsetDiff * 60 * 60 * 1000);

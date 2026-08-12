@@ -15,10 +15,7 @@
  */
 import type { OrderIntent } from "../../hooks/useDecisions";
 
-const STYLES: Record<
-  OrderIntent,
-  { label: string; className: string }
-> = {
+const STYLES: Record<OrderIntent, { label: string; className: string }> = {
   open_long: {
     label: "建多",
     className:
@@ -48,7 +45,14 @@ export function IntentBadge({
   intent: OrderIntent | null | undefined;
 }) {
   if (!intent || intent === "hold") return null;
-  const style = STYLES[intent];
+  const style =
+    intent === "open_long"
+      ? STYLES.open_long
+      : intent === "close_long"
+        ? STYLES.close_long
+        : intent === "open_short"
+          ? STYLES.open_short
+          : STYLES.close_short;
   if (!style || !style.label) return null;
   return (
     <span

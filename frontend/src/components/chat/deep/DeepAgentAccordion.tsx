@@ -7,6 +7,7 @@
  */
 
 import React, { useCallback } from "react";
+import { getRecordValue } from "../../../utils/safeRecord";
 import {
   ChevronRight,
   Loader2,
@@ -110,14 +111,16 @@ function DeepAgentAccordionInner({ state, dispatch }: DeepAgentAccordionProps) {
         <div className="px-3 py-2 space-y-2">
           {/* Sub-agent sections */}
           {state.subagentOrder.map((name) => {
-            const sa = state.subagents[name];
+            const sa = getRecordValue(state.subagents, name);
             if (!sa) return null;
             return (
               <SubAgentSection
                 key={name}
                 subagent={sa}
                 subagentKey={name}
-                isExpanded={state.expanded.subagents[name] ?? false}
+                isExpanded={
+                  getRecordValue(state.expanded.subagents, name) ?? false
+                }
                 onToggle={toggleSubagent}
               />
             );

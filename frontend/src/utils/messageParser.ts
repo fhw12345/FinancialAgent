@@ -90,7 +90,8 @@ export function replayDeepEvents<T>(
   dispatch: (action: T) => void,
 ): boolean {
   for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i];
+    const msg = messages.at(i);
+    if (!msg) continue;
     if (msg.deep_events && Array.isArray(msg.deep_events)) {
       let hasAction = false;
       for (const event of msg.deep_events) {

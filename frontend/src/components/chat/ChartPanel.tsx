@@ -5,12 +5,16 @@
  * such as symbol search and quick analysis buttons.
  */
 import React, { memo } from "react";
-import { UseQueryResult, UseMutationResult, useQuery } from "@tanstack/react-query";
+import {
+  UseQueryResult,
+  UseMutationResult,
+  useQuery,
+} from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { SymbolSearch } from "../SymbolSearch";
 import { TradingChart } from "../TradingChart";
 import { DateRangePicker } from "../chart/DateRangePicker";
-import { marketService } from "../../services/market";
+import { marketService, PriceDataError } from "../../services/market";
 import {
   BarChart3,
   TrendingUp,
@@ -78,7 +82,15 @@ interface ChartPanelProps {
   handleIntervalChange: (interval: TimeInterval) => void;
   handleDateRangeSelect: (startDate: string, endDate: string) => void;
   handleQuickAnalysis: (
-    type: "fibonacci" | "company_overview" | "macro" | "stochastic" | "news_sentiment" | "cash_flow" | "balance_sheet" | "market_movers",
+    type:
+      | "fibonacci"
+      | "company_overview"
+      | "macro"
+      | "stochastic"
+      | "news_sentiment"
+      | "cash_flow"
+      | "balance_sheet"
+      | "market_movers",
   ) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
@@ -99,11 +111,11 @@ const ChartPanelComponent: React.FC<ChartPanelProps> = ({
   isCollapsed,
   onToggleCollapse,
 }) => {
-  const { t } = useTranslation(['market', 'chat', 'common']);
+  const { t } = useTranslation(["market", "chat", "common"]);
 
   // Fetch real-time quote for header price display
   const quoteQuery = useQuery({
-    queryKey: ['quote', currentSymbol],
+    queryKey: ["quote", currentSymbol],
     queryFn: () => marketService.getQuote(currentSymbol),
     enabled: !!currentSymbol,
     staleTime: 60 * 1000, // 1 minute
@@ -118,10 +130,13 @@ const ChartPanelComponent: React.FC<ChartPanelProps> = ({
   const displayPrice = chartLastBar?.close ?? quoteQuery.data?.price ?? null;
 
   // Show timestamp from chart data or quote date
-  const priceTimestamp = chartLastBar?.time ?? quoteQuery.data?.latest_trading_day;
+  const priceTimestamp =
+    chartLastBar?.time ?? quoteQuery.data?.latest_trading_day;
 
   return (
-    <div className={`flex flex-col h-full transition-all duration-200 relative ${isCollapsed ? 'w-12' : 'w-full'}`}>
+    <div
+      className={`flex flex-col h-full transition-all duration-200 relative ${isCollapsed ? "w-12" : "w-full"}`}
+    >
       {/* Artistic Collapse/Expand Toggle - Vertical Bar Design */}
       {isCollapsed && (
         <div className="w-12 h-full flex flex-col bg-gradient-to-b from-white/80 to-gray-50/80 backdrop-blur-xl border-l border-gray-200/50 items-center justify-center relative">
@@ -134,7 +149,11 @@ const ChartPanelComponent: React.FC<ChartPanelProps> = ({
             <div className="w-1 h-16 bg-gradient-to-b from-blue-400 via-indigo-500 to-blue-600 rounded-full transition-all duration-300 group-hover:h-20 group-hover:w-1.5 group-hover:shadow-lg group-hover:shadow-blue-500/50" />
             {/* Chevron icon overlay */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <ChevronLeft size={16} strokeWidth={2.5} className="text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+              <ChevronLeft
+                size={16}
+                strokeWidth={2.5}
+                className="text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+              />
             </div>
           </button>
         </div>
@@ -142,7 +161,7 @@ const ChartPanelComponent: React.FC<ChartPanelProps> = ({
 
       <button
         onClick={onToggleCollapse}
-        className={`group absolute left-0 top-1/2 -translate-y-1/2 z-10 ${isCollapsed ? 'hidden' : ''}`}
+        className={`group absolute left-0 top-1/2 -translate-y-1/2 z-10 ${isCollapsed ? "hidden" : ""}`}
         title="Collapse chart panel"
       >
         {/* Elegant vertical bar that peeks from edge */}
@@ -151,176 +170,236 @@ const ChartPanelComponent: React.FC<ChartPanelProps> = ({
           {/* Chevron appears on hover */}
           <div className="absolute left-2 opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:translate-x-1">
             <div className="bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow-md">
-              <ChevronRight size={14} strokeWidth={2.5} className="text-indigo-600" />
+              <ChevronRight
+                size={14}
+                strokeWidth={2.5}
+                className="text-indigo-600"
+              />
             </div>
           </div>
         </div>
       </button>
 
-      <div className={isCollapsed ? 'hidden' : 'flex flex-col h-full'}>
-      <div className="border-b p-3 bg-gray-50">
-        {/* Title and Symbol in one line */}
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h3 className="text-lg font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent">
-              {t('market:chart.title')}
-            </h3>
-          </div>
-          {currentSymbol && displayPrice && (
-            <div className="flex items-center gap-2">
-              <div className="text-right">
-                <div className="text-base font-semibold text-gray-900">{currentSymbol}</div>
-                <div className="text-xs text-gray-500">{currentCompanyName}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-lg font-bold text-green-600">
-                  ${displayPrice.toFixed(2)}
-                </div>
-                {priceTimestamp && (
-                  <div className="text-xs text-gray-400">
-                    {priceTimestamp}
-                  </div>
-                )}
-              </div>
+      <div className={isCollapsed ? "hidden" : "flex flex-col h-full"}>
+        <div className="border-b p-3 bg-gray-50">
+          {/* Title and Symbol in one line */}
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-lg font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent">
+                {t("market:chart.title")}
+              </h3>
             </div>
-          )}
-        </div>
-
-        {/* Symbol Search */}
-        <SymbolSearch
-          onSymbolSelect={handleSymbolSelect}
-          value={currentSymbol}
-          companyName={currentCompanyName}
-          className="mb-3"
-        />
-
-        {/* Analysis Buttons - Only show when symbol selected */}
-        {currentSymbol && (
-          <div className="space-y-2">
-            {/* Technical Analysis - Hidden for 1min interval (insufficient data) */}
-            {selectedInterval !== "1m" && (
-              <div>
-                <div className="text-xs font-medium text-gray-500 mb-1.5">{t('chat:chartPanel.technicalAnalysis')}</div>
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={() => handleQuickAnalysis("fibonacci")}
-                    disabled={analysisMutation.isPending || priceDataQuery.isLoading}
-                    data-testid="analysis-fibonacci"
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
-                  >
-                    {priceDataQuery.isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BarChart3 className="h-3.5 w-3.5" />}
-                    {t('chat:chartPanel.fibonacci')}
-                  </button>
-                  <button
-                    onClick={() => handleQuickAnalysis("stochastic")}
-                    disabled={analysisMutation.isPending || priceDataQuery.isLoading}
-                    data-testid="analysis-stochastic"
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
-                  >
-                    {priceDataQuery.isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
-                    {t('chat:chartPanel.stochastic')}
-                  </button>
+            {currentSymbol && displayPrice && (
+              <div className="flex items-center gap-2">
+                <div className="text-right">
+                  <div className="text-base font-semibold text-gray-900">
+                    {currentSymbol}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {currentCompanyName}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-green-600">
+                    ${displayPrice.toFixed(2)}
+                  </div>
+                  {priceTimestamp && (
+                    <div className="text-xs text-gray-400">
+                      {priceTimestamp}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
-
-            {/* Fundamental Analysis */}
-            <div>
-              <div className="text-xs font-medium text-gray-500 mb-1.5">{t('chat:chartPanel.fundamentalAnalysis')}</div>
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  onClick={() => handleQuickAnalysis("company_overview")}
-                  disabled={analysisMutation.isPending || priceDataQuery.isLoading}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
-                >
-                  {priceDataQuery.isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Building2 className="h-3.5 w-3.5" />}
-                  {t('chat:chartPanel.overview')}
-                </button>
-                <button
-                  onClick={() => handleQuickAnalysis("cash_flow")}
-                  disabled={analysisMutation.isPending || priceDataQuery.isLoading}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-teal-500 text-white rounded-lg hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
-                >
-                  {priceDataQuery.isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
-                  {t('chat:chartPanel.cashFlow')}
-                </button>
-                <button
-                  onClick={() => handleQuickAnalysis("balance_sheet")}
-                  disabled={analysisMutation.isPending || priceDataQuery.isLoading}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
-                >
-                  {priceDataQuery.isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
-                  {t('chat:chartPanel.balanceSheet')}
-                </button>
-              </div>
-            </div>
-
-            {/* Market Sentiment */}
-            <div>
-              <div className="text-xs font-medium text-gray-500 mb-1.5">{t('chat:chartPanel.marketSentiment')}</div>
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  onClick={() => handleQuickAnalysis("news_sentiment")}
-                  disabled={analysisMutation.isPending || priceDataQuery.isLoading}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
-                >
-                  {priceDataQuery.isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Newspaper className="h-3.5 w-3.5" />}
-                  {t('chat:chartPanel.newsSentiment')}
-                </button>
-                <button
-                  onClick={() => handleQuickAnalysis("macro")}
-                  disabled={analysisMutation.isPending || priceDataQuery.isLoading}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
-                >
-                  {priceDataQuery.isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <TrendingUp className="h-3.5 w-3.5" />}
-                  {t('chat:chartPanel.macro')}
-                </button>
-                <button
-                  onClick={() => handleQuickAnalysis("market_movers")}
-                  disabled={analysisMutation.isPending || priceDataQuery.isLoading}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-500 text-white rounded-lg hover:bg-rose-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
-                >
-                  {priceDataQuery.isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowUpDown className="h-3.5 w-3.5" />}
-                  {t('chat:chartPanel.marketMovers')}
-                </button>
-              </div>
-            </div>
           </div>
-        )}
-        {currentSymbol && (
-          <DateRangePicker
-            value={selectedDateRange}
-            interval={selectedInterval}
-            symbol={currentSymbol}
-            onApply={(range) =>
-              handleDateRangeSelect(range.start, range.end)
-            }
-            disabled={priceDataQuery.isFetching}
+
+          {/* Symbol Search */}
+          <SymbolSearch
+            onSymbolSelect={handleSymbolSelect}
+            value={currentSymbol}
+            companyName={currentCompanyName}
+            className="mb-3"
           />
-        )}
-      </div>
 
-      <div className="flex-1 p-4 overflow-y-auto">
-        {!currentSymbol && (
-          <div className="h-full border rounded-lg flex items-center justify-center text-sm text-gray-500 bg-gray-50">
-            <div className="text-center">
-              <LineChart className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <p>{t('chat:chartPanel.searchPrompt')}</p>
-              <p className="text-xs mt-2">
-                {t('chat:chartPanel.searchHint')}
-              </p>
+          {/* Analysis Buttons - Only show when symbol selected */}
+          {currentSymbol && (
+            <div className="space-y-2">
+              {/* Technical Analysis - Hidden for 1min interval (insufficient data) */}
+              {selectedInterval !== "1m" && (
+                <div>
+                  <div className="text-xs font-medium text-gray-500 mb-1.5">
+                    {t("chat:chartPanel.technicalAnalysis")}
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => handleQuickAnalysis("fibonacci")}
+                      disabled={
+                        analysisMutation.isPending || priceDataQuery.isLoading
+                      }
+                      data-testid="analysis-fibonacci"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
+                    >
+                      {priceDataQuery.isLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <BarChart3 className="h-3.5 w-3.5" />
+                      )}
+                      {t("chat:chartPanel.fibonacci")}
+                    </button>
+                    <button
+                      onClick={() => handleQuickAnalysis("stochastic")}
+                      disabled={
+                        analysisMutation.isPending || priceDataQuery.isLoading
+                      }
+                      data-testid="analysis-stochastic"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
+                    >
+                      {priceDataQuery.isLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Activity className="h-3.5 w-3.5" />
+                      )}
+                      {t("chat:chartPanel.stochastic")}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Fundamental Analysis */}
+              <div>
+                <div className="text-xs font-medium text-gray-500 mb-1.5">
+                  {t("chat:chartPanel.fundamentalAnalysis")}
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => handleQuickAnalysis("company_overview")}
+                    disabled={
+                      analysisMutation.isPending || priceDataQuery.isLoading
+                    }
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
+                  >
+                    {priceDataQuery.isLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Building2 className="h-3.5 w-3.5" />
+                    )}
+                    {t("chat:chartPanel.overview")}
+                  </button>
+                  <button
+                    onClick={() => handleQuickAnalysis("cash_flow")}
+                    disabled={
+                      analysisMutation.isPending || priceDataQuery.isLoading
+                    }
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-teal-500 text-white rounded-lg hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
+                  >
+                    {priceDataQuery.isLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <FileText className="h-3.5 w-3.5" />
+                    )}
+                    {t("chat:chartPanel.cashFlow")}
+                  </button>
+                  <button
+                    onClick={() => handleQuickAnalysis("balance_sheet")}
+                    disabled={
+                      analysisMutation.isPending || priceDataQuery.isLoading
+                    }
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
+                  >
+                    {priceDataQuery.isLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <FileText className="h-3.5 w-3.5" />
+                    )}
+                    {t("chat:chartPanel.balanceSheet")}
+                  </button>
+                </div>
+              </div>
+
+              {/* Market Sentiment */}
+              <div>
+                <div className="text-xs font-medium text-gray-500 mb-1.5">
+                  {t("chat:chartPanel.marketSentiment")}
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => handleQuickAnalysis("news_sentiment")}
+                    disabled={
+                      analysisMutation.isPending || priceDataQuery.isLoading
+                    }
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
+                  >
+                    {priceDataQuery.isLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Newspaper className="h-3.5 w-3.5" />
+                    )}
+                    {t("chat:chartPanel.newsSentiment")}
+                  </button>
+                  <button
+                    onClick={() => handleQuickAnalysis("macro")}
+                    disabled={
+                      analysisMutation.isPending || priceDataQuery.isLoading
+                    }
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
+                  >
+                    {priceDataQuery.isLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <TrendingUp className="h-3.5 w-3.5" />
+                    )}
+                    {t("chat:chartPanel.macro")}
+                  </button>
+                  <button
+                    onClick={() => handleQuickAnalysis("market_movers")}
+                    disabled={
+                      analysisMutation.isPending || priceDataQuery.isLoading
+                    }
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-500 text-white rounded-lg hover:bg-rose-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs transition-all"
+                  >
+                    {priceDataQuery.isLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <ArrowUpDown className="h-3.5 w-3.5" />
+                    )}
+                    {t("chat:chartPanel.marketMovers")}
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
-        {currentSymbol && priceDataQuery.isLoading && (
-          <div className="h-full border rounded-lg flex items-center justify-center text-sm text-gray-500">
-            <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-              {t('chat:chartPanel.loadingPriceData')}
+          )}
+          {currentSymbol && (
+            <DateRangePicker
+              value={selectedDateRange}
+              interval={selectedInterval}
+              symbol={currentSymbol}
+              onApply={(range) => handleDateRangeSelect(range.start, range.end)}
+              disabled={priceDataQuery.isFetching}
+            />
+          )}
+        </div>
+
+        <div className="flex-1 p-4 overflow-y-auto">
+          {!currentSymbol && (
+            <div className="h-full border rounded-lg flex items-center justify-center text-sm text-gray-500 bg-gray-50">
+              <div className="text-center">
+                <LineChart className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p>{t("chat:chartPanel.searchPrompt")}</p>
+                <p className="text-xs mt-2">
+                  {t("chat:chartPanel.searchHint")}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
-        {currentSymbol && priceDataQuery.isError && (
+          )}
+          {currentSymbol && priceDataQuery.isLoading && (
+            <div className="h-full border rounded-lg flex items-center justify-center text-sm text-gray-500">
+              <div className="text-center">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                {t("chat:chartPanel.loadingPriceData")}
+              </div>
+            </div>
+          )}
+          {currentSymbol && priceDataQuery.isError && (
             <div className="p-4 border rounded-lg bg-red-50 text-sm text-red-700">
               <div className="flex items-center justify-between mb-3">
                 <span>{friendlyChartError(priceDataQuery.error?.message)}</span>
@@ -341,41 +420,50 @@ const ChartPanelComponent: React.FC<ChartPanelProps> = ({
                   ))}
                 </div>
               </div>
-              {(priceDataQuery.error as any)?.suggestions && (
-                <div className="flex flex-wrap gap-2">
-                  {(priceDataQuery.error as any).suggestions.map((s: any) => (
-                    <button
-                      key={s.symbol}
-                      onClick={() => handleSymbolSelect(s.symbol, s.name)}
-                      className="px-2 py-1 text-xs bg-white border rounded hover:bg-blue-50"
-                    >
-                      {s.symbol} {s.name && `- ${s.name}`}
-                    </button>
-                  ))}
+              {priceDataQuery.error instanceof PriceDataError &&
+                priceDataQuery.error.suggestions.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {priceDataQuery.error.suggestions.map((suggestion) => {
+                      const symbol =
+                        typeof suggestion === "string"
+                          ? suggestion
+                          : suggestion.symbol;
+                      const name =
+                        typeof suggestion === "string" ? "" : suggestion.name;
+                      return (
+                        <button
+                          key={symbol}
+                          onClick={() => handleSymbolSelect(symbol, name)}
+                          className="px-2 py-1 text-xs bg-white border rounded hover:bg-blue-50"
+                        >
+                          {symbol} {name && `- ${name}`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+            </div>
+          )}
+          {currentSymbol && priceDataQuery.data && !priceDataQuery.isError && (
+            <div className="h-full">
+              <TradingChart
+                symbol={currentSymbol}
+                data={priceDataQuery.data.data}
+                interval={selectedInterval}
+                onIntervalChange={handleIntervalChange}
+                onDateRangeSelect={handleDateRangeSelect}
+                fibonacciAnalysis={fibonacciAnalysis}
+                className="bg-white rounded-lg border h-full"
+              />
+              {priceDataQuery.isRefetching && (
+                <div className="text-xs text-gray-500 mt-1 flex items-center">
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                  {t("chat:chartPanel.updatingPriceData")}
                 </div>
               )}
             </div>
           )}
-        {currentSymbol && priceDataQuery.data && !priceDataQuery.isError && (
-          <div className="h-full">
-            <TradingChart
-              symbol={currentSymbol}
-              data={priceDataQuery.data.data}
-              interval={selectedInterval}
-              onIntervalChange={handleIntervalChange}
-              onDateRangeSelect={handleDateRangeSelect}
-              fibonacciAnalysis={fibonacciAnalysis as any}
-              className="bg-white rounded-lg border h-full"
-            />
-            {priceDataQuery.isRefetching && (
-              <div className="text-xs text-gray-500 mt-1 flex items-center">
-                <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                {t('chat:chartPanel.updatingPriceData')}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+        </div>
       </div>
     </div>
   );

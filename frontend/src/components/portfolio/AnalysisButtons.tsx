@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { Activity, AlertCircle, Briefcase, Sparkles } from "lucide-react";
 import { apiClient } from "../../services/api";
 
@@ -53,23 +54,24 @@ async function fetchStatus(
       `/api/admin/portfolio/status/${run_id}`,
     );
     return data;
-  } catch (e: any) {
-    if (e?.response?.status === 404) return null;
-    throw e;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error) && error.response?.status === 404)
+      return null;
+    throw error;
   }
 }
 
 function statusBadge(s: AnalysisRun["status"] | null) {
   if (!s) return null;
-  const map: Record<string, string> = {
-    pending: "bg-blue-100 text-blue-800",
-    running: "bg-blue-100 text-blue-800",
-    done: "bg-green-100 text-green-800",
-    error: "bg-red-100 text-red-800",
-  };
+  const color =
+    s === "done"
+      ? "bg-green-100 text-green-800"
+      : s === "error"
+        ? "bg-red-100 text-red-800"
+        : "bg-blue-100 text-blue-800";
   return (
     <span
-      className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${map[s]}`}
+      className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${color}`}
     >
       {s}
     </span>
@@ -200,12 +202,12 @@ export function AnalysisButtons({ settingsReady, onRunComplete }: Props) {
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-4 w-4 text-gray-700" />
             <h4 className="text-sm font-medium text-gray-900">
-              Today's Picks
+              Today&apos;s Picks
             </h4>
           </div>
           <p className="text-xs text-gray-500 mb-2">
-            Top 5 BUY recommendations from sectors you choose
-            (S&P 500 + Nasdaq 100 universe).
+            Top 5 BUY recommendations from sectors you choose (S&P 500 + Nasdaq
+            100 universe).
           </p>
 
           {sectorsQ.isLoading && (

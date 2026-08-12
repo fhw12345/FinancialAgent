@@ -12,7 +12,12 @@
 
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Newspaper, TrendingUp, TrendingDown, ExternalLink } from "lucide-react";
+import {
+  Newspaper,
+  TrendingUp,
+  TrendingDown,
+  ExternalLink,
+} from "lucide-react";
 import { ToolWrapper } from "./ToolWrapper";
 import { alphaVantageApi } from "../services/alphaVantageApi";
 import type { NewsFeedItem } from "../types/alphaVantage";
@@ -73,9 +78,13 @@ export const NewsSentimentTool: React.FC<NewsSentimentToolProps> = ({
         setPositive(filtered.positive);
         setNegative(filtered.negative);
         setTotal(filtered.total);
-      } catch (err: any) {
-        console.error("Failed to fetch news sentiment:", err);
-        setError(err?.message || "Failed to load news sentiment");
+      } catch (error: unknown) {
+        console.error("Failed to fetch news sentiment:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load news sentiment",
+        );
       } finally {
         setLoading(false);
       }
@@ -160,7 +169,9 @@ export const NewsSentimentTool: React.FC<NewsSentimentToolProps> = ({
       {loading && (
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          <span className="ml-3 text-sm text-gray-600">{t("market:news.loading")}</span>
+          <span className="ml-3 text-sm text-gray-600">
+            {t("market:news.loading")}
+          </span>
         </div>
       )}
 
@@ -180,7 +191,9 @@ export const NewsSentimentTool: React.FC<NewsSentimentToolProps> = ({
               <div className="flex items-center gap-2 mb-3">
                 <TrendingUp className="h-4 w-4 text-green-600" />
                 <h4 className="text-sm font-semibold text-green-800">
-                  {t("market:news.positiveSentiment", { count: positive.length })}
+                  {t("market:news.positiveSentiment", {
+                    count: positive.length,
+                  })}
                 </h4>
               </div>
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-3">
@@ -195,7 +208,9 @@ export const NewsSentimentTool: React.FC<NewsSentimentToolProps> = ({
               <div className="flex items-center gap-2 mb-3">
                 <TrendingDown className="h-4 w-4 text-red-600" />
                 <h4 className="text-sm font-semibold text-red-800">
-                  {t("market:news.negativeSentiment", { count: negative.length })}
+                  {t("market:news.negativeSentiment", {
+                    count: negative.length,
+                  })}
                 </h4>
               </div>
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-3">
@@ -222,7 +237,10 @@ export const NewsSentimentTool: React.FC<NewsSentimentToolProps> = ({
           {/* Footer Info */}
           {(positive.length > 0 || negative.length > 0) && (
             <div className="text-xs text-gray-500 text-center pt-2 border-t border-gray-200">
-              {t("market:news.showingArticles", { shown: positive.length + negative.length, total })}
+              {t("market:news.showingArticles", {
+                shown: positive.length + negative.length,
+                total,
+              })}
             </div>
           )}
         </div>

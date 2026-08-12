@@ -21,6 +21,30 @@ export const TOOL_REGISTRY = {
 
 export type ToolName = keyof typeof TOOL_REGISTRY;
 
+export function getToolInfo(toolName: ToolName): {
+  title: string;
+  icon: string;
+} {
+  switch (toolName) {
+    case "fibonacci":
+      return TOOL_REGISTRY.fibonacci;
+    case "macro":
+      return TOOL_REGISTRY.macro;
+    case "company_overview":
+      return TOOL_REGISTRY.company_overview;
+    case "stochastic":
+      return TOOL_REGISTRY.stochastic;
+    case "cash_flow":
+      return TOOL_REGISTRY.cash_flow;
+    case "balance_sheet":
+      return TOOL_REGISTRY.balance_sheet;
+    case "news_sentiment":
+      return TOOL_REGISTRY.news_sentiment;
+    case "market_movers":
+      return TOOL_REGISTRY.market_movers;
+  }
+}
+
 /**
  * Helper to create ToolCall object with metadata from registry.
  *
@@ -34,10 +58,7 @@ export function createToolCall(
   symbol?: string,
   metadata?: unknown,
 ): ToolCall {
-  const toolInfo = TOOL_REGISTRY[toolName] || {
-    title: toolName,
-    icon: "🔧",
-  };
+  const toolInfo = getToolInfo(toolName);
 
   return {
     tool_name: toolName,

@@ -20,6 +20,7 @@ import {
   useRefreshCategory,
 } from "../hooks/useInsights";
 import { formatTimestamp } from "../utils/timeFormatter";
+import { getRecordValue } from "../utils/safeRecord";
 
 /** Available days options for trend history */
 const DAYS_OPTIONS = [30, 60, 90] as const;
@@ -71,7 +72,7 @@ function CategoryDetail({
   // Get trend data for a specific metric
   const getMetricTrend = (metricId: string) => {
     if (!trendData?.metrics) return undefined;
-    return trendData.metrics[metricId];
+    return getRecordValue(trendData.metrics, metricId);
   };
 
   if (isLoading) {

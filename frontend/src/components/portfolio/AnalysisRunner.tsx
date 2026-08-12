@@ -22,10 +22,21 @@ export function AnalysisRunner() {
           headers: { "Content-Type": "application/json" },
         },
       );
-      const data = await response.json();
+      const payload: unknown = await response.json();
+      const data =
+        payload !== null && typeof payload === "object"
+          ? (payload as Record<string, unknown>)
+          : {};
 
       if (!response.ok) {
-        throw new Error(data.detail || "Failed to trigger analysis");
+        throw new Error(
+          typeof data.detail === "string"
+            ? data.detail
+            : "Failed to trigger analysis",
+        );
+      }
+      if (typeof data.run_id !== "string") {
+        throw new Error("Analysis response did not include a run ID");
       }
 
       setStatus({

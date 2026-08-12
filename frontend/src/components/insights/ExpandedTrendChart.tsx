@@ -58,7 +58,7 @@ export function ExpandedTrendChart({
     const tickCount = 5;
     const tickStep = (yMaxVal - yMinVal) / (tickCount - 1);
     const ticks = Array.from({ length: tickCount }, (_, i) =>
-      Math.round(yMinVal + i * tickStep)
+      Math.round(yMinVal + i * tickStep),
     );
 
     // Calculate points
@@ -72,7 +72,7 @@ export function ExpandedTrendChart({
     }));
 
     return { points: pts, yMin: yMinVal, yMax: yMaxVal, yTicks: ticks };
-  }, [chartData, chartWidth, chartHeight]);
+  }, [chartData, chartWidth, chartHeight, padding.left, padding.top]);
 
   // No data state
   if (chartData.length === 0) {
@@ -91,10 +91,17 @@ export function ExpandedTrendChart({
     .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
     .join(" ");
 
-  // Determine trend direction
-  const isUptrend = chartData[chartData.length - 1].score > chartData[0].score;
+  // Determine trend direction. The no-data branch above guarantees both points.
+  const firstDatum = chartData.at(0);
+  const lastDatum = chartData.at(-1);
+  const isUptrend =
+    firstDatum !== undefined &&
+    lastDatum !== undefined &&
+    lastDatum.score > firstDatum.score;
   const isFlat =
-    Math.abs(chartData[chartData.length - 1].score - chartData[0].score) < 1;
+    firstDatum !== undefined &&
+    lastDatum !== undefined &&
+    Math.abs(lastDatum.score - firstDatum.score) < 1;
 
   // Colors
   const lineColor = isFlat ? "#6b7280" : isUptrend ? "#22c55e" : "#ef4444";
@@ -106,25 +113,30 @@ export function ExpandedTrendChart({
   // Format date for display
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
   };
 
   // Get X axis labels (first, middle, last)
   const xLabels = (() => {
     if (chartData.length < 2) return [];
-    const labels = [];
-    labels.push({ x: points[0].x, label: formatDate(chartData[0].date) });
+    const firstPoint = points.at(0);
+    const lastPoint = points.at(-1);
+    const first = chartData.at(0);
+    const last = chartData.at(-1);
+    if (!firstPoint || !lastPoint || !first || !last) return [];
+    const labels = [{ x: firstPoint.x, label: formatDate(first.date) }];
     if (chartData.length > 2) {
       const midIdx = Math.floor(chartData.length / 2);
-      labels.push({
-        x: points[midIdx].x,
-        label: formatDate(chartData[midIdx].date),
-      });
+      const middlePoint = points.at(midIdx);
+      const middle = chartData.at(midIdx);
+      if (middlePoint && middle) {
+        labels.push({ x: middlePoint.x, label: formatDate(middle.date) });
+      }
     }
-    labels.push({
-      x: points[points.length - 1].x,
-      label: formatDate(chartData[chartData.length - 1].date),
-    });
+    labels.push({ x: lastPoint.x, label: formatDate(last.date) });
     return labels;
   })();
 
@@ -221,62 +233,64 @@ export function ExpandedTrendChart({
         ))}
 
         {/* Tooltip with smart positioning */}
-        {hoveredIndex !== null && points[hoveredIndex] && (() => {
-          const point = points[hoveredIndex];
-          // Smart positioning: show below if point is in top 40% of chart area
-          const chartTop = padding.top;
-          const chartBottom = height - padding.bottom;
-          const chartAreaHeight = chartBottom - chartTop;
-          const isInTopArea = point.y < chartTop + chartAreaHeight * 0.4;
+        {hoveredIndex !== null &&
+          (() => {
+            const point = points.at(hoveredIndex);
+            if (!point) return null;
+            // Smart positioning: show below if point is in top 40% of chart area
+            const chartTop = padding.top;
+            const chartBottom = height - padding.bottom;
+            const chartAreaHeight = chartBottom - chartTop;
+            const isInTopArea = point.y < chartTop + chartAreaHeight * 0.4;
 
-          // Tooltip dimensions
-          const tooltipWidth = 90;
-          const tooltipHeight = 32;
-          const tooltipOffset = 12; // Gap between point and tooltip
+            // Tooltip dimensions
+            const tooltipWidth = 90;
+            const tooltipHeight = 32;
+            const tooltipOffset = 12; // Gap between point and tooltip
 
-          // Calculate tooltip position
-          const tooltipX = point.x - tooltipWidth / 2;
-          const tooltipY = isInTopArea
-            ? point.y + tooltipOffset // Below point
-            : point.y - tooltipHeight - tooltipOffset; // Above point
+            // Calculate tooltip position
+            const tooltipX = point.x - tooltipWidth / 2;
+            const tooltipY = isInTopArea
+              ? point.y + tooltipOffset // Below point
+              : point.y - tooltipHeight - tooltipOffset; // Above point
 
-          // Text Y positions (relative to tooltip)
-          const scoreTextY = tooltipY + 13;
-          const dateTextY = tooltipY + 25;
+            // Text Y positions (relative to tooltip)
+            const scoreTextY = tooltipY + 13;
+            const dateTextY = tooltipY + 25;
 
-          return (
-            <g>
-              <rect
-                x={tooltipX}
-                y={tooltipY}
-                width={tooltipWidth}
-                height={tooltipHeight}
-                rx="4"
-                fill={tooltipBg}
-                filter="drop-shadow(0 2px 4px rgba(0,0,0,0.15))"
-              />
-              <text
-                x={point.x}
-                y={scoreTextY}
-                fill={tooltipText}
-                fontSize="11"
-                fontWeight="600"
-                textAnchor="middle"
-              >
-                Score: {point.score.toFixed(1)}
-              </text>
-              <text
-                x={point.x}
-                y={dateTextY}
-                fill={textColor}
-                fontSize="10"
-                textAnchor="middle"
-              >
-                {formatDate(chartData[hoveredIndex].date)}
-              </text>
-            </g>
-          );
-        })()}
+            return (
+              <g>
+                <rect
+                  x={tooltipX}
+                  y={tooltipY}
+                  width={tooltipWidth}
+                  height={tooltipHeight}
+                  rx="4"
+                  fill={tooltipBg}
+                  filter="drop-shadow(0 2px 4px rgba(0,0,0,0.15))"
+                />
+                <text
+                  x={point.x}
+                  y={scoreTextY}
+                  fill={tooltipText}
+                  fontSize="11"
+                  fontWeight="600"
+                  textAnchor="middle"
+                >
+                  Score: {point.score.toFixed(1)}
+                </text>
+                <text
+                  x={point.x}
+                  y={dateTextY}
+                  fill={textColor}
+                  fontSize="10"
+                  textAnchor="middle"
+                >
+                  {formatDate(point.date)}
+                </text>
+              </g>
+            );
+          })()}
       </svg>
     </div>
   );

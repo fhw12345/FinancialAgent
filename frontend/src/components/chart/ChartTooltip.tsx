@@ -7,7 +7,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-interface TooltipData {
+export interface TooltipData {
   visible: boolean;
   x: number;
   y: number;
@@ -48,7 +48,7 @@ export const ChartTooltip: React.FC<ChartTooltipProps> = ({
   tooltipData,
   chartContainerRef,
 }) => {
-  const { t } = useTranslation(['market', 'common']);
+  const { t } = useTranslation(["market", "common"]);
 
   if (!tooltipData.visible) {
     return null;
@@ -83,19 +83,21 @@ export const ChartTooltip: React.FC<ChartTooltipProps> = ({
         // Show OHLC format
         <div className="space-y-0.5">
           <div className="flex justify-between">
-            <span className="text-gray-400">{t('market:quote.open')}:</span>
+            <span className="text-gray-400">{t("market:quote.open")}:</span>
             <span>{formatPrice(tooltipData.open ?? 0)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-400">{t('market:quote.high')}:</span>
+            <span className="text-gray-400">{t("market:quote.high")}:</span>
             <span>{formatPrice(tooltipData.high ?? 0)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-400">{t('market:quote.low')}:</span>
+            <span className="text-gray-400">{t("market:quote.low")}:</span>
             <span>{formatPrice(tooltipData.low ?? 0)}</span>
           </div>
           <div className={`flex justify-between font-semibold ${colorClass}`}>
-            <span className="text-gray-400 font-normal">{t('market:quote.close')}:</span>
+            <span className="text-gray-400 font-normal">
+              {t("market:quote.close")}:
+            </span>
             <span>
               {formatPrice(tooltipData.close ?? 0)} {directionArrow}
             </span>
@@ -108,7 +110,7 @@ export const ChartTooltip: React.FC<ChartTooltipProps> = ({
 
       {tooltipData.volume !== undefined && (
         <div className="text-gray-400 mt-1 pt-1 border-t border-gray-700">
-          {t('market:quote.volume')}: {formatVolume(tooltipData.volume)}
+          {t("market:quote.volume")}: {formatVolume(tooltipData.volume)}
         </div>
       )}
     </div>

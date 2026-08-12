@@ -35,13 +35,20 @@ interface ToolWrapperProps {
   className?: string;
 }
 
-const badgeColors = {
-  default: "bg-gray-100 text-gray-800",
-  success: "bg-green-100 text-green-800",
-  warning: "bg-yellow-100 text-yellow-800",
-  error: "bg-red-100 text-red-800",
-  info: "bg-blue-100 text-blue-800",
-};
+function badgeColor(variant: NonNullable<ToolWrapperProps["badgeVariant"]>) {
+  switch (variant) {
+    case "success":
+      return "bg-green-100 text-green-800";
+    case "warning":
+      return "bg-yellow-100 text-yellow-800";
+    case "error":
+      return "bg-red-100 text-red-800";
+    case "info":
+      return "bg-blue-100 text-blue-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+}
 
 export const ToolWrapper: React.FC<ToolWrapperProps> = ({
   title,
@@ -87,7 +94,7 @@ export const ToolWrapper: React.FC<ToolWrapperProps> = ({
           {/* Badge */}
           {badge && (
             <span
-              className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${badgeColors[badgeVariant]}`}
+              className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${badgeColor(badgeVariant)}`}
             >
               {badge}
             </span>

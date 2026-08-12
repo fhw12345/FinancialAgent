@@ -22,7 +22,7 @@ export type { RefreshResponse };
  */
 export async function getCategories(): Promise<CategoriesListResponse> {
   const response = await apiClient.get<CategoriesListResponse>(
-    "/api/insights/categories"
+    "/api/insights/categories",
   );
   return response.data;
 }
@@ -35,11 +35,11 @@ export async function getCategories(): Promise<CategoriesListResponse> {
  */
 export async function getCategory(
   categoryId: string,
-  forceRefresh: boolean = false
+  forceRefresh: boolean = false,
 ): Promise<InsightCategory> {
   const response = await apiClient.get<InsightCategory>(
     `/api/insights/${categoryId}`,
-    { params: { force_refresh: forceRefresh } }
+    { params: { force_refresh: forceRefresh } },
   );
   return response.data;
 }
@@ -51,10 +51,10 @@ export async function getCategory(
  * @param categoryId - Category identifier
  */
 export async function getCompositeScore(
-  categoryId: string
+  categoryId: string,
 ): Promise<CompositeScore> {
   const response = await apiClient.get<CompositeScore>(
-    `/api/insights/${categoryId}/composite`
+    `/api/insights/${categoryId}/composite`,
   );
   return response.data;
 }
@@ -67,10 +67,10 @@ export async function getCompositeScore(
  */
 export async function getMetric(
   categoryId: string,
-  metricId: string
+  metricId: string,
 ): Promise<InsightMetric> {
   const response = await apiClient.get<InsightMetric>(
-    `/api/insights/${categoryId}/${metricId}`
+    `/api/insights/${categoryId}/${metricId}`,
   );
   return response.data;
 }
@@ -83,10 +83,10 @@ export async function getMetric(
  * @param categoryId - Category identifier
  */
 export async function refreshCategory(
-  categoryId: string
+  categoryId: string,
 ): Promise<RefreshResponse> {
   const response = await apiClient.post<RefreshResponse>(
-    `/api/insights/${categoryId}/refresh`
+    `/api/insights/${categoryId}/refresh`,
   );
   return response.data;
 }
@@ -100,11 +100,11 @@ export async function refreshCategory(
  */
 export async function getTrend(
   categoryId: string,
-  days: number = 30
+  days: number = 30,
 ): Promise<TrendResponse> {
   const response = await apiClient.get<TrendResponse>(
     `/api/insights/${categoryId}/trend`,
-    { params: { days } }
+    { params: { days } },
   );
   return response.data;
 }
@@ -158,11 +158,16 @@ export function formatScore(score: number): string {
  * Get status label for display.
  */
 export function getStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
-    low: "Low Risk",
-    normal: "Normal",
-    elevated: "Elevated",
-    high: "High Risk",
-  };
-  return labels[status] ?? status;
+  switch (status) {
+    case "low":
+      return "Low Risk";
+    case "normal":
+      return "Normal";
+    case "elevated":
+      return "Elevated";
+    case "high":
+      return "High Risk";
+    default:
+      return status;
+  }
 }

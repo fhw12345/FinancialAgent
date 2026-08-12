@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { PriceDataPoint, TimeInterval } from "../services/market";
 import { ChartHeader } from "./chart/ChartHeader";
 import { ChartTooltip } from "./chart/ChartTooltip";
+import type { FibonacciTrend } from "../services/analysis";
 import { useChart } from "./chart/useChart";
 import { useChartData } from "./chart/useChartData";
 
@@ -21,7 +22,7 @@ interface FibonacciLevel {
   level: number;
   price: number;
   percentage: string;
-  is_key_level: boolean;
+  is_key_level?: boolean;
 }
 
 interface PressureZone {
@@ -31,20 +32,11 @@ interface PressureZone {
   zone_width: number;
 }
 
-interface TopTrend {
-  rank: number;
-  type: string;
-  period: string;
-  magnitude: number;
-  high: number;
-  low: number;
-}
-
 interface FibonacciAnalysisData {
-  fibonacci_levels: FibonacciLevel[];
-  pressure_zone: PressureZone | null;
+  fibonacci_levels?: FibonacciLevel[];
+  pressure_zone?: PressureZone | null;
   raw_data?: {
-    top_trends?: TopTrend[];
+    top_trends?: FibonacciTrend[];
     pressure_zones?: Array<PressureZone & { trend_type: string }>;
   };
 }

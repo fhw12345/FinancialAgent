@@ -104,6 +104,11 @@ describe("timeFormatter", () => {
       expect(localizeTimestamps(text, "zh-CN")).toBe(text);
     });
 
+    it("handles adversarial long non-timestamp input without pathological work", () => {
+      const text = `${"2".repeat(100_000)} not-a-timestamp`;
+      expect(localizeTimestamps(text, "zh-CN")).toBe(text);
+    });
+
     it("returns empty input as-is", () => {
       expect(localizeTimestamps("", "zh-CN")).toBe("");
     });

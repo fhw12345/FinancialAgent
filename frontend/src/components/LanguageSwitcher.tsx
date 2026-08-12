@@ -19,9 +19,9 @@ export function LanguageSwitcher({
 }: LanguageSwitcherProps) {
   const { i18n, t } = useTranslation("common");
 
-  const currentLanguage = supportedLanguages.find(
-    (lang) => lang.code === i18n.language
-  ) || supportedLanguages[0];
+  const currentLanguage =
+    supportedLanguages.find((lang) => lang.code === i18n.language) ||
+    supportedLanguages[0];
 
   const handleLanguageChange = (langCode: SupportedLanguage) => {
     i18n.changeLanguage(langCode);
@@ -33,10 +33,11 @@ export function LanguageSwitcher({
         onClick={() => {
           // Toggle between languages
           const currentIndex = supportedLanguages.findIndex(
-            (lang) => lang.code === i18n.language
+            (lang) => lang.code === i18n.language,
           );
           const nextIndex = (currentIndex + 1) % supportedLanguages.length;
-          handleLanguageChange(supportedLanguages[nextIndex].code);
+          const nextLanguage = supportedLanguages.at(nextIndex);
+          if (nextLanguage) handleLanguageChange(nextLanguage.code);
         }}
         className={`flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 ${className}`}
         title={t("labels.language")}
@@ -73,7 +74,9 @@ export function LanguageSwitcher({
     <div className={`relative inline-block ${className}`}>
       <select
         value={i18n.language}
-        onChange={(e) => handleLanguageChange(e.target.value as SupportedLanguage)}
+        onChange={(e) =>
+          handleLanguageChange(e.target.value as SupportedLanguage)
+        }
         className="appearance-none bg-transparent pl-7 pr-8 py-1.5 text-sm border border-gray-300 rounded-md cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:hover:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
         aria-label={t("labels.language")}
       >

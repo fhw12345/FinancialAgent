@@ -10,6 +10,7 @@
  */
 
 import { useReducer } from "react";
+import { getRecordValue, setRecordValue } from "../../../utils/safeRecord";
 import type {
   DeepAccordionState,
   DeepAccordionAction,
@@ -76,11 +77,12 @@ function setToolOnLastItem<T extends { tools: Record<string, ToolState> }>(
 ): T[] {
   if (items.length === 0) return items;
   const copy = [...items];
-  const last = copy[copy.length - 1];
-  copy[copy.length - 1] = {
+  const last = copy.at(-1);
+  if (!last) return items;
+  copy.splice(copy.length - 1, 1, {
     ...last,
     tools: { ...last.tools, [toolName]: tool },
-  };
+  });
   return copy;
 }
 
@@ -90,7 +92,8 @@ function getToolFromLastItem<T extends { tools: Record<string, ToolState> }>(
   toolName: string,
 ): ToolState | undefined {
   if (items.length === 0) return undefined;
-  return items[items.length - 1].tools[toolName];
+  const last = items.at(-1);
+  return last ? getRecordValue(last.tools, toolName) : undefined;
 }
 
 function cancelTools(
@@ -112,7 +115,7 @@ function deepAccordionReducer(
     case "DEEP_START": {
       const expandedSubagents: Record<string, boolean> = {};
       for (const name of action.subagentNames) {
-        expandedSubagents[name] = true;
+        setRecordValue(expandedSubagents, name, true);
       }
       return {
         ...INITIAL_STATE,
@@ -332,13 +335,14 @@ function deepAccordionReducer(
       // Update existing pending round (last entry) instead of appending
       const rounds = [...state.debate.rounds];
       const lastIdx = rounds.length - 1;
-      if (lastIdx >= 0) {
-        rounds[lastIdx] = {
-          ...rounds[lastIdx],
+      const currentRound = rounds.at(lastIdx);
+      if (currentRound) {
+        rounds.splice(lastIdx, 1, {
+          ...currentRound,
           hasConcerns: action.hasConcerns,
           summary: action.summary,
           status: "completed",
-        };
+        });
       }
       return {
         ...state,
@@ -377,14 +381,15 @@ function deepAccordionReducer(
       // Update existing pending rebuttal (last entry) instead of appending
       const rebuttals = [...state.debate.rebuttals];
       const lastIdx = rebuttals.length - 1;
-      if (lastIdx >= 0) {
-        rebuttals[lastIdx] = {
-          ...rebuttals[lastIdx],
+      const currentRebuttal = rebuttals.at(lastIdx);
+      if (currentRebuttal) {
+        rebuttals.splice(lastIdx, 1, {
+          ...currentRebuttal,
           defenseSummary: action.defenseSummary,
           toolCount: action.toolCount,
           durationMs: action.durationMs,
           status: "completed",
-        };
+        });
       }
       return {
         ...state,
@@ -435,7 +440,7 @@ function deepAccordionReducer(
     case "EXPAND_ALL": {
       const subagents: Record<string, boolean> = {};
       for (const name of state.subagentOrder) {
-        subagents[name] = true;
+        setRecordValue(subagents, name, true);
       }
       return {
         ...state,
@@ -448,7 +453,7 @@ function deepAccordionReducer(
       // collapsing it would hide the toggle button itself.
       const subagents: Record<string, boolean> = {};
       for (const name of state.subagentOrder) {
-        subagents[name] = false;
+        setRecordValue(subagents, name, false);
       }
       return {
         ...state,

@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from "react";
+import { useEffect } from "react";
 import { Bot, MessageSquare, Microscope, Route, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -10,11 +10,16 @@ interface HelpModalProps {
 export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
   const { t } = useTranslation("chat");
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (!isOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isOpen, onClose]);
 
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.key === "Escape") onClose();
-  };
+  if (!isOpen) return null;
 
   const flows = [
     {
@@ -44,20 +49,18 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
   ] as const;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="help-modal-title"
-      tabIndex={-1}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-      onClick={onClose}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <button
+        type="button"
+        aria-label="Close help dialog"
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+      />
       <div
-        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-        role="document"
+        className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="help-modal-title"
       >
         <div className="sticky top-0 flex items-center justify-between rounded-t-2xl bg-gradient-to-r from-blue-500 to-indigo-500 p-6 text-white">
           <div>

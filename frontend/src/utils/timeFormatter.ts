@@ -79,8 +79,10 @@ export function formatTime(
 // timezone (Z or ±HH:MM / ±HHMM). Naive ISO without TZ is intentionally NOT
 // matched — it's ambiguous, and we don't want to silently mis-convert.
 // All quantifiers are bounded; no catastrophic-backtracking risk.
+/* eslint-disable security/detect-unsafe-regex -- Every quantifier is bounded; regression tests include 100k-character input. */
 const ISO_TIMESTAMP_RE =
-  /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})\b/g;
+  /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:\.\d{1,9})?(?:Z|[+-]\d{2}:?\d{2})\b/g;
+/* eslint-enable security/detect-unsafe-regex */
 
 /**
  * Replace every ISO 8601 timestamp inside a markdown/plain-text string with

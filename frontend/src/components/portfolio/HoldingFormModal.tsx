@@ -8,7 +8,7 @@
  * Validation uses react-hook-form + zod.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -44,7 +44,6 @@ export function HoldingFormModal({
   submitting,
 }: Props) {
   const isEdit = !!initial;
-  const backdropMouseDownRef = useRef(false);
   const {
     register,
     handleSubmit,
@@ -60,7 +59,7 @@ export function HoldingFormModal({
           quantity: initial.quantity,
           avg_price: initial.avg_price,
         }
-      : { symbol: "", quantity: undefined as any, avg_price: undefined as any },
+      : { symbol: "", quantity: Number.NaN, avg_price: Number.NaN },
   });
 
   // Reset whenever initial changes (open/close cycle or switching rows)
@@ -73,7 +72,7 @@ export function HoldingFormModal({
               quantity: initial.quantity,
               avg_price: initial.avg_price,
             }
-          : { symbol: "", quantity: undefined as any, avg_price: undefined as any },
+          : { symbol: "", quantity: Number.NaN, avg_price: Number.NaN },
       );
     }
   }, [open, initial, reset]);
@@ -93,25 +92,16 @@ export function HoldingFormModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onMouseDown={(e) => {
-        backdropMouseDownRef.current = e.target === e.currentTarget;
-      }}
-      onMouseUp={(e) => {
-        if (
-          backdropMouseDownRef.current &&
-          e.target === e.currentTarget
-        ) {
-          onClose();
-        }
-        backdropMouseDownRef.current = false;
-      }}
       role="dialog"
       aria-modal="true"
     >
-      <div
-        className="w-full max-w-md rounded-lg bg-white shadow-xl"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
+      <button
+        type="button"
+        aria-label="Close holding dialog"
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-md rounded-lg bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
           <h3 className="text-base font-semibold text-gray-900">
             {isEdit ? `Edit ${initial.symbol}` : "Add Holding"}
@@ -132,13 +122,17 @@ export function HoldingFormModal({
           className="px-4 py-4 space-y-4"
         >
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="holding-symbol"
+              className="block text-xs font-medium text-gray-700 mb-1"
+            >
               Symbol
             </label>
             {isEdit ? (
               // Edit mode: locked plain input (symbol is the row identity)
               <input
                 {...register("symbol")}
+                id="holding-symbol"
                 type="text"
                 disabled
                 className="w-full rounded border border-gray-300 px-3 py-2 text-sm uppercase bg-gray-100 text-gray-500"
@@ -147,9 +141,12 @@ export function HoldingFormModal({
               // Add mode: autocomplete via shared SymbolSearch
               <>
                 {/* Hidden input keeps react-hook-form aware of the symbol value */}
-                <input type="hidden" {...register("symbol")} />
+                <input
+                  id="holding-symbol"
+                  type="hidden"
+                  {...register("symbol")}
+                />
                 <SymbolSearch
-                  autoFocus
                   value={watch("symbol") || ""}
                   placeholder="AAPL — Apple Inc."
                   onSymbolSelect={(sym) => {
@@ -162,7 +159,9 @@ export function HoldingFormModal({
               </>
             )}
             {errors.symbol && (
-              <p className="mt-1 text-xs text-red-600">{errors.symbol.message}</p>
+              <p className="mt-1 text-xs text-red-600">
+                {errors.symbol.message}
+              </p>
             )}
             {isEdit && (
               <p className="mt-1 text-xs text-gray-500">
@@ -172,11 +171,15 @@ export function HoldingFormModal({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="holding-quantity"
+              className="block text-xs font-medium text-gray-700 mb-1"
+            >
               Quantity
             </label>
             <input
               {...register("quantity")}
+              id="holding-quantity"
               type="number"
               step="1"
               min="1"
@@ -197,11 +200,15 @@ export function HoldingFormModal({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="holding-average-cost"
+              className="block text-xs font-medium text-gray-700 mb-1"
+            >
               Average Cost ($)
             </label>
             <input
               {...register("avg_price")}
+              id="holding-average-cost"
               type="number"
               step="0.01"
               min="0.01"
@@ -216,8 +223,8 @@ export function HoldingFormModal({
             )}
             {!isEdit && (
               <p className="mt-1 text-xs text-gray-500">
-                Same symbol added twice = quantities merged with weighted-average
-                cost.
+                Same symbol added twice = quantities merged with
+                weighted-average cost.
               </p>
             )}
           </div>

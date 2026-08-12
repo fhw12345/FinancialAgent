@@ -57,12 +57,12 @@ interface Derivation {
 // FIELD ∈ {Q, OV, CF, BS, EAR, INS, N}. We're permissive on the first
 // two segments (uppercase letters/digits/underscore) so a future
 // provider doesn't silently fall through this regex.
-export const SOURCE_ID_PATTERN = /\[([A-Z][A-Z0-9_]*-[A-Z]+-[A-Z0-9.]+-\d{4}-\d{2}-\d{2})\]/g;
+export const SOURCE_ID_PATTERN =
+  /\[([A-Z][A-Z0-9_]*-[A-Z]+-[A-Z0-9.]+-\d{4}-\d{2}-\d{2})\]/g;
 
 interface ParsedThesisBullet {
   segments: Array<
-    | { kind: "text"; value: string }
-    | { kind: "ref"; id: string; index: number }
+    { kind: "text"; value: string } | { kind: "ref"; id: string; index: number }
   >;
 }
 
@@ -71,7 +71,10 @@ export interface ExtractedFootnotes {
   ids: string[]; // unique, in first-citation order
 }
 
-export function extractFootnotes(thesis: readonly string[]): ExtractedFootnotes {
+// eslint-disable-next-line react-refresh/only-export-components -- Exported pure parser is shared with contract tests.
+export function extractFootnotes(
+  thesis: readonly string[],
+): ExtractedFootnotes {
   const ids: string[] = [];
   const indexById = new Map<string, number>();
   const bullets: ParsedThesisBullet[] = thesis.map((bullet) => {
@@ -81,7 +84,10 @@ export function extractFootnotes(thesis: readonly string[]): ExtractedFootnotes 
     let match: RegExpExecArray | null;
     while ((match = SOURCE_ID_PATTERN.exec(bullet)) !== null) {
       if (match.index > cursor) {
-        segments.push({ kind: "text", value: bullet.slice(cursor, match.index) });
+        segments.push({
+          kind: "text",
+          value: bullet.slice(cursor, match.index),
+        });
       }
       const id = match[1];
       let i = indexById.get(id);
@@ -130,6 +136,7 @@ export interface SourceIdParts {
   asof: string;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- Exported pure parser is shared with contract tests.
 export function parseSourceId(id: string): SourceIdParts | null {
   // Walk from right: trailing YYYY-MM-DD, then symbol, then field,
   // then provider. The symbol is the only segment that can carry a
@@ -262,7 +269,10 @@ function ScenariosBlock({ scenarios }: { scenarios: ScenarioSet }) {
       <h4 className="text-xs font-semibold uppercase text-gray-500 mb-1">
         Scenarios{" "}
         {!probValid && (
-          <span className="ml-1 text-rose-700 font-normal" data-testid="scenarios-prob-warning">
+          <span
+            className="ml-1 text-rose-700 font-normal"
+            data-testid="scenarios-prob-warning"
+          >
             (⚠ probability sum {probSum.toFixed(2)} ≠ 1.0)
           </span>
         )}
@@ -399,7 +409,10 @@ export function ResearchPanel({ metadata }: { metadata: DecisionMetadata }) {
         <ValuationBlock items={valuation} />
       )}
       {priceTarget && (
-        <section data-testid="research-pt" className="mt-3 text-sm text-gray-700">
+        <section
+          data-testid="research-pt"
+          className="mt-3 text-sm text-gray-700"
+        >
           <span className="text-xs font-semibold uppercase text-gray-500 mr-2">
             Price target:
           </span>
@@ -412,9 +425,13 @@ export function ResearchPanel({ metadata }: { metadata: DecisionMetadata }) {
         </section>
       )}
       {scenarios && <ScenariosBlock scenarios={scenarios} />}
-      {catalysts && catalysts.length > 0 && <CatalystsBlock items={catalysts} />}
+      {catalysts && catalysts.length > 0 && (
+        <CatalystsBlock items={catalysts} />
+      )}
       {risks && risks.length > 0 && <RisksBlock items={risks} />}
-      {footnotes && footnotes.ids.length > 0 && <FootnoteList ids={footnotes.ids} />}
+      {footnotes && footnotes.ids.length > 0 && (
+        <FootnoteList ids={footnotes.ids} />
+      )}
     </div>
   );
 }
