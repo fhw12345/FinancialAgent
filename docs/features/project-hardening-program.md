@@ -1,7 +1,7 @@
 ---
 title: Project Hardening Program
 status: in-progress
-version: backend@0.51.2, frontend@0.32.2
+version: backend@0.51.2, frontend@0.32.3
 last_updated: 2026-08-06
 owner: maintainer
 related_paths:
@@ -98,8 +98,8 @@ Wave 1 implementation started on 2026-08-06. PH-001, PH-002, PH-005, and
 PH-010 have code and passing task-specific Playwright evidence. PH-004 and
 PH-008 have partial implementation but remain blocked from shipment by the
 pre-existing mypy debt and external package-registry TLS failures respectively.
-PH-003 is shipped at backend `0.51.2`; PH-006, PH-007, PH-008, and PH-009
-remain open and the program is not shipped. The first hardening tranche is
+PH-003 is shipped at backend `0.51.2` and PH-006 is shipped at frontend
+`0.32.3`; PH-007, PH-008, and PH-009 remain open and the program is not shipped. The first hardening tranche is
 recorded in implementation commit `960d29a`.
 
 ## Program Acceptance Criteria

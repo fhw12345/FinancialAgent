@@ -1,7 +1,7 @@
 ---
 title: Insights Shared Prefetch Contract Repair
 status: in-progress
-version: backend@0.51.2, frontend@0.32.2
+version: backend@0.51.2, frontend@0.32.3
 last_updated: 2026-08-06
 owner: maintainer
 related_paths:

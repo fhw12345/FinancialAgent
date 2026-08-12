@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.32.3] - 2026-08-06
+
+### Typed frontend boundaries and zero-warning production lint
+
+- Validates unknown SSE envelopes and ignores malformed optional events without corrupting chat state.
+- Removes explicit `any` and unsafe propagation from production API, chat, chart, portfolio, and insights boundaries.
+- Fixes hook dependencies, typed dictionary access, modal/form accessibility, keyboard resizing, and bounded timestamp-regex coverage.
+- Enforces zero ESLint warnings for production source and ratchets the isolated test/E2E warning budget from 435 to 131.
+- Adds Playwright recovery evidence for malformed SSE followed by successful streamed completion.
+
 ## [0.32.2] - 2026-08-06
 
 ### CI smoke isolation

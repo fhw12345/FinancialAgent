@@ -1,7 +1,7 @@
 ---
 title: Frontend API Boundary and Lint Quality
-status: planning
-version: frontend@0.32.2
+status: shipped
+version: frontend@0.32.3
 last_updated: 2026-08-06
 owner: maintainer
 related_paths:
@@ -78,13 +78,42 @@ recovers from an ignored malformed optional event and reaches completion.
 
 ## Acceptance Criteria
 
-- [ ] API/SSE production boundaries contain no explicit `any`.
-- [ ] Malformed payloads cannot corrupt React state.
-- [ ] Hook dependency warnings in production source are resolved.
-- [ ] Unsafe regex warning is removed with regression tests.
-- [ ] ESLint warning budget is enforced and documented.
-- [ ] Required browser scenarios and screenshot pass.
-- [ ] Unit tests, lint, type-check, and build pass.
+- [x] API/SSE production boundaries contain no explicit `any`.
+- [x] Malformed payloads cannot corrupt React state.
+- [x] Hook dependency warnings in production source are resolved.
+- [x] The bounded timestamp regex has a 100,000-character regression test and no production lint warning.
+- [x] Production lint enforces zero warnings; test/E2E debt is capped at 131.
+- [x] Required browser scenarios and screenshot pass.
+- [x] 248 unit tests, lint, type-check, and production build pass.
+
+## Implementation and Test Record
+
+The production lint baseline fell from 435 repository warnings, including 135
+in production source, to zero production warnings. Remaining warnings are
+isolated to tests and E2E fixtures and are capped at 131 in CI, preventing any
+increase. HTTP errors, SSE envelopes, analysis metadata, chart tooltips,
+Portfolio API responses, and dynamic dictionaries now cross `unknown` or typed
+validators before reaching state. Accessibility fixes added associated labels,
+button-backed modal backdrops, keyboard column resizing, and safe focus
+behavior.
+
+Validation completed on 2026-08-06:
+
+- 248 frontend unit/component tests passed;
+- production ESLint passed with `--max-warnings 0`;
+- full test/E2E lint passed at the ratcheted 131-warning ceiling;
+- TypeScript and the Vite production build passed;
+- malformed SSE recovery, Insights refresh, version diagnostics, and Markdown
+  safety passed in the project-hardening browser suite;
+- symbol clarification candidate selection passed;
+- cancellation persisted through the dedicated UAW-005 stack;
+- the synchronized chart-volume overlay passed.
+
+The malformed fixture was ignored, a later valid response reached its asserted
+completed UI, and Playwright then captured
+[`assets/ph-006/01-typed-stream-recovery.png`](assets/ph-006/01-typed-stream-recovery.png).
+The scenario used deterministic network fixtures. Implementation commit:
+`1a35c1b`.
 
 ## Risks
 

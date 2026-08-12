@@ -1,7 +1,7 @@
 ---
 title: Untrusted Agent Markdown Rendering Safety
 status: in-progress
-version: frontend@0.32.2
+version: frontend@0.32.3
 last_updated: 2026-08-06
 owner: maintainer
 related_paths:
