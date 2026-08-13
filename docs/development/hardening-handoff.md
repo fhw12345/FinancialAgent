@@ -1,8 +1,8 @@
 ---
 title: Project Hardening Active Handoff
 status: in-progress
-version: backend@0.51.3, frontend@0.32.3
-last_updated: 2026-08-12
+version: backend@0.51.4, frontend@0.32.4
+last_updated: 2026-08-13
 owner: maintainer
 related_paths:
   - docs/features/project-hardening-program.md
@@ -135,7 +135,7 @@ Formal document status at handoff:
 | PH-005 Markdown safety | in-progress | Raw HTML removed, component/browser security proof exists; formal closeout remains |
 | PH-006 Frontend quality | shipped | Complete |
 | PH-007 Composition coverage | shipped | Complete |
-| PH-008 Reproducible builds | in-progress | Lock and non-root changes exist; two clean builds and clean-image browser proof blocked previously by package-registry TLS |
+| PH-008 Reproducible builds | shipped | Lock-preserving mirrors, semantic package-lock verification, non-root runtime users, two clean builds, healthy fresh images, browser proof, screenshot, versions, changelogs, and shipment docs complete |
 | PH-009 Source decomposition | planning | Start only after PH-008 or an explicit integration decision |
 | PH-010 Version metadata | in-progress | Runtime/UI metadata and browser proof exist; formal closeout remains |
 
@@ -145,55 +145,20 @@ marked shipped before their final closeout review.
 
 ## 5. Recommended Next Sequence
 
-### Step 1 — PH-008 Reproducible Builds
+### Step 1 — Formal Closeout Review
 
-Read completely:
-
-- `docs/features/project-hardening-reproducible-builds.md`;
-- `backend/Dockerfile`;
-- `frontend/Dockerfile`;
-- `backend/requirements.lock`;
-- `frontend/package-lock.json`.
-
-Retry the previously blocked clean builds:
-
-```bash
-docker compose build --no-cache backend frontend
-docker compose build --no-cache backend frontend
-```
-
-Do not run `npm ci` in Docker containers or Docker image builds. The existing
-policy requires reuse of the dependency volume for normal validation.
-
-Required PH-008 completion evidence:
-
-1. two clean builds resolve identical dependency manifests;
-2. backend and frontend image users are non-root;
-3. image history contains no local secret files;
-4. fresh images pass Health and one deterministic chat/analysis browser flow;
-5. capture `docs/features/assets/ph-008/01-clean-build-runtime.png`;
-6. bump affected versions, update changelogs and bilingual case study;
-7. implementation commit followed by documentation commit with hash.
-
-Previous blocker:
-
-```text
-files.pythonhosted.org SSLV3_ALERT_HANDSHAKE_FAILURE
-npm CLI once emitted "Exit handler never called!"
-```
-
-Do not treat a Docker build as successful merely because BuildKit exported an
-image after npm emitted an internal failure. `npm ls --depth=0` exists to make
-that failure explicit.
-
-### Step 2 — Formal Closeout Review
+PH-008 shipped at backend `0.51.4` / frontend `0.32.4` in implementation commit
+`4742bc8` with documentation shipment evidence. The prior package-registry TLS
+blocker was resolved using lock-preserving transport mirrors, semantic
+`package-lock.json` verification, and final fresh-image Playwright evidence at
+`docs/features/assets/ph-008/01-clean-build-runtime.png`.
 
 Review PH-001, PH-002, PH-005, and PH-010 against their checklists. If every
 listed assertion and screenshot is still valid on current `main`, change each
 to `shipped` in a documentation shipment commit. Do not silently mark them
 shipped if current clean-image or integrated-browser evidence has regressed.
 
-### Step 3 — Finish PH-004 CI Evidence
+### Step 2 — Finish PH-004 CI Evidence
 
 Remaining work:
 
@@ -319,9 +284,9 @@ The full session remains in JSONL and can be revisited through `/tree`.
 
 1. Read this handoff completely.
 2. Run `git status --short --branch`; expect clean `main == origin/main`.
-3. Read PH-008 completely before changing Dockerfiles.
-4. Recheck package-registry connectivity rather than assuming the old TLS
-   failure still exists.
-5. Start with one clean backend build, diagnose deterministically, then build
-   frontend; avoid concurrent clean builds while investigating network errors.
-6. Keep PH-008 `in-progress` until fresh-image Playwright evidence is committed.
+3. Start with the formal closeout review for PH-001, PH-002, PH-005, and
+   PH-010; do not mark any of them shipped if current browser evidence has
+   regressed.
+4. Continue PH-004 only after confirming which evidence must come from local
+   gates versus GitHub Actions.
+5. Start PH-009 only after the integrated build/CI baseline is accepted.

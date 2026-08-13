@@ -63,6 +63,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [Reproducible Builds Need Runtime Proof](case-studies/2026-08-13-reproducible-builds-need-runtime-proof.md)
 - [Composition Tests Found Stale Failure After Success](case-studies/2026-08-12-composition-tests-found-stale-success.md)
 - [Typed Boundaries Restored Frontend Lint Signal](case-studies/2026-08-06-typed-boundaries-restored-lint-signal.md)
 - [Strict Types Found Runtime Contract Failures](case-studies/2026-08-06-strict-types-found-runtime-contracts.md)

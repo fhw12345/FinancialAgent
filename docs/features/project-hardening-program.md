@@ -1,8 +1,8 @@
 ---
 title: Project Hardening Program
 status: in-progress
-version: backend@0.51.3, frontend@0.32.3
-last_updated: 2026-08-12
+version: backend@0.51.4, frontend@0.32.4
+last_updated: 2026-08-13
 owner: maintainer
 related_paths:
   - docker-compose.yml
@@ -98,12 +98,14 @@ Active continuation notes are maintained in
 [Project Hardening Active Handoff](../development/hardening-handoff.md).
 
 Wave 1 implementation started on 2026-08-06. PH-001, PH-002, PH-005, and
-PH-010 have code and passing task-specific Playwright evidence. PH-004 and
-PH-008 have partial implementation but remain blocked from shipment by the
-pre-existing mypy debt and external package-registry TLS failures respectively.
-PH-003 and PH-007 are shipped at backend `0.51.3`, and PH-006 is shipped at
-frontend `0.32.3`; PH-008 and PH-009 remain open and the program is not shipped. The first hardening tranche is
-recorded in implementation commit `960d29a`.
+PH-010 have code and passing task-specific Playwright evidence. PH-004 remains
+open for CI-hosted evidence. PH-003 and PH-007 are shipped at backend
+`0.51.3`, PH-006 is shipped at frontend `0.32.3`, and PH-008 is shipped at
+backend `0.51.4` / frontend `0.32.4` after resolving the package-registry TLS
+blocker with lock-preserving transport mirrors, two clean builds, and
+fresh-image Playwright evidence. PH-009 remains open and the program is not
+shipped. The first hardening tranche is recorded in implementation commit
+`960d29a`; PH-008 shipped in implementation commit `4742bc8`.
 
 ## Program Acceptance Criteria
 
