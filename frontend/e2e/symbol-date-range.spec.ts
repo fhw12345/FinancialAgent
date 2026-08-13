@@ -2,7 +2,15 @@ import { mkdirSync } from "fs";
 import path from "path";
 import { expect, test } from "@playwright/test";
 
-const backendUrl = "http://host.docker.internal:18089";
+function resolveBackendUrl() {
+  if (process.env.E2E_BACKEND_URL) return process.env.E2E_BACKEND_URL;
+  const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? "";
+  return baseUrl.includes(":3008")
+    ? "http://host.docker.internal:18089"
+    : "http://host.docker.internal:18081";
+}
+
+const backendUrl = resolveBackendUrl();
 const evidenceDir = path.join(
   process.cwd(),
   "..",

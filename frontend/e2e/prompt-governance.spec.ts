@@ -11,7 +11,16 @@ const evidenceDir = path.resolve(
   "prompt-governance",
 );
 const updateEvidence = process.env.UPDATE_E2E_EVIDENCE === "true";
-const backendUrl = "http://host.docker.internal:18089";
+
+function resolveBackendUrl() {
+  if (process.env.E2E_BACKEND_URL) return process.env.E2E_BACKEND_URL;
+  const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? "";
+  return baseUrl.includes(":3008")
+    ? "http://host.docker.internal:18089"
+    : "http://host.docker.internal:18081";
+}
+
+const backendUrl = resolveBackendUrl();
 
 async function fetchRun(page: Page, runId: string) {
   return page.evaluate(
@@ -33,7 +42,7 @@ async function sendChat(page: Page, message: string) {
     .getAttribute("data-run-id")) as string;
 }
 
-test("prompt governance versions survive chat and Portfolio UI flows", async ({
+test("prompt governance versions survive chat and Portfolio UI flows @uaw009", async ({
   page,
 }) => {
   test.setTimeout(120_000);

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.4] - 2026-08-13
+
+### Added
+- Harden reproducible Docker builds with lock-preserving package mirrors and runtime healthchecks
+
+
 ## [0.51.3] - 2026-08-12
 
 ### Agent orchestration composition gates

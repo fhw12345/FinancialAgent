@@ -243,6 +243,49 @@ test("insights refresh completes through the visible UI @project-hardening", asy
   }
 });
 
+test("clean rebuilt images serve health and deterministic chat @project-hardening @ph008 @real-stack", async ({
+  page,
+  request,
+}) => {
+  const backendUrl =
+    process.env.PH008_BACKEND_URL ??
+    process.env.E2E_BACKEND_URL ??
+    "http://host.docker.internal:18081";
+  const health = await request.get(`${backendUrl}/api/health`);
+  expect(health.ok()).toBe(true);
+
+  await openEnglishApp(page);
+  await page.getByTestId("nav-health").click();
+  await expect(page.getByText("HEALTHY", { exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
+
+  await page.getByTestId("nav-chat").click();
+  await page
+    .getByTestId("chat-composer")
+    .fill("Remember CLEAN-008 for the clean build smoke.");
+  await page.getByTestId("chat-send").click();
+  await expect(
+    page.locator("[data-chat-scroll]").getByText("Acknowledged CLEAN-008."),
+  ).toBeVisible({ timeout: 30_000 });
+
+  if (updateEvidence) {
+    const dir = path.resolve(
+      process.cwd(),
+      "..",
+      "docs",
+      "features",
+      "assets",
+      "ph-008",
+    );
+    mkdirSync(dir, { recursive: true });
+    await page.screenshot({
+      path: path.join(dir, "01-clean-build-runtime.png"),
+      fullPage: true,
+    });
+  }
+});
+
 test("health diagnostics show matching component versions @project-hardening", async ({
   page,
 }) => {
@@ -261,14 +304,14 @@ test("health diagnostics show matching component versions @project-hardening", a
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ status: "ok", version: "0.51.2" }),
+      body: JSON.stringify({ status: "ok", version: "0.51.4" }),
     }),
   );
 
   await openEnglishApp(page);
   await page.getByTestId("nav-health").click();
-  await expect(page.getByText("v0.32.3", { exact: true })).toBeVisible();
-  await expect(page.getByText("v0.51.2", { exact: true })).toBeVisible();
+  await expect(page.getByText("v0.32.4", { exact: true })).toBeVisible();
+  await expect(page.getByText("v0.51.4", { exact: true })).toBeVisible();
 
   if (updateEvidence) {
     const dir = path.resolve(

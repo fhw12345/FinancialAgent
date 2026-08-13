@@ -1,6 +1,6 @@
 {
   "name": "financial-agent-frontend",
-  "version": "0.32.3",
+  "version": "0.32.4",
   "type": "module",
   "description": "Financial Agent frontend (personal local fork)",
   "scripts": {

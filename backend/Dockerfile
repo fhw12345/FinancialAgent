@@ -12,11 +12,14 @@ WORKDIR /app
 
 # Install the exact production dependency graph recorded from the supported
 # Linux/Python 3.12 runtime, then install this package without re-resolving it.
+# PIP_INDEX_URL is transport-only: requirements.lock remains the version source
+# of truth while allowing local networks to choose a reachable package mirror.
+ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 COPY pyproject.toml requirements.lock ./
 COPY src/ ./src/
 
 # hadolint ignore=DL3013
-RUN pip install --no-cache-dir -r requirements.lock && \
+RUN pip install --no-cache-dir --index-url "$PIP_INDEX_URL" -r requirements.lock && \
     pip install --no-cache-dir --no-deps .
 
 # Production stage
