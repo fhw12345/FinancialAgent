@@ -94,6 +94,9 @@ the same suite after decomposition to prove behavior preservation.
 
 ## Current Execution Record
 
+Active continuation notes are maintained in
+[Project Hardening Active Handoff](../development/hardening-handoff.md).
+
 Wave 1 implementation started on 2026-08-06. PH-001, PH-002, PH-005, and
 PH-010 have code and passing task-specific Playwright evidence. PH-004 and
 PH-008 have partial implementation but remain blocked from shipment by the

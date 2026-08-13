@@ -14,6 +14,7 @@ All current documentation describes the local single-user application.
 - [Coding Standards](development/coding-standards.md)
 - [Documentation Policy](development/documentation.md)
 - [Error Handling](development/error-handling.md)
+- [Active Project Hardening Handoff](development/hardening-handoff.md)
 
 ## Agent and Features
 
