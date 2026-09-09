@@ -1,0 +1,23 @@
+title = "Financial Agent secret scanning"
+
+[extend]
+useDefault = true
+
+# These three literals are deliberately synthetic inputs to sanitizer tests.
+# Both path AND exact extracted value must match; do not exempt all tests.
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Known synthetic sanitizer fixtures, not credentials"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''(^|/)backend/tests/test_alphavantage_market_data_service\.py$''',
+  '''(^|/)backend/tests/test_sanitizers\.py$''',
+]
+regexes = [
+  '''^TEST_API_KEY_1234567890$''',
+  '''^ABCD1234567890XYZ$''',
+  '''^ABC123DEF456$''',
+]

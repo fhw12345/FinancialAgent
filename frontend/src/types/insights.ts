@@ -66,6 +66,7 @@ export interface CategoriesListResponse {
 
 /** API Response: Refresh operation result */
 export interface RefreshResponse {
+  prefetch_errors?: Record<string, string>;
   success: boolean;
   category_id: string;
   message: string;

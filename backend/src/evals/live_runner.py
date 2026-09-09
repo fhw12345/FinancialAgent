@@ -4,7 +4,7 @@ import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
-from src.agent.prompt_registry import prompt_registry_snapshot
+from src.core.provenance import EvaluationProvenance, capture_evaluation_provenance
 
 from .live_budget import BudgetLedger
 from .live_cases import load_live_cases, load_provider_smoke_cases
@@ -15,7 +15,6 @@ from .live_gateway import (
     FakeLiveModelGateway,
     LiveModelGateway,
 )
-from .live_metrics import calculate_live_metrics
 from .live_policy import (
     ROUTER_MAX_INPUT_TOKENS,
     ROUTER_MAX_OUTPUT_TOKENS,
@@ -24,7 +23,7 @@ from .live_policy import (
     judge_failures,
     usage_totals,
 )
-from .live_progress import build_running_report
+from .live_progress import build_completed_report, build_running_report
 from .live_schemas import (
     DeterministicRubricResult,
     LiveCaseResult,
@@ -37,7 +36,6 @@ from .live_schemas import (
     ToolEvidence,
 )
 from .pricing import (
-    PRICING_CATALOG_VERSION,
     MissingModelPricing,
 )
 from .rubric import evaluate_deterministic_rubric
@@ -401,11 +399,13 @@ async def run_live_evaluation(
     run_id: str | None = None,
     created_at: datetime | None = None,
     progress_callback: LiveProgressCallback | None = None,
+    provenance: EvaluationProvenance | None = None,
 ) -> LiveEvaluationReport:
     if not request.enabled:
         raise ValueError("Live evaluation requires explicit enabled=true consent")
     if request.lane == "provider_smoke" and gateway is None:
         raise ValueError("Provider smoke requires an injected production gateway")
+    provenance = provenance or await capture_evaluation_provenance()
     if gateway is None:
         gateway = (
             FakeLiveModelGateway(request)
@@ -452,6 +452,7 @@ async def run_live_evaluation(
         if progress_callback is not None:
             await progress_callback(
                 build_running_report(
+                    provenance=provenance,
                     run_id=resolved_run_id,
                     request=request,
                     created_at=started_at,
@@ -462,36 +463,12 @@ async def run_live_evaluation(
             )
         if status == "budget_exhausted":
             break
-    metrics = calculate_live_metrics(results)
-    if status != "budget_exhausted" and any(
-        result.status == "failed" for result in results
-    ):
-        status = "failed"
-    gates_passed = (
-        status == "completed"
-        and metrics.case_pass_rate == 1.0
-        and metrics.critical_case_failures == 0
-        and metrics.tool_recall >= 0.9
-        and metrics.tool_precision >= 0.9
-        and metrics.deterministic_quality >= 0.9
-        and metrics.judge_quality >= 0.8
-        and metrics.required_fact_coverage >= 0.9
-        and metrics.unsupported_claim_rate == 0.0
-        and metrics.estimated_cost_usd <= request.max_cost_usd
-    )
-    completed_at = datetime.now(UTC)
-    return LiveEvaluationReport(
+    return build_completed_report(
+        provenance=provenance,
         run_id=resolved_run_id,
-        lane=request.lane,
+        request=request,
         status=status,
         created_at=started_at,
-        completed_at=completed_at,
-        max_cost_usd=request.max_cost_usd,
-        metrics=metrics,
-        gates_passed=gates_passed,
-        budget_exhausted=status == "budget_exhausted",
-        pricing_catalog_version=PRICING_CATALOG_VERSION,
-        configured_prompt_versions=prompt_registry_snapshot(),
         used_prompt_versions=used_prompts,
         model_routes=model_routes,
         results=results,

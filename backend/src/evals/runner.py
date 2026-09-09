@@ -4,6 +4,8 @@ import math
 import time
 from typing import Any, cast
 
+from src.core.provenance import capture_evaluation_provenance
+
 from ..agent.flow_router import AgentFlowRouter
 from ..agent.prompt_registry import prompt_registry_snapshot
 from ..agent.symbol_resolver import SymbolResolver
@@ -147,6 +149,7 @@ async def run_deterministic_evaluation(
     *,
     thresholds: EvaluationThresholds | None = None,
 ) -> EvaluationReport:
+    provenance = await capture_evaluation_provenance()
     thresholds = thresholds or EvaluationThresholds()
     router = AgentFlowRouter(llm=_NoLiveClassifier())
     results: list[CaseEvaluationResult] = []
@@ -333,6 +336,7 @@ async def run_deterministic_evaluation(
         ),
     ]
     return EvaluationReport(
+        provenance=provenance,
         suite_version=cases[0].suite_version if cases else "unknown",
         created_at=utcnow(),
         total_cases=total,

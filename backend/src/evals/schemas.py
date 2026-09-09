@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from src.core.provenance import EvaluationProvenance
+
 AgentFlow = Literal["v2", "v3", "v4-deep"]
 ExecutionMode = Literal["instant", "agentic", "research"]
 LatencyClass = Literal["fast", "normal", "long"]
@@ -104,6 +106,7 @@ class EvaluationComparison(BaseModel):
 
 
 class EvaluationReport(BaseModel):
+    provenance: EvaluationProvenance | None = None
     suite_version: str
     created_at: datetime
     total_cases: int

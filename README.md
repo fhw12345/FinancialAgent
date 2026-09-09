@@ -20,6 +20,7 @@ All published Compose ports bind to `127.0.0.1` by default. MongoDB, Redis, and
 the unauthenticated local API must not be exposed to a LAN. Remote access
 requires an explicit Compose override plus an appropriate authentication and
 network-security review; changing the bindings to `0.0.0.0` alone is unsafe.
+See [remote-access opt-in guidance](docs/development/getting-started.md#local-network-boundary-and-remote-opt-in).
 
 ## LLM Provider
 

@@ -1,22 +1,60 @@
 import { expect, test } from "@playwright/test";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const updateEvidence = process.env.UPDATE_E2E_EVIDENCE === "true";
+const frontendPackage = JSON.parse(readFileSync("package.json", "utf8")) as {
+  version: string;
+};
 
 async function openEnglishApp(page: import("@playwright/test").Page) {
+  await page.setViewportSize({ width: 1440, height: 1100 });
   await page.addInitScript(() => localStorage.setItem("i18nextLng", "en"));
   await page.goto("/", { waitUntil: "domcontentloaded" });
 }
 
 test("loopback-bound real stack remains healthy @project-hardening @real-stack", async ({
   page,
+  request,
 }) => {
+  const backendUrl =
+    process.env.E2E_BACKEND_URL ?? "http://host.docker.internal:18081";
+  const expected = readFileSync(
+    path.resolve("..", "backend", "pyproject.toml"),
+    "utf8",
+  ).match(/^version = "([^"]+)"/m)?.[1];
+  expect(expected).toBeTruthy();
+  const healthResponse = await request.get(`${backendUrl}/api/health`);
+  expect(healthResponse.ok()).toBe(true);
+  const health = (await healthResponse.json()) as {
+    version: string;
+    status: string;
+    dependencies: {
+      mongodb: { connected: boolean };
+      redis: { connected: boolean };
+    };
+  };
+  expect(health.version).toBe(expected);
+  expect(health.status).toBe("ok");
+  expect(health.dependencies.mongodb.connected).toBe(true);
+  expect(health.dependencies.redis.connected).toBe(true);
+  for (const endpoint of ["/", "/openapi.json"]) {
+    const response = await request.get(`${backendUrl}${endpoint}`);
+    expect(response.ok()).toBe(true);
+    const body = (await response.json()) as {
+      version?: string;
+      info?: { version: string };
+    };
+    expect(body.version ?? body.info?.version).toBe(expected);
+  }
   await openEnglishApp(page);
   await page.getByTestId("nav-health").click();
-  await expect(page.getByText(/^v0\.51\.\d+$/, { exact: true })).toBeVisible({
+  await expect(page.getByText(`v${expected}`, { exact: true })).toBeVisible({
     timeout: 15_000,
   });
+  await expect(
+    page.getByText(`v${frontendPackage.version}`, { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("HEALTHY", { exact: true })).toBeVisible();
 
   if (updateEvidence) {
@@ -32,6 +70,20 @@ test("loopback-bound real stack remains healthy @project-hardening @real-stack",
     await page.screenshot({
       path: path.join(dir, "01-loopback-stack-healthy.png"),
       fullPage: true,
+      animations: "disabled",
+    });
+    const versionDir = path.resolve(
+      "..",
+      "docs",
+      "features",
+      "assets",
+      "ph-010",
+    );
+    mkdirSync(versionDir, { recursive: true });
+    await page.screenshot({
+      path: path.join(versionDir, "01-version-diagnostics.png"),
+      fullPage: true,
+      animations: "disabled",
     });
   }
 });
@@ -59,6 +111,14 @@ test("untrusted assistant HTML stays inert @project-hardening", async ({
       "| Safety | Pass |",
       "",
       "[Source](https://example.com/research)",
+      "",
+      "![Markdown tracker](https://attacker.invalid/pixel)",
+      "",
+      "[unsafe](javascript:alert%281%29)",
+      "",
+      "<form><input onfocus='alert(1)'></form><svg onload='alert(1)'></svg>",
+      "",
+      "```python\nprint('safe code')\n```",
     ].join("\n");
     const events = [
       { type: "chat_created", chat_id: "chat_security" },
@@ -76,9 +136,9 @@ test("untrusted assistant HTML stays inert @project-hardening", async ({
   });
 
   const externalRequests: string[] = [];
-  page.on("request", (request) => {
-    if (request.url().includes("attacker.invalid"))
-      externalRequests.push(request.url());
+  await page.route("**://attacker.invalid/**", (route) => {
+    externalRequests.push(route.request().url());
+    return route.abort();
   });
 
   await openEnglishApp(page);
@@ -92,11 +152,23 @@ test("untrusted assistant HTML stays inert @project-hardening", async ({
   ).toBeVisible();
   await expect(chat.getByRole("table")).toBeVisible();
   await expect(
-    chat.locator("iframe, script, img, form, object, embed"),
+    chat.locator(
+      "iframe, script, img, form, object, embed, svg, math, [onerror], [onclick]",
+    ),
   ).toHaveCount(0);
   await expect(chat.getByRole("link", { name: "Source" })).toHaveAttribute(
     "rel",
     "noopener noreferrer",
+  );
+  await expect(chat.locator("code")).toContainText("safe code");
+  const codeColors = await chat.locator("code").evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { text: style.color, background: style.backgroundColor };
+  });
+  expect(codeColors.text).not.toBe(codeColors.background);
+  await expect(chat.locator("a").filter({ hasText: "unsafe" })).toHaveAttribute(
+    "href",
+    "",
   );
   expect(externalRequests).toEqual([]);
 
@@ -109,21 +181,13 @@ test("untrusted assistant HTML stays inert @project-hardening", async ({
       "assets",
       "ph-005",
     );
-    const typedStreamDir = path.resolve(
-      process.cwd(),
-      "..",
-      "docs",
-      "features",
-      "assets",
-      "ph-006",
-    );
     mkdirSync(securityDir, { recursive: true });
-    mkdirSync(typedStreamDir, { recursive: true });
-    await page.screenshot({
-      path: path.join(securityDir, "01-sanitized-agent-markdown.png"),
+    await chat.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
     });
     await page.screenshot({
-      path: path.join(typedStreamDir, "01-typed-stream-recovery.png"),
+      path: path.join(securityDir, "01-sanitized-agent-markdown.png"),
+      animations: "disabled",
     });
   }
 });
@@ -226,21 +290,7 @@ test("insights refresh completes through the visible UI @project-hardening", asy
   expect((await refreshResponse).ok()).toBe(true);
   await expect(page.getByText("Elevated fixture risk")).toBeVisible();
 
-  if (updateEvidence) {
-    const dir = path.resolve(
-      process.cwd(),
-      "..",
-      "docs",
-      "features",
-      "assets",
-      "ph-002",
-    );
-    mkdirSync(dir, { recursive: true });
-    await page.screenshot({
-      path: path.join(dir, "01-shared-prefetch-refresh.png"),
-      fullPage: true,
-    });
-  }
+  // PH-002 evidence is captured by insights-prefetch.spec.ts through the real API.
 });
 
 test("clean rebuilt images serve health and deterministic chat @project-hardening @ph008 @real-stack", async ({
@@ -310,21 +360,10 @@ test("health diagnostics show matching component versions @project-hardening", a
 
   await openEnglishApp(page);
   await page.getByTestId("nav-health").click();
-  await expect(page.getByText("v0.32.4", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(`v${frontendPackage.version}`, { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("v0.51.4", { exact: true })).toBeVisible();
 
-  if (updateEvidence) {
-    const dir = path.resolve(
-      process.cwd(),
-      "..",
-      "docs",
-      "features",
-      "assets",
-      "ph-010",
-    );
-    mkdirSync(dir, { recursive: true });
-    await page.screenshot({
-      path: path.join(dir, "01-version-diagnostics.png"),
-    });
-  }
+  // Curated PH-010 evidence is captured by the real-stack scenario, not this mock.
 });

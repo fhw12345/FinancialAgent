@@ -5,6 +5,7 @@ and composite scores with caching support.
 """
 
 import time
+from datetime import datetime
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -14,6 +15,7 @@ from slowapi.util import get_remote_address
 from ...database.mongodb import MongoDB
 from ...database.redis import RedisCache
 from ...services.insights import InsightsCategoryRegistry, InsightsSnapshotService
+from ..dependencies.insights_deps import get_snapshot_service
 from ..dependencies.storage import get_mongodb, get_redis_cache
 from ..schemas.insights_models import (
     CategoriesListResponse,
@@ -429,12 +431,13 @@ async def refresh_category(
     category_id: str,
     request: Request,
     registry: InsightsCategoryRegistry = Depends(get_insights_registry),
+    snapshot_service: InsightsSnapshotService = Depends(get_snapshot_service),
 ) -> RefreshResponse:
     """
     Force refresh a category's data.
 
-    Clears the cache and recalculates all metrics from fresh API data.
-    Use sparingly as this makes multiple Alpha Vantage API calls.
+    Recalculates from one shared DataManager prefetch and persists a snapshot.
+    Provider-cache TTLs still apply; this is not a forced network-cache purge.
 
     **Rate Limit**: 5 requests per minute (API-heavy operation)
     """
@@ -443,13 +446,16 @@ async def refresh_category(
     try:
         logger.info("Category refresh requested", category_id=category_id)
 
-        data = await registry.refresh_category(category_id)
-
-        if data is None:
+        if registry.get_category_instance(category_id) is None:
             raise HTTPException(
                 status_code=404,
                 detail=f"Category '{category_id}' not found",
             )
+
+        await snapshot_service.ensure_indexes()
+        result = await snapshot_service.create_snapshot(category_id)
+        if result["status"] != "success":
+            raise HTTPException(status_code=500, detail="Snapshot refresh failed")
 
         duration = time.time() - request_start
         logger.info(
@@ -462,7 +468,8 @@ async def refresh_category(
             success=True,
             category_id=category_id,
             message=f"Category '{category_id}' refreshed successfully",
-            last_updated=data.last_updated,
+            last_updated=datetime.fromisoformat(result["last_updated"]),
+            prefetch_errors=result["prefetch_errors"],
         )
 
     except HTTPException:

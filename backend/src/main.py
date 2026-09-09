@@ -281,7 +281,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app.state.market_service = market_service
 
         # Initialize Market Insights registry (singleton for all requests)
-        from .services.insights import InsightsCategoryRegistry
+        from .services.data_manager import DataManager
+        from .services.insights import InsightsCategoryRegistry, InsightsSnapshotService
         from .services.market_data import FREDService
 
         # Create FRED service for liquidity metrics
@@ -297,6 +298,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             fred_service=fred_service,
         )
         app.state.insights_registry = insights_registry
+        # Snapshot refresh must not depend on successful LLM initialization.
+        if data_manager is None:
+            data_manager = DataManager(redis_cache, market_service)
+        app.state.data_manager = data_manager
+        existing_snapshot = getattr(app.state, "snapshot_service", None)
+        if not isinstance(existing_snapshot, InsightsSnapshotService):
+            existing_snapshot = InsightsSnapshotService(
+                mongodb, redis_cache, data_manager, settings, insights_registry
+            )
+            app.state.snapshot_service = existing_snapshot
+        existing_snapshot._registry = insights_registry
         logger.info(
             "Insights registry initialized",
             category_count=len(insights_registry.list_categories()),

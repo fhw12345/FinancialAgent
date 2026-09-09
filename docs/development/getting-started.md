@@ -2,7 +2,7 @@
 title: Getting Started
 status: shipped
 version: n/a
-last_updated: 2026-07-13
+last_updated: 2026-09-09
 owner: maintainer
 related_paths:
   - docker-compose.yml
@@ -93,6 +93,30 @@ docker compose up -d --force-recreate backend
 ```
 
 `docker compose restart` does not reload environment variables.
+
+## Local Network Boundary and Remote Opt-in
+
+Every default published port (including E2E profiles) binds to `127.0.0.1`.
+Containers still communicate using service names on their Docker network.
+CORS is not authentication and does not protect database ports.
+
+Remote access is not enabled by the default configuration. Prefer an authenticated
+SSH tunnel to the existing loopback ports. Any LAN deployment requires a separate,
+explicit Compose override plus authenticated ingress and a network-security
+review. Replace the selected application port mappings rather than appending a
+second wildcard mapping; never expose MongoDB or Redis to the LAN. Simply changing
+`127.0.0.1` to `0.0.0.0` is not a safe remote-access configuration.
+
+Validate the full default port configuration with:
+
+```bash
+python scripts/check-compose-loopback.py
+```
+
+The checker renders every profile without resolving local secret env files.
+On Windows, start the engine with `docker desktop start` and confirm `docker info`
+before bringing services up. Stop on a failed `docker compose up`; do not keep
+polling an endpoint when its container never started.
 
 ## Development Commands
 

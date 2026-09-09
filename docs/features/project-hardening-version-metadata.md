@@ -1,102 +1,98 @@
 ---
 title: Authoritative Runtime Version Metadata
 status: in-progress
-version: backend@0.51.3, frontend@0.32.3
-last_updated: 2026-08-12
+version: backend@0.51.5, frontend@0.32.5
+last_updated: 2026-09-09
 owner: maintainer
 related_paths:
-  - backend/pyproject.toml
-  - backend/src/main.py
-  - frontend/package.json
+  - backend/src/core/version.py
+  - backend/src/core/provenance.py
+  - backend/src/evals/schemas.py
+  - backend/src/evals/live_schemas.py
+  - backend/src/evals/reporting.py
+  - scripts/check-runtime-versions.py
+  - frontend/e2e/project-hardening.spec.ts
   - docs/architecture/overview.md
 ---
 
 # PH-010: Authoritative Runtime Version Metadata
 
-## Objective
+## Scope and Contract
 
-Remove hard-coded and stale version strings so API responses, OpenAPI,
-frontend diagnostics, documentation, screenshots, and changelogs identify the
-same tested release.
+Backend package metadata and frontend `package.json` are authoritative. Runtime
+components must not duplicate release strings. Backend development reads the
+source pyproject; images without that file read installed package metadata.
+Missing metadata is explicitly `0.0.0+development`, never the old `0.1.0` placeholder.
 
-## Version Contract
+Root, Health and OpenAPI expose the backend version. Health displays both
+component versions. Vite derives its constant from the frontend package file.
+The architecture overview records the current candidate versions and links to
+the package sources rather than introducing another runtime authority.
 
-- backend package metadata is authoritative for backend version;
-- frontend package metadata is authoritative for frontend version;
-- runtime code reads generated/imported metadata rather than duplicating it;
-- `/`, health diagnostics, and OpenAPI expose the backend version;
-- the UI exposes frontend and backend versions in an appropriate diagnostics
-  view;
-- feature evidence records the tested commit in addition to semantic versions.
+## Evaluation Provenance
 
-## Ownership and Parallel Safety
+New deterministic and live reports capture provenance once when execution starts:
 
-Agent J owns version plumbing and stale architecture metadata. Avoid unrelated
-architecture rewrites. Coordinate package version bumps with every task before
-final integration so this task does not overwrite another component bump.
+- `backend_version` from the authoritative accessor;
+- `git_commit` when a valid 40-hex revision is available;
+- `source`: `build`, `git` or `unknown`;
+- `dirty`: local Git status when known, otherwise null.
 
-## Implementation Plan
+A declared `FINANCIAL_AGENT_COMMIT` or CI `GITHUB_SHA` is validated syntactically
+and labelled `build`, not represented as independently verified Git state.
+Otherwise local Git is queried off the event loop with bounded timeouts. Missing
+Git/source metadata, failed status, and slow mounts remain unknown, not clean.
 
-1. Add one backend version accessor based on installed package metadata with a
-   safe editable-development fallback.
-2. Use it in FastAPI/OpenAPI, root, health, logs, and evaluation reports.
-3. Expose frontend version through a build-time constant sourced from
-   `package.json`.
-4. Display both versions in Health or Help without cluttering primary workflows.
-5. Update stale architecture version metadata.
-6. Add a consistency script comparing runtime endpoints and package files.
-7. Document bump ownership for parallel branches.
+The same identity survives live initial/progress/final, failed and budget-exhausted
+reports, and JSON/Markdown exports. Historical reports lacking provenance load
+with `provenance=null`; deserialization must never attribute an old report to the
+current release. No model/provider call is needed to collect this metadata.
 
-## Test Plan
+## History and Closeout Findings
 
-### Unit/integration
+Commit `960d29a` added the version accessor and Health UI. Earlier screenshots
+mocked backend versions and were not real endpoint-consistency evidence.
+The 2026-09-09 continuation added installed/source-missing fallback coverage,
+real root/Health/OpenAPI consistency checks with mismatch controls, and evaluation
+provenance including historical compatibility.
 
-- installed and editable backend metadata paths;
-- OpenAPI and root/health report the package version;
-- frontend build constant equals `package.json`;
-- consistency script fails on an intentional mismatch;
-- eval report includes backend version and commit where available.
+## Validation
 
-### Playwright E2E — required
+- `test_version.py`: source, installed and missing-package paths;
+- `scripts/tests/test_hardening_checks.py`: intentional endpoint mismatch and
+  degraded Health are rejected;
+- `test_evaluation_provenance.py`: validated revision, dirty/unknown local Git,
+  deterministic/live exports, progress/final/budget continuity, legacy unknown;
+- `test_evaluation_api.py`: initial/terminal/failure reports preserve identity;
+- `scripts/check-runtime-versions.py`: real root, Health and OpenAPI match source;
+- real browser Health checks both visible versions against package metadata;
+- real browser-triggered eval checks report provenance against backend Health.
 
-Scenario `ph-010-version-diagnostics`:
+[Version diagnostics screenshot](assets/ph-010/01-version-diagnostics.png) was
+captured on the final rebuilt backend `0.51.5` / frontend `0.32.5` stack, with real
+MongoDB/Redis and no mocked Health/version responses. Application source and
+runtime dependencies were not bind-mounted. The mocked UI regression no longer
+writes this screenshot.
 
-1. Start the real local stack from the tested commit.
-2. Open the visible Health or Help diagnostics.
-3. Assert frontend `0.32.2` baseline/updated version and backend
-   `0.51.1` baseline/updated version match package metadata.
-4. Assert the backend health response reports the same backend version.
-5. Capture `docs/features/assets/ph-010/01-version-diagnostics.png`.
-
-Use the actual bumped versions at implementation time rather than freezing the
-planning baseline above.
+The complete local backend/frontend suites and fresh-image browser selection pass;
+see [PH-004](project-hardening-ci-agent-quality-gates.md) and its
+[clean-build receipts](assets/ph-004/clean-build-validation.json).
+Tested tree: `ddf4284` plus the closeout implementation pending commit.
 
 ## Acceptance Criteria
 
-- [ ] No runtime `0.1.0` placeholder remains.
-- [ ] Package metadata and runtime diagnostics agree.
-- [ ] Architecture overview reflects current component versions.
-- [ ] Consistency test prevents drift.
-- [ ] Browser diagnostics scenario and screenshot pass.
-- [ ] Changelogs and feature docs contain final versions and commit hashes.
+- [x] Runtime release metadata no longer uses the `0.1.0` placeholder.
+- [x] Package metadata, root/Health/OpenAPI and UI diagnostics agree.
+- [x] Architecture overview reflects candidate versions.
+- [x] Consistency tests reject drift.
+- [x] Real browser diagnostics and screenshot pass.
+- [x] New eval reports retain release provenance without rewriting history.
+- [ ] Commit hashes, hosted CI and publication complete.
 
-## Implementation and Test Record
+## Publication Status and Risks
 
-Added an authoritative backend version accessor that prefers bind-mounted
-`pyproject.toml` metadata and falls back to installed package metadata. FastAPI,
-root, and health now use it. Vite injects the frontend package version, and the
-Health UI displays both component versions. A real restarted backend reported
-`0.51.1`, replacing the stale image metadata value.
-
-Playwright scenario `health diagnostics show matching component versions`
-asserted frontend `0.32.2` and backend `0.51.1` before capturing
-[`assets/ph-010/01-version-diagnostics.png`](assets/ph-010/01-version-diagnostics.png).
-The screenshot used deterministic API fixtures; PH-001 separately proves the
-real backend Health page. The tested implementation commit is `960d29a`.
-
-## Risks
-
-Parallel version bumps commonly conflict. Assign one integration owner to
-perform final component bumps after implementation branches merge, and require
-other agents to state which component needs a major/minor/patch bump without
-editing the same version line concurrently.
+Local acceptance is verified, not shipped. GitHub authorization/real PR evidence
+and the publication workflow are still required. Unknown provenance is intentional
+when a runtime image has neither Git metadata nor a declared build revision.
+Version collection describes the execution environment; it is not a signed build
+attestation. Parallel branches must coordinate their component version bumps.

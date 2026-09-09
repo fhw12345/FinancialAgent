@@ -1,0 +1,8 @@
+# Fresh-image acceptance: application source/dependencies must come from images.
+# Use after two clean builds, layered on docker-compose.hardening.yml.
+services:
+  backend:
+    volumes: !override
+      - ./backend/tests:/app/tests:ro
+  frontend:
+    volumes: !reset []

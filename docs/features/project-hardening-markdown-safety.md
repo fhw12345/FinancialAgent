@@ -1,8 +1,8 @@
 ---
 title: Untrusted Agent Markdown Rendering Safety
 status: in-progress
-version: frontend@0.32.3
-last_updated: 2026-08-12
+version: frontend@0.32.5
+last_updated: 2026-09-09
 owner: maintainer
 related_paths:
   - frontend/src/components/chat/ChatMessages.tsx
@@ -78,6 +78,22 @@ opener isolation. No actual malicious external domain should be contacted.
 - [ ] Screenshot and deterministic fixture details are recorded.
 - [ ] Frontend full suite, lint, type-check, and build pass.
 
+## 2026-09-09 Closeout Review
+
+The previous corpus tested HTML images only. Markdown image syntax still creates
+`img` elements and remote requests, so PH-005 cannot be closed from the previous
+screenshot. Add a failing regression for Markdown images and unsafe link schemes,
+then disallow images explicitly. Extract only the existing Markdown renderer
+configuration to keep the touched source under 500 lines; this is a narrow
+security-boundary change, not the PH-009 decomposition program.
+
+Test English/Chinese historical output, normal GFM, fenced code, forms, SVG,
+MathML, event handlers, `javascript:`/`data:` links, and Markdown images. Browser
+requests to the fixture attacker domain must be blocked and counted, never sent.
+CSP is deferred: Vite HMR requires development-specific connect/script policy;
+removing HTML parsing plus explicit image rejection is the boundary for this
+change. A static-serving CSP should be designed with the eventual runtime server.
+
 ## Implementation and Test Record
 
 Removed `rehypeRaw` from assistant rendering and added isolated external-link
@@ -89,6 +105,26 @@ deterministic malicious assistant fixture, asserted zero active elements and
 zero attacker-domain requests, then captured
 [`assets/ph-005/01-sanitized-agent-markdown.png`](assets/ph-005/01-sanitized-agent-markdown.png).
 The tested implementation commit is `960d29a`.
+
+## Current Validation — 2026-09-09 (Unpublished)
+
+Tested tree: `ddf4284` plus pending closeout changes, frontend `0.32.5`.
+The Markdown-image regression failed before the fix and passed after it.
+The six-case component corpus passes. Screenshot review additionally exposed
+fenced-code text matching its inherited background; a failing browser contrast
+assertion preceded the scoped `pre code` CSS repair. `AssistantMarkdown.tsx` owns the unchanged
+GFM styles and explicit `img` rejection; `ChatMessages.tsx` is now 406 lines.
+
+The browser corpus includes Markdown tracking images, HTML forms/SVG, unsafe
+links and fenced code. Attacker requests are intercepted and aborted if any
+occur; the passing assertion observes zero. Safe links retain opener isolation.
+The refreshed [screenshot](assets/ph-005/01-sanitized-agent-markdown.png) shows the
+supported content after the safety assertions.
+
+Frontend validation: 254 tests, zero production warnings, 131 total test/E2E
+warnings, successful type-check and build. Windows denied deleting the old mounted
+`dist/assets`; a fresh `/tmp/ph-hardening-dist` output passed as non-root.
+The fix/evidence have not been committed or published, so status stays in progress.
 
 ## Risks
 

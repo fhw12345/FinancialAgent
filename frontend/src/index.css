@@ -54,6 +54,13 @@
     margin: 1rem 0;
   }
 
+  /* Fenced code inherits the dark pre block, not inline code's light background. */
+  .markdown-content pre code {
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+  }
+
   .markdown-content blockquote {
     border-left: 4px solid theme("colors.blue.500");
     background-color: theme("colors.blue.50");

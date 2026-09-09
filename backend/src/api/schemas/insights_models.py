@@ -79,6 +79,7 @@ class CategoriesListResponse(BaseModel):
 class RefreshResponse(BaseModel):
     """Response model for refresh operation."""
 
+    prefetch_errors: dict[str, str] = Field(default_factory=dict)
     success: bool = Field(..., description="Whether refresh succeeded")
     category_id: str = Field(..., description="Category that was refreshed")
     message: str = Field(..., description="Status message")

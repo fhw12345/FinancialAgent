@@ -4,8 +4,21 @@ import json
 from pathlib import Path
 from typing import Any
 
+from src.core.provenance import EvaluationProvenance
+
 from .live_schemas import LiveEvaluationReport
 from .schemas import EvaluationReport
+
+
+def _provenance_lines(provenance: EvaluationProvenance | None) -> list[str]:
+    if provenance is None:
+        return ["- Provenance: unknown (legacy report)"]
+    return [
+        f"- Backend version: `{provenance.backend_version}`",
+        f"- Git commit: `{provenance.git_commit or 'unknown'}`",
+        f"- Revision source: `{provenance.source}`",
+        f"- Working tree dirty: `{provenance.dirty if provenance.dirty is not None else 'unknown'}`",
+    ]
 
 
 def load_report(path: Path) -> EvaluationReport:
@@ -53,6 +66,7 @@ def write_reports(report: EvaluationReport, output_dir: Path) -> tuple[Path, Pat
     lines = [
         "# Agent Evaluation Report",
         "",
+        *_provenance_lines(report.provenance),
         f"- Suite: `{report.suite_version}`",
         f"- Cases: {report.passed_cases}/{report.total_cases} passed",
         f"- Case pass rate: {report.case_pass_rate:.1%}",
@@ -164,6 +178,7 @@ def write_live_reports(
     lines = [
         "# Live Agent Evaluation Report",
         "",
+        *_provenance_lines(report.provenance),
         f"- Run: `{report.run_id}`",
         f"- Lane: `{report.lane}`",
         f"- Status: `{report.status}`",

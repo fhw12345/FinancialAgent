@@ -4,107 +4,154 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
-  pull-requests: write
+
+concurrency:
+  group: pr-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # 1. Run unit tests (required status check)
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ENVIRONMENT: test
+      MONGODB_URL: mongodb://127.0.0.1:27017/hardening_ci
+      REDIS_URL: redis://127.0.0.1:6379/0
+      CI: "true"
 
     services:
       mongodb:
         image: mongo:7.0
-        ports:
-          - 27017:27017
+        ports: ["127.0.0.1:27017:27017"]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1})'"
+          --health-interval 5s --health-timeout 5s --health-retries 20
       redis:
         image: redis:7.2-alpine
-        ports:
-          - 6379:6379
+        ports: ["127.0.0.1:6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 20
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: backend/pyproject.toml
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.lock
+            backend/requirements-ci.lock
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Validate Local-Only Compose Bindings
-        run: python scripts/check-compose-loopback.py
-
-      - name: Install Backend Dependencies
-        run: |
-          cd backend
-          pip install -e ".[dev]"
-
-      - name: Install Frontend Dependencies
-        run: |
-          cd frontend
-          npm ci
-
-      - name: Run Backend Tests
+      - name: Validate repository policy and negative fixtures
         env:
-          MONGODB_URL: mongodb://localhost:27017/test
-          REDIS_URL: redis://localhost:6379
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          docker run --rm -i rhysd/actionlint:1.7.7 - < .github/workflows/pr-checks.yml
+          python -m unittest discover -s scripts/tests -v
+          python scripts/check-compose-loopback.py
+          docker compose -f docker-compose.hardening.yml config --format json > "$RUNNER_TEMP/hardening-compose.json"
+          python scripts/check-compose-loopback.py --config "$RUNNER_TEMP/hardening-compose.json"
+          # Manual runs validate the current tree against main; PRs use their base.
+          python scripts/check-repository-policy.py --base "${PR_BASE:-origin/main}"
+
+      - name: Gitleaks (PR commits and current tracked tree)
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          mkdir -p backend/artifacts/security /tmp/ph-tracked-tree
+          git archive HEAD | tar -x -C /tmp/ph-tracked-tree
+          docker run --rm -v /tmp/ph-tracked-tree:/repo:ro \
+            -v "$PWD/backend/artifacts/security:/reports" \
+            zricethezav/gitleaks:v8.24.3 dir /repo --redact --config /repo/.gitleaks.toml \
+            --report-format json --report-path /reports/gitleaks-tree.json
+          if [ -n "$PR_BASE" ]; then
+            docker run --rm -v "$PWD:/repo:ro" \
+              -v "$PWD/backend/artifacts/security:/reports" \
+              zricethezav/gitleaks:v8.24.3 git /repo --redact --config /repo/.gitleaks.toml \
+              --log-opts="$PR_BASE..HEAD" --report-format json --report-path /reports/gitleaks-commits.json
+          fi
+
+      - name: Install locked backend runtime and CI tools
         run: |
           cd backend
-          python -m pytest tests/ -v --tb=short --cov-report=json:coverage.json
-          cd ..
-          python scripts/check-critical-coverage.py
+          pip install -r requirements.lock -r requirements-ci.lock
+          pip install --no-deps --no-build-isolation -e .
+          pip check
 
-      - name: Run Deterministic Agent Evaluation
-        run: |
-          cd backend
-          python scripts/run_agent_eval.py --out artifacts/evals
-
-      - name: Run Frontend Tests
+      - name: Install locked frontend dependencies (host runner only)
         run: |
           cd frontend
-          npm test -- --passWithNoTests
+          npm ci --ignore-scripts
+          npm ls --depth=0
+          git diff --exit-code -- package-lock.json
 
-      - name: Run Project Hardening Browser Smoke
+      - name: Bandit production source
         run: |
-          cd frontend
-          npx playwright install --with-deps chromium
-          npm run dev -- --host 127.0.0.1 > /tmp/financial-agent-vite.log 2>&1 &
-          PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npm run test:e2e:project-hardening
+          python -m bandit -r backend/src -ll -ii -f json -o backend/artifacts/security/bandit.json
 
-      - name: Lint and Type Check Backend
+      - name: Backend lint and strict types
         run: |
           cd backend
           python -m ruff check src/
           python -m black --check src/
           python -m mypy src/
 
-      - name: Lint and Build Frontend
+      - name: Backend tests and critical coverage
+        run: |
+          cd backend
+          python -m pytest tests/ -q --cov-report=json:coverage.json
+          cd ..
+          python scripts/check-critical-coverage.py
+
+      - name: Deterministic Agent evaluation
+        run: |
+          cd backend
+          python scripts/run_agent_eval.py --out artifacts/evals
+
+      - name: Frontend tests, lint, types and build
         run: |
           cd frontend
+          npm run test -- --run
           npm run lint:production
           npm run lint -- --max-warnings 131
           npm run type-check
           npm run build
 
-      - name: Upload Evaluation and Browser Reports
+      - name: Deterministic real-API browser smoke
+        run: |
+          cd frontend
+          npx playwright install --with-deps chromium
+          cd ..
+          bash scripts/run-ci-browser.sh
+
+      - name: Upload quality reports and server logs (including failures)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pr-quality-reports
+          retention-days: 14
           path: |
-            backend/artifacts/evals/
+            backend/artifacts/
+            backend/coverage.json
             frontend/playwright-report/
             frontend/test-results/
-          if-no-files-found: ignore
+          if-no-files-found: warn

@@ -1,8 +1,8 @@
 ---
 title: Local Network Perimeter Hardening
 status: in-progress
-version: backend@0.51.3, frontend@0.32.3
-last_updated: 2026-08-12
+version: backend@0.51.5, frontend@0.32.5
+last_updated: 2026-09-09
 owner: maintainer
 related_paths:
   - docker-compose.yml
@@ -86,6 +86,14 @@ network isolation.
 - [ ] README and getting-started docs explain explicit remote-access opt-in.
 - [ ] Full quality gates pass.
 
+## 2026-09-09 Closeout Plan
+
+Recheck all profile-gated ports using rendered Compose JSON, not only the
+short-form regex. Add negative tests for wildcard, omitted host IP and IPv6
+bindings. Inspect live container publishers before the real Health/browser
+capture. Document secure remote-access opt-in in getting-started as well as the
+README. Keep `in-progress` until refreshed evidence and publication are complete.
+
 ## Implementation and Test Record
 
 Implemented loopback bindings for all 21 published Compose ports and added
@@ -98,6 +106,26 @@ the real local MongoDB, Redis, backend E2E, and frontend E2E stack. After the
 visible Health page asserted `HEALTHY` and backend version `0.51.1`, it captured
 [`assets/ph-001/01-loopback-stack-healthy.png`](assets/ph-001/01-loopback-stack-healthy.png).
 The tested implementation commit is `960d29a`.
+
+## Current Validation — 2026-09-09 (Unpublished)
+
+Tested tree: `ddf4284` plus the pending closeout changes, backend `0.51.5` /
+frontend `0.32.5`; no implementation hash exists yet.
+
+- Rendered all default profiles: 21 loopback bindings passed; isolated hardening
+  profile: 2 loopback bindings passed. Empty/wildcard/implicit/IPv6 negative
+  fixtures correctly fail.
+- Inspected the isolated live stack: frontend `3011` and backend `18091` bind
+  only to `127.0.0.1`; MongoDB/Redis/LLM publish no host ports.
+- Real `/api/health` confirms MongoDB and Redis connectivity. Browser Health and
+  matching component versions passed at a fixed 1440×1100 viewport.
+- Refreshed [real-stack screenshot](assets/ph-001/01-loopback-stack-healthy.png).
+  Agent responses in this stack are deterministic fixtures; Health and storage
+  are real and not browser-mocked.
+- README and getting-started now both explain safe remote-access opt-in.
+
+Local perimeter acceptance is evidenced, but the overall security/CI gate and
+publication are incomplete; the task remains `in-progress`.
 
 ## Risks and Rollback
 

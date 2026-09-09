@@ -17,7 +17,15 @@ export interface EvaluationCaseResult {
   failures: string[];
 }
 
+export interface EvaluationProvenance {
+  backend_version: string;
+  git_commit: string | null;
+  source: "git" | "build" | "unknown";
+  dirty: boolean | null;
+}
+
 export interface EvaluationReport {
+  provenance?: EvaluationProvenance | null;
   suite_version: string;
   created_at: string;
   total_cases: number;
@@ -42,10 +50,7 @@ export interface EvaluationReport {
   results: EvaluationCaseResult[];
 }
 
-export type LiveEvaluationLane =
-  | "replay_live"
-  | "provider_smoke"
-  | "fake_live";
+export type LiveEvaluationLane = "replay_live" | "provider_smoke" | "fake_live";
 
 export interface LiveEvaluationRequest {
   lane: LiveEvaluationLane;
@@ -129,6 +134,7 @@ export interface LiveCaseResult {
 }
 
 export interface LiveEvaluationReport {
+  provenance?: EvaluationProvenance | null;
   run_id: string;
   suite_version: string;
   lane: LiveEvaluationLane;
@@ -161,9 +167,7 @@ export interface LiveEvaluationReport {
   error: string | null;
 }
 
-export async function runEvaluation(
-  suite = "2.0",
-): Promise<EvaluationReport> {
+export async function runEvaluation(suite = "2.0"): Promise<EvaluationReport> {
   const { data } = await apiClient.post<EvaluationReport>(
     "/api/admin/evaluations/run",
     undefined,

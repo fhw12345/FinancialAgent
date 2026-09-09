@@ -1,8 +1,8 @@
 ---
 title: Project Hardening Program
 status: in-progress
-version: backend@0.51.4, frontend@0.32.4
-last_updated: 2026-08-13
+version: backend@0.51.5, frontend@0.32.5
+last_updated: 2026-09-09
 owner: maintainer
 related_paths:
   - docker-compose.yml
@@ -106,6 +106,23 @@ blocker with lock-preserving transport mirrors, two clean builds, and
 fresh-image Playwright evidence. PH-009 remains open and the program is not
 shipped. The first hardening tranche is recorded in implementation commit
 `960d29a`; PH-008 shipped in implementation commit `4742bc8`.
+
+## 2026-09-09 Closeout / CI Continuation (Unpublished)
+
+PH-001/002/005/010 now meet their local contract/browser checks, including
+Markdown-image safety, real snapshot refresh/shared-input consumption, Redis dedup
+failure handling, and historical-compatible eval provenance. They remain
+`in-progress` pending hosted CI and publication. PH-004's local security/policy
+gates are green after tested XML/SHA1 fixes; its six-case fresh-image real-API
+smoke and eleven-case default regression suite pass. Two final clean builds have
+identical complete installed manifests and frontend assets. GitHub authorization
+is unavailable, so no real PR run or publication is claimed.
+The 131 test/E2E warnings are retained as a non-increasing follow-up budget;
+production lint remains zero-warning. PH-009 has not started.
+
+Versions `0.51.5` / `0.32.5` describe the pending working tree; the last published
+versions remain `0.51.4` / `0.32.4`. See the
+[closeout case study](../case-studies/2026-09-09-closeout-checklists-are-not-evidence.md).
 
 ## Program Acceptance Criteria
 

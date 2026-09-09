@@ -1,8 +1,8 @@
 ---
 title: Project Hardening Active Handoff
 status: in-progress
-version: backend@0.51.4, frontend@0.32.4
-last_updated: 2026-08-13
+version: backend@0.51.5, frontend@0.32.5
+last_updated: 2026-09-09
 owner: maintainer
 related_paths:
   - docs/features/project-hardening-program.md
@@ -24,12 +24,11 @@ requirements.
 ## 2. Repository State at Handoff
 
 ```text
-branch: main
-HEAD: 3521746 docs(agent): record orchestration coverage shipment
-origin/main: 3521746
-working tree: clean
-backend: 0.51.3
-frontend: 0.32.3
+branch: hardening/closeout-ci
+base main / origin/main: ddf4284 docs(build): ship PH-008 reproducible builds
+working tree: local acceptance complete; preparing implementation/evidence commits
+last published: backend 0.51.4 / frontend 0.32.4
+pending versions: backend 0.51.5 / frontend 0.32.5
 ```
 
 Latest implementation/documentation pairs:
@@ -39,6 +38,7 @@ Latest implementation/documentation pairs:
 | PH-003 Backend strict types | `6344fd4` | `3ed53b9` | shipped |
 | PH-006 Frontend typed boundaries | `1a35c1b` | `5fcbec6` | shipped |
 | PH-007 Agent composition coverage | `54252dc` | `3521746` | shipped |
+| PH-008 Reproducible builds | `4742bc8` | `ddf4284` | shipped |
 
 Earlier hardening foundation:
 
@@ -122,6 +122,67 @@ Curated evidence:
 - `docs/features/assets/ph-007/01-portfolio-decision-after-reload.png`;
 - `docs/features/assets/ph-007/02-agent-cancelled-terminal-state.png`.
 
+### 2026-09-09 — Unpublished Closeout / CI Work
+
+Docker Desktop was started with `docker desktop start` and the engine is ready.
+Do not repeat curl waits after failed Compose startup. A dedicated
+`docker-compose.hardening.yml` stack now reuses existing images without npm
+installs, and binds frontend/backend to `3011/18091`. The backend mounts source,
+tests and package metadata only, not local env files.
+
+Pending changes:
+
+- PH-001: rendered-Compose checker (all profiles, long syntax, no env resolution),
+  negative controls, live publishers, real Health screenshot and remote-access docs;
+- PH-005: test-first fix for remote Markdown images; narrow renderer extraction
+  keeps ChatMessages at 406 lines; expanded corpus, fenced-code contrast repair,
+  and browser screenshot;
+- PH-010: source/installed/fallback tests, root/Health/OpenAPI checker and real
+  metadata screenshot; eval provenance now survives initial/progress/final/failure
+  and budget-exhausted reports. Historical reports remain explicitly unknown;
+- PH-002: visible refresh now executes snapshot prefetch and consumes the exact
+  full-history/basket/Treasury/news/IPO inputs through a request-local provider view.
+  Real Redis dedup tests found and fixed re-fetching after provider failure.
+  The screenshot now comes from real API/calculation/Mongo/Redis execution;
+- PH-004: pinned CI tools, concurrency cancellation, read-only permissions,
+  explicit tests, policy/security gates, bounded native browser launcher, same
+  deterministic browser selection locally/CI, and 14-day failure artifacts.
+
+Validation: backend 2,014 tests / 27 deselected, Ruff/Black/mypy (279 source files)
+and critical floors passed; aggregate coverage rounds to 71%. Frontend 254 tests,
+production lint zero, total warnings 131, TypeScript and build passed. Deterministic
+eval passed; final fresh-image Playwright 6 passed and default Playwright 11 passed.
+Gitleaks passed with narrowly-scoped synthetic sanitizer exceptions and a negative
+control. Bandit is green: SEC XML now uses pinned defusedxml with DTD/entity
+rejection, and SHA1 cache hashing explicitly declares non-security use. Actionlint,
+policy unit tests and changed-source/version checks pass. No security rules were
+suppressed for the production fixes.
+
+Two final clean builds compare full installed manifests: 120 backend distributions,
+746 frontend package paths, plus identical frontend production-asset hashes.
+Receipts: `docs/features/assets/ph-004/clean-build-validation.json`.
+The final image-only browser run mounts no application source/dependency paths;
+backend mounts only `/app/tests`, frontend mounts nothing. Both images are healthy,
+UID 1000, and exclude app-local env files.
+
+Remaining blocker: `gh auth status` has no login and no reusable GitHub API
+credential was available. Git push dry-run succeeded, so Git transport and gh API
+authorization must be treated separately. A real PR run, negative-gate/failure-
+artifact checks, branch-protection proof and final shipment still cannot be claimed.
+
+Implementation hash: pending commit.
+All five tasks remain `in-progress`; pending screenshots are under
+`docs/features/assets/ph-001`, `ph-002`, `ph-004`, `ph-005`, `ph-010`. Raw reports
+remain ignored under backend artifacts and frontend Playwright output.
+The isolated hardening stack is still available on `3011/18091` with the image-only
+override active (source edits need rebuilding or switching back to the base profile).
+`ph-quality`
+is a disposable validator container with the locked CI tools. The host's Azure CLI
+installation includes Python 3.13 for stdlib/Git policy scripts; backend gates
+were run with Python 3.12 inside the validator. No global Python/npm install or
+Git credential storage was changed.
+See the [case study](../case-studies/2026-09-09-closeout-checklists-are-not-evidence.md).
+
 ## 4. Hardening Status Matrix
 
 Formal document status at handoff:
@@ -129,15 +190,15 @@ Formal document status at handoff:
 | Task | Status | Actual state / blocker |
 | --- | --- | --- |
 | PH-001 Loopback perimeter | in-progress | Code, contract check, real-stack E2E and screenshot exist; formal closeout remains |
-| PH-002 Insights prefetch | in-progress | Contract fix, Python regression and browser evidence exist; formal closeout remains |
+| PH-002 Insights prefetch | in-progress | Real refresh/prefetch/calculation/persistence, dedup failure handling and fresh-image browser proof pass; publication pending |
 | PH-003 Backend types | shipped | Complete |
-| PH-004 CI gates | in-progress | mypy, eval, deterministic browser smoke, production lint and critical coverage floors exist; test/E2E warning debt and CI-hosted evidence remain |
+| PH-004 CI gates | in-progress | Full local gates and fresh-image smoke pass; missing GitHub authorization/hosted evidence blocks shipment |
 | PH-005 Markdown safety | in-progress | Raw HTML removed, component/browser security proof exists; formal closeout remains |
 | PH-006 Frontend quality | shipped | Complete |
 | PH-007 Composition coverage | shipped | Complete |
 | PH-008 Reproducible builds | shipped | Lock-preserving mirrors, semantic package-lock verification, non-root runtime users, two clean builds, healthy fresh images, browser proof, screenshot, versions, changelogs, and shipment docs complete |
 | PH-009 Source decomposition | planning | Start only after PH-008 or an explicit integration decision |
-| PH-010 Version metadata | in-progress | Runtime/UI metadata and browser proof exist; formal closeout remains |
+| PH-010 Version metadata | in-progress | Real endpoint/UI and evaluation provenance (including legacy compatibility) verified; publication pending |
 
 The formal shipped count understates implemented work because PH-001, PH-002,
 PH-005, and PH-010 have implementation and evidence but were deliberately not
@@ -169,7 +230,7 @@ Remaining work:
 - add concurrency cancellation and any still-missing security hooks;
 - record CI run URL/hash and curated screenshot in PH-004.
 
-### Step 4 — PH-009 Source Decomposition
+### Step 3 — PH-009 Source Decomposition
 
 Only start after the integrated build/CI baseline is accepted. PH-007 is now the
 behavioral freeze that protects this refactor.
@@ -283,7 +344,9 @@ The full session remains in JSONL and can be revisited through `/tree`.
 ## 9. First Actions After Compaction
 
 1. Read this handoff completely.
-2. Run `git status --short --branch`; expect clean `main == origin/main`.
+2. Run `git status --short --branch`; the continuation is on
+   `hardening/closeout-ci`, based on main/origin/main `ddf4284`. Preserve the
+   implementation and evidence; do not reset it to the published base.
 3. Start with the formal closeout review for PH-001, PH-002, PH-005, and
    PH-010; do not mark any of them shipped if current browser evidence has
    regressed.
