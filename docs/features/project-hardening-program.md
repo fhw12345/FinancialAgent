@@ -115,13 +115,16 @@ failure handling, and historical-compatible eval provenance. They remain
 `in-progress` pending hosted CI and publication. PH-004's local security/policy
 gates are green after tested XML/SHA1 fixes; its six-case fresh-image real-API
 smoke and eleven-case default regression suite pass. Two final clean builds have
-identical complete installed manifests and frontend assets. GitHub authorization
-is unavailable, so no real PR run or publication is claimed.
+identical complete installed manifests and frontend assets. Git transport push
+succeeded, but gh API authorization is unavailable; no real PR run or final
+shipment is claimed.
 The 131 test/E2E warnings are retained as a non-increasing follow-up budget;
 production lint remains zero-warning. PH-009 has not started.
 
-Versions `0.51.5` / `0.32.5` describe the pending working tree; the last published
-versions remain `0.51.4` / `0.32.4`. See the
+Versions `0.51.5` / `0.32.5` describe candidate implementation
+`db1e4b8739c21fb160e6eadda65dab53617522aa`, committed with evidence and pushed on
+`hardening/closeout-ci`. The last published main versions remain `0.51.4` /
+`0.32.4`. See the
 [closeout case study](../case-studies/2026-09-09-closeout-checklists-are-not-evidence.md).
 
 ## Program Acceptance Criteria

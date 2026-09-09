@@ -26,7 +26,8 @@ requirements.
 ```text
 branch: hardening/closeout-ci
 base main / origin/main: ddf4284 docs(build): ship PH-008 reproducible builds
-working tree: local acceptance complete; preparing implementation/evidence commits
+implementation: db1e4b8739c21fb160e6eadda65dab53617522aa (pushed)
+evidence: documentation commit following implementation; verify git status on resume
 last published: backend 0.51.4 / frontend 0.32.4
 pending versions: backend 0.51.5 / frontend 0.32.5
 ```
@@ -130,7 +131,7 @@ Do not repeat curl waits after failed Compose startup. A dedicated
 installs, and binds frontend/backend to `3011/18091`. The backend mounts source,
 tests and package metadata only, not local env files.
 
-Pending changes:
+Candidate implementation:
 
 - PH-001: rendered-Compose checker (all profiles, long syntax, no env resolution),
   negative controls, live publishers, real Health screenshot and remote-access docs;
@@ -166,12 +167,18 @@ backend mounts only `/app/tests`, frontend mounts nothing. Both images are healt
 UID 1000, and exclude app-local env files.
 
 Remaining blocker: `gh auth status` has no login and no reusable GitHub API
-credential was available. Git push dry-run succeeded, so Git transport and gh API
-authorization must be treated separately. A real PR run, negative-gate/failure-
+credential was available. The implementation branch push succeeded, but
+`gh pr create` exited 4 asking for login; Git transport and gh API authorization
+must be treated separately. A real PR run, negative-gate/failure-
 artifact checks, branch-protection proof and final shipment still cannot be claimed.
 
-Implementation hash: pending commit.
-All five tasks remain `in-progress`; pending screenshots are under
+Implementation hash: `db1e4b8739c21fb160e6eadda65dab53617522aa`.
+
+Next actions after `gh auth login`: push any final evidence commit, create the PR
+from `hardening/closeout-ci` to `main`, monitor all gates, verify failure artifacts
+and required checks, then perform the final shipment/merge status updates. A
+branch push alone is not a passed CI run or a shipped feature.
+All five tasks remain `in-progress`; committed screenshots are under
 `docs/features/assets/ph-001`, `ph-002`, `ph-004`, `ph-005`, `ph-010`. Raw reports
 remain ignored under backend artifacts and frontend Playwright output.
 The isolated hardening stack is still available on `3011/18091` with the image-only
@@ -347,9 +354,10 @@ The full session remains in JSONL and can be revisited through `/tree`.
 2. Run `git status --short --branch`; the continuation is on
    `hardening/closeout-ci`, based on main/origin/main `ddf4284`. Preserve the
    implementation and evidence; do not reset it to the published base.
-3. Start with the formal closeout review for PH-001, PH-002, PH-005, and
-   PH-010; do not mark any of them shipped if current browser evidence has
-   regressed.
-4. Continue PH-004 only after confirming which evidence must come from local
-   gates versus GitHub Actions.
+3. Local closeout checks and clean-image evidence are complete. Restore gh API
+   authorization, create the PR from `hardening/closeout-ci`, and obtain hosted
+   evidence rather than repeating the original investigation.
+4. Monitor every declared gate, verify negative-gate/failure artifacts and required
+   checks, then merge/publish and update statuses. No additional task from this
+   continuation is shipped yet.
 5. Start PH-009 only after the integrated build/CI baseline is accepted.

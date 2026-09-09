@@ -108,7 +108,7 @@ The tested implementation commit is `960d29a`.
 
 ## Current Validation — 2026-09-09 (Unpublished)
 
-Tested tree: `ddf4284` plus pending closeout changes, frontend `0.32.5`.
+Tested implementation: `db1e4b8739c21fb160e6eadda65dab53617522aa`, frontend `0.32.5`.
 The Markdown-image regression failed before the fix and passed after it.
 The six-case component corpus passes. Screenshot review additionally exposed
 fenced-code text matching its inherited background; a failing browser contrast
@@ -124,7 +124,8 @@ supported content after the safety assertions.
 Frontend validation: 254 tests, zero production warnings, 131 total test/E2E
 warnings, successful type-check and build. Windows denied deleting the old mounted
 `dist/assets`; a fresh `/tmp/ph-hardening-dist` output passed as non-root.
-The fix/evidence have not been committed or published, so status stays in progress.
+The fix and evidence are committed and pushed on `hardening/closeout-ci`.
+Hosted PR/CI and merge are pending, so status stays in progress.
 
 ## Risks
 

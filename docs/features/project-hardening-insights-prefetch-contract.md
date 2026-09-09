@@ -98,7 +98,9 @@ See [build receipts](assets/ph-004/clean-build-validation.json) for the two clea
 builds and actual installed dependency/output comparisons. Browser acceptance ran
 without application-source/dependency bind mounts.
 
-Tested tree: `ddf4284` plus the closeout implementation pending commit.
+Tested implementation: `db1e4b8739c21fb160e6eadda65dab53617522aa` on
+`hardening/closeout-ci`. Code and curated evidence are committed and the branch
+is pushed; real PR/hosted CI and merge remain outstanding.
 
 ## Acceptance Criteria
 

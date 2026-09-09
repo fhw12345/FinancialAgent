@@ -77,7 +77,9 @@ writes this screenshot.
 The complete local backend/frontend suites and fresh-image browser selection pass;
 see [PH-004](project-hardening-ci-agent-quality-gates.md) and its
 [clean-build receipts](assets/ph-004/clean-build-validation.json).
-Tested tree: `ddf4284` plus the closeout implementation pending commit.
+Tested implementation: `db1e4b8739c21fb160e6eadda65dab53617522aa` on
+`hardening/closeout-ci`. The implementation and screenshots are committed and
+pushed; hosted PR/CI and merge remain outstanding.
 
 ## Acceptance Criteria
 

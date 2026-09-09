@@ -104,13 +104,14 @@ version 与 Health 一致；可见 Prompt 区域明确是 configured，而不是
 [Build receipts](../features/assets/ph-004/clean-build-validation.json) and curated
 screenshots live under PH-001/002/004/005/010 assets. Raw reports remain ignored.
 
-Implementation: pending commit.
+Implementation: `db1e4b8739c21fb160e6eadda65dab53617522aa` (pushed on
+`hardening/closeout-ci`).
 
-GitHub CLI is not logged in and no reusable API credential is available. A Git
-push dry-run succeeded, so the Git transport is not blocked merely because gh
-lacks a login. There is still no hosted PR run, verified failure artifact/branch
-protection, or final shipment claim. All five tasks remain `in-progress` until the required workflow
-is actually complete.
+GitHub CLI is not logged in and no reusable API credential is available. The Git
+branch push succeeded, while `gh pr create` exited 4 asking for login. The Git
+transport is not blocked merely because gh lacks an API login. There is still no
+hosted PR run, verified failure artifact/branch protection, or final shipment
+claim. All five tasks remain `in-progress` until the required workflow is complete.
 
 ## 7. Lessons
 

@@ -109,8 +109,9 @@ The tested implementation commit is `960d29a`.
 
 ## Current Validation — 2026-09-09 (Unpublished)
 
-Tested tree: `ddf4284` plus the pending closeout changes, backend `0.51.5` /
-frontend `0.32.5`; no implementation hash exists yet.
+Tested implementation: `db1e4b8739c21fb160e6eadda65dab53617522aa`, backend
+`0.51.5` / frontend `0.32.5`. Code and refreshed screenshots are committed on the
+pushed `hardening/closeout-ci` branch.
 
 - Rendered all default profiles: 21 loopback bindings passed; isolated hardening
   profile: 2 loopback bindings passed. Empty/wildcard/implicit/IPv6 negative
@@ -124,8 +125,8 @@ frontend `0.32.5`; no implementation hash exists yet.
   are real and not browser-mocked.
 - README and getting-started now both explain safe remote-access opt-in.
 
-Local perimeter acceptance is evidenced, but the overall security/CI gate and
-publication are incomplete; the task remains `in-progress`.
+Local perimeter and security gates pass, but hosted PR/CI and merge remain
+incomplete; the task remains `in-progress`.
 
 ## Risks and Rollback
 

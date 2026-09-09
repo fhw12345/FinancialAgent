@@ -125,8 +125,10 @@ passed for implementation commit `960d29a`. CI smoke isolation was corrected in 
 
 ## Current Local Validation — 2026-09-09 (Not Shipped)
 
-Prepared workflow changes are **not** hosted evidence. Tested tree: `ddf4284`
-plus pending working changes at backend `0.51.5` / frontend `0.32.5`.
+Prepared workflow changes are **not** hosted evidence. Tested implementation:
+`db1e4b8739c21fb160e6eadda65dab53617522aa`, backend `0.51.5` / frontend `0.32.5`.
+The implementation and curated evidence are committed and pushed on
+`hardening/closeout-ci`; `gh pr create` still fails because gh has no API login.
 
 | Gate | Local result |
 | --- | --- |
