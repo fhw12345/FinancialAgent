@@ -124,8 +124,11 @@ and [hosted CI case study](../case-studies/2026-09-14-hosted-ci-needs-failure-pr
 
 Nine of ten tasks are shipped. **PH-009 remains planning and has not started**;
 the overall program is still in progress. Production lint remains zero-warning,
-with the unchanged 131-warning test/E2E budget. The integrated baseline is now
-ready for controlled source decomposition.
+with the unchanged 131-warning test/E2E budget. The integrated baseline is ready,
+but the maintainer explicitly paused PH-009 on 2026-09-14. The new
+[Investment Decision Quality Program](investment-decision-quality-program.md)
+records Agent/investment improvements as plans only; it does not authorize runtime
+implementation or resume source decomposition.
 
 ## Program Acceptance Criteria
 

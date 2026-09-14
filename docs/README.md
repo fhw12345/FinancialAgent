@@ -18,6 +18,16 @@ All current documentation describes the local single-user application.
 
 ## Agent and Features
 
+- [Investment Decision Quality Program — planning](features/investment-decision-quality-program.md)
+  - [IDQ-001 Decision Contracts and Policy Gates](features/investment-decision-policy-gates.md)
+  - [IDQ-002 Portfolio Risk and Allocation](features/investment-portfolio-risk-allocation.md)
+  - [IDQ-003 Candidate Selection and Portfolio Fit](features/investment-candidate-selection.md)
+  - [IDQ-004 Point-in-Time Evidence and Claim Validation](features/investment-evidence-snapshots.md)
+  - [IDQ-005 Investment Mandates and Strategy Contracts](features/investment-research-strategy-contracts.md)
+  - [IDQ-006 Structured Agent Research and Bounded Review](features/investment-agent-research-orchestration.md)
+  - [IDQ-007 Multidimensional Insights Risk](features/investment-insights-risk-dimensions.md)
+  - [IDQ-008 Forward Paper Portfolio and Ledger](features/investment-forward-paper-ledger.md)
+  - [IDQ-009 Research Quality and Investment Evaluation](features/investment-quality-evaluation.md)
 - [Project Hardening Program](features/project-hardening-program.md)
   - [PH-001 Local Network Perimeter](features/project-hardening-local-network-perimeter.md)
   - [PH-002 Insights Prefetch Contract](features/project-hardening-insights-prefetch-contract.md)

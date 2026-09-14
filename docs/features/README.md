@@ -31,13 +31,21 @@ Skip feature specs for:
 
 ## Feature Spec Template
 
-````markdown
-# Feature: [Feature Name]
+Follow [Documentation Standards](../development/documentation.md); the template
+below uses the same frontmatter/status contract as the actual specifications.
 
-> **Status**: [Draft | Under Review | Approved | Implemented]
-> **Created**: YYYY-MM-DD
-> **Last Updated**: YYYY-MM-DD
-> **Owner**: [Your Name]
+````markdown
+---
+title: Feature Name
+status: planning
+version: n/a
+last_updated: YYYY-MM-DD
+owner: maintainer
+related_paths:
+  - backend/src/
+---
+
+# Feature: [Feature Name]
 
 ## Context
 
@@ -92,11 +100,10 @@ class NewFeature(BaseModel):
     name: str
     created_at: datetime
 ```
-````
 
 **API Endpoints**:
 
-```
+```text
 POST   /api/feature          Create new feature
 GET    /api/feature/{id}     Get feature by ID
 PUT    /api/feature/{id}     Update feature
@@ -211,11 +218,11 @@ Feature is complete when:
 - Feature flag: `enable_feature_x`
 - Test with internal users first
 
-**Production**:
+**Local Release**:
 
-- Phased rollout (10% → 50% → 100%)
-- Monitoring metrics during rollout
-- Rollback plan if issues detected
+- Explicit opt-in for this single-user application
+- Monitoring and acceptance evidence before enabling new behavior
+- Rollback that preserves historical data and safety gates
 
 ## Open Questions
 
@@ -254,11 +261,25 @@ Feature is complete when:
 - **YYYY-MM-DD**: Updated based on review feedback
 - **YYYY-MM-DD**: Approved and implementation started
 
-```
+````
 
-## Completed Feature Specs
+## Feature Index
 
-Browse existing feature specs in this directory for examples:
+Planning entries describe proposed work, not implemented behavior. Runtime shipment
+requires the evidence and workflow in [Documentation Standards](../development/documentation.md).
+
+### Investment Decision Quality Plans
+
+- **[IDQ-000 Program and Shared Acceptance](investment-decision-quality-program.md)** — planning; baseline findings, contracts, dependencies, milestones, and validation gates
+- **[IDQ-001 Decision Policy Gates](investment-decision-policy-gates.md)** — planning; strict new writes, legacy reads, readiness, and stale approvals
+- **[IDQ-002 Portfolio Risk and Allocation](investment-portfolio-risk-allocation.md)** — planning; dated returns, cash-aware risk, and post-trade limits
+- **[IDQ-003 Candidate Selection](investment-candidate-selection.md)** — planning; deterministic quotas, eligibility, and actual portfolio fit
+- **[IDQ-004 Evidence Snapshots](investment-evidence-snapshots.md)** — planning; point-in-time records, claim validation, and immutable manifests
+- **[IDQ-005 Strategy Contracts](investment-research-strategy-contracts.md)** — planning; mandate, horizon, valuation methods, and invalidation conditions
+- **[IDQ-006 Agent Research Orchestration](investment-agent-research-orchestration.md)** — planning; structured coverage, counterevidence, budgets, and ablation
+- **[IDQ-007 Insights Risk Dimensions](investment-insights-risk-dimensions.md)** — planning; honest missing data and separate financial risk dimensions
+- **[IDQ-008 Forward Paper Ledger](investment-forward-paper-ledger.md)** — planning; future simulated fills, accounting, costs, and isolated experiments
+- **[IDQ-009 Quality Evaluation](investment-quality-evaluation.md)** — planning; factual oracles, forward outcomes, calibration, and strategy review
 
 ### Active Hardening Program
 
@@ -317,7 +338,7 @@ Browse existing feature specs in this directory for examples:
 3. **Approval**: Get sign-off before implementation
 4. **Implementation**: Reference spec during development
 5. **Update**: Keep spec updated if design changes
-6. **Archive**: Mark as "Implemented" when complete
+6. **Publish**: Set `shipped` only after required tests, browser evidence, versioning, and publication; use `superseded` when a successor replaces the spec
 
 ## Tips
 
@@ -326,4 +347,3 @@ Browse existing feature specs in this directory for examples:
 - **Think through edge cases**: What happens when...?
 - **Consider non-functional requirements**: Performance, security, scalability
 - **Link to related docs**: Don't duplicate, reference existing documentation
-```
