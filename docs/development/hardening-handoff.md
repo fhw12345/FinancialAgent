@@ -6,6 +6,7 @@ last_updated: 2026-09-14
 owner: maintainer
 related_paths:
   - docs/features/project-hardening-program.md
+  - docs/features/investment-decision-quality-program.md
   - docs/features/project-hardening-ci-agent-quality-gates.md
   - .github/workflows/pr-checks.yml
   - docker-compose.hardening.yml
@@ -25,7 +26,8 @@ published backend: 0.51.5
 published frontend: 0.32.5
 implementation PR: #1 (merged 2026-09-14)
 implementation merge: 7cc3789b291cfb71865d3cb7a368a965957db5ca
-shipment documentation: follows the implementation through a required-check PR
+shipment documentation: PR #2 merged as f0a5ed0 (2026-09-14)
+current request: investment/Agent quality plans only; PH-009 paused
 ```
 
 Always inspect `git status --short --branch` and fetch before resuming. Do not
@@ -125,10 +127,24 @@ config run. The 131 lint warnings are accepted non-increasing follow-up debt.
 | PH-009 Source decomposition | planning |
 | PH-010 Version metadata | shipped |
 
-## 5. Next Work — PH-009 Only
+## 5. Current Direction — Planning Only; PH-009 Paused
 
-The integrated build/CI baseline is accepted. Read the PH-009 spec before beginning.
-Prioritize:
+The maintainer explicitly requested **not to execute PH-009**. The follow-up Agent
+and investment review is now captured in the
+[Investment Decision Quality Program](../features/investment-decision-quality-program.md)
+and its nine child specifications. All are `planning`; no runtime implementation,
+new investment strategy, paper execution, or IDQ screenshot evidence is claimed.
+
+Read that program for baseline findings, milestone order, exact test oracles,
+Playwright scenarios and release conditions. Next implementation requires an
+explicit instruction; do not automatically start either IDQ or PH-009 from this
+handoff. IDQ-001-A safety containment is the suggested first implementation slice
+if approved, not work already authorized by publishing the plans.
+
+### PH-009 Resume References (Not an Active Work Queue)
+
+The integrated build/CI baseline is accepted, but resumption still needs maintainer
+approval. The earlier priority list is retained only for that future decision:
 
 ```text
 backend/src/services/data_manager/manager.py
