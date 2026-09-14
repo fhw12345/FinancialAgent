@@ -1,8 +1,8 @@
 ---
 title: Authoritative Runtime Version Metadata
-status: in-progress
+status: shipped
 version: backend@0.51.5, frontend@0.32.5
-last_updated: 2026-09-09
+last_updated: 2026-09-14
 owner: maintainer
 related_paths:
   - backend/src/core/version.py
@@ -79,7 +79,10 @@ see [PH-004](project-hardening-ci-agent-quality-gates.md) and its
 [clean-build receipts](assets/ph-004/clean-build-validation.json).
 Tested implementation: `db1e4b8739c21fb160e6eadda65dab53617522aa` on
 `hardening/closeout-ci`. The implementation and screenshots are committed and
-pushed; hosted PR/CI and merge remain outstanding.
+pushed. PR #1 merged on 2026-09-14 as
+`7cc3789b291cfb71865d3cb7a368a965957db5ca` after
+[hosted CI](https://github.com/fhw12345/FinancialAgent/actions/runs/34819419375)
+passed; its actual eval artifact includes backend version and PR merge-ref provenance.
 
 ## Acceptance Criteria
 
@@ -89,12 +92,12 @@ pushed; hosted PR/CI and merge remain outstanding.
 - [x] Consistency tests reject drift.
 - [x] Real browser diagnostics and screenshot pass.
 - [x] New eval reports retain release provenance without rewriting history.
-- [ ] Commit hashes, hosted CI and publication complete.
+- [x] Commit hashes, hosted CI and publication complete.
 
 ## Publication Status and Risks
 
-Local acceptance is verified, not shipped. GitHub authorization/real PR evidence
-and the publication workflow are still required. Unknown provenance is intentional
+Shipped after local/fresh-image acceptance, committed evidence and protected PR
+merge. Unknown provenance is intentional
 when a runtime image has neither Git metadata nor a declared build revision.
 Version collection describes the execution environment; it is not a signed build
 attestation. Parallel branches must coordinate their component version bumps.

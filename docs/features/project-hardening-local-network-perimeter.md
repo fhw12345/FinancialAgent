@@ -1,8 +1,8 @@
 ---
 title: Local Network Perimeter Hardening
-status: in-progress
+status: shipped
 version: backend@0.51.5, frontend@0.32.5
-last_updated: 2026-09-09
+last_updated: 2026-09-14
 owner: maintainer
 related_paths:
   - docker-compose.yml
@@ -78,13 +78,13 @@ network isolation.
 
 ## Acceptance Criteria
 
-- [ ] Every default published port is loopback-bound.
-- [ ] MongoDB and Redis are not reachable through a wildcard host binding.
-- [ ] Normal frontend/backend operation remains unchanged.
-- [ ] Real-stack Playwright health scenario passes.
-- [ ] Compose contract test prevents regression.
-- [ ] README and getting-started docs explain explicit remote-access opt-in.
-- [ ] Full quality gates pass.
+- [x] Every default published port is loopback-bound.
+- [x] MongoDB and Redis are not reachable through a wildcard host binding.
+- [x] Normal frontend/backend operation remains unchanged.
+- [x] Real-stack Playwright health scenario passes.
+- [x] Compose contract test prevents regression.
+- [x] README and getting-started docs explain explicit remote-access opt-in.
+- [x] Full quality gates pass.
 
 ## 2026-09-09 Closeout Plan
 
@@ -92,7 +92,8 @@ Recheck all profile-gated ports using rendered Compose JSON, not only the
 short-form regex. Add negative tests for wildcard, omitted host IP and IPv6
 bindings. Inspect live container publishers before the real Health/browser
 capture. Document secure remote-access opt-in in getting-started as well as the
-README. Keep `in-progress` until refreshed evidence and publication are complete.
+README. This plan kept the task in progress until the refreshed evidence and
+publication recorded below were complete.
 
 ## Implementation and Test Record
 
@@ -104,10 +105,10 @@ force-recreated and Docker reported only `127.0.0.1` host bindings.
 Playwright scenario `loopback-bound real stack remains healthy` passed against
 the real local MongoDB, Redis, backend E2E, and frontend E2E stack. After the
 visible Health page asserted `HEALTHY` and backend version `0.51.1`, it captured
-[`assets/ph-001/01-loopback-stack-healthy.png`](assets/ph-001/01-loopback-stack-healthy.png).
-The tested implementation commit is `960d29a`.
+the initial screenshot (tested implementation `960d29a`). The current committed
+asset was subsequently refreshed at `0.51.5`, as recorded below.
 
-## Current Validation — 2026-09-09 (Unpublished)
+## Local Validation — 2026-09-09
 
 Tested implementation: `db1e4b8739c21fb160e6eadda65dab53617522aa`, backend
 `0.51.5` / frontend `0.32.5`. Code and refreshed screenshots are committed on the
@@ -125,8 +126,10 @@ pushed `hardening/closeout-ci` branch.
   are real and not browser-mocked.
 - README and getting-started now both explain safe remote-access opt-in.
 
-Local perimeter and security gates pass, but hosted PR/CI and merge remain
-incomplete; the task remains `in-progress`.
+Local and hosted perimeter/security gates passed. PR #1 merged normally on
+2026-09-14 as `7cc3789b291cfb71865d3cb7a368a965957db5ca`; the task is shipped.
+[PH-004](project-hardening-ci-agent-quality-gates.md) records the actual CI run,
+required-check enforcement and retained artifact verification.
 
 ## Risks and Rollback
 

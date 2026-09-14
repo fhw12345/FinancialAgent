@@ -2,7 +2,7 @@
 title: Project Hardening Program
 status: in-progress
 version: backend@0.51.5, frontend@0.32.5
-last_updated: 2026-09-09
+last_updated: 2026-09-14
 owner: maintainer
 related_paths:
   - docker-compose.yml
@@ -97,46 +97,46 @@ the same suite after decomposition to prove behavior preservation.
 Active continuation notes are maintained in
 [Project Hardening Active Handoff](../development/hardening-handoff.md).
 
-Wave 1 implementation started on 2026-08-06. PH-001, PH-002, PH-005, and
-PH-010 have code and passing task-specific Playwright evidence. PH-004 remains
-open for CI-hosted evidence. PH-003 and PH-007 are shipped at backend
-`0.51.3`, PH-006 is shipped at frontend `0.32.3`, and PH-008 is shipped at
-backend `0.51.4` / frontend `0.32.4` after resolving the package-registry TLS
-blocker with lock-preserving transport mirrors, two clean builds, and
-fresh-image Playwright evidence. PH-009 remains open and the program is not
-shipped. The first hardening tranche is recorded in implementation commit
-`960d29a`; PH-008 shipped in implementation commit `4742bc8`.
+Wave 1 started on 2026-08-06 and is now shipped. PH-003/007 established strict
+backend types and composition coverage, PH-006 the frontend typed/lint boundary,
+and PH-008 reproducible non-root runtime builds. The first tranche was `960d29a`;
+PH-008 implementation was `4742bc8`.
 
-## 2026-09-09 Closeout / CI Continuation (Unpublished)
+## 2026-09-14 Closeout and Hosted CI Shipment
 
-PH-001/002/005/010 now meet their local contract/browser checks, including
-Markdown-image safety, real snapshot refresh/shared-input consumption, Redis dedup
-failure handling, and historical-compatible eval provenance. They remain
-`in-progress` pending hosted CI and publication. PH-004's local security/policy
-gates are green after tested XML/SHA1 fixes; its six-case fresh-image real-API
-smoke and eleven-case default regression suite pass. Two final clean builds have
-identical complete installed manifests and frontend assets. Git transport push
-succeeded, but gh API authorization is unavailable; no real PR run or final
-shipment is claimed.
-The 131 test/E2E warnings are retained as a non-increasing follow-up budget;
-production lint remains zero-warning. PH-009 has not started.
+**PH-001/002/004/005/010 are shipped** at backend `0.51.5` / frontend `0.32.5`.
+Implementation `db1e4b8739c21fb160e6eadda65dab53617522aa`, evidence `a115fd2`, and CI
+compatibility/probes `1e78a4a` merged through protected
+[PR #1](https://github.com/fhw12345/FinancialAgent/pull/1), merge
+`7cc3789b291cfb71865d3cb7a368a965957db5ca`.
 
-Versions `0.51.5` / `0.32.5` describe candidate implementation
-`db1e4b8739c21fb160e6eadda65dab53617522aa`, committed with evidence and pushed on
-`hardening/closeout-ci`. The last published main versions remain `0.51.4` /
-`0.32.4`. See the
-[closeout case study](../case-studies/2026-09-09-closeout-checklists-are-not-evidence.md).
+The closeout includes Markdown-image safety, real snapshot/shared-input
+consumption, Redis dedup failure handling and historical-compatible eval provenance.
+Two clean builds produced identical installed dependency manifests and frontend
+assets; six fresh-image smoke cases and eleven default regressions passed.
+
+Actual hosted PR gates passed, deliberate mypy/eval/Playwright failures preserved
+reports/traces, and a final normal rerun passed. Main requires the GitHub Actions
+`Unit Tests` check, strictly up to date and enforced for administrators. See
+[PH-004 hosted receipts](assets/ph-004/hosted-ci-validation.json), the
+[closeout case study](../case-studies/2026-09-09-closeout-checklists-are-not-evidence.md)
+and [hosted CI case study](../case-studies/2026-09-14-hosted-ci-needs-failure-proof.md).
+
+Nine of ten tasks are shipped. **PH-009 remains planning and has not started**;
+the overall program is still in progress. Production lint remains zero-warning,
+with the unchanged 131-warning test/E2E budget. The integrated baseline is now
+ready for controlled source decomposition.
 
 ## Program Acceptance Criteria
 
 - [ ] All ten task documents have complete implementation and test records.
-- [ ] No host service is exposed beyond loopback by default.
-- [ ] Insights shared prefetch executes with the real DataManager contract.
-- [ ] Backend mypy reports zero errors.
-- [ ] CI enforces typing, deterministic eval, and deterministic browser tests.
-- [ ] Untrusted agent output cannot render arbitrary HTML.
-- [ ] Frontend warnings are bounded and API/SSE boundaries contain no `any`.
-- [ ] Critical orchestration paths have composition-level tests.
-- [ ] Runtime builds are reproducible from committed dependency metadata.
+- [x] No host service is exposed beyond loopback by default.
+- [x] Insights shared prefetch executes with the real DataManager contract.
+- [x] Backend mypy reports zero errors.
+- [x] CI enforces typing, deterministic eval, and deterministic browser tests.
+- [x] Untrusted agent output cannot render arbitrary HTML.
+- [x] Frontend warnings are bounded and API/SSE boundaries contain no `any`.
+- [x] Critical orchestration paths have composition-level tests.
+- [x] Runtime builds are reproducible from committed dependency metadata.
 - [ ] Production source files comply with the 500-line policy.
-- [ ] Runtime and documentation versions have one authoritative source.
+- [x] Runtime and documentation versions have one authoritative source.

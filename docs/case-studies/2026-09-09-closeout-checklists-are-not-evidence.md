@@ -1,8 +1,8 @@
 ---
 title: Closeout Checklists Are Not Evidence
-status: in-progress
+status: shipped
 version: backend@0.51.5, frontend@0.32.5
-last_updated: 2026-09-09
+last_updated: 2026-09-14
 owner: maintainer
 related_paths:
   - frontend/src/components/chat/AssistantMarkdown.tsx
@@ -20,13 +20,14 @@ related_paths:
 > screenshots could not prove: Markdown images still loaded remotely, Insights
 > refresh bypassed snapshot prefetch, and Redis fallback repeated provider failures.
 > Test-first fixes, explicit eval provenance, real browser/provider-count proof,
-> and clean-image comparisons now pass locally. GitHub authorization and hosted
-> PR evidence are still required before shipment.
+> and clean-image comparisons passed locally. Hosted positive/negative gates,
+> artifact verification and protected PR merge completed on 2026-09-14.
 >
 > **TL;DR (中文)**：复核 hardening 验收发现，旧的绿色截图没有证明真正契约：Markdown
 > 图片仍会联网，Insights 刷新绕过 snapshot prefetch，Redis fallback 还会重复失败的
 > provider 调用。通过失败测试驱动修复、明确 eval provenance、真实浏览器/provider
-> 计数和 clean-image 对比，本地门禁已通过；GitHub 授权及真实 PR 证据仍是出货前提。
+> 计数和 clean-image 对比，本地门禁已通过；2026-09-14 又完成真实 hosted 正/负例、
+> artifact 核验及受保护 PR 合并，满足出货前提。
 
 ## 1. Context
 
@@ -37,7 +38,8 @@ related_paths:
 ## 2. Investigation
 
 - **网络边界**：旧脚本只识别特定短语法；改为渲染所有 Compose profiles，再检查
-  published ports。`--no-env-resolution` 让 CI 不依赖本地秘密 env 文件。
+  published ports。CI 使用 `--no-env-resolution`，并创建空的 ignored env 占位文件，
+  不依赖本地秘密；后续 hosted runner 暴露了不同 Compose 版本对文件存在性的差异。
 - **Markdown**：旧语料只有 `<img>`，没有 `![image](https://...)`。新增回归先失败，
   再明确拒绝 `img`。只抽出 renderer，ChatMessages 降至 406 行；截图复查还发现
   fenced code 文字/背景同色，通过浏览器失败断言后修复 CSS 继承。
@@ -107,11 +109,16 @@ screenshots live under PH-001/002/004/005/010 assets. Raw reports remain ignored
 Implementation: `db1e4b8739c21fb160e6eadda65dab53617522aa` (pushed on
 `hardening/closeout-ci`).
 
-GitHub CLI is not logged in and no reusable API credential is available. The Git
-branch push succeeded, while `gh pr create` exited 4 asking for login. The Git
-transport is not blocked merely because gh lacks an API login. There is still no
-hosted PR run, verified failure artifact/branch protection, or final shipment
-claim. All five tasks remain `in-progress` until the required workflow is complete.
+At the original local checkpoint, Git push worked but `gh pr create` exited 4
+because API authorization was absent. That distinction prevented a false shipment
+claim. Browser authorization subsequently completed without exposing credentials.
+
+On 2026-09-14, [PR #1](https://github.com/fhw12345/FinancialAgent/pull/1) passed the
+real hosted gates and merged as `7cc3789b291cfb71865d3cb7a368a965957db5ca`. Deliberate
+mypy/eval/browser failures and retained artifacts were verified, then the normal
+PR run passed again. All five tasks are shipped; PH-009 remains planning. See the
+[hosted CI follow-up](2026-09-14-hosted-ci-needs-failure-proof.md) and
+[verification receipts](../features/assets/ph-004/hosted-ci-validation.json).
 
 ## 7. Lessons
 
