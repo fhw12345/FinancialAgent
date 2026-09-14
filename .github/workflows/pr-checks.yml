@@ -5,12 +5,19 @@ on:
     types: [opened, synchronize, reopened]
     branches: [main]
   workflow_dispatch:
+    inputs:
+      probe:
+        description: "Intentional failure control (none for normal validation)"
+        required: true
+        default: none
+        type: choice
+        options: [none, mypy, eval, playwright]
 
 permissions:
   contents: read
 
 concurrency:
-  group: pr-validation-${{ github.event.pull_request.number || github.ref }}
+  group: pr-validation-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.probe || 'normal' }}
   cancel-in-progress: true
 
 jobs:
@@ -23,6 +30,7 @@ jobs:
       MONGODB_URL: mongodb://127.0.0.1:27017/hardening_ci
       REDIS_URL: redis://127.0.0.1:6379/0
       CI: "true"
+      PH_CI_PROBE: ${{ github.event_name == 'workflow_dispatch' && inputs.probe || 'none' }}
 
     services:
       mongodb:
@@ -67,6 +75,9 @@ jobs:
         run: |
           docker run --rm -i rhysd/actionlint:1.7.7 - < .github/workflows/pr-checks.yml
           python -m unittest discover -s scripts/tests -v
+          # Older hosted Compose validates env-file existence despite no-env-resolution.
+          # Empty CI-only placeholder; never copy secrets or overwrite a local env file.
+          test -e backend/.env.development || touch backend/.env.development
           python scripts/check-compose-loopback.py
           docker compose -f docker-compose.hardening.yml config --format json > "$RUNNER_TEMP/hardening-compose.json"
           python scripts/check-compose-loopback.py --config "$RUNNER_TEMP/hardening-compose.json"
@@ -108,12 +119,15 @@ jobs:
         run: |
           python -m bandit -r backend/src -ll -ii -f json -o backend/artifacts/security/bandit.json
 
+      - name: Activate optional mypy failure control
+        run: python scripts/ci-negative-control.py mypy
+
       - name: Backend lint and strict types
         run: |
           cd backend
           python -m ruff check src/
           python -m black --check src/
-          python -m mypy src/
+          python -m mypy src/ --junit-xml artifacts/mypy.xml
 
       - name: Backend tests and critical coverage
         run: |
@@ -121,6 +135,9 @@ jobs:
           python -m pytest tests/ -q --cov-report=json:coverage.json
           cd ..
           python scripts/check-critical-coverage.py
+
+      - name: Activate optional eval failure control
+        run: python scripts/ci-negative-control.py eval
 
       - name: Deterministic Agent evaluation
         run: |
@@ -135,6 +152,9 @@ jobs:
           npm run lint -- --max-warnings 131
           npm run type-check
           npm run build
+
+      - name: Activate optional browser failure control
+        run: python scripts/ci-negative-control.py playwright
 
       - name: Deterministic real-API browser smoke
         run: |

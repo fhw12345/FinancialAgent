@@ -2,7 +2,7 @@
 title: CI Agent Quality and Browser Gates
 status: in-progress
 version: backend@0.51.5, frontend@0.32.5
-last_updated: 2026-09-09
+last_updated: 2026-09-14
 owner: maintainer
 related_paths:
   - .github/workflows/pr-checks.yml
@@ -88,6 +88,27 @@ CI run URL/hash when shipped.
 - [ ] Local commands reproduce CI behavior.
 - [ ] No gate is marked successful with ignored failures.
 - [ ] Screenshot and CI evidence are recorded.
+
+## Hosted Validation Started — 2026-09-14
+
+GitHub CLI authentication is restored and [PR #1](https://github.com/fhw12345/FinancialAgent/pull/1)
+is open. The [first hosted run](https://github.com/fhw12345/FinancialAgent/actions/runs/34818319625)
+failed because the runner's Compose validates env-file existence even with
+`--no-env-resolution`; local Compose 5.2 does not reproduce that behavior.
+CI now creates an empty ignored env placeholder solely for rendering the default
+port contract, without copying secrets or changing runtime configuration.
+
+Main had no branch protection/ruleset. It now requires the GitHub Actions
+`Unit Tests` check (app 15368), strict up-to-date checks and administrator
+enforcement, without a reviewer requirement. PR #1 was observed `BLOCKED` while
+its check failed.
+
+Add explicitly dispatched `mypy`, `eval` and `playwright` negative controls in
+disposable CI checkouts. Ordinary PRs always use `none`. These probes activate
+immediately before the real gate, do not skip any gate, and must produce failed
+hosted runs with retained reports/traces. Finish with a green normal PR run before
+shipment. Candidate application versions remain 0.51.5/0.32.5; this repair changes
+CI-only scripts, not the already-tested runtime image inputs.
 
 ## 2026-09-09 Continuation Plan
 

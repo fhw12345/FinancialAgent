@@ -2,7 +2,7 @@
 title: Project Hardening Active Handoff
 status: in-progress
 version: backend@0.51.5, frontend@0.32.5
-last_updated: 2026-09-09
+last_updated: 2026-09-14
 owner: maintainer
 related_paths:
   - docs/features/project-hardening-program.md
@@ -210,6 +210,16 @@ Formal document status at handoff:
 The formal shipped count understates implemented work because PH-001, PH-002,
 PH-005, and PH-010 have implementation and evidence but were deliberately not
 marked shipped before their final closeout review.
+
+## Hosted Continuation — 2026-09-14
+
+GitHub CLI now authenticates as the repository owner through the system keyring.
+PR #1 is open. Hosted run `34818319625` failed on the missing CI env file despite
+`--no-env-resolution`; an empty CI-only placeholder and explicit negative-gate
+probes are being added. Main now requires `Unit Tests` from GitHub Actions app
+15368 with strict/admin enforcement; the failing PR is confirmed BLOCKED.
+Do not repeat the previous auth workflow or mark shipped until the hosted gates,
+negative controls/artifact proof and final merge/publication finish.
 
 ## 5. Recommended Next Sequence
 
