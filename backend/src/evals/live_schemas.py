@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from src.core.provenance import EvaluationProvenance
+
 LiveEvaluationLane = Literal["replay_live", "provider_smoke", "fake_live"]
 LiveEvaluationStatus = Literal[
     "running",
@@ -182,6 +184,7 @@ class LiveEvaluationComparison(BaseModel):
 
 
 class LiveEvaluationReport(BaseModel):
+    provenance: EvaluationProvenance | None = None
     run_id: str
     suite_version: str = "live-1.0"
     lane: LiveEvaluationLane

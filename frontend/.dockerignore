@@ -5,3 +5,4 @@ test-results
 playwright-report
 .vite
 npm-debug.log*
+.env*

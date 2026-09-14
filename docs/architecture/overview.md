@@ -1,8 +1,8 @@
 ---
 title: Architecture Overview
 status: shipped
-version: backend@0.51.3, frontend@0.32.3
-last_updated: 2026-08-12
+version: backend@0.51.5, frontend@0.32.5
+last_updated: 2026-09-09
 owner: maintainer
 related_paths:
   - backend/src/main.py
@@ -42,8 +42,8 @@ flowchart LR
 
 ## Frontend
 
-`frontend/src/App.tsx` renders four local tabs: Health, Chat, Portfolio, and
-Insights. TanStack Query manages server state. Chat responses and tool events
+`frontend/src/App.tsx` renders five local tabs: Health, Chat, Portfolio,
+Evaluation, and Insights. TanStack Query manages server state. Chat responses and tool events
 arrive through an SSE `POST /api/chat/stream` request.
 
 Quick-analysis buttons call deterministic `/api/analysis/*` routes directly.
@@ -58,6 +58,12 @@ The router applies deterministic rules first and calls a Haiku-class classifier
 only for ambiguous requests. It emits and persists a `route_selected` event so
 the frontend can explain which flow was chosen and restore that choice later.
 Explicit flow values remain available only as debugging/API overrides.
+
+Component versions are declared in [backend package metadata](../../backend/pyproject.toml)
+and [frontend package metadata](../../frontend/package.json), not duplicated in
+runtime components. Root, Health, OpenAPI, and the Health UI are checked against
+these sources by the hardening validation. The versions in this document describe
+the current working tree; the active handoff records the last published release.
 
 ## Backend
 

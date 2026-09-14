@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 0.32.5 — Hardening closeout / CI preparation (not yet published)
+
+- Rejects remote Markdown images as well as raw HTML; adds a six-case security corpus.
+- Extracts the existing assistant Markdown renderer and repairs an inherited fenced-code text/background contrast defect.
+- Verifies real root/Health/OpenAPI versions and refreshes PH-001/005/010 browser evidence.
+- Adds isolated deterministic CI smoke for routing, buffered output, replay deduplication and visible configured Prompt versions.
+- Adds real Insights shared-prefetch/provider-count/persistence browser evidence and typed provenance/degradation response fields.
+- Excludes local env files from the image context; validates two clean images and matching production assets without source/dependency mounts.
+- Retains zero-warning production lint and the explicit 131-warning test/E2E follow-up budget.
+
 ## [0.32.4] - 2026-08-13
 
 ### Added

@@ -1,0 +1,63 @@
+# Isolated, key-free browser validation; reuse existing images, never npm ci.
+name: financialagent-hardening
+services:
+  mongodb:
+    image: mongo:7.0
+  redis:
+    image: redis:7.2-alpine
+  llm:
+    image: financialagent-backend:latest
+    volumes:
+      - ./backend/tests:/app/tests:ro
+    command: python -m uvicorn tests.e2e.anthropic_stub:app --host 0.0.0.0 --port 8080
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://127.0.0.1:8080/health').raise_for_status()"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+  backend:
+    image: financialagent-backend:latest
+    volumes:
+      - ./backend/src:/app/src:ro
+      - ./backend/tests:/app/tests:ro
+      - ./backend/pyproject.toml:/app/pyproject.toml:ro
+    environment:
+      ENVIRONMENT: test
+      MONGODB_URL: mongodb://mongodb:27017/hardening_e2e
+      REDIS_URL: redis://redis:6379/0
+      CORS_ORIGINS: '["http://host.docker.internal:3011"]'
+      LLM_PROVIDER: anthropic
+      ANTHROPIC_BASE_URL: http://llm:8080
+      ANTHROPIC_API_KEY: dummy
+      ANTHROPIC_MODEL: e2e-model
+      SYMBOL_RESOLUTION_LLM_ENABLED: "false"
+    ports:
+      - "127.0.0.1:18091:8000"
+    depends_on: [mongodb, redis, llm]
+    command: python -m uvicorn tests.e2e.hardening_app:app --host 0.0.0.0 --port 8000
+  frontend:
+    image: financialagent-frontend:latest
+    environment:
+      VITE_API_URL: http://host.docker.internal:18091
+    ports:
+      - "127.0.0.1:3011:3000"
+    volumes:
+      - ./frontend:/app
+      - dependencies:/app/node_modules
+  browser:
+    image: mcr.microsoft.com/playwright:v1.52.0-noble
+    working_dir: /work/frontend
+    environment:
+      PLAYWRIGHT_BASE_URL: http://host.docker.internal:3011
+      E2E_BACKEND_URL: http://host.docker.internal:18091
+      UPDATE_E2E_EVIDENCE: ${UPDATE_E2E_EVIDENCE:-false}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./frontend:/work/frontend
+      - ./backend/pyproject.toml:/work/backend/pyproject.toml:ro
+      - ./docs:/work/docs
+      - dependencies:/work/frontend/node_modules
+    command: npm run test:e2e:ci
+volumes:
+  dependencies:

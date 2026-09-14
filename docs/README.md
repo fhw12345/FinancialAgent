@@ -63,6 +63,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [Hardening Closeout Evidence Review (in progress)](case-studies/2026-09-09-closeout-checklists-are-not-evidence.md)
 - [Reproducible Builds Need Runtime Proof](case-studies/2026-08-13-reproducible-builds-need-runtime-proof.md)
 - [Composition Tests Found Stale Failure After Success](case-studies/2026-08-12-composition-tests-found-stale-success.md)
 - [Typed Boundaries Restored Frontend Lint Signal](case-studies/2026-08-06-typed-boundaries-restored-lint-signal.md)

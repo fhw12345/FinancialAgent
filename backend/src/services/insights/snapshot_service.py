@@ -24,6 +24,7 @@ from ..data_manager import CacheKeys, DataManager
 from ..market_data import FREDService
 from .models import CompositeScore, InsightMetric
 from .registry import InsightsCategoryRegistry
+from .snapshot_inputs import prepare_snapshot_inputs
 
 logger = structlog.get_logger()
 
@@ -153,7 +154,16 @@ class InsightsSnapshotService:
 
             # Phase 1: Pre-fetch shared data via DML
             phase1_start = time.time()
-            shared_data = await self._prefetch_shared_data()
+            if self.data_manager is None:
+                raise RuntimeError("DataManager is required for snapshot prefetch")
+            inputs = await prepare_snapshot_inputs(category, self.data_manager)
+            shared_data = await self._prefetch_shared_data(
+                inputs.symbols, inputs.manager
+            )
+            # Public/cache metadata must not expose credentials from provider URLs.
+            shared_data["errors"] = dict.fromkeys(
+                shared_data["errors"], "Provider data unavailable"
+            )
             phase1_duration = time.time() - phase1_start
 
             logger.info(
@@ -165,7 +175,9 @@ class InsightsSnapshotService:
 
             # Phase 2: Calculate metrics and composite via get_category_data
             phase2_start = time.time()
-            category_data = await category.get_category_data(force_refresh=True)
+            category_data = await inputs.calculator(shared_data).get_category_data(
+                force_refresh=True
+            )
             metrics = category_data.metrics
             composite = category_data.composite
             if composite is None:
@@ -188,6 +200,7 @@ class InsightsSnapshotService:
                 category_id=category_id,
                 metrics=metrics,
                 composite=composite,
+                prefetch_errors=shared_data["errors"],
             )
             phase3_duration = time.time() - phase3_start
 
@@ -207,6 +220,8 @@ class InsightsSnapshotService:
                 "composite_score": composite.score,
                 "composite_status": composite.status.value,
                 "metric_count": len(metrics),
+                "last_updated": category_data.last_updated.isoformat(),
+                "prefetch_errors": shared_data["errors"],
                 "timing": {
                     "phase1_prefetch_seconds": round(phase1_duration, 2),
                     "phase2_calculate_seconds": round(phase2_duration, 2),
@@ -243,7 +258,11 @@ class InsightsSnapshotService:
                 },
             }
 
-    async def _prefetch_shared_data(self) -> dict[str, Any]:
+    async def _prefetch_shared_data(
+        self,
+        symbols: list[str] | None = None,
+        manager: DataManager | None = None,
+    ) -> dict[str, Any]:
         """Pre-fetch all shared data via DataManager.
 
         Uses asyncio.gather for parallel fetching.
@@ -256,11 +275,12 @@ class InsightsSnapshotService:
         # SharedDataContext.errors. Do not catch programming errors here: a
         # caller/signature mismatch must fail loudly instead of masquerading as
         # ordinary provider degradation.
-        if self.data_manager is None:
+        manager = manager if manager is not None else self.data_manager
+        if manager is None:
             raise RuntimeError("DataManager is required for snapshot prefetch")
-        symbols = ["NVDA", "MSFT", "AMD", "PLTR"]
+        symbols = symbols if symbols is not None else ["NVDA", "MSFT", "AMD", "PLTR"]
         treasury_maturities = ["2y", "10y"]
-        shared_context = await self.data_manager.prefetch_shared(
+        shared_context = await manager.prefetch_shared(
             symbols=symbols,
             treasury_maturities=treasury_maturities,
             include_news=True,
@@ -289,6 +309,7 @@ class InsightsSnapshotService:
         category_id: str,
         metrics: list[InsightMetric],
         composite: CompositeScore,
+        prefetch_errors: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Persist snapshot to MongoDB and update Redis cache.
 
@@ -318,6 +339,7 @@ class InsightsSnapshotService:
             "composite_status": composite.status.value,
             "metrics": metrics_dict,
             "created_at": now,
+            "prefetch_errors": prefetch_errors or {},
         }
 
         # Upsert to MongoDB (replace if same date exists)
@@ -344,6 +366,7 @@ class InsightsSnapshotService:
             "composite_status": composite.status.value,
             "metrics": metrics_dict,
             "cached_at": now.isoformat(),
+            "prefetch_errors": prefetch_errors or {},
         }
 
         await self.redis_cache.set(cache_key, cache_doc, ttl_seconds=SNAPSHOT_REDIS_TTL)

@@ -77,8 +77,8 @@ export async function getMetric(
 
 /**
  * Force refresh a category's data.
- * Clears cache and recalculates from fresh API data.
- * Use sparingly - makes multiple Alpha Vantage API calls.
+ * Recalculates through shared prefetch and persists a snapshot.
+ * DataManager provider-cache TTLs still apply.
  *
  * @param categoryId - Category identifier
  */

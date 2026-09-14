@@ -84,9 +84,12 @@ def test_live_api_persists_running_and_terminal_reports():
         run_id=None,
         created_at=None,
         progress_callback=None,
+        provenance=None,
     ):
         report = _report(run_id)
-        return report.model_copy(update={"created_at": created_at})
+        return report.model_copy(
+            update={"created_at": created_at, "provenance": provenance}
+        )
 
     with patch(
         "src.api.evaluations.run_live_evaluation",
@@ -109,6 +112,30 @@ def test_live_api_persists_running_and_terminal_reports():
     assert saved[0].args[0].status == "running"
     assert saved[1].args[0].status == "completed"
     assert saved[1].args[0].created_at == saved[0].args[0].created_at
+    assert saved[0].args[0].provenance is not None
+    assert saved[1].args[0].provenance == saved[0].args[0].provenance
+
+
+def test_live_api_failure_keeps_start_provenance():
+    repository = AsyncMock()
+    with patch(
+        "src.api.evaluations.run_live_evaluation",
+        side_effect=RuntimeError("fixture failure"),
+    ):
+        response = TestClient(_app(repository)).post(
+            "/api/admin/evaluations/live/runs",
+            json={
+                "lane": "fake_live",
+                "enabled": True,
+                "max_cost_usd": 1,
+                "case_limit": 1,
+            },
+        )
+    assert response.status_code == 202
+    saved = repository.save.await_args_list
+    assert saved[-1].args[0].status == "failed"
+    assert saved[0].args[0].provenance is not None
+    assert saved[-1].args[0].provenance == saved[0].args[0].provenance
 
 
 def test_live_api_lists_and_fetches_history():

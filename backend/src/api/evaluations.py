@@ -7,6 +7,7 @@ import structlog
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 
 from src.core.config import Settings, get_settings
+from src.core.provenance import capture_evaluation_provenance
 from src.database.mongodb import MongoDB
 from src.database.repositories.evaluation_run_repository import (
     EVALUATION_RUNS_COLLECTION,
@@ -105,6 +106,7 @@ async def start_live_evaluation(
     run_id = f"eval_live_{uuid.uuid4().hex}"
     created_at = datetime.now(UTC)
     initial = LiveEvaluationReport(
+        provenance=await capture_evaluation_provenance(),
         run_id=run_id,
         lane=payload.lane,
         status="running",
@@ -128,6 +130,7 @@ async def start_live_evaluation(
                 run_id=run_id,
                 created_at=created_at,
                 progress_callback=repository.save,
+                provenance=initial.provenance,
             )
         except Exception as exc:
             logger.exception(

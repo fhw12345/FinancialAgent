@@ -81,7 +81,8 @@ NVDA 因 AI 需求创 52 周新高。资料来源:公司文件。
 
 
 def _cache_key(text: str, target_lang: str) -> str:
-    h = hashlib.sha1(text.encode("utf-8")).hexdigest()
+    # Content-addressed cache only; preserve existing keys, not a security digest.
+    h = hashlib.sha1(text.encode("utf-8"), usedforsecurity=False).hexdigest()
     return f"{CACHE_KEY_PREFIX}:{target_lang}:{h}"
 
 

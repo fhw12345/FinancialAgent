@@ -14,6 +14,9 @@ from collections.abc import Awaitable, Callable
 from typing import Any, cast
 
 import structlog
+from redis.exceptions import RedisError
+
+from ...database.redis import RedisCache
 
 logger = structlog.get_logger(__name__)
 
@@ -212,16 +215,43 @@ class CacheOperations:
 
         # Try to use dedup if available (check it's actually callable, not a mock)
         get_with_dedup = getattr(self._redis, "get_with_dedup", None)
+        if isinstance(self._redis, RedisCache) and self._redis.client is None:
+            get_with_dedup = None  # Unconfigured optional cache: fetch directly.
         if get_with_dedup is not None and callable(get_with_dedup):
             # Additional check: ensure it's not a mock (for testing)
             if not str(type(get_with_dedup).__module__).startswith("unittest.mock"):
+                fetched: dict[str, Any] | list[Any] | None = None
+                fetch_completed = False
+                fetch_error: Exception | None = None
+
+                async def tracked_fetch() -> dict[str, Any] | list[Any] | None:
+                    nonlocal fetched, fetch_completed, fetch_error
+                    fetch_completed = False
+                    try:
+                        fetched = await fetch_func()
+                    except Exception as exc:
+                        fetch_error = exc
+                        raise
+                    fetch_error = None
+                    fetch_completed = True
+                    return fetched
+
                 try:
-                    result = await get_with_dedup(key, fetch_func, ttl_seconds)
+                    result = await get_with_dedup(key, tracked_fetch, ttl_seconds)
+                except Exception as exc:
+                    if fetch_error is not None:
+                        raise fetch_error from None
+                    if not isinstance(exc, OSError | RedisError):
+                        raise  # Programming failures are not cache degradation.
+                    if fetch_completed:
+                        return fetched  # A cache write/unlock failed after success.
+                    # Only a cache transport failure before fetch permits fallback.
+                else:
+                    if fetch_error is not None:
+                        raise fetch_error  # Some dedup fallbacks return None on failure.
                     if isinstance(result, dict | list):
                         return cast(dict[str, Any] | list[Any], result)
                     return None
-                except Exception:
-                    pass  # Fall back to simple fetch
 
         # Simple fetch and cache
         result = await fetch_func()

@@ -82,10 +82,27 @@ def mock_category_data() -> InsightCategory:
 
 
 @pytest.fixture
-def test_app(mock_registry: MagicMock) -> FastAPI:
+def mock_snapshot_service():
+    from src.services.insights.snapshot_service import InsightsSnapshotService
+
+    service = MagicMock(spec=InsightsSnapshotService)
+    service.ensure_indexes = AsyncMock()
+    service.create_snapshot = AsyncMock(
+        return_value={
+            "status": "success",
+            "last_updated": "2026-09-09T00:00:00+00:00",
+            "prefetch_errors": {},
+        }
+    )
+    return service
+
+
+@pytest.fixture
+def test_app(mock_registry: MagicMock, mock_snapshot_service) -> FastAPI:
     """Create test app with mock registry."""
     app = FastAPI()
     app.state.insights_registry = mock_registry
+    app.state.snapshot_service = mock_snapshot_service
     app.include_router(router, prefix="/api/insights")
     return app
 
@@ -277,10 +294,9 @@ class TestRefreshCategory:
         self,
         client: TestClient,
         mock_registry: MagicMock,
-        mock_category_data: InsightCategory,
+        mock_snapshot_service,
     ) -> None:
-        """Test successful category refresh."""
-        mock_registry.refresh_category = AsyncMock(return_value=mock_category_data)
+        """Visible refresh invokes persisted snapshot creation, not registry-only refresh."""
 
         response = client.post("/api/insights/ai_sector_risk/refresh")
 
@@ -289,16 +305,30 @@ class TestRefreshCategory:
         assert data["success"] is True
         assert data["category_id"] == "ai_sector_risk"
         assert "refreshed" in data["message"].lower()
+        mock_snapshot_service.create_snapshot.assert_awaited_once_with("ai_sector_risk")
+        mock_registry.refresh_category.assert_not_called()
 
     def test_refresh_not_found(
         self, client: TestClient, mock_registry: MagicMock
     ) -> None:
         """Test 404 when category doesn't exist."""
-        mock_registry.refresh_category = AsyncMock(return_value=None)
+        mock_registry.get_category_instance.return_value = None
 
         response = client.post("/api/insights/nonexistent/refresh")
 
         assert response.status_code == 404
+
+    def test_snapshot_failure_is_not_success(self, client, mock_snapshot_service):
+        mock_snapshot_service.create_snapshot.return_value = {"status": "error"}
+        assert client.post("/api/insights/ai_sector_risk/refresh").status_code == 500
+
+    def test_prefetch_degradation_is_explicit(self, client, mock_snapshot_service):
+        mock_snapshot_service.create_snapshot.return_value["prefetch_errors"] = {
+            "news:technology": "offline"
+        }
+        response = client.post("/api/insights/ai_sector_risk/refresh")
+        assert response.status_code == 200
+        assert response.json()["prefetch_errors"] == {"news:technology": "offline"}
 
 
 class TestEdgeCases:
