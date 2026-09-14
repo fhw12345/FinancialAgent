@@ -1,8 +1,8 @@
 ---
 title: Untrusted Agent Markdown Rendering Safety
-status: in-progress
+status: shipped
 version: frontend@0.32.5
-last_updated: 2026-09-09
+last_updated: 2026-09-14
 owner: maintainer
 related_paths:
   - frontend/src/components/chat/ChatMessages.tsx
@@ -70,13 +70,13 @@ opener isolation. No actual malicious external domain should be contacted.
 
 ## Acceptance Criteria
 
-- [ ] Raw untrusted HTML cannot create active DOM content.
-- [ ] Unsafe URL schemes are rejected.
-- [ ] Supported GFM display remains intact.
-- [ ] Component security corpus passes.
-- [ ] Browser test proves malicious content is inert.
-- [ ] Screenshot and deterministic fixture details are recorded.
-- [ ] Frontend full suite, lint, type-check, and build pass.
+- [x] Raw untrusted HTML cannot create active DOM content.
+- [x] Unsafe URL schemes are rejected.
+- [x] Supported GFM display remains intact.
+- [x] Component security corpus passes.
+- [x] Browser test proves malicious content is inert.
+- [x] Screenshot and deterministic fixture details are recorded.
+- [x] Frontend full suite, lint, type-check, and build pass.
 
 ## 2026-09-09 Closeout Review
 
@@ -103,10 +103,10 @@ remain inert while headings, GFM tables, and safe links render.
 Playwright scenario `untrusted assistant HTML stays inert` streamed a
 deterministic malicious assistant fixture, asserted zero active elements and
 zero attacker-domain requests, then captured
-[`assets/ph-005/01-sanitized-agent-markdown.png`](assets/ph-005/01-sanitized-agent-markdown.png).
-The tested implementation commit is `960d29a`.
+the initial screenshot (tested implementation `960d29a`). The current committed
+asset was subsequently replaced by the expanded corpus evidence below.
 
-## Current Validation — 2026-09-09 (Unpublished)
+## Local Validation — 2026-09-09
 
 Tested implementation: `db1e4b8739c21fb160e6eadda65dab53617522aa`, frontend `0.32.5`.
 The Markdown-image regression failed before the fix and passed after it.
@@ -125,7 +125,10 @@ Frontend validation: 254 tests, zero production warnings, 131 total test/E2E
 warnings, successful type-check and build. Windows denied deleting the old mounted
 `dist/assets`; a fresh `/tmp/ph-hardening-dist` output passed as non-root.
 The fix and evidence are committed and pushed on `hardening/closeout-ci`.
-Hosted PR/CI and merge are pending, so status stays in progress.
+The same security corpus/browser checks passed in
+[hosted PR CI](https://github.com/fhw12345/FinancialAgent/actions/runs/34819419375).
+PR #1 merged normally on 2026-09-14 as `7cc3789b291cfb71865d3cb7a368a965957db5ca`;
+this task is shipped.
 
 ## Risks
 

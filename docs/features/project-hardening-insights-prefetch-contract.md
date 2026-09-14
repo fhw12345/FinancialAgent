@@ -1,8 +1,8 @@
 ---
 title: Insights Shared Prefetch Contract Repair
-status: in-progress
+status: shipped
 version: backend@0.51.5, frontend@0.32.5
-last_updated: 2026-09-09
+last_updated: 2026-09-14
 owner: maintainer
 related_paths:
   - backend/src/services/insights/snapshot_service.py
@@ -24,8 +24,8 @@ never consumed snapshot prefetch. The old UI-mocked screenshot was not proof of
 the backend integration.
 
 The continuation connects the actual refresh endpoint to snapshot creation.
-Local acceptance is now verified; status remains `in-progress` pending hosted
-CI and the publication workflow.
+Local and hosted acceptance passed. PR #1 merged on 2026-09-14 through the
+required-check path; this task is shipped.
 
 ## Contract
 
@@ -100,7 +100,10 @@ without application-source/dependency bind mounts.
 
 Tested implementation: `db1e4b8739c21fb160e6eadda65dab53617522aa` on
 `hardening/closeout-ci`. Code and curated evidence are committed and the branch
-is pushed; real PR/hosted CI and merge remain outstanding.
+is pushed. PR #1 merged as `7cc3789b291cfb71865d3cb7a368a965957db5ca` after
+[hosted CI](https://github.com/fhw12345/FinancialAgent/actions/runs/34819419375)
+passed. [PH-004](project-hardening-ci-agent-quality-gates.md) records positive and
+negative controls plus artifact verification.
 
 ## Acceptance Criteria
 
@@ -110,7 +113,7 @@ is pushed; real PR/hosted CI and merge remain outstanding.
 - [x] Contract, composition, API and real browser tests pass.
 - [x] Curated screenshot and final image receipts are captured.
 - [x] Backend and frontend local quality gates pass.
-- [ ] Implementation hash, hosted CI and publication are recorded.
+- [x] Implementation hash, hosted CI and publication are recorded.
 
 ## Risks
 

@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### 0.51.5 — Hardening closeout / CI preparation (not yet published)
+## [0.51.5] - 2026-09-14
+
+### Project hardening closeout and enforced CI
 
 - Adds real Snapshot-to-DataManager prefetch composition and version-fallback tests.
 - Pins CI tooling independently of the existing runtime lock, with editable-install support.
@@ -16,7 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Prevents Redis dedup fallback from re-fetching failed providers or discarding successful fetches.
 - Adds run-start evaluation provenance across progress/final/failure and historical report compatibility.
 - Rejects SEC XML DTD/entities with pinned defusedxml and preserves non-security SHA1 cache keys.
-- All local gates pass; publication still requires GitHub authorization and hosted PR evidence.
+- Passes all hosted PR gates and explicit mypy/eval/browser failure controls with verified report/trace retention.
+- Requires the GitHub Actions quality check on main, including for administrators; fixes secret-free runner Compose validation.
+- Ships through protected PR #1 (`7cc3789b`), preserving implementation `db1e4b8` and CI fix `1e78a4a`.
 
 ## [0.51.4] - 2026-08-13
 

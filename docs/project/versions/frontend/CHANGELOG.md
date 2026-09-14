@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### 0.32.5 — Hardening closeout / CI preparation (not yet published)
+## [0.32.5] - 2026-09-14
+
+### Project hardening closeout and browser acceptance
 
 - Rejects remote Markdown images as well as raw HTML; adds a six-case security corpus.
 - Extracts the existing assistant Markdown renderer and repairs an inherited fenced-code text/background contrast defect.
@@ -16,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adds real Insights shared-prefetch/provider-count/persistence browser evidence and typed provenance/degradation response fields.
 - Excludes local env files from the image context; validates two clean images and matching production assets without source/dependency mounts.
 - Retains zero-warning production lint and the explicit 131-warning test/E2E follow-up budget.
+- Passes hosted PR browser gates and proves browser failures retain traces, screenshots, video and server logs before protected merge.
 
 ## [0.32.4] - 2026-08-13
 

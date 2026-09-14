@@ -1,0 +1,157 @@
+{
+  "recorded_on": "2026-09-14",
+  "implementation_commit": "db1e4b8739c21fb160e6eadda65dab53617522aa",
+  "ci_fix_commit": "1e78a4a0e684604dd7467938905fe29d83dfa37e",
+  "implementation_merge": "7cc3789b291cfb71865d3cb7a368a965957db5ca",
+  "pr_url": "https://github.com/fhw12345/FinancialAgent/pull/1",
+  "required_check": {
+    "name": "Unit Tests",
+    "app_id": 15368,
+    "strict": true,
+    "enforce_admins": true
+  },
+  "failed_pr_blocking_observation": {
+    "run_id": 34818319625,
+    "head_sha": "a115fd23dceaea5dae71f78ed7a612896197fd57",
+    "merge_state": "BLOCKED"
+  },
+  "probe_scope": "Negative controls are workflow_dispatch failure-exit/artifact proof, not regular PR checks. Normal PR failure blocking was separately observed on the initial failed run.",
+  "runs": [
+    {
+      "scenario": "normal",
+      "run_id": 34819419375,
+      "run_attempt": 2,
+      "event": "pull_request",
+      "head_sha": "1e78a4a0e684604dd7467938905fe29d83dfa37e",
+      "url": "https://github.com/fhw12345/FinancialAgent/actions/runs/34819419375",
+      "conclusion": "success",
+      "failed_step": null,
+      "artifact_upload_passed": true,
+      "artifacts": [
+        {
+          "id": 10338143227,
+          "name": "pr-quality-reports",
+          "size_in_bytes": 316241,
+          "expires_at": "2026-09-28T08:06:47Z"
+        }
+      ],
+      "verified_files": [
+        {
+          "path": "backend/artifacts/evals/agent-eval-20260914-080452.json",
+          "sha256": "09a0bcfbf496356429d3914ebd0c8d6da2d8ce2532a870646f6bb6cf89c07a72"
+        },
+        {
+          "path": "backend/artifacts/evals/agent-eval-20260914-080452.md",
+          "sha256": "e4d807332149326aee1e06898c33f2f73b19c11cd4710e9a9a77daac11cd7d30"
+        },
+        {
+          "path": "backend/artifacts/mypy.xml",
+          "sha256": "3a285cfe6c4801b803bea106f908b0ae829093343032b7872d19fb7b9b557877"
+        }
+      ]
+    },
+    {
+      "scenario": "mypy",
+      "run_id": 34819876537,
+      "run_attempt": 1,
+      "event": "workflow_dispatch",
+      "head_sha": "1e78a4a0e684604dd7467938905fe29d83dfa37e",
+      "url": "https://github.com/fhw12345/FinancialAgent/actions/runs/34819876537",
+      "conclusion": "failure",
+      "failed_step": "Backend lint and strict types",
+      "artifact_upload_passed": true,
+      "artifacts": [
+        {
+          "id": 10337962177,
+          "name": "pr-quality-reports",
+          "size_in_bytes": 4317,
+          "expires_at": "2026-09-28T07:55:47Z"
+        }
+      ],
+      "verified_files": [
+        {
+          "path": "backend/artifacts/mypy.xml",
+          "sha256": "fa81c3051a31fd8912b6ab372fe85148b77ebaff5d8659e5dc8bec8e6fcf3a64"
+        }
+      ]
+    },
+    {
+      "scenario": "eval",
+      "run_id": 34819884649,
+      "run_attempt": 1,
+      "event": "workflow_dispatch",
+      "head_sha": "1e78a4a0e684604dd7467938905fe29d83dfa37e",
+      "url": "https://github.com/fhw12345/FinancialAgent/actions/runs/34819884649",
+      "conclusion": "failure",
+      "failed_step": "Deterministic Agent evaluation",
+      "artifact_upload_passed": true,
+      "artifacts": [
+        {
+          "id": 10338022064,
+          "name": "pr-quality-reports",
+          "size_in_bytes": 94300,
+          "expires_at": "2026-09-28T07:57:05Z"
+        }
+      ],
+      "verified_files": [
+        {
+          "path": "backend/artifacts/evals/agent-eval-20260914-075705.json",
+          "sha256": "cf3cafc8125c547726df312061303c62106ae2133d7978be08cb0677501d5f31"
+        },
+        {
+          "path": "backend/artifacts/evals/agent-eval-20260914-075705.md",
+          "sha256": "f3b827fff7c632f6a48592800c19d64571ca90da08dec28986ee48cbc4787e92"
+        },
+        {
+          "path": "backend/artifacts/mypy.xml",
+          "sha256": "33ee30e72ffabd1d64089ecd2e808f58515d971f479ce2036e6afc9e17d49df6"
+        }
+      ]
+    },
+    {
+      "scenario": "playwright",
+      "run_id": 34819891538,
+      "run_attempt": 1,
+      "event": "workflow_dispatch",
+      "head_sha": "1e78a4a0e684604dd7467938905fe29d83dfa37e",
+      "url": "https://github.com/fhw12345/FinancialAgent/actions/runs/34819891538",
+      "conclusion": "failure",
+      "failed_step": "Deterministic real-API browser smoke",
+      "artifact_upload_passed": true,
+      "artifacts": [
+        {
+          "id": 10337389309,
+          "name": "pr-quality-reports",
+          "size_in_bytes": 3148669,
+          "expires_at": "2026-09-28T07:57:47Z"
+        }
+      ],
+      "verified_files": [
+        {
+          "path": "backend/artifacts/evals/agent-eval-20260914-075619.json",
+          "sha256": "2d6f41c8d3c9caad4842f72f8ff6c2df94c0dedd380d9bbcb13833705c25d1c8"
+        },
+        {
+          "path": "backend/artifacts/evals/agent-eval-20260914-075619.md",
+          "sha256": "cadb6b3cfb17e440400ca83f23ba5698683a9f91785b59f003292857f09effe0"
+        },
+        {
+          "path": "backend/artifacts/mypy.xml",
+          "sha256": "9fd30c328a2936d089dd7a985f2d292808367c42cb4ef13edc0135ca66b170b6"
+        },
+        {
+          "path": "frontend/test-results/ci-hardening-PH-004-intentional-browser-failure-chromium/test-failed-1.png",
+          "sha256": "59a56a0949428082ad30491334d1b09fedfa30c40a56a747a353520eb759fa5d"
+        },
+        {
+          "path": "frontend/test-results/ci-hardening-PH-004-intentional-browser-failure-chromium/trace.zip",
+          "sha256": "cfba0ad1dd2e10156400420f96861fea794d2d2c8ef4ae5267dbaabf03931609"
+        },
+        {
+          "path": "frontend/test-results/ci-hardening-PH-004-intentional-browser-failure-chromium/video.webm",
+          "sha256": "c427476c7cc9c79aea7c63d7ee3fa28ed258dad868e35aebca19f685d56a5a8b"
+        }
+      ]
+    }
+  ]
+}
