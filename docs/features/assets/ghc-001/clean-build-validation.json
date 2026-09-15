@@ -1,5 +1,12 @@
 {
   "date": "2026-09-15",
+  "implementation_commit": "5b097d086ec109a7720ab8afcb8443bc2c85d10a",
+  "browser_test_commit": "6e5ba294cfb733674d2f54a5de26af87c174b4cc",
+  "native_browser_passed": 3,
+  "hardening_smoke_passed": 6,
+  "default_e2e_passed": 11,
+  "hosted_ci_run_url": "https://github.com/fhw12345/FinancialAgent/actions/runs/34953213465",
+  "source_scope": "Application sources and dependency metadata match the implementation commit; the later commit only expands externally mounted browser fixtures/tests.",
   "backend_version": "0.52.0",
   "frontend_version": "0.33.0",
   "same_working_tree": true,

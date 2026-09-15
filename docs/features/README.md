@@ -299,7 +299,7 @@ requires the evidence and workflow in [Documentation Standards](../development/d
 - **[Portfolio Agent Architecture](portfolio-agent-architecture-refactor.md)** — 3-phase analysis (research → decisions → execution)
 
 ### AI & Agent System
-- **[Native GitHub Copilot Provider](native-github-copilot-provider.md)** — in-progress; independent device login and Python Responses transport without pi or a bridge
+- **[Native GitHub Copilot Provider](native-github-copilot-provider.md)** — shipped; independent device login and Python Responses transport without pi or a bridge
 - **[Automatic Chat Flow Routing](automatic-chat-flow-routing.md)** — rule-first routing with a lightweight classifier fallback
 - **[Chat Symbol Context](chat-symbol-context.md)** — inject the active UI symbol into chat context so the agent does not have to re-ask
 - **[Deep Agent Symbol Clarification](deep-agent-symbol-clarification.md)** — remove silent ticker fallback and require confirmation for ambiguous research requests

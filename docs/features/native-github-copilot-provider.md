@@ -1,6 +1,6 @@
 ---
 title: Native GitHub Copilot Provider
-status: in-progress
+status: shipped
 version: backend@0.52.0, frontend@0.33.0
 last_updated: 2026-09-15
 owner: maintainer
@@ -58,19 +58,19 @@ PH-009及IDQ功能均不实施。Copilot权益、模型许可、组织政策与�
 
 ## Validation / Acceptance
 
-- [ ] device pending/slow_down/deny/expiry/cancel/logout/restart和迟到响应不会错写状态。
-- [ ] 并发刷新不重复exchange；token写失败不报成功；安全路径/权限/重定向/URL域限制通过。
-- [ ] 模型disabled/无tool/不支持协议/消失/变更/未选择都有可判定错误。
-- [ ] 消息转换覆盖user/system/assistant/tool、Unicode、多个工具、reasoning replay。
-- [ ] 增量tool JSON与text流正确，usage不双计；failed/incomplete/断流不能显示完成。
-- [ ] cancel关闭HTTP流；无late成功、无泄露prompt或token的异常。
-- [ ] 真LangGraph执行工具→回传→最终回复；Pydantic结构化输出通过且非法输出拒绝。
-- [ ] 旧三个provider路由测试及全量backend/frontend/安全门禁不回退。
-- [ ] Playwright：Health登录pending→授权→选模型→显式连接测试→真实Chat回复→刷新恢复→退出；
+- [x] device pending/slow_down/deny/expiry/cancel/logout/restart和迟到响应不会错写状态。
+- [x] 并发刷新不重复exchange；token写失败不报成功；安全路径/权限/重定向/URL域限制通过。
+- [x] 模型disabled/无tool/不支持协议/消失/变更/未选择都有可判定错误。
+- [x] 消息转换覆盖user/system/assistant/tool、Unicode、多个工具、reasoning replay。
+- [x] 增量tool JSON与text流正确，usage不双计；failed/incomplete/断流不能显示完成。
+- [x] cancel关闭HTTP流；无late成功、无泄露prompt或token的异常。
+- [x] 真LangGraph执行工具→回传→最终回复；Pydantic结构化输出通过且非法输出拒绝。
+- [x] 旧三个provider路由测试及全量backend/frontend/安全门禁不回退。
+- [x] Playwright：Health登录pending→授权→选模型→显式连接测试→真实Chat回复→刷新恢复→退出；
   另测deny/expired/不支持模型/错误测试。固定viewport，截图在断言后保存至
   `docs/features/assets/ghc-001/`，录制外部传输但真实路由与存储，不冒充live权限证明。
-- [ ] 实际登录/小额度推理证据与fixture证据分开；缺实际授权时明确记录阻塞。
-- [ ] 版本、镜像、curated截图、实现hash、CI链接、changelog和双语案例完整后才shipped。
+- [x] 实际登录/小额度推理证据与fixture证据分开；实际账号与最终镜像推理已验证。
+- [x] 版本、镜像、curated截图、实现hash、CI链接、changelog和双语案例已记录。
 
 ## Risks / Rollback
 
@@ -85,7 +85,15 @@ Initial investigation: current pi selects github-copilot with Responses; existin
 factory always constructs ChatAnthropic, so native transport requires an adapter, not merely a URL change.
 Reference: [pi Copilot OAuth](https://github.com/earendil-works/pi-mono/blob/main/packages/ai/src/auth/oauth/github-copilot.ts)
 and [Copilot headers](https://github.com/earendil-works/pi-mono/blob/main/packages/ai/src/api/github-copilot-headers.ts).
-Implementation is present; shipment remains pending the final image/browser and hosted CI/publication checks.
+Shipped through protected PR #4 on 2026-09-15 after local, image-only, live-account and hosted CI validation.
+
+- Implementation: `5b097d086ec109a7720ab8afcb8443bc2c85d10a`.
+- Additional browser negatives: `6e5ba294cfb733674d2f54a5de26af87c174b4cc` (tests only; application inputs unchanged).
+- Merge: `94a190f2d1838de198eb4a9e94b85c2e15ede495`, [PR #4](https://github.com/fhw12345/FinancialAgent/pull/4).
+- [Hosted run](https://github.com/fhw12345/FinancialAgent/actions/runs/34953213465) passed every gate,
+  including 6 hardening and 3 native browser cases. Both reports were downloaded and checked;
+  [hosted receipts](assets/ghc-001/hosted-validation.json) record artifact identities/hashes and no credential files.
+- [Live receipts](assets/ghc-001/live-validation.json) are separate from recorded browser proof.
 
 ## 2026-09-15 Implementation and Live Verification
 
@@ -137,14 +145,15 @@ Curated screenshots are recorded fixtures, not proof of real account entitlement
 
 - [Native login/model/structured-test panel](assets/ghc-001/01-native-copilot-connected.png).
 - [Denied authorization remains disconnected](assets/ghc-001/02-native-copilot-denied.png).
+- [Rate-limited inference is not reported successful](assets/ghc-001/03-native-copilot-rate-limit.png).
 
 Final local acceptance passed: two clean builds have matching full installed manifests and frontend
 assets; both app image users are UID 1000 and no credentials/env files are baked in.
 [Image receipts](assets/ghc-001/clean-build-validation.json) identify the final backend/frontend images.
-Fresh-image tests passed **2 native Copilot + 6 hardening smoke + 11 default E2E** cases, with backend
+Fresh-image tests passed **3 native Copilot + 6 hardening smoke + 11 default E2E** cases, with backend
 mounting tests only and frontend mounting nothing. The screenshots above were regenerated on those images.
 The real-account stack was then recreated without application/dependency mounts: authorization/model
 selection survived in its private volume and the real structured inference test passed again.
 
-Remaining publication work: implementation and shipment commits, protected hosted CI and merge.
-No `shipped` claim is made yet.
+Protected hosted validation and implementation merge are complete; this shipment documentation
+records their immutable identities. PH-009 and all IDQ runtime work remain unstarted.

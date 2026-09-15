@@ -7,12 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### 0.52.0 — Native GitHub Copilot (candidate)
+## [0.52.0] - 2026-09-15
+
+### Native GitHub Copilot
 
 - Adds independent device OAuth, private persistent credentials, refresh single-flight, account model discovery and explicit local sign-out.
 - Adds a native GPT Responses LangChain adapter with streaming, tools, structured output, cancellation, usage and request/account model pinning; no bridge or pi credential dependency.
 - Adds local-origin protected Health controls and recorded real-API browser coverage; actual account structured inference was verified separately.
-- Preserves existing providers; runtime and hosted publication gates remain required before shipment.
+- Preserves existing providers; passes full local/hosted gates and 3 native browser scenarios, plus clean-image and live-account verification.
+- Ships through protected PR #4 (`94a190f2`), implementation `5b097d0`, with private credential persistence verified across image recreation.
 
 ## [0.51.5] - 2026-09-14
 
