@@ -52,8 +52,9 @@ ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
 # Change ownership to app user and create .local directory
 RUN chown -R app:app /app && \
-    mkdir -p /home/app/.local && \
-    chown -R app:app /home/app/.local
+    mkdir -p /home/app/.local /home/app/.financial-agent && \
+    chown -R app:app /home/app/.local /home/app/.financial-agent && \
+    chmod 700 /home/app/.financial-agent
 
 # Switch to non-root user
 USER app

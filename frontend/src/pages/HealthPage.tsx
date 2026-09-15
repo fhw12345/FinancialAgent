@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatTimestamp } from "../utils/timeFormatter";
+import CopilotConnection from "../components/CopilotConnection";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -96,6 +97,8 @@ export default function HealthPage() {
           <MetricCard label="Frontend" value={`v${__APP_VERSION__}`} />
           <MetricCard label="Backend" value={`v${backendHealth.version}`} />
         </div>
+
+        <CopilotConnection />
 
         <div className="overflow-hidden rounded-lg bg-white shadow">
           <table className="min-w-full divide-y divide-gray-200 text-sm">

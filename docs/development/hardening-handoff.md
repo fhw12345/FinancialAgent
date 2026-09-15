@@ -1,8 +1,8 @@
 ---
 title: Project Hardening Active Handoff
 status: in-progress
-version: backend@0.51.5, frontend@0.32.5
-last_updated: 2026-09-14
+version: backend@0.52.0, frontend@0.33.0
+last_updated: 2026-09-15
 owner: maintainer
 related_paths:
   - docs/features/project-hardening-program.md
@@ -16,6 +16,26 @@ related_paths:
 # Project Hardening Active Handoff
 
 ## 1. Current State
+
+### Active GHC-001 implementation (2026-09-15)
+
+The maintainer authorized implementation of the native Copilot provider after the
+IDQ planning-only work. Current branch: `feat/native-github-copilot`, candidate
+versions backend `0.52.0` / frontend `0.33.0`. See
+[native provider spec](../features/native-github-copilot-provider.md).
+PH-009 and all IDQ runtime changes remain unstarted.
+
+Core and recorded browser tests pass; the real account separately authorized and
+passed structured inference plus a bounded native tool-result round trip on
+gpt-6-astra. Real credentials are isolated in a private Docker volume and must
+never be copied into the repo, fixtures, images, or CI artifacts. The live UI is
+localhost:3013 (backend 18095); the recorded test stack is 3012/18094.
+Two final clean builds and image-only acceptance (2 native, 6 hardening smoke,
+11 default E2E) passed. Real authorization/model selection survived recreation
+onto those images and live structured inference passed again. Protected CI and
+publication remain pending; do not mark GHC-001 shipped until they complete.
+
+### Previously shipped hardening baseline
 
 PH-001/002/004/005/010 have completed local acceptance, clean-image browser proof,
 hosted PR validation, negative-gate/artifact verification and protected implementation

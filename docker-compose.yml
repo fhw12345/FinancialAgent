@@ -19,6 +19,7 @@ services:
     volumes:
       - ./backend:/app # Mount full backend directory
       - backend_deps:/home/app/.local # Persist pip user install packages
+      - copilot_credentials:/home/app/.financial-agent # Private native OAuth state
     restart: unless-stopped
 
   frontend:
@@ -418,5 +419,6 @@ services:
 volumes:
   mongodb_data:
   redis_data:
+  copilot_credentials:
   backend_deps: # Persist Python packages across restarts
   frontend_e2e_deps:

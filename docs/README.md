@@ -18,6 +18,8 @@ All current documentation describes the local single-user application.
 
 ## Agent and Features
 
+- [Native GitHub Copilot Provider](features/native-github-copilot-provider.md)
+
 - [Investment Decision Quality Program — planning](features/investment-decision-quality-program.md)
   - [IDQ-001 Decision Contracts and Policy Gates](features/investment-decision-policy-gates.md)
   - [IDQ-002 Portfolio Risk and Allocation](features/investment-portfolio-risk-allocation.md)
@@ -73,6 +75,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [Native Copilot Is Not a URL Change](case-studies/2026-09-15-native-copilot-is-not-a-url-change.md)
 - [Hosted CI Needs Failure Proof](case-studies/2026-09-14-hosted-ci-needs-failure-proof.md)
 - [Hardening Closeout Evidence Review](case-studies/2026-09-09-closeout-checklists-are-not-evidence.md)
 - [Reproducible Builds Need Runtime Proof](case-studies/2026-08-13-reproducible-builds-need-runtime-proof.md)

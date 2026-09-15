@@ -6,12 +6,13 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from langchain_anthropic import ChatAnthropic
+from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic import SecretStr
 
 from ..core.config import Settings, get_settings
 from ..core.exceptions import ConfigurationError
 
-LLMProvider = Literal["maestro", "anthropic", "copilot_reverse"]
+LLMProvider = Literal["maestro", "anthropic", "copilot_reverse", "github_copilot"]
 
 ROLE_MODEL_FIELDS: dict[str, str] = {
     "deep_planner": "model_deep_planner",
@@ -64,6 +65,11 @@ def resolve_model(role: str, settings: Settings | None = None) -> str:
     """Resolve a role to a model for the selected provider."""
     settings = settings or get_settings()
 
+    if settings.llm_provider == "github_copilot":
+        from ..services.copilot.context import current_profile
+
+        return current_profile().model
+
     if settings.llm_provider == "maestro":
         return str(getattr(settings, _role_field(role)))
 
@@ -90,6 +96,18 @@ def resolve_route(
     settings = settings or get_settings()
     provider = settings.llm_provider
     model = resolve_model(role, settings)
+
+    if provider == "github_copilot":
+        # OAuth secrets are resolved only inside the native transport, never
+        # exposed through diagnostic routes or agent metadata.
+        from ..services.copilot.service import get_copilot_service
+
+        return LLMRoute(
+            provider=provider,
+            base_url=get_copilot_service().store.read().base_url,
+            api_key="",
+            model=model,
+        )
 
     if provider == "maestro":
         return LLMRoute(
@@ -132,8 +150,17 @@ def get_llm(
     max_tokens: int = 4096,
     streaming: bool = False,
     **kwargs: Any,
-) -> ChatAnthropic:
-    """Create an Anthropic-compatible client for the selected provider."""
+) -> BaseChatModel:
+    """Create a lazy native client or the existing Anthropic-compatible client."""
+    if get_settings().llm_provider == "github_copilot":
+        from .copilot_chat_model import CopilotChatModel
+
+        return CopilotChatModel(
+            role=role,
+            max_tokens=max_tokens,
+            streaming=streaming,
+            timeout=float(kwargs.get("timeout", 180)),
+        )
     route = resolve_route(role)
     return ChatAnthropic(
         model_name=route.model,
