@@ -35,6 +35,11 @@ test.describe("@real-stack native Copilot", () => {
     await expect(
       page.getByTestId("copilot-model-select").locator("option"),
     ).toHaveCount(2);
+    const rejected = await request.post(`${backend}/api/llm/copilot/model`, {
+      headers: { "X-Financial-Agent-Local": "1" },
+      data: { model_id: "gpt-5-disabled" },
+    });
+    expect(rejected.status()).toBe(422);
     await page.getByTestId("copilot-model-select").selectOption("gpt-6-astra");
     await page.getByTestId("copilot-save-model").click();
     await expect(page.getByTestId("copilot-test")).toBeEnabled();
@@ -93,6 +98,43 @@ test.describe("@real-stack native Copilot", () => {
     const paths = ((await result.json()) as { requests: string[] }).requests;
     expect(paths).toContain("/responses");
     expect(paths).not.toContain("/cc/v1/messages");
+  });
+
+  test("expired login and rate-limited inference remain explicit", async ({
+    page,
+    request,
+  }) => {
+    await request.post(`${backend}/api/test/copilot/mode/expired`);
+    await page.getByTestId("copilot-login").click();
+    await expect(page.getByTestId("copilot-login-ended")).toContainText(
+      "expired",
+      { timeout: 15000 },
+    );
+    await expect(page.getByTestId("copilot-test")).toHaveCount(0);
+    await request.post(`${backend}/api/test/copilot/mode/normal`);
+    await page.getByTestId("copilot-login").click();
+    await expect(page.getByTestId("copilot-user-code")).toBeVisible();
+    await request.post(`${backend}/api/test/copilot/approve`);
+    await expect(page.getByTestId("copilot-models")).toBeVisible({
+      timeout: 15000,
+    });
+    await page.getByTestId("copilot-models").click();
+    await page.getByTestId("copilot-model-select").selectOption("gpt-6-astra");
+    await page.getByTestId("copilot-save-model").click();
+    await expect(page.getByTestId("copilot-test")).toBeEnabled();
+    await request.post(`${backend}/api/test/copilot/mode/limited`);
+    await page.getByTestId("copilot-test").click();
+    await expect(page.getByRole("alert")).toContainText("rate_limited");
+    await expect(page.getByTestId("copilot-test-result")).toHaveCount(0);
+    await expect(page.getByTestId("copilot-test")).toBeEnabled();
+    if (process.env.UPDATE_E2E_EVIDENCE === "true") {
+      await mkdir(evidence, { recursive: true });
+      await page.screenshot({
+        path: path.join(evidence, "03-native-copilot-rate-limit.png"),
+        fullPage: true,
+        animations: "disabled",
+      });
+    }
   });
 
   test("denied authorization stays disconnected", async ({ page, request }) => {

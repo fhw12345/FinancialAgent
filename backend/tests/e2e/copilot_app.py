@@ -36,8 +36,13 @@ def recorded(request):
             },
         )
     if path == "/login/oauth/access_token":
-        if mode == "denied":
-            return httpx.Response(200, json={"error": "access_denied"})
+        if mode in ("denied", "expired"):
+            return httpx.Response(
+                200,
+                json={
+                    "error": "access_denied" if mode == "denied" else "expired_token"
+                },
+            )
         return httpx.Response(
             200,
             json=(
@@ -149,7 +154,7 @@ async def approve():
 @app.post("/api/test/copilot/mode/{value}")
 async def change_mode(value: str):
     global mode
-    assert value in ("normal", "denied", "limited")
+    assert value in ("normal", "denied", "expired", "limited")
     mode = value
     return {"mode": mode}
 
