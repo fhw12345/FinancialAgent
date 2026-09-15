@@ -7,11 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### 0.33.0 — Native Copilot connection controls (candidate)
+## [0.33.0] - 2026-09-15
+
+### Native Copilot connection controls
 
 - Adds a bilingual Health panel for device authorization, permitted model selection, explicit allowance-consuming tests, cancellation and local logout.
 - Validates API payloads at runtime and ignores late responses after logout/unmount.
-- Adds recorded-external/real-API browser proof for login, inference, chat reload and denied authorization; implementation is pending final publication gates.
+- Adds recorded-external/real-API browser proof for login, inference, chat reload, denial, expiration, unavailable models and rate-limit errors.
+- Passes 258 tests, zero-warning production lint, unchanged 131-warning test budget, full hosted CI and protected PR #4 publication.
 
 ## [0.32.5] - 2026-09-14
 

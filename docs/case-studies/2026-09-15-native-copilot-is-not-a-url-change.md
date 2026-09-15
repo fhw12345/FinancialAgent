@@ -1,6 +1,6 @@
 ---
 title: Native Copilot Is Not a URL Change
-status: in-progress
+status: shipped
 version: backend@0.52.0, frontend@0.33.0
 last_updated: 2026-09-15
 owner: maintainer
@@ -18,11 +18,11 @@ related_paths:
 > provider. Native Copilot required a distinct OAuth and Responses boundary, not
 > copying pi's token or replacing the base URL. Request-local account/model binding,
 > private durable credentials, exact tool-stream replay, and real browser plus live
-> account tests establish the new path. Publication is still pending at this checkpoint.
+> account tests establish the new path. Hosted CI and protected PR #4 merge completed the implementation release.
 >
 > **TL;DR (中文)**：原工厂始终返回 ChatAnthropic，不能靠换 URL 变成 pi 那样的
 > Copilot 直连。此次新增独立 OAuth、私有凭据存储和 Responses adapter，并验证
-> 模型/账号绑定、工具流回放、真实浏览器和真实账号。当前检查点尚未完成最终发布。
+> 模型/账号绑定、工具流回放、真实浏览器和真实账号；现已通过 hosted CI 并以受保护 PR #4 合并。
 
 ## 1. Context
 
@@ -62,7 +62,7 @@ PH-009 或 IDQ 投资策略改造。GitHub CLI 的 PR 授权与 Copilot 的模�
   all critical floors passed; Ruff/Black/mypy (288 source files), Bandit/actionlint pass.
 - Frontend: 258 passed, production warnings 0, total test/E2E warnings 131, types/build pass.
 - Two clean builds have equal complete installed manifests and frontend asset hashes.
-- Image-only validation: native browser 2 passed, existing hardening smoke 6 passed,
+- Image-only validation: native browser 3 passed, existing hardening smoke 6 passed,
   default E2E regressions 11 passed. App source/dependencies were not bind-mounted.
 - Curated screenshots explicitly show a **Recorded GPT** fixture, not real account entitlement.
 
@@ -83,6 +83,14 @@ Pydantic连接测试通过。另一组两次、有界的真实请求执行本地
 5. Preserve tool identities and opaque protocol state without granting new tool authority.
 6. Recorded tests prove failure paths; actual account tests prove the available integration path.
 7. Clean images, preserved login, hosted checks and publication remain distinct acceptance steps.
+
+Implementation `5b097d086ec109a7720ab8afcb8443bc2c85d10a` and browser-negative
+supplement `6e5ba294cfb733674d2f54a5de26af87c174b4cc` merged normally in
+[PR #4](https://github.com/fhw12345/FinancialAgent/pull/4), merge
+`94a190f2d1838de198eb4a9e94b85c2e15ede495`. Hosted run
+[34953213465](https://github.com/fhw12345/FinancialAgent/actions/runs/34953213465)
+passed every gate and preserved both browser reports, with no credential files in artifacts.
+The extra test commit did not change application sources or dependency metadata.
 
 See [feature contract and evidence](../features/native-github-copilot-provider.md) and
 [clean-build receipts](../features/assets/ghc-001/clean-build-validation.json).

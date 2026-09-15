@@ -17,23 +17,27 @@ related_paths:
 
 ## 1. Current State
 
-### Active GHC-001 implementation (2026-09-15)
+### Shipped GHC-001 native Copilot (2026-09-15)
 
-The maintainer authorized implementation of the native Copilot provider after the
-IDQ planning-only work. Current branch: `feat/native-github-copilot`, candidate
-versions backend `0.52.0` / frontend `0.33.0`. See
-[native provider spec](../features/native-github-copilot-provider.md).
-PH-009 and all IDQ runtime changes remain unstarted.
+Native Copilot shipped at backend `0.52.0` / frontend `0.33.0` through protected
+PR #4, merge `94a190f2d1838de198eb4a9e94b85c2e15ede495`. Implementation:
+`5b097d086ec109a7720ab8afcb8443bc2c85d10a`; browser supplement: `6e5ba29`.
+See [native provider spec](../features/native-github-copilot-provider.md) and
+[hosted receipts](../features/assets/ghc-001/hosted-validation.json).
+PH-009 and all IDQ runtime changes remain unstarted; do not begin them without
+an explicit maintainer instruction.
 
 Core and recorded browser tests pass; the real account separately authorized and
 passed structured inference plus a bounded native tool-result round trip on
 gpt-6-astra. Real credentials are isolated in a private Docker volume and must
 never be copied into the repo, fixtures, images, or CI artifacts. The live UI is
 localhost:3013 (backend 18095); the recorded test stack is 3012/18094.
-Two final clean builds and image-only acceptance (2 native, 6 hardening smoke,
+Two final clean builds and image-only acceptance (3 native, 6 hardening smoke,
 11 default E2E) passed. Real authorization/model selection survived recreation
-onto those images and live structured inference passed again. Protected CI and
-publication remain pending; do not mark GHC-001 shipped until they complete.
+onto those images and live structured inference passed again. Hosted CI run
+34953213465 passed all backend/frontend/security and both browser lanes; downloaded
+artifacts retain both reports and contain no credential files. Runtime source and
+dependency inputs are unchanged by the later test-only supplement.
 
 ### Previously shipped hardening baseline
 
@@ -42,12 +46,12 @@ hosted PR validation, negative-gate/artifact verification and protected implemen
 merge. The program remains **in-progress** because PH-009 has not started.
 
 ```text
-published backend: 0.51.5
-published frontend: 0.32.5
+hardening release backend: 0.51.5
+hardening release frontend: 0.32.5
 implementation PR: #1 (merged 2026-09-14)
 implementation merge: 7cc3789b291cfb71865d3cb7a368a965957db5ca
 shipment documentation: PR #2 merged as f0a5ed0 (2026-09-14)
-current request: investment/Agent quality plans only; PH-009 paused
+subsequent release: GHC-001 at 0.52.0 / 0.33.0; PH-009 and IDQ still paused/planning
 ```
 
 Always inspect `git status --short --branch` and fetch before resuming. Do not
