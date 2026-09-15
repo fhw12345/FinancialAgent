@@ -1,0 +1,28 @@
+{
+  "date": "2026-09-15",
+  "evidence_mode": "live_account",
+  "authentication": "independent_device_oauth",
+  "requested_model": "gpt-6-astra",
+  "protocol": "openai-responses",
+  "bridge_used": false,
+  "pi_credentials_used": false,
+  "account_catalog_discovery_passed": true,
+  "structured_probe_passed": true,
+  "tool_round_trip": {
+    "requests": 2,
+    "max_output_tokens_per_request": 512,
+    "tool_input": 2,
+    "tool_result": 3,
+    "final_answer": "3",
+    "first_usage": {"input_tokens": 63, "output_tokens": 19},
+    "final_usage": {"input_tokens": 58, "output_tokens": 5}
+  },
+  "after_final_image_recreation": {
+    "authorization_preserved": true,
+    "selected_model_preserved": true,
+    "structured_probe_http_status": 200,
+    "backend_image": "sha256:84d8634f49b03294a4049d12a0fe5ce5e9e3f976629118a2d6515d0b6686544b",
+    "frontend_image": "sha256:4683ec7f8e7461024edea17ff22b47b6c5ffaedafbf63123b7b224391ca3928e"
+  },
+  "notes": "Small bounded compatibility checks, not investment-quality or dollar-cost evidence. No tokens, device codes, account identifiers or raw provider responses are recorded. Curated browser screenshots use recorded external services, not this live account."
+}

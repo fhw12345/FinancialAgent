@@ -1,0 +1,48 @@
+{
+  "date": "2026-09-15",
+  "backend_version": "0.52.0",
+  "frontend_version": "0.33.0",
+  "same_working_tree": true,
+  "dependencies_equal": true,
+  "frontend_assets_equal": true,
+  "runs": [
+    {
+      "backend": {
+        "image_id": "sha256:f247f14d542e4ed6bea3d9173280c17ceccde3168fdc463058b1113bfe8e391b",
+        "user": "app",
+        "uid": "1000",
+        "dependency_count": 120,
+        "dependency_sha256": "1eb2e137c72dc38ed8063445723c1757fd47fe3cf8d5861a3d250d0b762d0f21",
+        "local_env_files": 0
+      },
+      "frontend": {
+        "image_id": "sha256:31da792bf81aed1ca8768ce3b9c23f59f83ee51772912c33a375773d48100417",
+        "user": "node",
+        "uid": "1000",
+        "dependency_count": 746,
+        "dependency_sha256": "18efc4df1ef5ba048bc9ca2aea121864f0e5513dd1a2038cfed3f73e83a3420b",
+        "local_env_files": 0,
+        "build_assets_sha256": "8fa7345201b3be81c302876f4e1ae5c8df6158bedbfb59a03abb2e14d133f9a4"
+      }
+    },
+    {
+      "backend": {
+        "image_id": "sha256:84d8634f49b03294a4049d12a0fe5ce5e9e3f976629118a2d6515d0b6686544b",
+        "user": "app",
+        "uid": "1000",
+        "dependency_count": 120,
+        "dependency_sha256": "1eb2e137c72dc38ed8063445723c1757fd47fe3cf8d5861a3d250d0b762d0f21",
+        "local_env_files": 0
+      },
+      "frontend": {
+        "image_id": "sha256:4683ec7f8e7461024edea17ff22b47b6c5ffaedafbf63123b7b224391ca3928e",
+        "user": "node",
+        "uid": "1000",
+        "dependency_count": 746,
+        "dependency_sha256": "18efc4df1ef5ba048bc9ca2aea121864f0e5513dd1a2038cfed3f73e83a3420b",
+        "local_env_files": 0,
+        "build_assets_sha256": "8fa7345201b3be81c302876f4e1ae5c8df6158bedbfb59a03abb2e14d133f9a4"
+      }
+    }
+  ]
+}

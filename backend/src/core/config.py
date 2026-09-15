@@ -10,6 +10,7 @@ Supports hierarchical environment configuration:
 
 import os
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -55,7 +56,10 @@ class Settings(BaseSettings):
     langfuse_host: str | None = None
 
     # LLM provider routing
-    llm_provider: Literal["maestro", "anthropic", "copilot_reverse"] = "maestro"
+    llm_provider: Literal[
+        "maestro", "anthropic", "copilot_reverse", "github_copilot"
+    ] = "maestro"
+    copilot_state_dir: str = str(Path.home() / ".financial-agent" / "copilot")
 
     # Agent Maestro
     maestro_base_url: str = "http://localhost:23333/api/anthropic"

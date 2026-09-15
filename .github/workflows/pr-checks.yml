@@ -81,6 +81,10 @@ jobs:
           python scripts/check-compose-loopback.py
           docker compose -f docker-compose.hardening.yml config --format json > "$RUNNER_TEMP/hardening-compose.json"
           python scripts/check-compose-loopback.py --config "$RUNNER_TEMP/hardening-compose.json"
+          for config in docker-compose.copilot.yml docker-compose.copilot-live.yml; do
+            docker compose -f "$config" config --format json > "$RUNNER_TEMP/copilot-compose.json"
+            python scripts/check-compose-loopback.py --config "$RUNNER_TEMP/copilot-compose.json"
+          done
           # Manual runs validate the current tree against main; PRs use their base.
           python scripts/check-repository-policy.py --base "${PR_BASE:-origin/main}"
 
@@ -162,6 +166,7 @@ jobs:
           npx playwright install --with-deps chromium
           cd ..
           bash scripts/run-ci-browser.sh
+          bash scripts/run-ci-browser.sh copilot
 
       - name: Upload quality reports and server logs (including failures)
         if: always()

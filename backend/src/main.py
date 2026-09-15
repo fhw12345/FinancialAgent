@@ -26,6 +26,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from .api.admin import router as admin_router
 from .api.analysis import router as analysis_router
 from .api.chat import router as chat_router
+from .api.copilot import router as copilot_router
 from .api.dependencies.rate_limit import limiter
 from .api.dependencies.timing_middleware import TimingMiddleware
 from .api.evaluations import router as evaluations_router
@@ -42,6 +43,7 @@ from .core.exceptions import AppError
 from .core.version import BACKEND_VERSION
 from .database.mongodb import MongoDB
 from .database.redis import RedisCache
+from .services.copilot.context import CopilotContextMiddleware
 
 # Set the root logger level to INFO so we can see detailed logs
 logging.basicConfig(level=logging.INFO)
@@ -384,6 +386,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    app.add_middleware(CopilotContextMiddleware)
     # Request timing middleware for performance profiling
     # Added first so it wraps all other middleware and measures total time
     if settings.environment != "test":
@@ -452,6 +455,7 @@ def create_app() -> FastAPI:
 
     # Include routers
     app.include_router(health_router, prefix="/api", tags=["health"])
+    app.include_router(copilot_router)
     app.include_router(admin_router)  # Admin-only monitoring endpoints
     app.include_router(evaluations_router)  # Deterministic agent evaluation
     app.include_router(analysis_router)

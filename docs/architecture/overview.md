@@ -1,8 +1,8 @@
 ---
 title: Architecture Overview
-status: shipped
-version: backend@0.51.5, frontend@0.32.5
-last_updated: 2026-09-09
+status: in-progress
+version: backend@0.52.0, frontend@0.33.0
+last_updated: 2026-09-15
 owner: maintainer
 related_paths:
   - backend/src/main.py
@@ -92,8 +92,13 @@ user message, prepares token-bounded prior history by message ID, and invokes a
 stateless per-request ReAct graph. LangGraph manages the tool loop within that
 request; it is not used as the cross-request conversation store.
 
-`llm_factory.py` selects an Anthropic-compatible endpoint with
-`LLM_PROVIDER=maestro|anthropic|copilot_reverse`. Agent Maestro keeps the
+`llm_factory.py` selects a model client with
+`LLM_PROVIDER=maestro|anthropic|copilot_reverse|github_copilot`. Native
+`github_copilot` uses an independent local OAuth store and a Python Responses
+adapter, preserving LangChain tools/streaming/structured output without a bridge.
+All roles use the selected account-permitted GPT model; Health provides explicit
+login, model selection, testing and local logout. Other modes retain their existing
+Anthropic-compatible transport. Agent Maestro keeps the
 cross-vendor role mapping. Direct Anthropic uses one configured Anthropic model.
 Copilot reverse mode targets the sibling `copilot-bridge` at `/cc` and uses
 Claude models for the main/tool-heavy roles and GPT Responses models for

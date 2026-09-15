@@ -6,7 +6,7 @@ locally with Docker Compose and never submits broker orders.
 ## Start
 
 1. Copy `backend/.env.example` to `backend/.env.development`.
-2. Configure the Agent Maestro endpoint and any optional market-data keys.
+2. Choose an LLM provider below and configure any optional market-data keys.
 3. Start the stack:
 
 ```bash
@@ -31,8 +31,24 @@ Set `LLM_PROVIDER` in `backend/.env.development`:
 | `maestro`         | Agent Maestro at `MAESTRO_BASE_URL`                                  |
 | `anthropic`       | Direct Anthropic API using `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` |
 | `copilot_reverse` | GitHub Copilot through the sibling `../copilot-bridge` repository    |
+| `github_copilot`  | Native Python OAuth + GPT Responses; sign in and select a model on Health |
 
-For the Copilot reverse mode, start the bridge first:
+Native Copilot needs no pi process, bridge, or OpenAI/Anthropic API key. Set
+`LLM_PROVIDER=github_copilot`, recreate backend, then open **Health → GitHub Copilot**.
+Authorize on GitHub, refresh the permitted model list, select a GPT Responses model,
+and explicitly test the connection (uses Copilot allowance). The selected model is
+used for all roles; native v1 does not support Claude/Gemini transports or Enterprise
+Server login. Account entitlement and model policies still apply.
+
+Credentials stay in a private local Docker volume, separate from pi and GitHub CLI.
+Local logout does not revoke the GitHub grant. See the
+[native provider specification](docs/features/native-github-copilot-provider.md)
+for isolated ports, security limits, and recorded/live verification boundaries.
+
+After changing local env configuration, use
+`docker compose up -d --force-recreate backend`; a restart alone does not reload it.
+
+For the existing Copilot reverse mode, start the bridge first:
 
 ```powershell
 make copilot-reverse

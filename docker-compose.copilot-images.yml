@@ -1,0 +1,7 @@
+# Fresh-image acceptance: test fixtures only, never application/dependency mounts.
+services:
+  backend:
+    volumes: !override
+      - ./backend/tests:/app/tests:ro
+  frontend:
+    volumes: !reset []

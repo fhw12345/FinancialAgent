@@ -1,0 +1,30 @@
+# Real native Copilot, isolated from recorded fixtures and existing port 8000.
+# No provider credentials are imported from pi, gh CLI, or a local env file.
+name: financialagent-copilot-live
+services:
+  mongodb:
+    image: mongo:7.0
+    volumes: [mongo:/data/db]
+  redis:
+    image: redis:7.2-alpine
+  backend:
+    image: financialagent-backend:latest
+    environment:
+      ENVIRONMENT: development
+      LLM_PROVIDER: github_copilot
+      COPILOT_STATE_DIR: /home/app/.financial-agent/copilot
+      MONGODB_URL: mongodb://mongodb:27017/financial_agent
+      REDIS_URL: redis://redis:6379/0
+      CORS_ORIGINS: '["http://localhost:3013","http://127.0.0.1:3013"]'
+    volumes:
+      - credentials:/home/app
+    ports: ["127.0.0.1:18095:8000"]
+    depends_on: [mongodb, redis]
+  frontend:
+    image: financialagent-frontend:latest
+    environment:
+      VITE_API_URL: http://localhost:18095
+    ports: ["127.0.0.1:3013:3000"]
+volumes:
+  credentials:
+  mongo:
