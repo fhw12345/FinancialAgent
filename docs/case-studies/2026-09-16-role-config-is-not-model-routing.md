@@ -1,6 +1,6 @@
 ---
 title: A Role Configuration Is Not Model Routing
-status: in-progress
+status: shipped
 version: backend@0.53.0, frontend@0.34.0
 last_updated: 2026-09-16
 owner: maintainer
@@ -17,12 +17,12 @@ related_paths:
 > **TL;DR (EN)**: The account exposed GPT, Gemini and Grok, but the original native
 > adapter only supported GPT Responses and ignored role names. Supporting multiple
 > vendors required protocol-aware streaming and real workflow bindings, not just a
-> bigger dropdown. Recorded browser tests and bounded live probes now pass; hosted
-> publication remains pending at this checkpoint.
+> bigger dropdown. Recorded browser tests, bounded live probes and hosted CI passed;
+> protected PR #6 completed the implementation release.
 >
 > **TL;DR (中文)**：账号有多厂商模型，不等于应用已会调用；有角色配置，也不等于真实
 > workflow使用它。此次补上协议分流、真实角色scope与配置版本，并用浏览器、真实账号
-> 验证。当前已完成本地验收，尚待hosted CI和最终发布。
+> 验证，现已通过hosted CI并以受保护PR #6合并发布。
 
 ## 1. Context
 
@@ -70,5 +70,10 @@ Gemini真实路径，翻译/consistency另有实际调用组合测试。
 
 单次探针延迟不代表性能排名；多厂商不代表独立事实，也不证明投资结果更好。
 后续效果验证属于IDQ，PH-009与IDQ实现没有在本任务中启动。
+
+实现 `0719b92389f211018ce93d8cd2573bd64a0b903d` 经
+[CI 35055009845](https://github.com/fhw12345/FinancialAgent/actions/runs/35055009845)
+验证后，通过PR #6合并为 `c00efe6d884eb8dd49090dd49aa47a54c3d28208`。
+下载的artifact保留两套browser reports，不包含凭据文件。
 
 See [feature contracts and receipts](../features/copilot-multivendor-role-routing.md).

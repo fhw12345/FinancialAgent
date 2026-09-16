@@ -1,0 +1,29 @@
+{
+  "date": "2026-09-16",
+  "implementation_commit": "0719b92389f211018ce93d8cd2573bd64a0b903d",
+  "merge_commit": "c00efe6d884eb8dd49090dd49aa47a54c3d28208",
+  "pr_url": "https://github.com/fhw12345/FinancialAgent/pull/6",
+  "run_url": "https://github.com/fhw12345/FinancialAgent/actions/runs/35055009845",
+  "run_id": 35055009845,
+  "conclusion": "success",
+  "backend_tests": 2061,
+  "frontend_tests": 261,
+  "hardening_browser": 6,
+  "copilot_browser": 4,
+  "artifact": {
+    "id": 10430097574,
+    "name": "pr-quality-reports",
+    "expires_at": "2026-09-30T04:22:53Z"
+  },
+  "credential_files_in_artifacts": 0,
+  "reports": [
+    {
+      "path": "backend/artifacts/browser/previous-POPBXb/playwright-report/index.html",
+      "sha256": "d92ab5663e7f036858407a94ba626402588c5e15ec0472dffa20daff36d6c612"
+    },
+    {
+      "path": "frontend/playwright-report/index.html",
+      "sha256": "bb6ca84829426d5345e243d705bb7f90e420862d00402f7a1f6c50e9602ed603"
+    }
+  ]
+}

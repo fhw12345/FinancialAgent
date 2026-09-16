@@ -1,6 +1,6 @@
 ---
 title: Copilot Multi-Vendor Models and Role Routing
-status: in-progress
+status: shipped
 version: backend@0.53.0, frontend@0.34.0
 last_updated: 2026-09-16
 owner: maintainer
@@ -66,18 +66,18 @@ consistency_check、eval_judge；deep_planner保留为reserved配置，不声称
 
 ## Validation Plan
 
-- [ ] Catalog: 16代表条目均可识别正确协议，MAI/隐藏/disabled/embedding/未知协议拒绝。
-- [ ] Role map: 默认兼容、持久化/restart、非法值、stale revision、并发修改与logout均正确。
-- [ ] 一次run不同角色使用不同模型；同角色tool loop冻结；账号/角色/API变化不回放opaque。
-- [ ] Gemini Chat Completions text/并行tools/structured output/usage/reasoning metadata可回放。
-- [ ] Grok Responses不发送GPT专属include；旧GPT行为与GHC-001测试不回退。
-- [ ] 真实Portfolio Phase1/Phase2、translation/consistency调用点使用相应角色，不只是工厂单测。
-- [ ] Playwright通过Health配置→保存→reload→真实Chat/测试请求验证model/API；MAI不可选，
+- [x] Catalog: 16代表条目均可识别正确协议，MAI/隐藏/disabled/embedding/未知协议拒绝。
+- [x] Role map: 默认兼容、持久化/restart、非法值、stale revision、并发修改与logout均正确。
+- [x] 一次run不同角色使用不同模型；同角色tool loop冻结；账号/角色/API变化不回放opaque。
+- [x] Gemini Chat Completions text/并行tools/structured output/usage/reasoning metadata可回放。
+- [x] Grok Responses不发送GPT专属include；旧GPT行为与GHC-001测试不回退。
+- [x] 真实Portfolio Phase1/Phase2、translation/consistency调用点使用相应角色，不只是工厂单测。
+- [x] Playwright通过Health配置→保存→reload→真实Chat/测试请求验证model/API；MAI不可选，
   stale配置保存不能覆盖，错误推理不显示成功；截图存于`assets/ghc-002/`。
-- [ ] 用独立已授权账号做少量、有界的逐模型兼容性请求，结果包含成功/失败和协议，不
+- [x] 用独立已授权账号做少量、有界的逐模型兼容性请求，结果包含成功/失败和协议，不
   把catalog可见冒充成功；不进行16模型默认fan-out或投资效果宣传。
-- [ ] 全量backend/frontend/coverage/安全门禁、两次clean build与最终镜像E2E通过。
-- [ ] 版本/changelog/案例/索引、实现提交与出货文档、protected PR CI和push同步后才shipped。
+- [x] 全量backend/frontend/coverage/安全门禁、两次clean build与最终镜像E2E通过。
+- [x] 版本/changelog/案例/索引、实现hash、protected PR CI、push及合并已记录。
 
 ## Failure / Security / Rollback
 
@@ -88,7 +88,13 @@ consistency_check、eval_judge；deep_planner保留为reserved配置，不声称
 
 ## Evidence
 
-实现已通过本地验收，尚待protected hosted CI与publication，不能提前标shipped。
+已于2026-09-16通过受保护的 [PR #6](https://github.com/fhw12345/FinancialAgent/pull/6) 合并，未使用管理员绕过。
+
+- 实现：`0719b92389f211018ce93d8cd2573bd64a0b903d`。
+- 合并：`c00efe6d884eb8dd49090dd49aa47a54c3d28208`。
+- [Hosted CI](https://github.com/fhw12345/FinancialAgent/actions/runs/35055009845)全部门禁通过，
+  包括6个既有与4个Copilot浏览器场景；两份报告已下载核验，artifact不含credential文件。
+- [Hosted receipt](assets/ghc-002/hosted-validation.json)保存身份、artifact和report hashes。
 
 - Backend **2061 passed / 27 deselected**；Ruff/Black/mypy（291 source files）、Bandit与所有关键coverage floors通过。
 - Frontend **261 passed**；production lint 0 warnings、全量test/E2E warning ceiling 131、类型检查通过。

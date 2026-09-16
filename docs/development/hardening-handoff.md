@@ -17,10 +17,11 @@ related_paths:
 
 ## 1. Current State
 
-### Active GHC-002 multi-vendor role routing (2026-09-16)
+### Shipped GHC-002 multi-vendor role routing (2026-09-16)
 
-Maintainer requested all account-selectable GPT/Gemini/Grok models except MAI.
-Branch `feat/copilot-multivendor-routing`, candidate backend 0.53.0/frontend 0.34.0.
+GHC-002 shipped at backend 0.53.0/frontend 0.34.0 via protected PR #6,
+merge `c00efe6d884eb8dd49090dd49aa47a54c3d28208`, implementation
+`0719b92389f211018ce93d8cd2573bd64a0b903d`.
 See [GHC-002](../features/copilot-multivendor-role-routing.md). Native Responses
 and Chat Completions, versioned role overrides, actual Portfolio/translation/check
 bindings and role-aware replay are implemented. Local tests: backend 2061, frontend
@@ -31,8 +32,10 @@ Live account: 16/16 bounded structured probes and Gemini/Grok tool round trips p
 The default remains Astra; the discussed editable multi-vendor role map was explicitly
 applied on the live UI at localhost:3013. Final-image news/debater/translation probes
 passed. Existing OAuth was preserved; no MAI call or model-policy change was made.
-Hosted CI, implementation/shipment commits and merge remain pending; not shipped yet.
-PH-009 and IDQ remain unstarted.
+Hosted CI run 35055009845 passed every gate and both browser lanes. Both reports
+were downloaded and verified; no credential files were included. See
+[hosted receipts](../features/assets/ghc-002/hosted-validation.json).
+PH-009 and IDQ remain unstarted; no further work is authorized by this handoff.
 
 ### Shipped GHC-001 native Copilot (2026-09-15)
 
