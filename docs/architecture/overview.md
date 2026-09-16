@@ -1,8 +1,8 @@
 ---
 title: Architecture Overview
-status: shipped
-version: backend@0.52.0, frontend@0.33.0
-last_updated: 2026-09-15
+status: in-progress
+version: backend@0.53.0, frontend@0.34.0
+last_updated: 2026-09-16
 owner: maintainer
 related_paths:
   - backend/src/main.py
@@ -94,10 +94,13 @@ request; it is not used as the cross-request conversation store.
 
 `llm_factory.py` selects a model client with
 `LLM_PROVIDER=maestro|anthropic|copilot_reverse|github_copilot`. Native
-`github_copilot` uses an independent local OAuth store and a Python Responses
-adapter, preserving LangChain tools/streaming/structured output without a bridge.
-All roles use the selected account-permitted GPT model; Health provides explicit
-login, model selection, testing and local logout. Other modes retain their existing
+`github_copilot` uses an independent local OAuth store and Python adapters for
+Responses and Chat Completions, preserving LangChain tools/streaming/structured output
+without a bridge. Account-permitted GPT/Gemini/Grok models are supported; MAI is excluded.
+Health provides explicit login, default/role model selection, versioned presets, tests
+and local logout. Runs freeze role/model/protocol mappings; Portfolio Phase1/Phase2,
+translation and consistency checks use their real logical roles. Model diversity is
+not itself evidence of investment effectiveness. Other modes retain their existing
 Anthropic-compatible transport. Agent Maestro keeps the
 cross-vendor role mapping. Direct Anthropic uses one configured Anthropic model.
 Copilot reverse mode targets the sibling `copilot-bridge` at `/cc` and uses

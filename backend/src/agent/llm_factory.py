@@ -11,24 +11,9 @@ from pydantic import SecretStr
 
 from ..core.config import Settings, get_settings
 from ..core.exceptions import ConfigurationError
+from ..core.llm_roles import ROLE_MODEL_FIELDS
 
 LLMProvider = Literal["maestro", "anthropic", "copilot_reverse", "github_copilot"]
-
-ROLE_MODEL_FIELDS: dict[str, str] = {
-    "deep_planner": "model_deep_planner",
-    "react_agent": "model_react_agent",
-    "portfolio_decisions": "model_portfolio_decisions",
-    "verdict": "model_verdict",
-    "sub_technical": "model_sub_technical",
-    "simple_chat": "model_simple_chat",
-    "sub_financial": "model_sub_financial",
-    "portfolio_research": "model_portfolio_research",
-    "sub_debater": "model_sub_debater",
-    "sub_news": "model_sub_news",
-    "summary": "model_summary",
-    "router": "model_router",
-    "eval_judge": "model_eval_judge",
-}
 
 COPILOT_REVERSE_MODELS: dict[str, str] = {
     "deep_planner": "claude-opus-4.8",
@@ -44,6 +29,8 @@ COPILOT_REVERSE_MODELS: dict[str, str] = {
     "summary": "gpt-5.4-mini",
     "router": "claude-haiku-4.5",
     "eval_judge": "gpt-5.4-mini",
+    "translation": "claude-opus-4.8",
+    "consistency_check": "claude-haiku-4.5",
 }
 
 
@@ -68,7 +55,7 @@ def resolve_model(role: str, settings: Settings | None = None) -> str:
     if settings.llm_provider == "github_copilot":
         from ..services.copilot.context import current_profile
 
-        return current_profile().model
+        return current_profile(role).model
 
     if settings.llm_provider == "maestro":
         return str(getattr(settings, _role_field(role)))
@@ -141,6 +128,17 @@ def get_role_models(settings: Settings | None = None) -> dict[str, str]:
     """Return the active model assignment for every role."""
     settings = settings or get_settings()
     return {role: resolve_model(role, settings) for role in ROLE_MODEL_FIELDS}
+
+
+def get_model_routing_metadata(roles: tuple[str, ...]) -> dict[str, Any]:
+    if get_settings().llm_provider != "github_copilot":
+        return {}
+    from ..services.copilot.context import current_profile, routing_snapshot
+
+    return {
+        "model_routing_revision": routing_snapshot().revision,
+        "model_protocols": {role: current_profile(role).api for role in roles},
+    }
 
 
 def get_llm(

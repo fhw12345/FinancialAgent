@@ -2,7 +2,7 @@
 title: Native GitHub Copilot Provider
 status: shipped
 version: backend@0.52.0, frontend@0.33.0
-last_updated: 2026-09-15
+last_updated: 2026-09-16
 owner: maintainer
 related_paths:
   - backend/src/agent/llm_factory.py
@@ -13,6 +13,9 @@ related_paths:
 ---
 
 # GHC-001：Python 原生 GitHub Copilot 登录与模型连接
+
+> 本页保留0.52.0/0.33.0的初始出货范围与证据。后续多厂商协议、角色覆盖和当前配置说明
+> 见 [GHC-002](copilot-multivendor-role-routing.md)；下文“v1仅GPT/所有角色同模型”是历史范围。
 
 ## Scope
 

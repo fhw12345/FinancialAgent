@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING, Any
 
 from ...core.config import Settings
+from ...core.llm_roles import model_role_scope
 from ...database.mongodb import MongoDB
 from ...database.repositories.chat_repository import ChatRepository
 from ...database.repositories.message_repository import MessageRepository
@@ -11,6 +12,7 @@ from ...database.repositories.watchlist_repository import (
     WATCHLIST_COLLECTION,
     WatchlistRepository,
 )
+from ...models.trading_decision import SymbolAnalysisResult
 from ...services.context_window_manager import ContextWindowManager
 from ..langgraph_react_agent import FinancialAnalysisReActAgent
 from ..order_optimizer import OrderOptimizer
@@ -59,3 +61,37 @@ class PortfolioAnalysisAgent(
             order_repo=self.order_repo,
             message_repo=self.message_repo,
         )
+
+    async def _run_phase1_research(
+        self,
+        positions: list[Any],
+        watchlist_items: list[Any],
+        user_id: str,
+        dry_run: bool,
+        result_summary: dict[str, Any],
+        suppress_chat: bool = False,
+    ) -> list[SymbolAnalysisResult]:
+        # The reused graph owns a react_agent client. Bind its logical role in
+        # this task (and inherited research tasks), without mutating the singleton.
+        with model_role_scope("react_agent", "portfolio_research"):
+            return await super()._run_phase1_research(
+                positions,
+                watchlist_items,
+                user_id,
+                dry_run,
+                result_summary,
+                suppress_chat,
+            )
+
+    async def _run_phase2_decisions(
+        self,
+        all_analysis_results: list[SymbolAnalysisResult],
+        portfolio_context: dict[str, Any],
+        user_id: str,
+        dry_run: bool,
+        flow: str | None = None,
+    ) -> tuple[Any, list[Any]]:
+        with model_role_scope("react_agent", "portfolio_decisions"):
+            return await super()._run_phase2_decisions(
+                all_analysis_results, portfolio_context, user_id, dry_run, flow
+            )

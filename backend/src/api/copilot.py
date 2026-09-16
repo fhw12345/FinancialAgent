@@ -37,6 +37,21 @@ class PollRequest(BaseModel):
 class ModelRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     model_id: str = Field(min_length=1, max_length=120, pattern=r"^[a-zA-Z0-9_.-]+$")
+    expected_revision: int | None = Field(default=None, ge=0, strict=True)
+
+
+class RoutingRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    role_models: dict[str, str] = Field(max_length=20)
+    expected_revision: int = Field(ge=0, strict=True)
+
+
+class ProbeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    model_id: str | None = Field(
+        default=None, max_length=120, pattern=r"^[a-zA-Z0-9_.-]+$"
+    )
+    role: str = Field(default="simple_chat", max_length=80)
 
 
 def public_status() -> dict[str, Any]:
@@ -72,7 +87,14 @@ async def models() -> dict[str, Any]:
 
 @router.post("/model", dependencies=[Depends(local_action)])
 async def select_model(body: ModelRequest) -> dict[str, Any]:
-    await get_copilot_service().select_model(body.model_id)
+    await get_copilot_service().select_model(body.model_id, body.expected_revision)
+    return public_status()
+
+
+@router.post("/routing", dependencies=[Depends(local_action)])
+@limiter.limit("10/minute")
+async def routing(body: RoutingRequest, request: Request) -> dict[str, Any]:
+    await get_copilot_service().update_routing(body.role_models, body.expected_revision)
     return public_status()
 
 
@@ -84,5 +106,6 @@ async def logout() -> dict[str, Any]:
 
 @router.post("/test", dependencies=[Depends(local_action)])
 @limiter.limit("5/minute")
-async def probe(request: Request) -> dict[str, Any]:
-    return await test_connection()
+async def probe(request: Request, body: ProbeRequest | None = None) -> dict[str, Any]:
+    body = body or ProbeRequest()
+    return await test_connection(body.model_id, body.role)

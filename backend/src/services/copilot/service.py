@@ -15,6 +15,7 @@ from uuid import uuid4
 import httpx
 from pydantic import SecretStr
 
+from ...core.llm_roles import BALANCED_MODELS, ROLE_LABELS, ROLE_MODEL_FIELDS
 from .catalog import CopilotModel, parse_catalog
 from .protocol import (
     CLIENT_ID,
@@ -80,6 +81,12 @@ class CopilotService:
             ),
             "selected_model": state.selected_model,
             "models": [model.model_dump() for model in state.models],
+            "role_models": dict(state.role_models),
+            "routing_revision": state.routing_revision,
+            "recommended_role_models": dict(BALANCED_MODELS),
+            "roles": [
+                {"id": role, "label": label} for role, label in ROLE_LABELS.items()
+            ],
             "login": login,
         }
 
@@ -93,7 +100,9 @@ class CopilotService:
             ):
                 return self.status()
             # Replacing an account is explicit. Invalidate every old run binding.
-            state = CredentialState(revision=state.revision)
+            state = CredentialState(
+                revision=state.revision, routing_revision=state.routing_revision + 1
+            )
             self.store.save(state)
             data = await self._json(
                 "POST",
@@ -268,7 +277,9 @@ class CopilotService:
             self.store.save(state)
             return state.models
 
-    async def select_model(self, model_id: str) -> dict[str, Any]:
+    async def select_model(
+        self, model_id: str, expected_revision: int | None = None
+    ) -> dict[str, Any]:
         models = await self.models()
         async with self._lock:
             state = self.store.read()
@@ -278,7 +289,35 @@ class CopilotService:
                 model.id for model in state.models
             }:
                 raise CopilotError("model_not_available", 422)
+            if (
+                expected_revision is not None
+                and expected_revision != state.routing_revision
+            ):
+                raise CopilotError("routing_changed_reload", 409)
+            if state.selected_model != model_id:
+                state.routing_revision += 1
             state.selected_model = model_id
+            self.store.save(state)
+            return self.status()
+
+    async def update_routing(
+        self, role_models: dict[str, str], expected_revision: int
+    ) -> dict[str, Any]:
+        if set(role_models) - ROLE_MODEL_FIELDS.keys():
+            raise CopilotError("unknown_model_role", 422)
+        models = await self.models()
+        async with self._lock:
+            state = self.store.read()
+            if expected_revision != state.routing_revision:
+                raise CopilotError("routing_changed_reload", 409)
+            available = {m.id for m in models} & {m.id for m in state.models}
+            if (
+                not state.github_token.get_secret_value()
+                or not set(role_models.values()) <= available
+            ):
+                raise CopilotError("model_not_available", 422)
+            state.role_models = dict(role_models)
+            state.routing_revision += 1
             self.store.save(state)
             return self.status()
 

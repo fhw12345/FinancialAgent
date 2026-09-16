@@ -36,6 +36,8 @@ class CredentialState(BaseModel):
     token_revision: int = 0
     base_url: str = "https://api.individual.githubcopilot.com"
     selected_model: str | None = None
+    role_models: dict[str, str] = Field(default_factory=dict)
+    routing_revision: int = 0
     models: list[CopilotModel] = Field(default_factory=list)
     catalog_at: float = 0
     device: DeviceAttempt | None = None
@@ -108,4 +110,8 @@ class CopilotStore:
 
     def clear(self) -> None:
         old = self.read()
-        self.save(CredentialState(revision=old.revision))
+        self.save(
+            CredentialState(
+                revision=old.revision, routing_revision=old.routing_revision + 1
+            )
+        )

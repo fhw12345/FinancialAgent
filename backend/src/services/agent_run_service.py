@@ -6,7 +6,7 @@ import uuid
 from datetime import timedelta
 from typing import Any
 
-from ..agent.llm_factory import get_role_models
+from ..agent.llm_factory import get_model_routing_metadata, get_role_models
 from ..core.utils.date_utils import utcnow
 from ..database.repositories.agent_run_repository import AgentRunRepository
 from ..models.agent_run import AgentRun, AgentRunStatus, ExecutionMode
@@ -101,6 +101,7 @@ class AgentRunService:
             policy_version=POLICY_VERSION,
             prompt_versions={"portfolio": PROMPT_VERSIONS["portfolio"]},
             model_routes={role: models[role] for role in FLOW_MODEL_ROLES["portfolio"]},
+            **get_model_routing_metadata(FLOW_MODEL_ROLES["portfolio"]),
             status="pending",
             started_at=now,
             lease_expires_at=now + PORTFOLIO_RUN_LEASE,
@@ -133,6 +134,7 @@ class AgentRunService:
                 {prompt_key: PROMPT_VERSIONS[prompt_key]} if prompt_key else {}
             ),
             model_routes={role: models[role] for role in roles},
+            **get_model_routing_metadata(roles),
         )
 
     async def attach_chat(self, run_id: str, chat_id: str) -> AgentRun | None:

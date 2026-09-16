@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import CopilotRoleRouting from "./CopilotRoleRouting";
 import {
   copilotAction,
   copilotError,
@@ -16,13 +17,20 @@ export default function CopilotConnection() {
   const [error, setError] = useState<string | null>(null);
   const [choice, setChoice] = useState("");
   const [tested, setTested] = useState<string | null>(null);
+  const acceptRoutingStatus = useCallback((next: CopilotStatus) => {
+    setStatus((current) =>
+      current && (next.routing_revision ?? 0) < (current.routing_revision ?? 0)
+        ? current
+        : next,
+    );
+  }, []);
   const controller = useRef<AbortController | null>(null);
   const epoch = useRef(0);
 
   const act = useCallback(
     async (
       action: CopilotAction | "test",
-      payload: Record<string, string> = {},
+      payload: Record<string, unknown> = {},
     ) => {
       controller.current?.abort();
       const active = new AbortController();
@@ -33,7 +41,12 @@ export default function CopilotConnection() {
       setTested(null);
       try {
         if (action === "test") {
-          const model = await testCopilot(active.signal);
+          const model = await testCopilot(active.signal, {
+            model_id:
+              typeof payload.model_id === "string"
+                ? payload.model_id
+                : undefined,
+          });
           if (epoch.current === current) setTested(model);
         } else {
           const next = await copilotAction(action, payload, active.signal);
@@ -204,8 +217,8 @@ export default function CopilotConnection() {
             htmlFor="copilot-model"
           >
             {zh
-              ? "所有角色使用所选 GPT Responses 模型；不支持的模型不会列出。"
-              : "All roles use the selected GPT Responses model. Unsupported models are excluded."}
+              ? "默认模型：未设置角色覆盖时使用。支持账号允许的 GPT、Gemini、Grok；排除 MAI。"
+              : "Default model for roles without overrides. Permitted GPT, Gemini and Grok models are supported; MAI is excluded."}
           </label>
           <select
             id="copilot-model"
@@ -227,7 +240,12 @@ export default function CopilotConnection() {
               type="button"
               className={button}
               disabled={busy || !choice}
-              onClick={() => void act("model", { model_id: choice })}
+              onClick={() =>
+                void act("model", {
+                  model_id: choice,
+                  expected_revision: status.routing_revision,
+                })
+              }
               data-testid="copilot-save-model"
             >
               {zh ? "使用此模型" : "Use this model"}
@@ -236,7 +254,9 @@ export default function CopilotConnection() {
               type="button"
               className={button}
               disabled={busy || !status.selected_model}
-              onClick={() => void act("test")}
+              onClick={() =>
+                void act("test", { model_id: status.selected_model })
+              }
               data-testid="copilot-test"
             >
               {zh ? "测试连接（消耗额度）" : "Test connection (uses allowance)"}
@@ -250,6 +270,13 @@ export default function CopilotConnection() {
             </p>
           )}
         </div>
+      )}
+      {status?.authenticated && (
+        <CopilotRoleRouting
+          key={status.routing_revision ?? 0}
+          status={status}
+          onStatus={acceptRoutingStatus}
+        />
       )}
       {busy && (
         <p role="status" className="text-sm text-gray-500">

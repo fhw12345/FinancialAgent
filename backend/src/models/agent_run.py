@@ -32,6 +32,8 @@ class AgentRun(BaseModel):
     policy_version: str
     prompt_versions: dict[str, str] = Field(default_factory=dict)
     model_routes: dict[str, str] = Field(default_factory=dict)
+    model_protocols: dict[str, str] = Field(default_factory=dict)
+    model_routing_revision: int | None = None
     status: AgentRunStatus
     started_at: datetime
     finished_at: datetime | None = None

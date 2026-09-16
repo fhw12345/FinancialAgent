@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 0.34.0 — Copilot role configuration (candidate)
+
+- Adds default inheritance, explicit multi-vendor preset drafts, per-role model/API display and allowance-labeled role tests.
+- Rejects stale settings and late save responses after logout, preserving the user's newer state.
+- Adds real-API browser proof of Gemini chat, Grok/Google role tests, persistence and optimistic-concurrency errors; final hosted publication is pending.
+
 ## [0.33.0] - 2026-09-15
 
 ### Native Copilot connection controls

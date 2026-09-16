@@ -19,6 +19,7 @@ All current documentation describes the local single-user application.
 ## Agent and Features
 
 - [Native GitHub Copilot Provider](features/native-github-copilot-provider.md)
+- [Copilot Multi-Vendor Models and Role Routing](features/copilot-multivendor-role-routing.md)
 
 - [Investment Decision Quality Program — planning](features/investment-decision-quality-program.md)
   - [IDQ-001 Decision Contracts and Policy Gates](features/investment-decision-policy-gates.md)
@@ -75,6 +76,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [A Role Configuration Is Not Model Routing](case-studies/2026-09-16-role-config-is-not-model-routing.md)
 - [Native Copilot Is Not a URL Change](case-studies/2026-09-15-native-copilot-is-not-a-url-change.md)
 - [Hosted CI Needs Failure Proof](case-studies/2026-09-14-hosted-ci-needs-failure-proof.md)
 - [Hardening Closeout Evidence Review](case-studies/2026-09-09-closeout-checklists-are-not-evidence.md)
