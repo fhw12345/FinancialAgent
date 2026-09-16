@@ -1,5 +1,6 @@
 {
   "date": "2026-09-16",
+  "implementation_commit": "0719b92389f211018ce93d8cd2573bd64a0b903d",
   "evidence_mode": "live_account",
   "max_output_tokens_per_request": 512,
   "models": [

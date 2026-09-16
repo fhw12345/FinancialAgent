@@ -7,12 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### 0.53.0 — Copilot multi-vendor role routing (candidate)
+## [0.53.0] - 2026-09-16
+
+### Copilot multi-vendor role routing
 
 - Supports account-permitted GPT/Grok Responses and Gemini Chat Completions, explicitly excluding MAI and hidden/unsupported model entries.
 - Adds persistent, version-checked role overrides, immutable request routing, role-scoped tool replay and run protocol/revision metadata.
 - Wires actual Portfolio research/decisions and independent translation/consistency roles without changing the legacy providers' default assignments.
-- Adds parallel-tool/reasoning/usage/error/cancellation coverage and real-account checks for all 16 discovered supported models; final hosted publication is pending.
+- Adds parallel-tool/reasoning/usage/error/cancellation coverage and successful real-account checks for all 16 discovered supported models.
+- Ships through protected PR #6 (`c00efe6d`), implementation `0719b92`, after full local/hosted, clean-image and browser validation.
 
 ## [0.52.0] - 2026-09-15
 
