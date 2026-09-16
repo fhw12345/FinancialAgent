@@ -272,7 +272,7 @@ requires the evidence and workflow in [Documentation Standards](../development/d
 
 - **[IDQ-000 Program and Shared Acceptance](investment-decision-quality-program.md)** — in-progress (A only); baseline findings, contracts, dependencies, milestones, and validation gates
 - **[IDQ-001 Decision Policy Gates](investment-decision-policy-gates.md)** — in-progress; A containment, B risk/evidence/strategy and stale approvals still pending
-- **[IDQ-001-A Safety Containment](investment-decision-safety-containment.md)** — in-progress; non-actionable assessments, legacy read-only, no ready/approval
+- **[IDQ-001-A Safety Containment](investment-decision-safety-containment.md)** — shipped (0.54.0/0.35.0); non-actionable assessments, legacy read-only, no ready/approval
 - **[IDQ-002 Portfolio Risk and Allocation](investment-portfolio-risk-allocation.md)** — planning; dated returns, cash-aware risk, and post-trade limits
 - **[IDQ-003 Candidate Selection](investment-candidate-selection.md)** — planning; deterministic quotas, eligibility, and actual portfolio fit
 - **[IDQ-004 Evidence Snapshots](investment-evidence-snapshots.md)** — planning; point-in-time records, claim validation, and immutable manifests
