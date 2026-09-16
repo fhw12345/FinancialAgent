@@ -17,6 +17,9 @@ THRESHOLDS = {
     "src/agent/optimizer/plan_builder.py": 60.0,
     "src/agent/optimizer/executor.py": 60.0,
     "src/services/data_manager/manager.py": 70.0,
+    "src/models/decision_assessment.py": 90.0,
+    "src/services/decision_policy/builder.py": 85.0,
+    "src/database/repositories/decision_assessment_repository.py": 85.0,
 }
 
 

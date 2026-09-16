@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import time
-import uuid
 from collections.abc import Callable
 from typing import Any
 
@@ -136,65 +135,22 @@ class DeepReActAgent:
         chat_id: str,
         run_id: str,
         message_id: str,
+        research_text: str = "",
     ) -> None:
-        """Persist a validated structured verdict action as a signal decision."""
+        """Persist Deep research as a non-actionable assessment, never a signal order."""
         if action not in {"BUY", "HOLD", "SELL"}:
             raise ValueError(f"Unsupported structured verdict action: {action}")
-        if not self._order_repo or not self._data_manager or not symbol:
-            return
-        try:
-            from ..core.utils.date_utils import utcnow
-            from ..models.portfolio import PortfolioOrder
-
-            quote = await self._data_manager.get_quote(symbol)
-            decision_price = float(getattr(quote, "price", 0.0) or 0.0)
-            if decision_price <= 0:
-                return
-
-            analysis_id = f"deep_react_{symbol}_{run_id}"
-            row = PortfolioOrder(
-                order_id=(
-                    "verdict_"
-                    f"{uuid.uuid5(uuid.NAMESPACE_URL, f'deep-verdict:{run_id}').hex}"
-                ),
-                chat_id=chat_id,
-                message_id=message_id,
-                analysis_id=analysis_id,
-                symbol=symbol.upper(),
-                order_type="market",
-                side=action.lower(),
-                quantity=0.0,
-                limit_price=None,
-                stop_price=None,
-                time_in_force="day",
-                status="signal",
-                filled_qty=0.0,
-                filled_avg_price=None,
-                filled_at=None,
-                error_message=None,
-                created_at=utcnow(),
-                decision_price=decision_price,
-                decision_type="signal",
-                metadata={
-                    "source": "deep_react_verdict",
-                    "run_id": run_id,
-                },
-            )
-            persisted = await self._order_repo.upsert(row)
-            logger.info(
-                "verdict_decision_persisted",
-                symbol=symbol,
-                side=persisted.side,
-                decision_price=persisted.decision_price,
-                chat_id=chat_id,
-                run_id=run_id,
-            )
-        except Exception as exc:
-            logger.warning(
-                "verdict_persist_failed",
-                symbol=symbol,
-                error=str(exc),
-            )
+        if self._order_repo is None:
+            raise RuntimeError("Deep assessment storage is unavailable")
+        # A directional research stance is not a sized trading proposal.
+        await self._order_repo.assess(
+            request_key=run_id,
+            run_id=run_id,
+            source="deep",
+            symbols=[symbol],
+            proposals=[],
+            research={symbol: research_text},
+        )
 
     async def _invoke_subagent(
         self,

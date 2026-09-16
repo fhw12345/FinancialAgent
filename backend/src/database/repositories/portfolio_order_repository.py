@@ -6,11 +6,16 @@ from typing import Any
 
 import structlog
 from motor.motor_asyncio import AsyncIOMotorCollection
-from pymongo import ReturnDocument
 
 from src.core.utils.date_utils import utcnow
 
+from ...models.decision_assessment import DecisionAssessment
 from ...models.portfolio import PortfolioOrder
+from .decision_assessment_repository import (
+    COLLECTION,
+    DecisionAssessmentRepository,
+    DecisionWriteRejected,
+)
 
 logger = structlog.get_logger()
 
@@ -56,75 +61,22 @@ class PortfolioOrderRepository:
         )
         logger.info("Portfolio order indexes ensured")
 
-    async def create(self, order: PortfolioOrder) -> PortfolioOrder:
-        """
-        Create a new portfolio order.
-
-        Args:
-            order: Portfolio order to store
-
-        Returns:
-            Created order
-
-        """
-        # Convert to dict for MongoDB
-        order_dict = order.model_dump()
-
-        # Insert into database
-        await self.collection.insert_one(order_dict)
-
-        logger.info(
-            "Portfolio order created",
-            order_id=order.order_id,
-            symbol=order.symbol,
-            side=order.side,
-            quantity=order.quantity,
-            status=order.status,
-            analysis_id=order.analysis_id,
+    async def assess(self, **inputs: Any) -> DecisionAssessment:
+        """The only new AI-result writer. A batch is never an executable order."""
+        collection = self.collection.database.get_collection(COLLECTION)
+        return await DecisionAssessmentRepository(collection).assess_and_persist(
+            **inputs
         )
 
-        return order
+    async def create(self, order: PortfolioOrder) -> PortfolioOrder:
+        """Legacy read DTOs cannot be used as new AI writes."""
+        raise DecisionWriteRejected()
 
     async def upsert(self, order: PortfolioOrder) -> PortfolioOrder:
-        """Atomically persist a deterministic order once."""
-        order_dict = await self.collection.find_one_and_update(
-            {"order_id": order.order_id},
-            {"$setOnInsert": order.model_dump()},
-            upsert=True,
-            return_document=ReturnDocument.AFTER,
-        )
-        if order_dict is None:
-            raise RuntimeError("Portfolio order upsert returned no document")
-        order_dict.pop("_id", None)
-        return PortfolioOrder(**order_dict)
+        raise DecisionWriteRejected()
 
     async def create_many(self, orders: list[PortfolioOrder]) -> int:
-        """
-        Batch insert multiple portfolio orders.
-
-        Uses insert_many() for efficient bulk insertion, reducing
-        database round trips from N to 1.
-
-        Args:
-            orders: List of portfolio orders to store
-
-        Returns:
-            Number of orders inserted
-
-        """
-        if not orders:
-            return 0
-
-        order_dicts = [o.model_dump() for o in orders]
-        result = await self.collection.insert_many(order_dicts)
-
-        logger.info(
-            "Portfolio orders batch created",
-            count=len(result.inserted_ids),
-            symbols=[o.symbol for o in orders],
-        )
-
-        return len(result.inserted_ids)
+        raise DecisionWriteRejected()
 
     async def get(self, order_id: str) -> PortfolioOrder | None:
         """
@@ -226,29 +178,8 @@ class PortfolioOrderRepository:
         filled_at: datetime,
         user_transaction_id: str | None,
     ) -> PortfolioOrder | None:
-        """
-        Mark a locally-suggested order as executed by the user.
-
-        This is the DecisionTracker "Mark Executed" path, keyed by the local
-        order ID.
-        """
-        update_dict: dict[str, Any] = {
-            "status": "filled",
-            "filled_qty": filled_qty,
-            "filled_avg_price": filled_avg_price,
-            "filled_at": filled_at,
-            "user_transaction_id": user_transaction_id,
-            "updated_at": utcnow(),
-        }
-        result = await self.collection.find_one_and_update(
-            {"order_id": order_id},
-            {"$set": update_dict},
-            return_document=True,
-        )
-        if not result:
-            return None
-        result.pop("_id", None)
-        return PortfolioOrder(**result)
+        """No AI/legacy record has approval eligibility during Stage A."""
+        raise DecisionWriteRejected()
 
     async def revert_filled(self, order_id: str) -> PortfolioOrder | None:
         """
@@ -260,7 +191,7 @@ class PortfolioOrderRepository:
         of the audit fields — only the fill state.
         """
         update_dict: dict[str, Any] = {
-            "status": "suggested",
+            "status": "legacy_unverified",
             "filled_qty": 0.0,
             "filled_avg_price": None,
             "filled_at": None,

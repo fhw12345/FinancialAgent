@@ -66,6 +66,11 @@ async def create_user_transaction(
     holding_repo: HoldingRepository = Depends(get_holding_repository),
 ) -> UserTransaction:
     """Record a new user-entered buy/sell. Auto-syncs holdings collection."""
+    if payload.portfolio_order_id is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="AI/legacy orders cannot authorize trades in Stage A; record this actual trade independently.",
+        )
     tx = await repo.create(payload)
     try:
         await apply_transaction(tx, holding_repo, sign=1)

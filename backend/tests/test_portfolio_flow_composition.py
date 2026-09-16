@@ -1,12 +1,6 @@
-"""Composition tests for dashboard Portfolio orchestration.
-
-Internal flow functions, domain models, consistency metadata, and persistence
-translation are real. Mongo repositories, market providers, and LLM execution
-are replaced only at their outer boundaries.
-"""
+"""Real Stage-A orchestration and policy with outer provider/storage fixtures."""
 
 from __future__ import annotations
-
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, patch
@@ -26,61 +20,54 @@ from src.agent.portfolio.phase1_research import Phase1ResearchMixin
 from src.agent.portfolio.phase2_decisions import Phase2DecisionsMixin
 from src.agent.portfolio_phase2_prompt import GovernedPortfolioDecisionList
 from src.models.portfolio_analysis import PortfolioSettings
-from src.models.trading_decision import (
-    OrderIntent,
-    SymbolAnalysisResult,
-    TradingAction,
-)
+from src.models.trading_decision import OrderIntent, SymbolAnalysisResult, TradingAction
+from src.services.decision_policy.builder import build_assessment
 
 SETTINGS = PortfolioSettings(
-    cash_balance=100_000,
-    risk_tolerance="moderate",
-    max_position_pct=10,
+    cash_balance=100000, risk_tolerance="moderate", max_position_pct=10
 )
 
 
 class _Mongo:
-    def get_collection(self, name: str) -> object:
+    def get_collection(self, name):
         return object()
 
 
 class _HoldingRepo:
-    holdings: list[Any] = []
+    holdings = []
 
-    def __init__(self, collection: object) -> None:
-        self.collection = collection
+    def __init__(self, collection):
+        pass
 
-    async def list_by_user(self) -> list[Any]:
+    async def list_by_user(self):
         return self.holdings
 
 
 class _OrderRepo:
-    created: list[Any] = []
-    fail_symbols: set[str] = set()
+    batches = []
 
-    def __init__(self, collection: object | None = None) -> None:
-        self.collection = collection
+    def __init__(self, collection=None):
+        self.fail = False
 
-    async def create(self, order: Any) -> Any:
-        if order.symbol in self.fail_symbols:
+    async def assess(self, **kwargs):
+        if self.fail:
             raise RuntimeError("mongo unavailable")
-        self.created.append(order)
-        return order
+        batch = build_assessment(**kwargs)
+        self.batches.append(batch)
+        return batch
 
 
 class _DataManager:
-    def __init__(self, prices: dict[str, float]) -> None:
+    def __init__(self, prices):
         self.prices = prices
 
-    async def get_quote(self, symbol: str) -> Any:
+    async def get_quote(self, symbol):
         if symbol not in self.prices:
             raise RuntimeError("quote unavailable")
-        return SimpleNamespace(
-            price=self.prices[symbol], session="regular", source="fixture"
-        )
+        return SimpleNamespace(price=self.prices[symbol])
 
 
-def _app(pa: object | None, dm: object | None = None) -> Any:
+def _app(pa, dm=None):
     return SimpleNamespace(
         state=SimpleNamespace(
             mongodb=_Mongo(),
@@ -91,7 +78,7 @@ def _app(pa: object | None, dm: object | None = None) -> Any:
     )
 
 
-def _research(symbol: str = "AAPL") -> SymbolAnalysisResult:
+def _research(symbol="AAPL"):
     return SymbolAnalysisResult(
         symbol=symbol,
         analysis_type="holding",
@@ -101,34 +88,23 @@ def _research(symbol: str = "AAPL") -> SymbolAnalysisResult:
     )
 
 
-def _decision(symbol: str = "AAPL", action: TradingAction = TradingAction.BUY) -> Any:
+def _decision(symbol="AAPL", action=TradingAction.BUY):
     return SimpleNamespace(
         symbol=symbol,
         decision=action,
         position_size_percent=5,
-        confidence=8,
         entry_price=198.0,
         stop_loss=185.0,
         take_profit=225.0,
-        reasoning_summary="Grounded decision",
+        reasoning_summary="Unverified research draft",
         intent=(
             OrderIntent.OPEN_LONG if action == TradingAction.BUY else OrderIntent.HOLD
         ),
-        thesis=None,
-        valuation=None,
-        price_target=None,
-        scenarios=None,
-        catalysts=None,
-        risks=None,
-        entry_derivation=None,
-        stop_derivation=None,
-        target_derivation=None,
-        size_derivation=None,
     )
 
 
 @pytest.mark.asyncio
-async def test_consistency_annotations_flow_into_quality_metadata() -> None:
+async def test_consistency_annotations_flow_into_quality_metadata():
     result = _research()
     verdict = GateVerdict(
         passed=False,
@@ -140,143 +116,109 @@ async def test_consistency_annotations_flow_into_quality_metadata() -> None:
         AsyncMock(return_value=(verdict, ["cashflow unavailable"])),
     ):
         await _apply_consistency_gate([result])
-
-    quality = _build_data_quality_map([result])
-    assert quality["AAPL"] == {
-        "degraded_fields": ["cashflow unavailable"],
-        "consistency_violations": [{"field": "cashflow", "quote": "unsupported claim"}],
-        "consistency_passed": False,
-    }
+    quality = _build_data_quality_map([result])["AAPL"]
+    assert quality["degraded_fields"] == ["cashflow unavailable"]
+    assert quality["consistency_passed"] is False and not quality["check_unavailable"]
     assert result.prompt_versions["consistency-gate"] == "consistency-gate@2"
 
 
 @pytest.mark.asyncio
-async def test_persistence_keeps_valid_rows_and_isolates_failures() -> None:
+async def test_persistence_retains_missing_symbols_and_propagates_whole_batch_failure():
     repo = _OrderRepo()
-    repo.created = []
-    repo.fail_symbols = {"FAIL"}
-    decisions = [
-        {
-            "symbol": "AAPL",
-            "decision": "buy",
-            "position_size_percent": 5,
-            "confidence": 8,
-            "reasoning_summary": "Buy reasoning",
-            "entry_price": 198.0,
-            "stop_loss": 185.0,
-            "take_profit": 225.0,
-            "intent": "open_long",
-        },
-        {"symbol": "BAD", "decision": "watch"},
-        {"symbol": "NOPRICE", "decision": "hold"},
-        {"symbol": "FAIL", "decision": "sell"},
-    ]
-
-    written = await _persist_decisions(
-        decisions,
-        _DataManager({"AAPL": 200, "FAIL": 50}),
+    repo.batches = []
+    count = await _persist_decisions(
+        [{"symbol": "AAPL", "decision": "HOLD", "reasoning_summary": "Wait"}],
+        _DataManager({"AAPL": 200}),
         repo,
         source="holdings",
-        run_id="run_composition",
-        research_by_symbol={"AAPL": "Full evidence"},
-        data_quality_by_symbol={
-            "AAPL": {"degraded_fields": ["fundamentals unavailable"]}
-        },
+        run_id="r1",
+        expected_symbols=["AAPL", "MISSING"],
+        research_by_symbol={"AAPL": "Research"},
     )
-
-    assert written == 1
-    assert len(repo.created) == 1
-    order = repo.created[0]
-    assert order.symbol == "AAPL"
-    assert order.analysis_id == "run_composition"
-    assert order.metadata["full_research"] == "Full evidence"
-    assert order.metadata["data_quality"]["degraded_fields"]
-    assert order.decision_price == 200
-
-
-@pytest.mark.asyncio
-async def test_persistence_pretranslates_reasoning_and_research() -> None:
-    repo = _OrderRepo()
-    repo.created = []
-    repo.fail_symbols = set()
-
-    async def translate(values: dict[str, str], redis_cache: object) -> dict[str, str]:
-        return {f"{key}_zh": f"ZH:{value}" for key, value in values.items()}
-
-    with patch(
-        "src.agent.portfolio.flows.translate_for_persistence",
-        side_effect=translate,
-    ):
-        written = await _persist_decisions(
-            [
-                {
-                    "symbol": "AAPL",
-                    "decision": "hold",
-                    "confidence": 6,
-                    "reasoning_summary": "Wait for evidence",
-                }
-            ],
-            _DataManager({"AAPL": 200}),
+    assert count == 2 and len(repo.batches) == 1 and not repo.batches[0].actionable
+    assert repo.batches[0].results[1].readiness == "insufficient_evidence"
+    repo.fail = True
+    with pytest.raises(RuntimeError, match="mongo"):
+        await _persist_decisions(
+            [],
+            _DataManager({}),
             repo,
             source="holdings",
-            run_id="translated_run",
-            research_by_symbol={"AAPL": "Long research"},
-            redis_cache=object(),
+            run_id="r2",
+            expected_symbols=["AAPL"],
         )
-
-    assert written == 1
-    metadata = repo.created[0].metadata
-    assert metadata["reasoning_zh"] == "ZH:Wait for evidence"
-    assert metadata["full_research_zh"] == "ZH:Long research"
-
-
-def test_decision_normalization_preserves_machine_fields() -> None:
-    normalized = _trading_decisions_to_dicts([_decision()])
-    assert normalized[0]["decision"] == "BUY"
-    assert normalized[0]["intent"] == "open_long"
-    assert normalized[0]["entry_price"] == 198.0
+    assert len(repo.batches) == 1
 
 
 @pytest.mark.asyncio
-async def test_holdings_full_pipeline_composes_phase1_phase2_and_persistence() -> None:
+async def test_persistence_does_not_generate_translations_or_orders():
+    repo = _OrderRepo()
+    repo.batches = []
+    count = await _persist_decisions(
+        [],
+        _DataManager({"AAPL": 100}),
+        repo,
+        source="holdings",
+        run_id="no-llm",
+        expected_symbols=["AAPL"],
+        research_by_symbol={"AAPL": "Research"},
+        redis_cache=object(),
+    )
+    assert count == 1 and repo.batches[0].results[0].research == "Research"
+    assert repo.batches[0].results[0].proposal is None
+
+
+def test_decision_normalization_preserves_machine_fields():
+    normalized = _trading_decisions_to_dicts([_decision()])
+    assert normalized[0]["decision"] == "BUY" and normalized[0]["entry_price"] == 198
+
+
+@pytest.mark.asyncio
+async def test_holdings_full_pipeline_is_research_only_and_failed_gate_skips_phase2():
     _HoldingRepo.holdings = [SimpleNamespace(symbol="AAPL")]
     pa = SimpleNamespace(
-        _run_phase1_research=AsyncMock(return_value=[_research()]),
+        _run_phase1_research=AsyncMock(side_effect=lambda **kw: [_research()]),
         _run_phase2_decisions=AsyncMock(return_value=({}, [_decision()])),
     )
-    persist = AsyncMock(return_value=1)
-
     with (
         patch("src.agent.portfolio.flows.HoldingRepository", _HoldingRepo),
         patch("src.agent.portfolio.flows.PortfolioOrderRepository", _OrderRepo),
         patch(
             "src.agent.portfolio.flows.build_context_from_mongo",
-            AsyncMock(return_value={"positions": [], "cash": 100_000}),
+            AsyncMock(return_value={"positions": [], "cash": 100000}),
         ),
-        patch("src.agent.portfolio.flows._apply_consistency_gate", AsyncMock()),
-        patch("src.agent.portfolio.flows._persist_decisions", persist),
+        patch(
+            "src.agent.portfolio.flows.run_consistency_gate",
+            AsyncMock(return_value=(GateVerdict(passed=True), [])),
+        ),
     ):
         result = await run_analyze_holdings(_app(pa), SETTINGS)
-
-    assert result["result_count"] == 1
-    pa._run_phase1_research.assert_awaited_once()
+    assert result["result_count"] == 1 and result["actionable_count"] == 0
     pa._run_phase2_decisions.assert_awaited_once()
-    persisted = persist.await_args.args[0]
-    assert persisted[0]["symbol"] == "AAPL"
-
-
-@pytest.mark.asyncio
-async def test_holdings_empty_and_phase1_failure_are_terminal_without_writes() -> None:
-    _HoldingRepo.holdings = []
+    pa._run_phase2_decisions.reset_mock()
     with (
         patch("src.agent.portfolio.flows.HoldingRepository", _HoldingRepo),
         patch("src.agent.portfolio.flows.PortfolioOrderRepository", _OrderRepo),
+        patch(
+            "src.agent.portfolio.flows.build_context_from_mongo",
+            AsyncMock(return_value={"positions": []}),
+        ),
+        patch(
+            "src.agent.portfolio.flows.run_consistency_gate",
+            AsyncMock(side_effect=RuntimeError("secret-provider-error")),
+        ),
     ):
-        empty = await run_analyze_holdings(_app(SimpleNamespace()), SETTINGS)
-    assert empty == {"message": "Add holdings first", "result_count": 0}
+        await run_analyze_holdings(_app(pa), SETTINGS)
+    pa._run_phase2_decisions.assert_not_awaited()
+    assert _OrderRepo.batches[-1].readiness == "needs_review"
 
+
+@pytest.mark.asyncio
+async def test_empty_holdings_and_missing_agent_never_use_fallback():
+    _HoldingRepo.holdings = []
+    with patch("src.agent.portfolio.flows.HoldingRepository", _HoldingRepo):
+        assert (await run_analyze_holdings(_app(None), SETTINGS))["result_count"] == 0
     _HoldingRepo.holdings = [SimpleNamespace(symbol="AAPL")]
-    pa = SimpleNamespace(_run_phase1_research=AsyncMock(return_value=[]))
     with (
         patch("src.agent.portfolio.flows.HoldingRepository", _HoldingRepo),
         patch("src.agent.portfolio.flows.PortfolioOrderRepository", _OrderRepo),
@@ -284,32 +226,25 @@ async def test_holdings_empty_and_phase1_failure_are_terminal_without_writes() -
             "src.agent.portfolio.flows.build_context_from_mongo",
             AsyncMock(return_value={}),
         ),
+        patch("src.agent.portfolio.flows._phase2_for_symbols", AsyncMock()) as shortcut,
     ):
-        failed = await run_analyze_holdings(_app(pa), SETTINGS)
-    assert failed["result_count"] == 0
-    assert "no research" in failed["message"]
+        result = await run_analyze_holdings(_app(None), SETTINGS)
+    shortcut.assert_not_awaited()
+    assert result["assessment_count"] == 1 and result["actionable_count"] == 0
+    assert _OrderRepo.batches[-1].readiness == "insufficient_evidence"
 
 
 @pytest.mark.asyncio
-async def test_single_symbol_validates_input_and_runs_same_pipeline() -> None:
-    pa = SimpleNamespace(
-        _run_phase1_research=AsyncMock(return_value=[_research("MSFT")]),
-        _run_phase2_decisions=AsyncMock(
-            return_value=({}, [_decision("MSFT", TradingAction.HOLD)])
-        ),
-    )
-    persist = AsyncMock(return_value=1)
+async def test_single_symbol_validates_input_and_records_missing_research():
+    pa = SimpleNamespace(_run_phase1_research=AsyncMock(return_value=[]))
     with (
         patch("src.agent.portfolio.flows.HoldingRepository", _HoldingRepo),
         patch("src.agent.portfolio.flows.PortfolioOrderRepository", _OrderRepo),
-        patch("src.agent.portfolio.flows._apply_consistency_gate", AsyncMock()),
-        patch("src.agent.portfolio.flows._persist_decisions", persist),
     ):
         result = await run_single_symbol(_app(pa), " msft ")
-
-    assert result["symbol"] == "MSFT"
-    assert result["result_count"] == 1
-    with pytest.raises(ValueError, match="invalid symbol"):
+    assert result["symbol"] == "MSFT" and result["actionable_count"] == 0
+    assert result["assessment_count"] == 1
+    with pytest.raises(ValueError, match="Invalid requested symbol"):
         await run_single_symbol(_app(pa), "bad symbol!")
 
 

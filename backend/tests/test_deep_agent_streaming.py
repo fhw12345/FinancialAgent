@@ -321,7 +321,10 @@ async def test_resolved_symbol_continues_to_deep_agent():
         run_id="run_3",
         message_id=message_id_for_run("run_3"),
     )
-    assert persistence_order == ["message", "signal"]
+    assert persistence_order == [
+        "signal",
+        "message",
+    ]  # Assessment must persist before success.
 
 
 @pytest.mark.asyncio

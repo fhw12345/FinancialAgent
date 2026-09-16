@@ -1,0 +1,49 @@
+{
+  "date": "2026-09-16",
+  "backend_version": "0.54.0",
+  "frontend_version": "0.35.0",
+  "dependencies_equal": true,
+  "frontend_assets_equal": true,
+  "runs": [
+    {
+      "backend": {
+        "image_id": "sha256:193e88fef1ffeb4dfeee64b56b5823ca3d3ab452376e099acbb4d89bf60cd61d",
+        "user": "app",
+        "uid": "1000",
+        "dependency_count": 120,
+        "dependency_sha256": "025cf9ac35a2f9170ad2833cec1538d84920ffdd7a66d41e3d145a620907fb51",
+        "local_env_files": 0
+      },
+      "frontend": {
+        "image_id": "sha256:5199885e023b1b7f4194b91e430123fc74bd939b94d224ac1595546163da1e74",
+        "user": "node",
+        "uid": "1000",
+        "dependency_count": 746,
+        "dependency_sha256": "18efc4df1ef5ba048bc9ca2aea121864f0e5513dd1a2038cfed3f73e83a3420b",
+        "local_env_files": 0,
+        "build_assets_sha256": "6416f32038ef92ecd348916c80a682e5dd54de78765d9450ab3c58cb349d1b9b"
+      }
+    },
+    {
+      "backend": {
+        "image_id": "sha256:7d05d04803fb6b777e73e4edd08dcc4164c49c22dbef7d814fabef7e6130e029",
+        "user": "app",
+        "uid": "1000",
+        "dependency_count": 120,
+        "dependency_sha256": "025cf9ac35a2f9170ad2833cec1538d84920ffdd7a66d41e3d145a620907fb51",
+        "local_env_files": 0
+      },
+      "frontend": {
+        "image_id": "sha256:24d5df0e890da78d2c3828601664f8f368a16197789fd61fed26cb8f4cacf656",
+        "user": "node",
+        "uid": "1000",
+        "dependency_count": 746,
+        "dependency_sha256": "18efc4df1ef5ba048bc9ca2aea121864f0e5513dd1a2038cfed3f73e83a3420b",
+        "local_env_files": 0,
+        "build_assets_sha256": "6416f32038ef92ecd348916c80a682e5dd54de78765d9450ab3c58cb349d1b9b"
+      }
+    }
+  ],
+  "production_sources_equal": true,
+  "note": "Runtime source trees match both images and working tree; full installed package/asset manifests match. Browser fixture/test/docs were refined during acceptance."
+}

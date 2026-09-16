@@ -120,9 +120,9 @@ def test_verdict_rejects_markdown_action_mismatch():
 
 
 @pytest.mark.asyncio
-async def test_persistence_uses_structured_action_directly():
+async def test_persistence_records_research_not_an_executable_signal():
     order_repo = SimpleNamespace(
-        upsert=AsyncMock(side_effect=lambda order: order),
+        assess=AsyncMock(),
     )
     data_manager = SimpleNamespace(
         get_quote=AsyncMock(return_value=SimpleNamespace(price=123.45))
@@ -139,16 +139,12 @@ async def test_persistence_uses_structured_action_directly():
         message_id="msg-run-1",
     )
 
-    persisted = order_repo.upsert.await_args.args[0]
-    assert persisted.side == "sell"
-    assert persisted.decision_price == 123.45
-    assert persisted.chat_id == "chat-1"
-    assert persisted.message_id == "msg-run-1"
-    assert persisted.analysis_id == "deep_react_AAPL_run-1"
-    assert persisted.metadata == {
-        "source": "deep_react_verdict",
-        "run_id": "run-1",
-    }
+    persisted = order_repo.assess.await_args.kwargs
+    assert persisted["source"] == "deep"
+    assert persisted["run_id"] == "run-1"
+    assert persisted["proposals"] == []
+    assert persisted["symbols"] == ["AAPL"]
+    data_manager.get_quote.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -175,7 +171,7 @@ async def test_persistence_is_idempotent_by_analysis_id():
         decision_price=123.45,
     )
     order_repo = SimpleNamespace(
-        upsert=AsyncMock(return_value=existing),
+        assess=AsyncMock(return_value=existing),
     )
     data_manager = SimpleNamespace(
         get_quote=AsyncMock(return_value=SimpleNamespace(price=123.45))
@@ -192,7 +188,8 @@ async def test_persistence_is_idempotent_by_analysis_id():
         message_id="msg-run-1",
     )
 
-    order_repo.upsert.assert_awaited_once()
+    order_repo.assess.assert_awaited_once()
+    assert order_repo.assess.await_args.kwargs["request_key"] == "run-1"
 
 
 @pytest.mark.asyncio

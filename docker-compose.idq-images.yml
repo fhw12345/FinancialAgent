@@ -1,0 +1,7 @@
+# Only fixtures are mounted; application/dependencies come from final images.
+services:
+  backend:
+    volumes: !override
+      - ./backend/tests:/app/tests:ro
+  frontend:
+    volumes: !reset []

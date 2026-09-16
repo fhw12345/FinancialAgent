@@ -22,6 +22,14 @@ requires an explicit Compose override plus an appropriate authentication and
 network-security review; changing the bindings to `0.0.0.0` alone is unsafe.
 See [remote-access opt-in guidance](docs/development/getting-started.md#local-network-boundary-and-remote-opt-in).
 
+## Research Safety
+
+Stage A records **non-actionable research assessments**, not approved BUY/SELL
+recommendations. Policy, evidence, portfolio-risk and strategy gates remain pending;
+no result can be `ready` or approved. Legacy decisions remain readable but cannot be
+marked executed. Use **Add Transaction** independently to record trades you actually
+made. See [the Stage-A boundary](docs/features/investment-decision-safety-containment.md).
+
 ## LLM Provider
 
 Set `LLM_PROVIDER` in `backend/.env.development`:

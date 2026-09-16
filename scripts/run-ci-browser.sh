@@ -4,11 +4,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 profile="${1:-hardening}"
-case "$profile" in hardening|copilot) ;; *) echo 'Unknown browser profile' >&2; exit 2;; esac
+case "$profile" in hardening|copilot|decision)  ;; *) echo 'Unknown browser profile' >&2; exit 2;; esac
 logs="backend/artifacts/browser/$profile"
 mkdir -p "$logs"
 # Preserve the previous lane's reports before Playwright replaces its output dirs.
-if [[ "$profile" == copilot ]]; then
+if [[ "$profile" != hardening ]]; then
   previous="$(mktemp -d backend/artifacts/browser/previous-XXXXXX)"
   for dir in playwright-report test-results; do
     if [[ -d "frontend/$dir" ]]; then mv "frontend/$dir" "$previous/$dir"; fi
@@ -37,8 +37,13 @@ else
   export LLM_PROVIDER=github_copilot
   auth_dir="$(mktemp -d)" # Never put even recorded credentials in CI artifacts.
   export COPILOT_STATE_DIR="$auth_dir"
-  fixture=copilot_app
-  suite=test:e2e:copilot
+  if [[ "$profile" == decision ]]; then
+    fixture=decision_policy_app
+    suite=test:e2e:decision-safety
+  else
+    fixture=copilot_app
+    suite=test:e2e:copilot
+  fi
 fi
 (cd backend && exec python -m uvicorn "tests.e2e.$fixture:app" --host 127.0.0.1 --port 18091) >"$logs/backend.log" 2>&1 &
 pids+=("$!")

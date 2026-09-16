@@ -1,8 +1,8 @@
 ---
 title: Investment Decision Quality Program
-status: planning
-version: n/a
-last_updated: 2026-09-14
+status: in-progress
+version: backend@0.54.0, frontend@0.35.0
+last_updated: 2026-09-16
 owner: maintainer
 related_paths:
   - backend/src/agent/portfolio/
@@ -17,11 +17,14 @@ related_paths:
 
 > **TL;DR (EN)**: Preserve the working Agent/runtime foundation, but separate
 > evidence, research, portfolio constraints, and investment outcomes. This is a
-> planning-only program: it introduces no runtime changes, profitability claims,
-> broker integration, or authorization to start PH-009.
+> staged program: only IDQ-001-A safety containment is being implemented.
+> It introduces no profitability claims, broker integration, or authorization to start PH-009.
 >
 > **TL;DR (中文)**：保留已通过工程门禁的底座，补齐“事实有依据、建议受约束、结果能验证”
-> 的闭环。本文及子计划均未实施；规划合并不代表功能出货，也不代表策略有超额收益。
+> 的闭环。目前只启动 IDQ-001-A 安全收口；其余目标仍待实施，工程验收不代表策略有超额收益。
+
+当前实施：[IDQ-001-A](investment-decision-safety-containment.md)。没有 ready、批准或
+paper 执行资格。IDQ-001-B、002–009 仍未实施，PH-009 继续暂停。
 
 ## 1. 目标、基线与证据等级
 
@@ -68,8 +71,9 @@ B03–B05 仅为不联网的内存样例，不是市场实测。B04 假设现金
 漂亮回测自动选策略；不把所有财务研究都强制成 Fibonacci 交易；不启用无限 Agent
 辩论；不以本计划名义进行全仓库机械拆分或大规模迁移。
 
-所有新增 DTO、集合、接口、文件名和阈值均为**拟定契约**，不是已存在的 API。
-`version: n/a` 表示没有为未实现功能虚构组件版本。实际出货时填写真实版本。
+除 [A 阶段](investment-decision-safety-containment.md) 明确列出的实现外，本文 DTO、
+集合、接口、文件名和阈值仍为**拟定契约**。各 planning 子计划保留 `version: n/a`；
+本总计划的版本仅标记 A 的实现基线，不表示其他契约已经出货。
 
 ## 3. 目标链路与职责
 

@@ -1,7 +1,7 @@
 ---
 title: Project Hardening Active Handoff
 status: in-progress
-version: backend@0.53.0, frontend@0.34.0
+version: backend@0.54.0, frontend@0.35.0
 last_updated: 2026-09-16
 owner: maintainer
 related_paths:
@@ -16,6 +16,19 @@ related_paths:
 # Project Hardening Active Handoff
 
 ## 1. Current State
+
+### IDQ-001-A authorized / in progress (2026-09-16)
+
+The maintainer authorized the narrow [safety containment slice](../features/investment-decision-safety-containment.md).
+Current branch: `feat/idq-001-safety-containment`, target 0.54.0/0.35.0.
+New AI outputs are non-actionable assessments; legacy orders are read-only, manual
+real-trade recording is separate. No ready or approval can be produced in A.
+Local backend 2100/frontend 266 tests pass; final image-only acceptance has six
+safety, four Copilot, six hardening and eleven default scenarios. Two clean builds
+match complete dependency/asset manifests. Hosted publication is still pending.
+Do not infer shipping from these local results. PH-009 and IDQ-002–009 remain paused/planning.
+The live localhost:3013 instance uses the final images; private credentials and the
+full role map/routing revision 1 were preserved. No new live inference was performed.
 
 ### Shipped GHC-002 multi-vendor role routing (2026-09-16)
 
@@ -35,7 +48,7 @@ passed. Existing OAuth was preserved; no MAI call or model-policy change was mad
 Hosted CI run 35055009845 passed every gate and both browser lanes. Both reports
 were downloaded and verified; no credential files were included. See
 [hosted receipts](../features/assets/ghc-002/hosted-validation.json).
-PH-009 and IDQ remain unstarted; no further work is authorized by this handoff.
+At the GHC-002 release, PH-009 and IDQ were unstarted. Current A authorization is recorded above.
 
 ### Shipped GHC-001 native Copilot (2026-09-15)
 
@@ -44,8 +57,7 @@ PR #4, merge `94a190f2d1838de198eb4a9e94b85c2e15ede495`. Implementation:
 `5b097d086ec109a7720ab8afcb8443bc2c85d10a`; browser supplement: `6e5ba29`.
 See [native provider spec](../features/native-github-copilot-provider.md) and
 [hosted receipts](../features/assets/ghc-001/hosted-validation.json).
-PH-009 and all IDQ runtime changes remain unstarted; do not begin them without
-an explicit maintainer instruction.
+At the GHC-001 release, PH-009 and all IDQ runtime changes were unstarted.
 
 Core and recorded browser tests pass; the real account separately authorized and
 passed structured inference plus a bounded native tool-result round trip on
@@ -171,19 +183,14 @@ config run. The 131 lint warnings are accepted non-increasing follow-up debt.
 | PH-009 Source decomposition | planning |
 | PH-010 Version metadata | shipped |
 
-## 5. Current Direction — Planning Only; PH-009 Paused
+## 5. Current Direction — IDQ-001-A Only; PH-009 Paused
 
-The maintainer explicitly requested **not to execute PH-009**. The follow-up Agent
-and investment review is now captured in the
-[Investment Decision Quality Program](../features/investment-decision-quality-program.md)
-and its nine child specifications. All are `planning`; no runtime implementation,
-new investment strategy, paper execution, or IDQ screenshot evidence is claimed.
-
-Read that program for baseline findings, milestone order, exact test oracles,
-Playwright scenarios and release conditions. Next implementation requires an
-explicit instruction; do not automatically start either IDQ or PH-009 from this
-handoff. IDQ-001-A safety containment is the suggested first implementation slice
-if approved, not work already authorized by publishing the plans.
+The maintainer explicitly requested **not to execute PH-009**. IDQ-001-A is now
+separately authorized; see the current state above and the
+[program](../features/investment-decision-quality-program.md). IDQ-001 remains
+in-progress even after A ships. B requires confirmed policy and IDQ-002/004/005;
+none of those limits or approvals may be invented to make A look complete.
+Other child plans remain planning. No paper execution or investment-quality claim.
 
 ### PH-009 Resume References (Not an Active Work Queue)
 

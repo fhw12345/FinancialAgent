@@ -1,4 +1,4 @@
-"""Durable Deep verdict signal persistence."""
+"""Durable non-actionable Deep assessment persistence."""
 
 import asyncio
 from typing import Any
@@ -15,7 +15,7 @@ async def persist_completed_verdict(
     chat_id: str,
     run_id: str,
 ) -> None:
-    """Persist a completed Deep verdict and propagate cancellation afterward."""
+    """Persist research before terminal success, propagating cancellation afterward."""
     persist_verdict = getattr(agent, "persist_verdict_decision", None)
     if not isinstance(verdict, dict) or not callable(persist_verdict):
         return

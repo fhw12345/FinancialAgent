@@ -81,7 +81,7 @@ jobs:
           python scripts/check-compose-loopback.py
           docker compose -f docker-compose.hardening.yml config --format json > "$RUNNER_TEMP/hardening-compose.json"
           python scripts/check-compose-loopback.py --config "$RUNNER_TEMP/hardening-compose.json"
-          for config in docker-compose.copilot.yml docker-compose.copilot-live.yml; do
+          for config in docker-compose.copilot.yml docker-compose.copilot-live.yml docker-compose.idq.yml; do
             docker compose -f "$config" config --format json > "$RUNNER_TEMP/copilot-compose.json"
             python scripts/check-compose-loopback.py --config "$RUNNER_TEMP/copilot-compose.json"
           done
@@ -167,6 +167,7 @@ jobs:
           cd ..
           bash scripts/run-ci-browser.sh
           bash scripts/run-ci-browser.sh copilot
+          bash scripts/run-ci-browser.sh decision
 
       - name: Upload quality reports and server logs (including failures)
         if: always()

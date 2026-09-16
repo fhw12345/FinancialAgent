@@ -323,6 +323,14 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
       data-chat-scroll
       className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0"
     >
+      <p
+        className="sticky top-0 z-10 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900"
+        data-testid="chat-research-only"
+      >
+        {i18n.language.startsWith("zh")
+          ? "Stage A：以下内容仅为未验证研究，不构成已批准的买卖行动；运行完成不等于投资建议通过验证。"
+          : "Stage A: unverified research only, not approved trading actions. A completed run is not a validated investment recommendation."}
+      </p>
       {/* Chat ID Display - Debug info */}
       {chatId && (
         <div className="flex justify-center mb-2">

@@ -178,10 +178,11 @@ export function AnalysisButtons({ settingsReady, onRunComplete }: Props) {
             </h4>
           </div>
           <p className="text-xs text-gray-500 mb-3">
-            Get a BUY / SELL / HOLD recommendation for each position you
-            currently own.
+            Research existing positions and record safety assessments. Stage A
+            does not approve BUY / SELL actions.
           </p>
           <button
+            data-testid="analyze-holdings"
             disabled={!settingsReady || holdingsRunning}
             onClick={() => triggerHoldings.mutate()}
             title={disabledTip}
@@ -190,7 +191,11 @@ export function AnalysisButtons({ settingsReady, onRunComplete }: Props) {
             {holdingsRunning ? "Analyzing…" : "Analyze My Holdings"}
           </button>
           {holdingsStatusQ.data && (
-            <p className="mt-2 text-xs text-gray-600 flex items-center gap-2">
+            <p
+              data-testid="holdings-analysis-status"
+              data-run-status={holdingsStatusQ.data.status}
+              className="mt-2 text-xs text-gray-600 flex items-center gap-2"
+            >
               {statusBadge(holdingsStatusQ.data.status)}
               <span>{holdingsStatusQ.data.message ?? ""}</span>
             </p>
@@ -206,8 +211,9 @@ export function AnalysisButtons({ settingsReady, onRunComplete }: Props) {
             </h4>
           </div>
           <p className="text-xs text-gray-500 mb-2">
-            Top 5 BUY recommendations from sectors you choose (S&P 500 + Nasdaq
-            100 universe).
+            Research candidates from selected sectors (S&P 500 + Nasdaq 100).
+            Results remain non-actionable until the required gates are
+            integrated.
           </p>
 
           {sectorsQ.isLoading && (

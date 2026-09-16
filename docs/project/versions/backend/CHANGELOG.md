@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.54.0] - 2026-09-16
+
+### IDQ-001-A decision safety containment
+
+- Adds strict, atomic, replay-safe non-actionable assessment batches; new AI writes cannot become ready/approved/orders.
+- Closes evidence-free fallback and consistency fail-open paths across Portfolio, Deep, watchlist and legacy optimizer exits.
+- Rejects legacy AI mark-executed/account mutations while preserving legacy reads and independent manual transactions.
+- Rejects error/empty research envelopes; extracts the existing Phase 1 prompt without changing its research rules.
+- Adds explicit cancelled/failed/in-progress artifact projections and persistence-failure propagation.
+- Adds a required real-API decision safety browser lane and critical coverage floors for assessment contracts/storage.
+- Implementation release validation/publication pending; does not complete IDQ-001-B or establish investment effectiveness.
+
 ## [0.53.0] - 2026-09-16
 
 ### Copilot multi-vendor role routing

@@ -13,6 +13,7 @@ can decide whether the case is relevant before reading the Chinese body.
 
 | Date       | Title                                                                                       | Stack                   | Topic                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-16 | [A Completed Run Is Not an Approved Decision](2026-09-16-completed-run-is-not-approved-decision.md) | Agent / policy / Mongo / Playwright | Research-only containment, fail-closed writes and independent manual transactions |
 | 2026-09-16 | [A Role Configuration Is Not Model Routing](2026-09-16-role-config-is-not-model-routing.md) | Copilot / LangChain / Gemini / Grok / Playwright | Protocol-aware role snapshots, actual workflow scopes, replay isolation and stale UI writes |
 | 2026-09-15 | [Native Copilot Is Not a URL Change](2026-09-15-native-copilot-is-not-a-url-change.md) | OAuth / LangChain / Responses / Playwright | Private native credentials, refresh races, tool replay and separate recorded/live evidence |
 | 2026-09-14 | [Hosted CI Needs Failure Proof](2026-09-14-hosted-ci-needs-failure-proof.md) | GitHub Actions / Compose / mypy / eval / Playwright | Runner compatibility, real negative gates, retained artifacts and enforced merge checks |
