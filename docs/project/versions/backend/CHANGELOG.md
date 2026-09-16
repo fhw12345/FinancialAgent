@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rejects error/empty research envelopes; extracts the existing Phase 1 prompt without changing its research rules.
 - Adds explicit cancelled/failed/in-progress artifact projections and persistence-failure propagation.
 - Adds a required real-API decision safety browser lane and critical coverage floors for assessment contracts/storage.
-- Implementation release validation/publication pending; does not complete IDQ-001-B or establish investment effectiveness.
+- Shipped through protected PR #8 (`5ce5d8a`), implementation `75e2431`, CI run 35087643908; does not complete IDQ-001-B or establish investment effectiveness.
 
 ## [0.53.0] - 2026-09-16
 

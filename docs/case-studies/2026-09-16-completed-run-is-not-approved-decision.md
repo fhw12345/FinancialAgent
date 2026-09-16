@@ -1,6 +1,6 @@
 ---
 title: A Completed Run Is Not an Approved Decision
-status: in-progress
+status: shipped
 version: backend@0.54.0, frontend@0.35.0
 last_updated: 2026-09-16
 owner: maintainer
@@ -78,8 +78,10 @@ Local acceptance passed: backend 2100/frontend 266 tests; final-image six safety
 four Copilot, six hardening and eleven default browser cases; two equal-manifest
 clean builds. The default browser lane initially ran against the wrong native
 fixture (which translates recorded text); rerunning on its intended hardening
-fixture restored its real assertions, without weakening them. Hosted publication
-is pending. See the
+fixture restored its real assertions, without weakening them. Implementation
+`75e2431779b631b74077b033544197296152c9c2` merged through protected PR #8 as
+`5ce5d8a14bfbefe74e1d71968409d1502d02397d`; hosted run 35087643908 passed all
+three browser lanes and quality gates. See the
 [feature record](../features/investment-decision-safety-containment.md) for current
 receipts and the precise remaining release conditions.
 

@@ -1,6 +1,6 @@
 ---
 title: Decision Safety Containment Stage A
-status: in-progress
+status: shipped
 version: backend@0.54.0, frontend@0.35.0
 last_updated: 2026-09-16
 owner: maintainer
@@ -60,16 +60,16 @@ legacy TradingDecision和Phase2不做大规模改写。Phase1只抽出原有prom
 
 ## Validation Cases
 
-- [ ] Empty BUY仍可legacy读取，但严格新草稿拒绝；伪造ready/approved/actionable不能写入。
-- [ ] 有完整研究/草稿也只能research_only；缺002/004/005不会提前ready。
-- [ ] check timeout/invalid output/known violation显示正确非HOLD状态；无错误信息泄露。
-- [ ] pa缺失与部分研究失败不调用裸LLM shortcut，不漏记缺失symbol。
-- [ ] 超范围/重复股票、SELL非持仓、非法short/size/非finite数值均明确阻断。
-- [ ] 所有AI出口只写评估；旧create/upsert/create_many/mark_filled无法绕过。
-- [ ] 同key并发和重试至多一份批次；不同payload冲突；DB失败无保存成功反馈。
-- [ ] cancellation/failed/in-progress关联run的读投影不能显示completed/ready。
-- [ ] legacy原文/来源/时间/PnL仍可读，approve与旧Mark Executed无法变更持仓/现金。
-- [ ] 独立Add Transaction仍可正常登记真实交易，不能被标AI validated。
+- [x] Empty BUY仍可legacy读取，但严格新草稿拒绝；伪造ready/approved/actionable不能写入。
+- [x] 有完整研究/草稿也只能research_only；缺002/004/005不会提前ready。
+- [x] check timeout/invalid output/known violation显示正确非HOLD状态；无错误信息泄露。
+- [x] pa缺失与部分研究失败不调用裸LLM shortcut，不漏记缺失symbol。
+- [x] 超范围/重复股票、SELL非持仓、非法short/size/非finite数值均明确阻断。
+- [x] 所有AI出口只写评估；旧create/upsert/create_many/mark_filled无法绕过。
+- [x] 同key并发和重试至多一份批次；不同payload冲突；DB失败无保存成功反馈。
+- [x] cancellation/failed/in-progress关联run的读投影不能显示completed/ready。
+- [x] legacy原文/来源/时间/PnL仍可读，approve与旧Mark Executed无法变更持仓/现金。
+- [x] 独立Add Transaction仍可正常登记真实交易，不能被标AI validated。
 
 ### Required Playwright
 
@@ -86,7 +86,7 @@ legacy TradingDecision和Phase2不做大规模改写。Phase1只抽出原有prom
 实际投研试运行必须是小样本、明确预算、研究用途，单独标明live/recorded边界；不能
 把模型接口探针当作投资质量验证，也不能为了验收伪造ready。未获得真实数据则记录降级。
 
-## Implementation / Evidence In Progress
+## Implementation / Evidence
 
 - Backend: 2100 passed / 27 live integrations deselected, coverage rounds to 72%;
   mypy 299 files, Black/Ruff/Bandit and all critical floors pass. New floors:
@@ -109,14 +109,20 @@ legacy TradingDecision和Phase2不做大规模改写。Phase1只抽出原有prom
   Curated screenshots: [missing evidence](assets/idq-001-a/01-insufficient-evidence.png),
   [research only](assets/idq-001-a/02-research-only.png),
   [legacy + manual transaction](assets/idq-001-a/03-legacy-readonly.png).
-- Hosted CI and protected publication remain pending. Local acceptance is not shipment.
+- Implementation `75e2431779b631b74077b033544197296152c9c2`, protected
+  [PR #8](https://github.com/fhw12345/FinancialAgent/pull/8), merge
+  `5ce5d8a14bfbefe74e1d71968409d1502d02397d`.
+- [Hosted CI](https://github.com/fhw12345/FinancialAgent/actions/runs/35087643908)
+  passed all gates, including all three browser lanes. Downloaded artifact retains
+  three HTML reports with verified hashes and no credential files; see
+  [hosted receipts](assets/idq-001-a/hosted-validation.json). No admin bypass.
 
 ## Completion and Rollback
 
-- [ ] 先失败回归，再目标测试；全backend/frontend/types/lint/security/critical coverage通过。
-- [ ] 真实浏览器、curated截图、clean builds/最终镜像、版本/changelog/案例/索引齐全。
-- [ ] 实现提交与记录其hash的出货文档，protected CI/merge/push同步完成后才ship A。
-- [ ] 父IDQ-001/总计划仍in-progress；B所需DP-02/03/06/07/10等未实现验收不勾选。
+- [x] 先失败回归，再目标测试；全backend/frontend/types/lint/security/critical coverage通过。
+- [x] 真实浏览器、curated截图、clean builds/最终镜像、版本/changelog/案例/索引齐全。
+- [x] 实现提交与记录其hash的出货文档，protected CI/merge/push同步完成后才ship A。
+- [x] 父IDQ-001/总计划仍in-progress；B所需DP-02/03/06/07/10等未实现验收不勾选。
 
 回滚只能停用新研究入口/保持只读，不恢复旧AI写入放行。新评估与旧记录分开保存；
 原始持仓/现金不批量修改，不把B阶段风险阈值凭空补入用户设置。

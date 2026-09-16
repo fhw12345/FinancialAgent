@@ -17,16 +17,19 @@ related_paths:
 
 ## 1. Current State
 
-### IDQ-001-A authorized / in progress (2026-09-16)
+### IDQ-001-A shipped (2026-09-16)
 
 The maintainer authorized the narrow [safety containment slice](../features/investment-decision-safety-containment.md).
-Current branch: `feat/idq-001-safety-containment`, target 0.54.0/0.35.0.
+Shipped at 0.54.0/0.35.0: implementation `75e2431779b631b74077b033544197296152c9c2`,
+protected PR #8, merge `5ce5d8a14bfbefe74e1d71968409d1502d02397d`.
 New AI outputs are non-actionable assessments; legacy orders are read-only, manual
 real-trade recording is separate. No ready or approval can be produced in A.
 Local backend 2100/frontend 266 tests pass; final image-only acceptance has six
 safety, four Copilot, six hardening and eleven default scenarios. Two clean builds
-match complete dependency/asset manifests. Hosted publication is still pending.
-Do not infer shipping from these local results. PH-009 and IDQ-002–009 remain paused/planning.
+match complete dependency/asset manifests. Hosted run 35087643908 passed every gate
+and all three browser lanes; downloaded reports were verified. See
+[receipts](../features/assets/idq-001-a/hosted-validation.json).
+IDQ-001/000 remain in-progress; PH-009 and IDQ-002–009 remain paused/planning.
 The live localhost:3013 instance uses the final images; private credentials and the
 full role map/routing revision 1 were preserved. No new live inference was performed.
 
@@ -186,7 +189,7 @@ config run. The 131 lint warnings are accepted non-increasing follow-up debt.
 ## 5. Current Direction — IDQ-001-A Only; PH-009 Paused
 
 The maintainer explicitly requested **not to execute PH-009**. IDQ-001-A is now
-separately authorized; see the current state above and the
+separately authorized and shipped; see the current state above and the
 [program](../features/investment-decision-quality-program.md). IDQ-001 remains
 in-progress even after A ships. B requires confirmed policy and IDQ-002/004/005;
 none of those limits or approvals may be invented to make A look complete.

@@ -17,7 +17,7 @@ related_paths:
 
 ## Current Delivery Boundary
 
-[IDQ-001-A 安全收口](investment-decision-safety-containment.md) 已获授权并实施中。
+[IDQ-001-A 安全收口](investment-decision-safety-containment.md) 已出货（0.54.0/0.35.0，PR #8）。
 A 只允许非行动性评估，没有 ready/approval。下文是完整 A+B 目标，未勾选项仍不代表已实现；
 尤其政策确认、风险限额、PIT 证据、策略契约、子集审批和 stale revalidation 仍待 B 阶段。
 A 使用独立 assessments API，不将新研究混入 legacy 决策收益统计。

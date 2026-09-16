@@ -17,13 +17,13 @@ related_paths:
 
 > **TL;DR (EN)**: Preserve the working Agent/runtime foundation, but separate
 > evidence, research, portfolio constraints, and investment outcomes. This is a
-> staged program: only IDQ-001-A safety containment is being implemented.
+> staged program: only IDQ-001-A safety containment has shipped.
 > It introduces no profitability claims, broker integration, or authorization to start PH-009.
 >
 > **TL;DR (中文)**：保留已通过工程门禁的底座，补齐“事实有依据、建议受约束、结果能验证”
-> 的闭环。目前只启动 IDQ-001-A 安全收口；其余目标仍待实施，工程验收不代表策略有超额收益。
+> 的闭环。目前仅 IDQ-001-A 安全收口已出货；其余目标仍待实施，工程验收不代表策略有超额收益。
 
-当前实施：[IDQ-001-A](investment-decision-safety-containment.md)。没有 ready、批准或
+当前出货切片：[IDQ-001-A](investment-decision-safety-containment.md)。没有 ready、批准或
 paper 执行资格。IDQ-001-B、002–009 仍未实施，PH-009 继续暂停。
 
 ## 1. 目标、基线与证据等级
