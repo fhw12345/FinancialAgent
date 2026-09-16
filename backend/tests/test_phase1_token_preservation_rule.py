@@ -15,17 +15,14 @@ a future refactor cannot silently regress the rule.
 
 from __future__ import annotations
 
-import inspect
 import re
 
-from src.agent.portfolio import phase1_research
+from tests.phase1_prompt_fixture import phase1_prompt
 
 
 def _prompt_source() -> str:
-    """Snapshot the live ``_analyze_symbol`` source so we lock the wording
-    that the running LLM actually sees, not a top-level constant that
-    might or might not be referenced."""
-    return inspect.getsource(phase1_research.Phase1ResearchMixin._analyze_symbol)
+    """Assert the wording actually delivered to the agent, not a dead template."""
+    return phase1_prompt()
 
 
 def _collapsed() -> str:

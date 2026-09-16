@@ -34,7 +34,7 @@ from typing import Literal
 
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from src.agent.llm_factory import get_llm
 from src.agent.prompt_registry import get_prompt, render_prompt
@@ -89,12 +89,19 @@ class GateViolation(BaseModel):
 
 class GateVerdict(BaseModel):
     passed: bool
+    available: bool = True
     violations: list[GateViolation] = Field(default_factory=list)
     note: str | None = Field(
         default=None,
         description="One short sentence summarising the verdict; optional",
     )
     prompt_versions: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def coherent_verdict(self) -> GateVerdict:
+        if self.passed and (self.violations or not self.available):
+            raise ValueError("A failed or unavailable check cannot pass")
+        return self
 
 
 # ---------------------------------------------------------------------------
@@ -112,8 +119,8 @@ async def run_consistency_gate(
 
     Returns (verdict, degraded_fields). `degraded_fields` is the
     deterministic regex list — useful for the caller to log even if
-    the LLM call fails. On any LLM error we fail-open (passed=True,
-    note set) so a flaky gate cannot wedge the whole pipeline.
+    the LLM call fails. Errors mark the check unavailable and not passed;
+    research may continue only as a non-actionable assessment.
     """
     degraded = detect_degraded_fields(research_text)
 
@@ -145,17 +152,18 @@ async def run_consistency_gate(
         verdict = GateVerdict.model_validate(verdict).model_copy(
             update={"prompt_versions": {prompt.prompt_id: prompt.versioned_id}}
         )
-    except Exception as e:  # pragma: no cover — network-class failure
+    except Exception as e:
         logger.warning(
             "consistency_gate_llm_failed",
             symbol=symbol,
-            error=str(e),
+            error_type=type(e).__name__,
             degraded_count=len(degraded),
         )
         return (
             GateVerdict(
-                passed=True,
-                note=f"gate failed-open due to LLM error: {e}",
+                passed=False,
+                available=False,
+                note="Consistency check unavailable; no actionable decision is permitted.",
             ),
             degraded,
         )

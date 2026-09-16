@@ -1,27 +1,12 @@
-"""
-Order suggestion handler for watchlist analysis.
-
-Trading decisions are persisted to MongoDB ``portfolio_orders`` with
-``status="suggested"``.
-"""
-
-import uuid
-
-import structlog
-
-from src.core.utils.date_utils import utcnow
+"""Watchlist drafts use the shared assessment boundary, not PortfolioOrder writes."""
 
 from ...database.repositories.message_repository import MessageRepository
 from ...database.repositories.portfolio_order_repository import PortfolioOrderRepository
 from ...models.message import Message
-from ...models.portfolio import PortfolioOrder
-
-logger = structlog.get_logger()
+from ..decision_policy.context import current_run_id
 
 
 class OrderHandler:
-    """Handles order suggestion persistence for trading decisions."""
-
     def __init__(
         self,
         message_repo: MessageRepository,
@@ -40,58 +25,21 @@ class OrderHandler:
         user_id: str,
         message: Message | None,
     ) -> None:
-        """Persist a *suggested* order (no broker call)."""
-        if not self.order_repository:
-            logger.warning(
-                "Order repository not available - suggestion not persisted",
-                symbol=symbol,
-            )
-            return
-
-        try:
-            quantity = 1  # TODO: derive from position_size
-
-            suggested = PortfolioOrder(
-                order_id=f"order_{uuid.uuid4().hex[:12]}",
-                chat_id=chat_id,
-                user_id=user_id,
-                message_id=message.message_id if message else None,
-                analysis_id=analysis_id,
-                symbol=symbol,
-                order_type="market",
-                side=decision.lower(),
-                quantity=float(quantity),
-                limit_price=None,
-                stop_price=None,
-                time_in_force="day",
-                status="suggested",
-                filled_qty=0.0,
-                filled_avg_price=None,
-                filled_at=None,
-                error_message=None,
-                created_at=utcnow(),
-            )
-
-            await self.order_repository.create(suggested)
-            logger.info(
-                "Order suggestion persisted",
-                symbol=symbol,
-                side=suggested.side,
-                analysis_id=analysis_id,
-                order_id=suggested.order_id,
-            )
-
-            if message:
-                message.metadata.order_placed = False
-                message.metadata.order_id = suggested.order_id
-                await self.message_repo.update_metadata(
-                    message.message_id, message.metadata
-                )
-        except Exception as e:
-            logger.error(
-                "Failed to persist order suggestion",
-                symbol=symbol,
-                error=str(e),
-                error_type=type(e).__name__,
-            )
-            # Don't fail the whole analysis if suggestion persistence fails
+        if self.order_repository is None:
+            raise RuntimeError("Assessment storage is unavailable")
+        await self.order_repository.assess(
+            request_key=current_run_id() or analysis_id,
+            run_id=current_run_id(),
+            source="watchlist",
+            symbols=[symbol],
+            proposals=[
+                {
+                    "symbol": symbol,
+                    "decision": decision.upper(),
+                    "position_size_percent": position_size,
+                    "reasoning_summary": "Unverified watchlist draft; no execution plan.",
+                }
+            ],
+            research={symbol: message.content if message else ""},
+        )
+        # No order_id/order_placed metadata: saving research is not order creation.

@@ -63,6 +63,7 @@ class DeepAgentAdapter:
             chat_id=chat_id,
             run_id=run_id,
             message_id=message_id,
+            research_text=structured_verdict.report_markdown,
         )
 
     async def resolve_symbol(

@@ -48,6 +48,9 @@ async def list_decisions(
             "decisions": [
                 {
                     "order_id": d.order_id,
+                    "legacy": True,
+                    "actionable": False,
+                    "readiness": "legacy_unverified",
                     "symbol": d.symbol,
                     "side": d.side,
                     "intent": getattr(d, "intent", None),

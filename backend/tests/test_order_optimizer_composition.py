@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from unittest.mock import AsyncMock
+from types import SimpleNamespace
+from src.services.decision_policy.builder import build_assessment
 
 import pytest
 
@@ -105,11 +107,14 @@ class _OrderRepo:
     def __init__(self, fail: bool = False) -> None:
         self.fail = fail
         self.orders: list[object] = []
+        self.batches = []
 
-    async def create_many(self, orders: list[object]) -> None:
+    async def assess(self, **kwargs):
         if self.fail:
             raise RuntimeError("mongo failure")
-        self.orders.extend(orders)
+        batch = build_assessment(**kwargs)
+        self.batches.append(batch)
+        return batch
 
 
 class _MessageRepo:
@@ -160,18 +165,10 @@ async def test_executor_persists_suggestions_and_message_metadata() -> None:
         [_analysis("AAPL")],
     )
 
-    assert result == {
-        "executed": 1,
-        "failed": 0,
-        "skipped": 1,
-        "total_orders": 2,
-        "mode": "suggestion_only",
-    }
-    assert len(order_repo.orders) == 1
-    suggested = order_repo.orders[0]
-    assert suggested.status == "suggested"  # type: ignore[attr-defined]
-    assert suggested.analysis_id == "analysis_AAPL"  # type: ignore[attr-defined]
-    assert len(message_repo.updates) == 1
+    assert result["executed"] == 0 and result["mode"] == "research_only"
+    assert result["assessment_count"] == 1
+    assert not order_repo.orders and not message_repo.updates
+    assert not order_repo.batches[0].actionable
 
 
 @pytest.mark.asyncio
@@ -182,11 +179,10 @@ async def test_executor_reports_attempted_suggestions_when_persistence_degrades(
         order_repo=_OrderRepo(fail=True),
         message_repo=_MessageRepo(fail=True),
     )
-    result = await executor.execute_order_plan(
-        _plan([_order("AAPL", 1)]), "local", [_analysis("AAPL")]
-    )
-    assert result["executed"] == 1
-    assert result["failed"] == 0
+    with pytest.raises(RuntimeError, match="mongo failure"):
+        await executor.execute_order_plan(
+            _plan([_order("AAPL", 1)]), "local", [_analysis("AAPL")]
+        )
 
 
 class _Phase3Harness(Phase3ExecutionMixin):
@@ -196,7 +192,7 @@ class _Phase3Harness(Phase3ExecutionMixin):
 @pytest.mark.asyncio
 async def test_phase3_persists_hold_and_executes_actionable_plan() -> None:
     harness = _Phase3Harness()
-    harness.order_repo = AsyncMock()
+    harness.order_repo = _OrderRepo()
     harness.react_agent = type(
         "Agent",
         (),
@@ -229,10 +225,45 @@ async def test_phase3_persists_hold_and_executes_actionable_plan() -> None:
         decisions, [_analysis("MSFT"), _analysis("AAPL")], {}, "local", summary
     )
 
-    assert summary == {
-        "holds_persisted": 1,
-        "orders_executed": 1,
-        "orders_failed": 0,
-        "orders_skipped": 0,
-    }
-    harness.order_repo.create.assert_awaited_once()
+    assert summary["orders_executed"] == 0 and summary["actionable_count"] == 0
+    assert summary["assessment_count"] == 2
+    assert not harness.order_repo.orders
+    harness.order_optimizer.optimize_trading_decisions.assert_not_awaited()
+    harness.order_optimizer.execute_order_plan.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_phase3_hold_and_empty_paths_are_non_actionable():
+    harness = _Phase3Harness()
+    harness.order_repo = _OrderRepo()
+    harness.react_agent = SimpleNamespace(data_manager=None)
+    assert await harness._resolve_decision_price("AAPL") is None
+    dm = SimpleNamespace(get_quote=AsyncMock(return_value=SimpleNamespace(price=100)))
+    harness.react_agent.data_manager = dm
+    assert await harness._resolve_decision_price("AAPL") == 100
+    dm.get_quote.side_effect = RuntimeError("unavailable")
+    assert await harness._resolve_decision_price("AAPL") is None
+    assert await harness._persist_hold_signals([], [], "local") == 0
+    assert (
+        await harness._persist_hold_signals(
+            [_decision("AAPL", TradingAction.HOLD, None)], [_analysis("AAPL")], "local"
+        )
+        == 1
+    )
+    assert not harness.order_repo.batches[0].actionable
+    summary = {}
+    await harness._run_phase3_execution([], [], {}, "local", summary)
+    assert summary["orders_executed"] == 0
+
+
+@pytest.mark.asyncio
+async def test_executor_empty_and_skipped_plans_do_not_write():
+    repo = _OrderRepo()
+    executor = OrderExecutor(repo, _MessageRepo())
+    assert (await executor.execute_order_plan(_plan([]), "local", []))["executed"] == 0
+    assert (
+        await executor.execute_order_plan(
+            _plan([_order("AAPL", 1, skip="skip")]), "local", [_analysis("AAPL")]
+        )
+    )["assessment_count"] == 0
+    assert not repo.batches

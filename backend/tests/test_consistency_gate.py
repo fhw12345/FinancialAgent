@@ -121,7 +121,7 @@ async def test_gate_calls_llm_when_degraded_present() -> None:
 
 
 @pytest.mark.asyncio
-async def test_gate_fails_open_on_llm_exception() -> None:
+async def test_gate_is_unavailable_on_llm_exception() -> None:
     text = "⚠️ **Cash flow unavailable for AAPL.** unsubstantiated."
     fake_llm = MagicMock()
     fake_structured = MagicMock()
@@ -133,8 +133,9 @@ async def test_gate_fails_open_on_llm_exception() -> None:
     ):
         verdict, degraded = await run_consistency_gate("AAPL", text)
     # Fail-open so a flaky gate doesn't wedge the pipeline.
-    assert verdict.passed is True
-    assert "failed-open" in (verdict.note or "")
+    assert verdict.passed is False
+    assert verdict.available is False
+    assert "unavailable" in (verdict.note or "")
     assert len(degraded) == 1
 
 

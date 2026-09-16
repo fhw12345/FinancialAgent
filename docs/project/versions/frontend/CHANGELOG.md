@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-09-16
+
+### Research-only assessments and read-only legacy decisions
+
+- Displays versioned Stage-A safety status/reasons and full research separately from legacy directional metrics.
+- Removes AI/legacy Mark Executed, retains old research and P&L, and labels chat/model drafts as unverified research.
+- Fixes manual transaction numeric form values so quantity/price changes really auto-calculate total amount.
+- Adds response-contract/component/manual-form tests and six real-stack safety scenarios; production lint remains warning-free.
+- Implementation release validation/publication pending; no ready/approval UI or automatic trading is enabled.
+
 ## [0.34.0] - 2026-09-16
 
 ### Copilot role configuration

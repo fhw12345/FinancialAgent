@@ -1,23 +1,22 @@
-"""Tests for local portfolio-order persistence."""
+"""Legacy records remain readable; every former AI write entry is closed."""
 
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
-
 import pytest
-from pymongo import ReturnDocument
-
 from src.database.repositories.portfolio_order_repository import (
     PortfolioOrderRepository,
+)
+from src.database.repositories.decision_assessment_repository import (
+    DecisionWriteRejected,
 )
 from src.models.portfolio import PortfolioOrder
 
 
 @pytest.fixture
-def order() -> PortfolioOrder:
+def order():
     return PortfolioOrder(
         order_id="order_1",
         chat_id="chat_1",
-        message_id="message_1",
         analysis_id="analysis_1",
         symbol="AAPL",
         order_type="market",
@@ -30,90 +29,39 @@ def order() -> PortfolioOrder:
 
 
 @pytest.mark.asyncio
-async def test_create_inserts_local_order(order):
+@pytest.mark.parametrize("method", ["create", "upsert", "create_many", "mark_filled"])
+async def test_legacy_writes_cannot_promote_unverified_data(order, method):
     collection = MagicMock()
-    collection.insert_one = AsyncMock()
     repository = PortfolioOrderRepository(collection)
-
-    result = await repository.create(order)
-
-    assert result == order
-    collection.insert_one.assert_awaited_once_with(order.model_dump())
+    with pytest.raises(DecisionWriteRejected):
+        if method == "create_many":
+            await repository.create_many([order])
+        elif method == "mark_filled":
+            await repository.mark_filled(
+                order.order_id, 2, 201, datetime.now(UTC), "tx1"
+            )
+        else:
+            await getattr(repository, method)(order)
+    collection.insert_one.assert_not_called()
+    collection.find_one_and_update.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_upsert_uses_atomic_deterministic_order_identity(order):
-    collection = MagicMock()
-    collection.find_one_and_update = AsyncMock(
-        return_value={"_id": "mongo", **order.model_dump()}
-    )
-    repository = PortfolioOrderRepository(collection)
-
-    result = await repository.upsert(order)
-
-    assert result == order
-    collection.find_one_and_update.assert_awaited_once_with(
-        {"order_id": order.order_id},
-        {"$setOnInsert": order.model_dump()},
-        upsert=True,
-        return_document=ReturnDocument.AFTER,
-    )
-
-
-@pytest.mark.asyncio
-async def test_get_by_order_id(order):
+async def test_get_by_order_id_preserves_historical_data(order):
     collection = MagicMock()
     collection.find_one = AsyncMock(return_value={"_id": "mongo", **order.model_dump()})
-    repository = PortfolioOrderRepository(collection)
-
-    result = await repository.get(order.order_id)
-
-    assert result == order
+    assert await PortfolioOrderRepository(collection).get(order.order_id) == order
     collection.find_one.assert_awaited_once_with({"order_id": order.order_id})
-
-
-@pytest.mark.asyncio
-async def test_mark_filled_uses_local_order_id(order):
-    filled_at = datetime.now(UTC)
-    filled = {
-        **order.model_dump(),
-        "status": "filled",
-        "filled_qty": 2,
-        "filled_avg_price": 201,
-        "filled_at": filled_at,
-        "user_transaction_id": "tx_1",
-    }
-    collection = MagicMock()
-    collection.find_one_and_update = AsyncMock(return_value=filled)
-    repository = PortfolioOrderRepository(collection)
-
-    result = await repository.mark_filled(
-        order_id=order.order_id,
-        filled_qty=2,
-        filled_avg_price=201,
-        filled_at=filled_at,
-        user_transaction_id="tx_1",
-    )
-
-    assert result is not None
-    assert result.status == "filled"
-    query = collection.find_one_and_update.await_args.args[0]
-    assert query == {"order_id": order.order_id}
 
 
 @pytest.mark.asyncio
 async def test_ensure_indexes_has_no_broker_index():
     collection = MagicMock()
     collection.create_index = AsyncMock()
-    repository = PortfolioOrderRepository(collection)
-
-    await repository.ensure_indexes()
-
-    names = [call.kwargs["name"] for call in collection.create_index.await_args_list]
-    assert "idx_alpaca_order" not in names
-    unique_index = next(
-        call
-        for call in collection.create_index.await_args_list
-        if call.kwargs["name"] == "idx_order_id_unique"
+    await PortfolioOrderRepository(collection).ensure_indexes()
+    calls = collection.create_index.await_args_list
+    assert any(
+        call.kwargs["name"] == "idx_order_id_unique" and call.kwargs.get("unique")
+        for call in calls
     )
-    assert unique_index.kwargs["unique"] is True
+    assert all(call.kwargs["name"] != "idx_alpaca_order" for call in calls)

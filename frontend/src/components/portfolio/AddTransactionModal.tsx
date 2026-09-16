@@ -252,7 +252,7 @@ export function AddTransactionModal({
                 Quantity
               </label>
               <input
-                {...register("quantity")}
+                {...register("quantity", { valueAsNumber: true })}
                 id="transaction-quantity"
                 type="number"
                 step="any"
@@ -275,7 +275,7 @@ export function AddTransactionModal({
                 Execution Price ($)
               </label>
               <input
-                {...register("price")}
+                {...register("price", { valueAsNumber: true })}
                 id="transaction-price"
                 type="number"
                 step="0.01"

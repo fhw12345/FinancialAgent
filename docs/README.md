@@ -21,8 +21,9 @@ All current documentation describes the local single-user application.
 - [Native GitHub Copilot Provider](features/native-github-copilot-provider.md)
 - [Copilot Multi-Vendor Models and Role Routing](features/copilot-multivendor-role-routing.md)
 
-- [Investment Decision Quality Program — planning](features/investment-decision-quality-program.md)
+- [Investment Decision Quality Program — A in progress](features/investment-decision-quality-program.md)
   - [IDQ-001 Decision Contracts and Policy Gates](features/investment-decision-policy-gates.md)
+  - [IDQ-001-A Decision Safety Containment](features/investment-decision-safety-containment.md)
   - [IDQ-002 Portfolio Risk and Allocation](features/investment-portfolio-risk-allocation.md)
   - [IDQ-003 Candidate Selection and Portfolio Fit](features/investment-candidate-selection.md)
   - [IDQ-004 Point-in-Time Evidence and Claim Validation](features/investment-evidence-snapshots.md)
@@ -76,6 +77,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [A Completed Run Is Not an Approved Decision](case-studies/2026-09-16-completed-run-is-not-approved-decision.md)
 - [A Role Configuration Is Not Model Routing](case-studies/2026-09-16-role-config-is-not-model-routing.md)
 - [Native Copilot Is Not a URL Change](case-studies/2026-09-15-native-copilot-is-not-a-url-change.md)
 - [Hosted CI Needs Failure Proof](case-studies/2026-09-14-hosted-ci-needs-failure-proof.md)

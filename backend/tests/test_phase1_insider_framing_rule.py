@@ -8,21 +8,17 @@ discretionary-bearish framing entirely. PRD AC #4 is asserted directly:
 date 2025-01-01 is **not** allowed to be cited as discretionary
 bearish."
 
-We assert against the source of `_analyze_symbol` because the prompt
-is composed inline as an f-string — there is no exported template
-constant to read. The rule wraps across source lines, so checks
-collapse whitespace before substring testing.
+We capture the prompt actually sent by `_analyze_symbol`, including
+its extracted template. Checks collapse whitespace before comparison.
 """
 
 from __future__ import annotations
 
-import inspect
-
-from src.agent.portfolio.phase1_research import Phase1ResearchMixin
+from tests.phase1_prompt_fixture import phase1_prompt
 
 
 def _prompt_src() -> str:
-    return inspect.getsource(Phase1ResearchMixin._analyze_symbol)
+    return phase1_prompt()
 
 
 def _collapsed() -> str:

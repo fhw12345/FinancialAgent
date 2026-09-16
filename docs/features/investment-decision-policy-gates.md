@@ -1,8 +1,8 @@
 ---
 title: Investment Decision Contracts and Policy Gates
-status: planning
-version: n/a
-last_updated: 2026-09-14
+status: in-progress
+version: backend@0.54.0, frontend@0.35.0
+last_updated: 2026-09-16
 owner: maintainer
 related_paths:
   - backend/src/models/trading_decision.py
@@ -14,6 +14,13 @@ related_paths:
 ---
 
 # IDQ-001：严格决策契约与确定性门禁
+
+## Current Delivery Boundary
+
+[IDQ-001-A 安全收口](investment-decision-safety-containment.md) 已获授权并实施中。
+A 只允许非行动性评估，没有 ready/approval。下文是完整 A+B 目标，未勾选项仍不代表已实现；
+尤其政策确认、风险限额、PIT 证据、策略契约、子集审批和 stale revalidation 仍待 B 阶段。
+A 使用独立 assessments API，不将新研究混入 legacy 决策收益统计。
 
 ## 1. 目标与根因
 
@@ -131,7 +138,7 @@ research_only → ready。必要检查清单由 strategy/policy 固定，非关�
   政策变更、审批与消费必须有共同的revision/CAS协调点；仅先查policy再写另一个集合
   不是原子校验。实施前选定单文档aggregate或有序事件方案并做竞争测试。
 
-## 7. 验证矩阵（尚未执行）
+## 7. 完整目标验证矩阵（A 的已执行验证单独记录）
 
 拟新增 `backend/tests/test_decision_policy_contract.py`、`test_decision_policy_composition.py`、
 `test_decision_approval_api.py`，以及前端 policy/readiness component tests。

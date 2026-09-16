@@ -418,14 +418,15 @@ async def stream_with_deep_agent(
             await await_disconnect_grace(client_request)
             verdict = result.get("verdict")
 
-            async def persist_verdict_after_durable_completion() -> None:
-                await persist_completed_verdict(
-                    agent=agent,
-                    symbol=resolution.symbol,
-                    verdict=verdict,
-                    chat_id=lifecycle.require_chat_id(),
-                    run_id=lifecycle.run_id,
-                )
+            # Assessment writes must succeed before reporting terminal success.
+            # Cancelled/failed runs keep any late non-actionable artifact partial.
+            await persist_completed_verdict(
+                agent=agent,
+                symbol=resolution.symbol,
+                verdict=verdict,
+                chat_id=lifecycle.require_chat_id(),
+                run_id=lifecycle.run_id,
+            )
 
             async for event in lifecycle.complete(
                 ChatCompletion(
@@ -455,7 +456,6 @@ async def stream_with_deep_agent(
                         "tool_executions": tool_executions,
                         "trace_id": trace_id,
                     },
-                    after_durable=persist_verdict_after_durable_completion,
                 )
             ):
                 yield event

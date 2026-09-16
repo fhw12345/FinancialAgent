@@ -150,12 +150,14 @@ async def test_phase1_legacy_usage_wrapper_no_longer_supported(
 async def test_phase1_handles_missing_token_keys(
     captured_logs: list[tuple[str, dict]],
 ) -> None:
-    """A response dict that is missing both keys (e.g. an early-error
-    short-circuit) must default to 0/0 without raising."""
+    """Usable research without usage keys preserves the legacy counter default.
+
+    Empty/error output is rejected separately by test_decision_research_errors.
+    """
     response = {
-        "trace_id": "early-exit",
+        "trace_id": "no-usage",
         "messages": [],
-        "final_answer": "",
+        "final_answer": "Recorded research without a usage receipt",
         "tool_executions": 0,
     }
     mixin = _build_mixin_with_response(response)

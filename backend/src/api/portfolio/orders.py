@@ -68,11 +68,14 @@ async def get_portfolio_orders(
                     "submitted_at": o.created_at.isoformat() if o.created_at else None,
                     "filled_at": o.filled_at.isoformat() if o.filled_at else None,
                     "analysis_id": o.analysis_id,
+                    "legacy": True,
+                    "actionable": False,
+                    "readiness": "legacy_unverified",
                 }
                 for o in orders
             ],
             "total": len(orders),
-            "note": "Suggested orders only. Manual execution required.",
+            "note": "Legacy AI history is unverified/read-only. Record actual trades independently with Add Transaction.",
         }
     except Exception as e:
         logger.error("Failed to list portfolio orders", error=str(e))
@@ -147,7 +150,7 @@ async def mark_order_executed_endpoint(
     except OrderAlreadyFilledError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
     except OrderNotExecutableError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except ValueError as e:
         # Holdings ledger errors (oversell / no-holding) bubble up here
         raise HTTPException(status_code=400, detail=str(e)) from e

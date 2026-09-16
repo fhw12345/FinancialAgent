@@ -179,7 +179,10 @@ async def _run_holdings_flow(
         )
         if running is None:
             raise RuntimeError("Could not transition holdings run to running")
-        result = await run_analyze_holdings(app, settings)
+        from ..services.decision_policy.context import assessment_run
+
+        with assessment_run(run_id):
+            result = await run_analyze_holdings(app, settings)
         await run_service.transition_portfolio(
             run_id,
             status="completed",
@@ -214,7 +217,10 @@ async def _run_picks_flow(
         )
         if running is None:
             raise RuntimeError("Could not transition picks run to running")
-        result = await run_today_picks(app, settings, sectors)
+        from ..services.decision_policy.context import assessment_run
+
+        with assessment_run(run_id):
+            result = await run_today_picks(app, settings, sectors)
         await run_service.transition_portfolio(
             run_id,
             status="completed",
@@ -252,7 +258,10 @@ async def _run_single_symbol_flow(
         )
         if running is None:
             raise RuntimeError("Could not transition symbol run to running")
-        result = await run_single_symbol(app, symbol, settings)
+        from ..services.decision_policy.context import assessment_run
+
+        with assessment_run(run_id):
+            result = await run_single_symbol(app, symbol, settings)
         await run_service.transition_portfolio(
             run_id,
             status="completed",
