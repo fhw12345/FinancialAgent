@@ -1,8 +1,8 @@
 ---
 title: Project Hardening Active Handoff
 status: in-progress
-version: backend@0.52.0, frontend@0.33.0
-last_updated: 2026-09-15
+version: backend@0.53.0, frontend@0.34.0
+last_updated: 2026-09-16
 owner: maintainer
 related_paths:
   - docs/features/project-hardening-program.md
@@ -16,6 +16,23 @@ related_paths:
 # Project Hardening Active Handoff
 
 ## 1. Current State
+
+### Active GHC-002 multi-vendor role routing (2026-09-16)
+
+Maintainer requested all account-selectable GPT/Gemini/Grok models except MAI.
+Branch `feat/copilot-multivendor-routing`, candidate backend 0.53.0/frontend 0.34.0.
+See [GHC-002](../features/copilot-multivendor-role-routing.md). Native Responses
+and Chat Completions, versioned role overrides, actual Portfolio/translation/check
+bindings and role-aware replay are implemented. Local tests: backend 2061, frontend
+261; full lint/types/security and critical coverage passed. Two clean builds match;
+final image-only 4 Copilot + 6 hardening + 11 default E2E passed.
+
+Live account: 16/16 bounded structured probes and Gemini/Grok tool round trips passed.
+The default remains Astra; the discussed editable multi-vendor role map was explicitly
+applied on the live UI at localhost:3013. Final-image news/debater/translation probes
+passed. Existing OAuth was preserved; no MAI call or model-policy change was made.
+Hosted CI, implementation/shipment commits and merge remain pending; not shipped yet.
+PH-009 and IDQ remain unstarted.
 
 ### Shipped GHC-001 native Copilot (2026-09-15)
 

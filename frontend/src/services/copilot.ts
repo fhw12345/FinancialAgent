@@ -5,6 +5,8 @@ const modelSchema = z.object({
   id: z.string(),
   name: z.string(),
   max_output_tokens: z.number().int().positive(),
+  api: z.enum(["openai-responses", "openai-completions"]).optional(),
+  vendor: z.string().optional(),
 });
 export const copilotStatusSchema = z.object({
   provider_enabled: z.boolean(),
@@ -12,6 +14,10 @@ export const copilotStatusSchema = z.object({
   authenticated: z.boolean(),
   selected_model: z.string().nullable(),
   models: z.array(modelSchema),
+  role_models: z.record(z.string()).optional(),
+  routing_revision: z.number().int().nonnegative().optional(),
+  roles: z.array(z.object({ id: z.string(), label: z.string() })).optional(),
+  recommended_role_models: z.record(z.string()).optional(),
   login: z
     .object({
       attempt_id: z.string(),
@@ -25,13 +31,13 @@ export const copilotStatusSchema = z.object({
 });
 export type CopilotStatus = z.infer<typeof copilotStatusSchema>;
 export type CopilotAction =
-  "status" | "login" | "poll" | "models" | "model" | "logout";
+  "status" | "login" | "poll" | "models" | "model" | "logout" | "routing";
 
 const headers = { "X-Financial-Agent-Local": "1" };
 
 export async function copilotAction(
   action: CopilotAction,
-  payload: Record<string, string> = {},
+  payload: Record<string, unknown> = {},
   signal?: AbortSignal,
 ): Promise<CopilotStatus> {
   const url = `/api/llm/copilot/${action}`;
@@ -42,21 +48,24 @@ export async function copilotAction(
   return copilotStatusSchema.parse(response.data);
 }
 
-export async function testCopilot(signal?: AbortSignal): Promise<string> {
+export async function testCopilot(
+  signal?: AbortSignal,
+  options: { model_id?: string; role?: string } = {},
+): Promise<string> {
   const response = await apiClient.post<unknown>(
     "/api/llm/copilot/test",
-    {},
+    options,
     {
       signal,
       headers,
-      timeout: 60000,
+      timeout: 90000,
     },
   );
   return z
     .object({
       connected: z.literal(true),
       model: z.string(),
-      protocol: z.literal("openai-responses"),
+      protocol: z.enum(["openai-responses", "openai-completions"]),
     })
     .parse(response.data).model;
 }

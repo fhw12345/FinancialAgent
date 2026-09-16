@@ -299,6 +299,7 @@ requires the evidence and workflow in [Documentation Standards](../development/d
 - **[Portfolio Agent Architecture](portfolio-agent-architecture-refactor.md)** — 3-phase analysis (research → decisions → execution)
 
 ### AI & Agent System
+- **[Copilot Multi-Vendor Role Routing](copilot-multivendor-role-routing.md)** — in-progress; GPT/Gemini/Grok protocols, MAI exclusion, persistent role maps and real workflow bindings
 - **[Native GitHub Copilot Provider](native-github-copilot-provider.md)** — shipped; independent device login and Python Responses transport without pi or a bridge
 - **[Automatic Chat Flow Routing](automatic-chat-flow-routing.md)** — rule-first routing with a lightweight classifier fallback
 - **[Chat Symbol Context](chat-symbol-context.md)** — inject the active UI symbol into chat context so the agent does not have to re-ask

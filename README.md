@@ -31,14 +31,21 @@ Set `LLM_PROVIDER` in `backend/.env.development`:
 | `maestro`         | Agent Maestro at `MAESTRO_BASE_URL`                                  |
 | `anthropic`       | Direct Anthropic API using `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` |
 | `copilot_reverse` | GitHub Copilot through the sibling `../copilot-bridge` repository    |
-| `github_copilot`  | Native Python OAuth + GPT Responses; sign in and select a model on Health |
+| `github_copilot`  | Native Python OAuth + GPT/Gemini/Grok; default and role models configured on Health |
 
 Native Copilot needs no pi process, bridge, or OpenAI/Anthropic API key. Set
 `LLM_PROVIDER=github_copilot`, recreate backend, then open **Health → GitHub Copilot**.
-Authorize on GitHub, refresh the permitted model list, select a GPT Responses model,
-and explicitly test the connection (uses Copilot allowance). The selected model is
-used for all roles; native v1 does not support Claude/Gemini transports or Enterprise
-Server login. Account entitlement and model policies still apply.
+Authorize on GitHub, refresh the permitted model list, select a default model,
+and explicitly test the connection (uses Copilot allowance). GPT/Grok use Responses;
+Gemini uses Chat Completions. MAI, hidden entries and unsupported
+protocols are excluded. Enterprise Server login is not supported; account model
+permissions still apply.
+
+Expand **Role-based model routing** to assign models to research, news, adversarial
+review, translation and final decisions. Empty overrides inherit the default.
+The multi-vendor suggestion is a draft until explicitly saved; existing runs retain
+their snapshot. See [role routing](docs/features/copilot-multivendor-role-routing.md)
+for the role map, compatibility boundaries and recorded/live validation.
 
 Credentials stay in a private local Docker volume, separate from pi and GitHub CLI.
 Local logout does not revoke the GitHub grant. See the

@@ -131,7 +131,7 @@ async def run_consistency_gate(
 
     try:
         prompt = get_prompt("consistency-gate")
-        llm = get_llm("simple_chat", temperature=0.0, max_tokens=400)
+        llm = get_llm("consistency_check", temperature=0.0, max_tokens=400)
         structured = llm.with_structured_output(GateVerdict)
         verdict = await structured.ainvoke(
             [

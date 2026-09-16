@@ -1,0 +1,175 @@
+{
+  "date": "2026-09-16",
+  "evidence_mode": "live_account",
+  "max_output_tokens_per_request": 512,
+  "models": [
+    {
+      "model": "gemini-3.5-flash",
+      "api": "openai-completions",
+      "structured_passed": true,
+      "duration_ms": 2355
+    },
+    {
+      "model": "gemini-3.6-flash",
+      "api": "openai-completions",
+      "structured_passed": true,
+      "duration_ms": 2252
+    },
+    {
+      "model": "gemini-3.7-flash",
+      "api": "openai-completions",
+      "structured_passed": true,
+      "duration_ms": 2228
+    },
+    {
+      "model": "gemini-3.8-flash",
+      "api": "openai-completions",
+      "structured_passed": true,
+      "duration_ms": 2729
+    },
+    {
+      "model": "gpt-5-mini",
+      "api": "openai-responses",
+      "structured_passed": true,
+      "duration_ms": 4569
+    },
+    {
+      "model": "gpt-5.3-codex",
+      "api": "openai-responses",
+      "structured_passed": true,
+      "duration_ms": 1788
+    },
+    {
+      "model": "gpt-5.4",
+      "api": "openai-responses",
+      "structured_passed": true,
+      "duration_ms": 2292
+    },
+    {
+      "model": "gpt-5.4-mini",
+      "api": "openai-responses",
+      "structured_passed": true,
+      "duration_ms": 1683
+    },
+    {
+      "model": "gpt-5.5",
+      "api": "openai-responses",
+      "structured_passed": true,
+      "duration_ms": 1945
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "api": "openai-responses",
+      "structured_passed": true,
+      "duration_ms": 8292
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "api": "openai-responses",
+      "structured_passed": true,
+      "duration_ms": 2282
+    },
+    {
+      "model": "gpt-5.6-sol-fast",
+      "api": "openai-responses",
+      "structured_passed": true,
+      "duration_ms": 1776
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "api": "openai-responses",
+      "structured_passed": true,
+      "duration_ms": 1650
+    },
+    {
+      "model": "gpt-6-astra",
+      "api": "openai-responses",
+      "structured_passed": true,
+      "duration_ms": 2295
+    },
+    {
+      "model": "grok-4.5",
+      "api": "openai-responses",
+      "structured_passed": true,
+      "duration_ms": 4631
+    },
+    {
+      "model": "grok-4.6",
+      "api": "openai-responses",
+      "structured_passed": true,
+      "duration_ms": 5225
+    }
+  ],
+  "tool_round_trips": [
+    {
+      "model": "gemini-3.8-flash",
+      "tool_round_trip": true,
+      "first_usage": {
+        "input_tokens": 41,
+        "output_tokens": 14,
+        "total_tokens": 55,
+        "input_token_details": {
+          "cache_read": 0
+        }
+      },
+      "final_usage": {
+        "input_tokens": 41,
+        "output_tokens": 1,
+        "total_tokens": 42,
+        "input_token_details": {
+          "cache_read": 0
+        }
+      }
+    },
+    {
+      "model": "grok-4.6",
+      "tool_round_trip": true,
+      "first_usage": {
+        "input_tokens": 1634,
+        "output_tokens": 80,
+        "total_tokens": 1714,
+        "input_token_details": {
+          "cache_read": 1536
+        }
+      },
+      "final_usage": {
+        "input_tokens": 1561,
+        "output_tokens": 142,
+        "total_tokens": 1703,
+        "input_token_details": {
+          "cache_read": 0
+        }
+      }
+    }
+  ],
+  "summary": {
+    "completed": true,
+    "models": 16,
+    "passed": 16,
+    "default_unchanged": true
+  },
+  "notes": "Bounded compatibility probes, not a performance or investment-quality benchmark. No credentials or raw reasoning state are recorded. The default model was not changed by probes. Final-image sub_news, sub_debater and translation role tests also passed after explicit routing configuration.",
+  "final_image_routing": {
+    "default_model": "gpt-6-astra",
+    "role_models": {
+      "router": "gpt-5.4-mini",
+      "simple_chat": "gpt-5.4-mini",
+      "summary": "gpt-5.4-mini",
+      "translation": "gpt-5.4-mini",
+      "consistency_check": "gpt-5.4-mini",
+      "react_agent": "gpt-5.6-sol",
+      "portfolio_research": "gpt-5.6-sol",
+      "sub_financial": "gpt-5.6-sol",
+      "sub_technical": "gpt-5.6-sol",
+      "deep_planner": "gpt-5.6-sol",
+      "sub_news": "gemini-3.8-flash",
+      "sub_debater": "grok-4.6",
+      "portfolio_decisions": "gpt-6-astra",
+      "verdict": "gpt-6-astra",
+      "eval_judge": "gpt-5.4"
+    },
+    "routing_revision": 1,
+    "authorization_preserved": true,
+    "roles_preserved_after_recreation": true
+  }
+}

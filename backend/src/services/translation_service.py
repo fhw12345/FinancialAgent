@@ -41,7 +41,9 @@ logger = structlog.get_logger()
 
 CACHE_TTL_SECONDS = 86_400  # 1 day
 CACHE_KEY_PREFIX = "llm_translation"
-TRANSLATION_ROLE = "verdict"  # routes to the configured high-quality verdict model
+TRANSLATION_ROLE = (
+    "translation"  # independent native role; legacy providers retain verdict defaults
+)
 
 # Sentinel separating translated passages in the model's raw response.
 # Replaces the previous JSON-array protocol — JSON parsing was choking on

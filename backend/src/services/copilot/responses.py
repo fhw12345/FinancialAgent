@@ -36,7 +36,7 @@ def text_content(message: BaseMessage) -> str:
 
 
 def response_input(
-    messages: list[BaseMessage], model: str
+    messages: list[BaseMessage], model: str, role: str | None = None
 ) -> tuple[str, list[dict[str, Any]]]:
     instructions: list[str] = []
     items: list[dict[str, Any]] = []
@@ -58,7 +58,14 @@ def response_input(
             )
         elif isinstance(message, AIMessage):
             raw = message.additional_kwargs.get("copilot_output")
-            if raw and message.response_metadata.get("model_name") == model:
+            if (
+                raw
+                and message.response_metadata.get("model_name") == model
+                and (
+                    role is None
+                    or message.response_metadata.get("copilot_role") == role
+                )
+            ):
                 # Opaque reasoning IDs/encrypted content must survive within a
                 # tool loop; never send signed items to a different model.
                 items.extend(raw)
@@ -280,6 +287,11 @@ class ResponseChunks:
             )
             self.completed = True
         return chunks
+
+    def finish(self) -> list[AIMessageChunk]:
+        if not self.completed:
+            raise CopilotError("stream_ended_without_completion")
+        return []
 
     def _validate_arguments(self, raw: Any, index: int) -> None:
         if not isinstance(raw, str):

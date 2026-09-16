@@ -34,7 +34,7 @@ test.describe("@real-stack native Copilot", () => {
     await page.getByTestId("copilot-models").click();
     await expect(
       page.getByTestId("copilot-model-select").locator("option"),
-    ).toHaveCount(2);
+    ).toHaveCount(7);
     const rejected = await request.post(`${backend}/api/llm/copilot/model`, {
       headers: { "X-Financial-Agent-Local": "1" },
       data: { model_id: "gpt-5-disabled" },

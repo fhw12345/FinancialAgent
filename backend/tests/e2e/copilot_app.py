@@ -14,11 +14,14 @@ from src.main import app
 from src.services.cache_warming_service import CacheWarmingService
 from src.services.copilot import context
 from src.services.copilot.service import CopilotService
+from src.services.translation_service import _cache_key
 from tests.copilot_fixtures import sse, text_output
+from tests.copilot_chat_fixtures import chat_sse, chat_tool
 
 approved = False
 mode = "normal"
 requests = []
+model_requests = []
 
 
 def recorded(request):
@@ -67,6 +70,25 @@ def recorded(request):
                         "policy": {"state": "enabled"},
                         "supported_endpoints": ["/responses"],
                     },
+                    *[
+                        {
+                            "id": mid,
+                            "name": "Recorded " + mid,
+                            "vendor": vendor,
+                            "model_picker_enabled": True,
+                            "policy": {"state": "enabled"},
+                            "supported_endpoints": [endpoint],
+                            "capabilities": {"supports": {"tool_calls": True}},
+                        }
+                        for mid, vendor, endpoint in [
+                            ("gpt-5.4-mini", "OpenAI", "/responses"),
+                            ("gpt-5.4", "OpenAI", "/responses"),
+                            ("gpt-5.6-sol", "OpenAI", "/responses"),
+                            ("gemini-3.8-flash", "Google", "/chat/completions"),
+                            ("grok-4.6", "xAI", "/responses"),
+                            ("mai-code-1.1-flash", "Microsoft", "/responses"),
+                        ]
+                    ],
                     {
                         "id": "claude-test",
                         "model_picker_enabled": True,
@@ -81,6 +103,15 @@ def recorded(request):
                 ]
             },
         )
+    if path in ("/responses", "/chat/completions"):
+        body = json.loads(request.content)
+        model_requests.append({"model": body["model"], "endpoint": path})
+    if path == "/chat/completions":
+        if mode == "limited":
+            return httpx.Response(429)
+        if body.get("tools"):
+            return chat_tool(body["tools"][0]["function"]["name"], {"connected": True})
+        return chat_sse([{"content": "NATIVE_GEMINI_CHAT_OK"}])
     if path == "/responses":
         if mode == "limited":
             return httpx.Response(429, json={"message": "recorded limit"})
@@ -98,6 +129,8 @@ def recorded(request):
                     }
                 ]
             )
+        if "NATIVE_GEMINI_CHAT_OK" in json.dumps(body):
+            return sse(text_output("NATIVE_GEMINI_CHAT_OK"))
         return sse(
             text_output("NATIVE_COPILOT_CHAT_OK"),
             deltas=[
@@ -140,6 +173,8 @@ async def reset():
     approved = False
     mode = "normal"
     requests.clear()
+    model_requests.clear()
+    await app.state.redis.delete(_cache_key("NATIVE_GEMINI_CHAT_OK", "zh-CN"))
     service.logout()
     return {"reset": True}
 
@@ -161,4 +196,8 @@ async def change_mode(value: str):
 
 @app.get("/api/test/copilot/evidence")
 async def evidence():
-    return {"requests": requests, "authenticated": service.status()["authenticated"]}
+    return {
+        "requests": requests,
+        "model_requests": model_requests,
+        "authenticated": service.status()["authenticated"],
+    }
