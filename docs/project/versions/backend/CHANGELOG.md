@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adds deterministic membership/value/unit/period/conflict/historical-cutoff checks and whitelisted derived calculators; free prose and source truth remain unverified.
 - Freezes tool data for Portfolio and Deep research, persists dossiers before success, and blocks missing/invalid material claims without enabling ready/approval.
 - Fixes legacy tool provenance that mislabeled Yahoo payloads as Alpha Vantage; preserves fractional statement values and explicit financial currency.
-- All local gates, 33 final-image browser cases and two unchanged-input post-review builds pass; hosted publication pending.
+- Shipped through protected PR #12 (`86d912e`), implementation `3f339f7`, CI 35209071011, after all local gates, 33 final-image browser cases and two unchanged-input post-review builds.
 
 ## [0.55.0] - 2026-09-17
 

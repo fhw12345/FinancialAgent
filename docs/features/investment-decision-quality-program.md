@@ -17,15 +17,15 @@ related_paths:
 
 > **TL;DR (EN)**: Preserve the working Agent/runtime foundation, but separate
 > evidence, research, portfolio constraints, and investment outcomes. This is a
-> staged program: IDQ-001-A containment and IDQ-002 risk/allocation previews have shipped.
+> staged program: IDQ-001-A containment, IDQ-002 risk previews and IDQ-004 sealed evidence/structured-field checks have shipped.
 > It introduces no profitability claims, broker integration, or authorization to start PH-009.
 >
 > **TL;DR (中文)**：保留已通过工程门禁的底座，补齐“事实有依据、建议受约束、结果能验证”
-> 的闭环。目前 IDQ-001-A 安全收口和 IDQ-002 风险/配仓预览已出货；其余目标仍待实施，工程验收不代表策略有超额收益。
+> 的闭环。目前 IDQ-001-A 安全收口、IDQ-002 风险预览和 IDQ-004 封存证据/字段校验已出货；其余目标仍待实施，工程验收不代表策略有超额收益。
 
 当前出货切片：[IDQ-001-A](investment-decision-safety-containment.md)。没有 ready、批准或
 paper 执行资格。[IDQ-002](investment-portfolio-risk-allocation.md) 已出货风险数学与
-非行动性配仓预览；[IDQ-004](investment-evidence-snapshots.md) 已获授权、正在实施。
+非行动性配仓预览；[IDQ-004](investment-evidence-snapshots.md) 已出货封存证据与结构化字段校验（不认证全文/来源真伪）。
 维护者确认顺序调整为 **004 → 005 → 001-B**，003 后移；其余任务未启动，PH-009 继续暂停。
 
 ## 1. 目标、基线与证据等级
@@ -74,7 +74,8 @@ B03–B05 仅为不联网的内存样例，不是市场实测。B04 假设现金
 辩论；不以本计划名义进行全仓库机械拆分或大规模迁移。
 
 除 [A 阶段](investment-decision-safety-containment.md) 和
-[IDQ-002](investment-portfolio-risk-allocation.md) 明确列出的实现外，本文 DTO、
+[IDQ-002](investment-portfolio-risk-allocation.md)、[IDQ-004](investment-evidence-snapshots.md)
+明确列出的实现外，本文 DTO、
 集合、接口、文件名和阈值仍为**拟定契约**。各 planning 子计划保留 `version: n/a`；
 本总计划的版本标记已出货组件的实现基线，不表示其余契约已经出货。
 

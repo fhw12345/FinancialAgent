@@ -21,7 +21,7 @@ All current documentation describes the local single-user application.
 - [Native GitHub Copilot Provider](features/native-github-copilot-provider.md)
 - [Copilot Multi-Vendor Models and Role Routing](features/copilot-multivendor-role-routing.md)
 
-- [Investment Decision Quality Program — A and risk previews shipped, program in progress](features/investment-decision-quality-program.md)
+- [Investment Decision Quality Program — A, risk previews and sealed evidence shipped; program in progress](features/investment-decision-quality-program.md)
   - [IDQ-001 Decision Contracts and Policy Gates](features/investment-decision-policy-gates.md)
   - [IDQ-001-A Decision Safety Containment](features/investment-decision-safety-containment.md)
   - [IDQ-002 Portfolio Risk and Allocation](features/investment-portfolio-risk-allocation.md)

@@ -1,6 +1,6 @@
 ---
 title: Point-In-Time Evidence Snapshots and Claim Validation
-status: in-progress
+status: shipped
 version: backend@0.56.0, frontend@0.37.0
 last_updated: 2026-09-17
 owner: maintainer
@@ -154,12 +154,12 @@ structured numeric fields、evidence IDs、method ID/version、materiality、ver
 
 ## 7. 实施步骤
 
-- [ ] 为quote、OHLCV、overview/statements、news/filing分别定义typed adapters。
-- [ ] 加snapshot collecting/seal与幂等；接现有DataManager，不增加重复fetch链。
-- [ ] 实现ClaimValidator和安全calculator registry；把质量状态从文字中移到字段。
-- [ ] Phase1产出dossier，Phase2/Deep仅消费manifest内证据；补数产生新revision。
-- [ ] ResearchPanel点击claim可查看来源／日期／单位／计算链；翻译不改ID或数字。
-- [ ] 旧报告标legacy/unverified，绝不批量补成“已验证历史”。
+- [x] 为quote、OHLCV、overview/statements、news/filing分别定义typed adapters。
+- [x] 加snapshot collecting/seal与幂等；接现有DataManager，不增加重复fetch链。
+- [x] 实现ClaimValidator和安全calculator registry；把质量状态从文字中移到字段。
+- [x] 主研究流程Phase1产出dossier，Phase2/Deep仅消费manifest内证据；补数产生新revision。
+- [x] EvidencePanel点击claim可查看来源／日期／单位／计算链；翻译不改ID或数字。
+- [x] 旧报告标legacy/unverified，绝不批量补成“已验证历史”。
 
 ## 8. 验证矩阵
 
@@ -192,13 +192,13 @@ structured numeric fields、evidence IDs、method ID/version、materiality、ver
 
 ## 9. Acceptance / Rollback
 
-- [ ] EV-01…12及真实API E2E通过；无伪造citation通过critical gate。
-- [ ] 服务重启和provider更新不能改变旧决策所引用证据。
-- [ ] 未具备PIT能力的数据诚实标注，不能用于无污染历史验证的声明。
-- [ ] 总计划质量门禁、截图、版本、changelog、双语案例和protected PR完成。
-- [ ] 回滚停止新dossier/ready写入，保留旧sealed记录和兼容reader。
+- [x] EV-01…12及真实API E2E通过；无伪造citation通过critical gate。
+- [x] 服务重启和provider更新不能改变旧决策所引用证据。
+- [x] 未具备PIT能力的数据诚实标注，不能用于无污染历史验证的声明。
+- [x] 总计划质量门禁、截图、版本、changelog、双语案例和protected PR完成。
+- [x] 回滚停止新dossier写入并继续禁用ready，保留旧sealed记录和兼容reader。
 
-## Local Validation / Publication Pending
+## Validation / Shipment
 
 - Backend 2180 passed / 27 live integrations deselected, coverage rounds to 73%;
   mypy 317 files, Black/Ruff/Bandit/deterministic evaluation and all critical floors pass.
@@ -228,7 +228,13 @@ structured numeric fields、evidence IDs、method ID/version、materiality、ver
 - The sealed API response is byte-for-byte unchanged after actual backend recreation.
   The live 3013 instance uses accepted images; private credentials, routing revision 1
   and unconfigured personal policy are preserved. No live model probes or investment benchmark.
-- Hosted protected publication remains pending; local evidence is not shipment.
+- Implementation `3f339f771d4f7214d83d002b5b6d84e6c47994d1` merged through
+  [protected PR #12](https://github.com/fhw12345/FinancialAgent/pull/12) as
+  `86d912e14e34bb9320ee0de54a6c8cc7ee72c830`.
+  [Hosted CI 35209071011](https://github.com/fhw12345/FinancialAgent/actions/runs/35209071011)
+  passed every gate and all five browser lanes. Downloaded artifacts retain all five
+  HTML reports with verified hashes and no credential files; see
+  [hosted receipts](assets/idq-004/hosted-validation.json). No admin bypass.
 - [Bilingual case study](../case-studies/2026-09-17-citation-is-not-evidence-verification.md).
 
 风险：存储膨胀、provider许可、修订财报、时区和转载新闻混淆。先适配核心数据、分页

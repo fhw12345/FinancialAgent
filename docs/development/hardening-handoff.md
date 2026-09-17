@@ -17,17 +17,21 @@ related_paths:
 
 ## 1. Current State
 
-### IDQ-004 authorized / in progress (2026-09-17)
+### IDQ-004 shipped (2026-09-17)
 
 Maintainer changed priority to **004 → 005 → 001-B**, postponing 003, then explicitly
 authorized [evidence snapshots](../features/investment-evidence-snapshots.md).
-Branch `feat/idq-004-evidence-snapshots`, target 0.56.0/0.37.0. Sealed per-symbol
+Shipped at 0.56.0/0.37.0 through protected PR #12: implementation
+`3f339f771d4f7214d83d002b5b6d84e6c47994d1`, merge
+`86d912e14e34bb9320ee0de54a6c8cc7ee72c830`. Sealed per-symbol
 aggregates, collector fencing, typed source/unit/period/PIT metadata, frozen tools,
 structured-field validators and Portfolio/Deep dossiers are implemented locally.
 Matched fields do not certify prose/source truth; no ready/approval/strategy is enabled.
 Local backend 2180 / frontend 271 tests pass; final image-only acceptance passes 33
 scenarios. Two post-review no-cache builds match full manifests/assets/source trees.
-Hosted publication remains pending. Live 3013 runs accepted images with private
+Hosted run 35209071011 passed all gates and five browser lanes; downloaded reports
+were verified in the [receipt](../features/assets/idq-004/hosted-validation.json).
+Live 3013 runs accepted images with private
 credentials/routing revision 1 and unconfigured personal risk policy preserved.
 No live inference is required. PH-009 remains paused; no authorization to start 005 yet.
 
@@ -226,7 +230,8 @@ separately authorized and shipped; see the current state above and the
 in-progress even after A ships. B requires confirmed policy and IDQ-002/004/005;
 none of those limits or approvals may be invented to make A look complete.
 IDQ-002 software is shipped as non-actionable risk/allocation previews. IDQ-004 is
-now authorized; subsequent order is 005 then 001-B, with 003 postponed. Other child
+shipped as a bounded evidence/structured-field layer; subsequent order is 005 then
+001-B, with 003 postponed. Next implementation still needs maintainer authorization. Other child
 plans remain planning. No paper execution or investment-quality claim.
 
 ### PH-009 Resume References (Not an Active Work Queue)
