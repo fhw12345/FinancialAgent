@@ -17,15 +17,19 @@ related_paths:
 
 ## 1. Current State
 
-### IDQ-002 authorized / in progress (2026-09-17)
+### IDQ-002 shipped (2026-09-17)
 
 The maintainer authorized the next [risk/allocation task](../features/investment-portfolio-risk-allocation.md).
-Branch `feat/idq-002-portfolio-risk`, target 0.55.0/0.36.0. Implements daily-close
+Shipped at 0.55.0/0.36.0 through protected PR #10. Implementation
+`17b6a4b6884794302c747fa162b03f6856636417`, merge
+`ef1fd2cd6897858fcb7a32638b871e2148215ded`. Implements daily-close
 XNYS snapshots, full-account vs invested sigma, dated covariance, fractional holdings,
 explicit preview-policy CAS and post-trade batch checks. No ready/approval is enabled.
 Backend 2142 / frontend 269 tests and strict gates pass locally. Final image-only
 acceptance passes 30 scenarios; two unchanged-input clean builds per component match
-full manifests/assets. Hosted publication is still pending. Live 3013 uses accepted
+full manifests/assets. Hosted run 35193568404 passed every gate and all four
+browser lanes; downloaded reports are verified in the
+[receipt](../features/assets/idq-002/hosted-validation.json). Live 3013 uses accepted
 images with its private credential volume and routing revision 1 preserved; no live
 inference was requested and no personal risk policy was configured automatically.
 PH-009 and IDQ-003–009 remain unstarted.
@@ -207,7 +211,7 @@ separately authorized and shipped; see the current state above and the
 [program](../features/investment-decision-quality-program.md). IDQ-001 remains
 in-progress even after A ships. B requires confirmed policy and IDQ-002/004/005;
 none of those limits or approvals may be invented to make A look complete.
-Only IDQ-002 is newly authorized. Other child plans remain planning. No paper
+IDQ-002 software is shipped as non-actionable risk/allocation previews. Other child plans remain planning. No paper
 execution or investment-quality claim.
 
 ### PH-009 Resume References (Not an Active Work Queue)

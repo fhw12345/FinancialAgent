@@ -1,0 +1,252 @@
+{
+  "date": "2026-09-17",
+  "implementation": "17b6a4b6884794302c747fa162b03f6856636417",
+  "merge": "ef1fd2cd6897858fcb7a32638b871e2148215ded",
+  "pr": "https://github.com/fhw12345/FinancialAgent/pull/10",
+  "ci": {
+    "conclusion": "success",
+    "createdAt": "2026-09-17T07:14:40Z",
+    "headSha": "17b6a4b6884794302c747fa162b03f6856636417",
+    "jobs": [
+      {
+        "completedAt": "2026-09-17T07:23:10Z",
+        "conclusion": "success",
+        "databaseId": 105111427443,
+        "name": "Unit Tests",
+        "startedAt": "2026-09-17T07:14:44Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-09-17T07:14:46Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-09-17T07:14:45Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:15:03Z",
+            "conclusion": "success",
+            "name": "Initialize containers",
+            "number": 2,
+            "startedAt": "2026-09-17T07:14:46Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:15:06Z",
+            "conclusion": "success",
+            "name": "Checkout",
+            "number": 3,
+            "startedAt": "2026-09-17T07:15:03Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:15:08Z",
+            "conclusion": "success",
+            "name": "Setup Python",
+            "number": 4,
+            "startedAt": "2026-09-17T07:15:06Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:15:13Z",
+            "conclusion": "success",
+            "name": "Setup Node.js",
+            "number": 5,
+            "startedAt": "2026-09-17T07:15:08Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:15:19Z",
+            "conclusion": "success",
+            "name": "Validate repository policy and negative fixtures",
+            "number": 6,
+            "startedAt": "2026-09-17T07:15:13Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:15:23Z",
+            "conclusion": "success",
+            "name": "Gitleaks (PR commits and current tracked tree)",
+            "number": 7,
+            "startedAt": "2026-09-17T07:15:19Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:16:19Z",
+            "conclusion": "success",
+            "name": "Install locked backend runtime and CI tools",
+            "number": 8,
+            "startedAt": "2026-09-17T07:15:23Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:17:44Z",
+            "conclusion": "success",
+            "name": "Install locked frontend dependencies (host runner only)",
+            "number": 9,
+            "startedAt": "2026-09-17T07:16:19Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:17:48Z",
+            "conclusion": "success",
+            "name": "Bandit production source",
+            "number": 10,
+            "startedAt": "2026-09-17T07:17:44Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:17:48Z",
+            "conclusion": "success",
+            "name": "Activate optional mypy failure control",
+            "number": 11,
+            "startedAt": "2026-09-17T07:17:48Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:18:15Z",
+            "conclusion": "success",
+            "name": "Backend lint and strict types",
+            "number": 12,
+            "startedAt": "2026-09-17T07:17:48Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:19:23Z",
+            "conclusion": "success",
+            "name": "Backend tests and critical coverage",
+            "number": 13,
+            "startedAt": "2026-09-17T07:18:15Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:19:23Z",
+            "conclusion": "success",
+            "name": "Activate optional eval failure control",
+            "number": 14,
+            "startedAt": "2026-09-17T07:19:23Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:19:25Z",
+            "conclusion": "success",
+            "name": "Deterministic Agent evaluation",
+            "number": 15,
+            "startedAt": "2026-09-17T07:19:23Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:20:32Z",
+            "conclusion": "success",
+            "name": "Frontend tests, lint, types and build",
+            "number": 16,
+            "startedAt": "2026-09-17T07:19:25Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:20:32Z",
+            "conclusion": "success",
+            "name": "Activate optional browser failure control",
+            "number": 17,
+            "startedAt": "2026-09-17T07:20:32Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:22:59Z",
+            "conclusion": "success",
+            "name": "Deterministic real-API browser smoke",
+            "number": 18,
+            "startedAt": "2026-09-17T07:20:32Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:23:00Z",
+            "conclusion": "success",
+            "name": "Upload quality reports and server logs (including failures)",
+            "number": 19,
+            "startedAt": "2026-09-17T07:22:59Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:23:03Z",
+            "conclusion": "success",
+            "name": "Post Setup Node.js",
+            "number": 35,
+            "startedAt": "2026-09-17T07:23:00Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:23:06Z",
+            "conclusion": "success",
+            "name": "Post Setup Python",
+            "number": 36,
+            "startedAt": "2026-09-17T07:23:03Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:23:07Z",
+            "conclusion": "success",
+            "name": "Post Checkout",
+            "number": 37,
+            "startedAt": "2026-09-17T07:23:06Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:23:07Z",
+            "conclusion": "success",
+            "name": "Stop containers",
+            "number": 38,
+            "startedAt": "2026-09-17T07:23:07Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-17T07:23:07Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 39,
+            "startedAt": "2026-09-17T07:23:07Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/fhw12345/FinancialAgent/actions/runs/35193568404/job/105111427443"
+      }
+    ],
+    "updatedAt": "2026-09-17T07:23:11Z",
+    "url": "https://github.com/fhw12345/FinancialAgent/actions/runs/35193568404"
+  },
+  "artifacts": [
+    {
+      "id": 10484782828,
+      "name": "pr-quality-reports",
+      "size_in_bytes": 970982,
+      "expires_at": "2026-10-01T07:22:59Z"
+    }
+  ],
+  "download_verified": true,
+  "browser_lane_reports": [
+    {
+      "path": "backend/artifacts/browser/previous-Ak1qWX/playwright-report/index.html",
+      "sha256": "1bdf09727d315ecca4036ee83cf5667b87a4325dc596c21b1f2b6fa4e5bb3a54"
+    },
+    {
+      "path": "backend/artifacts/browser/previous-e24Whs/playwright-report/index.html",
+      "sha256": "33e34598e438e698530633a8841252545e943c770a51c78eb36ad6eb6baa9789"
+    },
+    {
+      "path": "backend/artifacts/browser/previous-YPufOX/playwright-report/index.html",
+      "sha256": "0ce87054a7a5886dd0ed466b2adb1c60c8036539fd594deea8e43ee9576f2cb7"
+    },
+    {
+      "path": "frontend/playwright-report/index.html",
+      "sha256": "e58e1f1cc1a6ea043a2e8f41161d28005de9354f061f62ac06ec00e2a0b0d123"
+    }
+  ],
+  "credential_files": 0,
+  "merge_protection": {
+    "required_check": "Unit Tests",
+    "app_id": 15368,
+    "observed_premerge_state": "CLEAN/MERGEABLE",
+    "admin_bypass": false
+  }
+}

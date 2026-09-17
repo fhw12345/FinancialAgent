@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adds explicit daily-close risk refresh, separate account/invested sigma and coverage, confirmed preview-limit form, and current/proposed constraint receipts.
 - Shows stale captures and unavailable risk without a zero-risk fallback; risk checks still do not imply ready/approval.
 - Supports fractional holding inputs and zero declared cash; labels old sizing controls as model hints, not enforced risk limits.
-- Adds runtime schema/component tests and real-API risk browser scenarios. All 269 tests, 30 final-image browser cases and repeated clean builds pass; protected publication pending.
+- Adds runtime schema/component tests and real-API risk browser scenarios. All 269 tests, 30 final-image browser cases, repeated clean builds and protected PR #10 CI pass; shipped as `ef1fd2c`.
 
 ## [0.35.0] - 2026-09-16
 
