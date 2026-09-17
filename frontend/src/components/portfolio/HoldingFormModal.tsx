@@ -22,7 +22,7 @@ const schema = z.object({
     .min(1, "Symbol required")
     .max(10, "Max 10 chars")
     .transform((s) => s.toUpperCase()),
-  quantity: z.coerce.number().int("Whole shares only").positive("Must be > 0"),
+  quantity: z.coerce.number().finite().positive("Must be > 0"),
   avg_price: z.coerce.number().positive("Must be > 0"),
 });
 
@@ -181,7 +181,7 @@ export function HoldingFormModal({
               {...register("quantity")}
               id="holding-quantity"
               type="number"
-              step="1"
+              step="any"
               min="1"
               placeholder="10"
               onWheelCapture={(e) => {

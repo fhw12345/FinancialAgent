@@ -1,8 +1,8 @@
 ---
 title: Investment Decision Contracts and Policy Gates
 status: in-progress
-version: backend@0.54.0, frontend@0.35.0
-last_updated: 2026-09-16
+version: backend@0.55.0, frontend@0.36.0
+last_updated: 2026-09-17
 owner: maintainer
 related_paths:
   - backend/src/models/trading_decision.py
@@ -19,7 +19,8 @@ related_paths:
 
 [IDQ-001-A 安全收口](investment-decision-safety-containment.md) 已出货（0.54.0/0.35.0，PR #8）。
 A 只允许非行动性评估，没有 ready/approval。下文是完整 A+B 目标，未勾选项仍不代表已实现；
-尤其政策确认、风险限额、PIT 证据、策略契约、子集审批和 stale revalidation 仍待 B 阶段。
+IDQ-002 的风险预览限额与快照检查正在接入；完整投资政策、PIT 证据、策略契约、
+子集审批和批准时的 stale revalidation 仍待 B 阶段。风险预览不是完整政策或批准。
 A 使用独立 assessments API，不将新研究混入 legacy 决策收益统计。
 
 ## 1. 目标与根因

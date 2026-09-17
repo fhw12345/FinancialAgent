@@ -26,6 +26,7 @@ import { KpiBar } from "./decisionTracking/LegacyCells";
 import { DecisionRows } from "./decisionTracking/DecisionRows";
 import { ResearchBody } from "./decisionTracking/ResearchBody";
 import DecisionAssessments from "./DecisionAssessments";
+import { PortfolioRiskPanel } from "./PortfolioRiskPanel";
 export function DecisionTracker() {
   const { i18n } = useTranslation();
   const [symbolFilter, setSymbolFilter] = useState("");
@@ -87,6 +88,7 @@ export function DecisionTracker() {
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 mt-6">
+      <PortfolioRiskPanel />
       <DecisionAssessments
         symbol={symbolFilter || undefined}
         source={tab === "all" ? undefined : tab}

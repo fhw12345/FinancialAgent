@@ -110,6 +110,10 @@ async def _research_and_assess(
     if mongo is None or dm is None:
         raise RuntimeError("MongoDB/DataManager unavailable")
     symbols = list(dict.fromkeys(s.upper() for s in symbols))
+    from ...services.portfolio_risk import service as risk_service
+
+    snapshot = await risk_service.capture(mongo, symbols)
+    context.update(risk_service.prompt_context(snapshot))
     run_id = current_run_id() or f"{source}_{uuid.uuid4().hex}"
     repository = PortfolioOrderRepository(mongo.get_collection("portfolio_orders"))
     summary: dict[str, Any] = {
@@ -118,6 +122,10 @@ async def _research_and_assess(
         "errors": [],
     }
     results: list[Any] = []
+    if current_run_id():
+        active = await mongo.get_collection("agent_runs").find_one({"run_id": run_id})
+        if active is None or active.get("status") != "running":
+            pa = None
     if pa is not None:
         stubs = [_SymbolStub(symbol=s) for s in symbols]
         results = await pa._run_phase1_research(
@@ -141,6 +149,7 @@ async def _research_and_assess(
     checked = complete and all(
         r.consistency_passed is True and not r.degraded_fields for r in results
     )
+    checked = checked and risk_service.estimate(snapshot).status == "complete"
     if current_run_id():
         canonical = await mongo.get_collection("agent_runs").find_one(
             {"run_id": run_id}
@@ -164,9 +173,15 @@ async def _research_and_assess(
                 quality[symbol]["decision_unavailable"] = True
     held = (
         [p["symbol"] for p in context.get("positions", [])]
-        if settings is not None and source != "picks"
+        if snapshot.cash is not None
         else None
     )
+    risk_review = await risk_service.project_stale(
+        mongo, risk_service.assess_drafts(snapshot, proposals)
+    )
+    if risk_review.stale and risk_review.allocation:
+        risk_review.allocation.status = "blocked"
+        risk_review.allocation.constraints.append("STALE_SNAPSHOT")
     written = await _persist_decisions(
         proposals,
         dm,
@@ -178,6 +193,7 @@ async def _research_and_assess(
         redis_cache=app.state.redis,
         expected_symbols=symbols,
         holdings=held,
+        portfolio_risk=risk_review,
     )
     return {
         "message": f"Stage A: saved {written} non-actionable research assessment(s). No trade recommendation is approved.",

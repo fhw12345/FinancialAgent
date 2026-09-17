@@ -35,6 +35,12 @@ class DecisionAssessmentRepository:
     async def assess_and_persist(self, **inputs: Any) -> DecisionAssessment:
         assessment = build_assessment(**inputs)
         document = assessment.model_dump()
+        if assessment.portfolio_risk:
+            # BSON supports datetimes, not session dates. Keep the nested versioned
+            # receipt in its JSON wire form; strict model reads reconstruct dates.
+            document["portfolio_risk"] = assessment.portfolio_risk.model_dump(
+                mode="json"
+            )
         saved: dict[str, Any] | None
         try:
             saved = await self.collection.find_one_and_update(
@@ -57,6 +63,12 @@ class DecisionAssessmentRepository:
     async def _project(self, doc: dict[str, Any]) -> DecisionAssessment:
         doc.pop("_id", None)
         assessment = DecisionAssessment.model_validate(doc)
+        if assessment.portfolio_risk:
+            from ...services.portfolio_risk.service import project_stale
+
+            assessment.portfolio_risk = await project_stale(
+                self.collection.database, assessment.portfolio_risk
+            )
         if not assessment.run_id:
             return assessment
         run = await self.collection.database.get_collection("agent_runs").find_one(

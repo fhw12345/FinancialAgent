@@ -11,7 +11,11 @@ from pydantic import BaseModel, Field
 class PortfolioSettings(BaseModel):
     """User-set parameters for portfolio analysis. ALL fields required (no defaults)."""
 
-    cash_balance: float = Field(gt=0, description="Available cash to deploy (USD)")
+    cash_balance: float = Field(
+        ge=0,
+        allow_inf_nan=False,
+        description="Declared local account cash balance (USD)",
+    )
     risk_tolerance: Literal["conservative", "moderate", "aggressive"]
     max_position_pct: float = Field(
         ge=5.0, le=30.0, description="Max single-position size as % of cash"

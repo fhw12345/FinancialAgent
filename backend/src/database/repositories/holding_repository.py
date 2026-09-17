@@ -105,7 +105,7 @@ class HoldingRepository:
         return holdings
 
     def _calculate_pl(
-        self, quantity: int, current_price: float, cost_basis: float
+        self, quantity: float, current_price: float, cost_basis: float
     ) -> dict[str, float]:
         """
         Calculate market value and P&L metrics.

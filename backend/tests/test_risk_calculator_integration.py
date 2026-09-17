@@ -19,16 +19,20 @@ from src.agent.portfolio.risk_calculator import (
 )
 
 
+from tests.portfolio_risk_fixtures import ASOF, asset
+
+
 def _h(symbol: str, qty: int, px: float):
     return SimpleNamespace(
         symbol=symbol,
         quantity=qty,
         current_price=px,
         market_value=qty * px,
+        mark_session=ASOF,
     )
 
 
-# Realistic 4-position fixture (mirrors the user's 2026-05-07 portfolio).
+# Fixed four-position test fixture; not a live account or efficacy claim.
 HOLDINGS = [
     _h("AAPL", 2, 290.0),
     _h("NVDA", 3, 207.0),
@@ -56,51 +60,49 @@ def _series(seed: int, n: int = 60) -> list[float]:
 
 async def _returns(sym):
     seeds = {"AAPL": 2, "NVDA": 3, "AVGO": 4, "CRWV": 5}
-    return _series(seeds[sym])
+    return asset(sym, values=_series(seeds[sym])).returns
 
 
 @pytest.mark.asyncio
 async def test_risk_block_realistic_4_position_portfolio() -> None:
     risk = await compute_portfolio_risk(
-        HOLDINGS, cash=CASH, fetch_meta=_meta, fetch_returns=_returns
+        HOLDINGS, cash=CASH, fetch_meta=_meta, fetch_returns=_returns, as_of=ASOF
     )
 
     # All 4 positions are tagged Technology in the META — single-sector
     # exposure should be the entire invested amount.
     invested = 2 * 290 + 3 * 207 + 1 * 419 + 5 * 130
     total_equity = invested + CASH
-    assert risk["total_equity"] == pytest.approx(total_equity, abs=0.5)
-    assert "Technology" in risk["sector_exposure"]
-    assert risk["sector_exposure"]["Technology"]["dollars"] == pytest.approx(
-        invested, abs=0.5
+    assert risk["equity"] == pytest.approx(total_equity, abs=0.5)
+    assert risk["sector_weights"]["Technology"] == pytest.approx(
+        invested / total_equity
     )
-    assert risk["cash_pct"] == pytest.approx(CASH / total_equity, abs=1e-3)
+    assert risk["cash_weight"] == pytest.approx(CASH / total_equity, abs=1e-3)
 
     # Beta-weighted exposure should land between 1.2 and 2.1 (clamped to
     # the largest position's beta when concentration matters); just
     # verify it's in plausible range.
-    beta_w = risk["beta_weighted_exposure"]
+    beta_w = risk["beta_exposure"]
     assert 1.0 < beta_w < 2.5
 
     # Correlation matrix + portfolio sigma should be populated.
-    assert risk["correlation_matrix"] is not None
-    assert set(risk["correlation_matrix"].keys()) == {"AAPL", "NVDA", "AVGO", "CRWV"}
-    assert risk["portfolio_sigma_annualised"] is not None
-    assert risk["portfolio_sigma_annualised"] > 0
+    assert set(risk["correlations"]) == {"AAPL", "NVDA", "AVGO", "CRWV"}
+    assert risk["account_sigma_annualized"] > 0
+    assert risk["invested_sigma_annualized"] > risk["account_sigma_annualized"]
 
 
 @pytest.mark.asyncio
 async def test_render_risk_block_includes_metrics_for_4_positions() -> None:
     risk = await compute_portfolio_risk(
-        HOLDINGS, cash=CASH, fetch_meta=_meta, fetch_returns=_returns
+        HOLDINGS, cash=CASH, fetch_meta=_meta, fetch_returns=_returns, as_of=ASOF
     )
     md = render_risk_block_for_prompt(risk)
     # Prompt block should mention each metric the W2.6 docstring promised.
     assert "Portfolio Risk" in md
     assert "Technology" in md
-    assert "beta_weighted_exposure" in md
-    assert "position_concentration_hhi" in md
-    assert "cash_pct" in md
+    assert "beta_exposure" in md
+    assert "invested_hhi" in md
+    assert "cash_weight" in md
     # And it should mention the largest position by symbol.
-    largest = risk["largest_position"]["symbol"]
+    largest = max(risk["position_weights"], key=risk["position_weights"].get)
     assert largest in md

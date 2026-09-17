@@ -77,6 +77,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [Cash Is Not Missing Risk](case-studies/2026-09-17-cash-is-not-missing-risk.md)
 - [A Completed Run Is Not an Approved Decision](case-studies/2026-09-16-completed-run-is-not-approved-decision.md)
 - [A Role Configuration Is Not Model Routing](case-studies/2026-09-16-role-config-is-not-model-routing.md)
 - [Native Copilot Is Not a URL Change](case-studies/2026-09-15-native-copilot-is-not-a-url-change.md)

@@ -116,3 +116,8 @@ xxhash==3.8.1
 yarl==1.24.5
 yfinance==1.5.1
 zstandard==0.25.0
+exchange-calendars==4.13.2
+korean-lunar-calendar==0.4.0
+pyluach==2.3.0
+toolz==1.1.0
+tzdata==2026.4

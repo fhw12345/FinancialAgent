@@ -28,9 +28,47 @@ SETTINGS = PortfolioSettings(
 )
 
 
+class _Collection:
+    def __init__(self, name):
+        self.name = name
+
+    def find(self, query):
+        return self
+
+    def sort(self, *args):
+        return self
+
+    async def __aiter__(self):
+        for h in _HoldingRepo.holdings:
+            yield {
+                "holding_id": h.symbol,
+                "symbol": h.symbol,
+                "quantity": 1,
+                "avg_price": 100,
+                "cost_basis": 100,
+            }
+
+    async def find_one(self, query):
+        return {"cash_balance": 100000} if self.name == "user_settings" else None
+
+
 class _Mongo:
     def get_collection(self, name):
-        return object()
+        return _Collection(name)
+
+
+@pytest.fixture(autouse=True)
+def recorded_risk_provider(monkeypatch):
+    from tests.portfolio_risk_fixtures import ASOF, asset
+    from src.services.portfolio_risk import service, provider
+
+    async def fetch(symbol, session):
+        row = asset(symbol)
+        row.mark = 200.0
+        return row
+
+    monkeypatch.setattr(provider, "fetch_asset", fetch)
+    monkeypatch.setattr(service, "completed_session", lambda now: ASOF)
 
 
 class _HoldingRepo:
@@ -232,6 +270,28 @@ async def test_empty_holdings_and_missing_agent_never_use_fallback():
     shortcut.assert_not_awaited()
     assert result["assessment_count"] == 1 and result["actionable_count"] == 0
     assert _OrderRepo.batches[-1].readiness == "insufficient_evidence"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("source", ["picks", "single_symbol"])
+async def test_candidate_research_uses_full_account_not_an_empty_portfolio(source):
+    from src.agent.portfolio.flows import _research_and_assess
+
+    _HoldingRepo.holdings = [SimpleNamespace(symbol="AAPL")]
+    pa = SimpleNamespace(
+        _run_phase1_research=AsyncMock(return_value=[_research("MSFT")]),
+        _run_phase2_decisions=AsyncMock(return_value=({}, [_decision("MSFT")])),
+    )
+    with patch("src.agent.portfolio.flows.PortfolioOrderRepository", _OrderRepo):
+        await _research_and_assess(
+            _app(pa), SETTINGS, ["MSFT"], {"positions": []}, source, as_holdings=False
+        )
+    context = pa._run_phase2_decisions.await_args.kwargs["portfolio_context"]
+    assert context["positions"][0]["symbol"] == "AAPL"
+    assert context["positions"][0]["quantity"] == 1
+    assert {a["symbol"] for a in context["risk_snapshot"]["assets"]} == {"AAPL", "MSFT"}
+    assert _OrderRepo.batches[-1].portfolio_risk.current.equity == 100200
+    assert not _OrderRepo.batches[-1].actionable
 
 
 @pytest.mark.asyncio

@@ -63,7 +63,7 @@ async def build_context_from_mongo(
         positions.append(
             {
                 "symbol": h.symbol,
-                "quantity": int(h.quantity),
+                "quantity": h.quantity,
                 "market_value": float(market_value),
                 "unrealized_pl_percent": float(upl_pct),
                 "session": session,
