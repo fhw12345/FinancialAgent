@@ -275,7 +275,7 @@ requires the evidence and workflow in [Documentation Standards](../development/d
 - **[IDQ-001-A Safety Containment](investment-decision-safety-containment.md)** — shipped (0.54.0/0.35.0); non-actionable assessments, legacy read-only, no ready/approval
 - **[IDQ-002 Portfolio Risk and Allocation](investment-portfolio-risk-allocation.md)** — shipped (0.55.0/0.36.0); dated daily-close snapshots, cash-aware risk, explicit preview policy and whole-batch limits (never approval)
 - **[IDQ-003 Candidate Selection](investment-candidate-selection.md)** — planning; deterministic quotas, eligibility, and actual portfolio fit
-- **[IDQ-004 Evidence Snapshots](investment-evidence-snapshots.md)** — in-progress; point-in-time records, claim validation, and immutable manifests
+- **[IDQ-004 Evidence Snapshots](investment-evidence-snapshots.md)** — shipped (0.56.0/0.37.0); bounded structured-field verification, not full prose/source-truth certification; point-in-time records, claim validation, and immutable manifests
 - **[IDQ-005 Strategy Contracts](investment-research-strategy-contracts.md)** — planning; mandate, horizon, valuation methods, and invalidation conditions
 - **[IDQ-006 Agent Research Orchestration](investment-agent-research-orchestration.md)** — planning; structured coverage, counterevidence, budgets, and ablation
 - **[IDQ-007 Insights Risk Dimensions](investment-insights-risk-dimensions.md)** — planning; honest missing data and separate financial risk dimensions

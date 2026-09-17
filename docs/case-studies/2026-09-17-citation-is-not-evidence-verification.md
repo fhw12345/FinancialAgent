@@ -1,6 +1,6 @@
 ---
 title: A Citation Is Not Evidence Verification
-status: in-progress
+status: shipped
 version: backend@0.56.0, frontend@0.37.0
 last_updated: 2026-09-17
 owner: maintainer
@@ -96,5 +96,8 @@ Local validation passes backend 2180 / frontend 271 tests and 33 final image-onl
 browser scenarios, including Deep reload. Two post-review builds match dependency,
 asset and source manifests. A sealed API response survives actual backend recreation
 unchanged. The live account's private login/routing/policy state was preserved; no live
-inference was requested. Hosted publication is pending. See the
+inference was requested. Implementation `3f339f771d4f7214d83d002b5b6d84e6c47994d1`
+merged through protected PR #12 as `86d912e14e34bb9320ee0de54a6c8cc7ee72c830`.
+Hosted run 35209071011 passed every gate and all five browser lanes; their reports
+were downloaded and hashed, with no credential files included. See the
 [feature record](../features/investment-evidence-snapshots.md) for current receipts.
