@@ -97,6 +97,9 @@ def create_deep_subagent(
     Returns:
         DeepSubAgent wrapping a compiled deep agent graph
     """
+    from ...services.evidence.context import install_tools
+
+    install_tools(tools)
     tool_names = [getattr(t, "name", str(t)) for t in tools]
 
     graph = create_deep_agent(

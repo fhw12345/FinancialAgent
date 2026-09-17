@@ -3,6 +3,7 @@
 from typing import Any
 
 from ...database.repositories.portfolio_order_repository import PortfolioOrderRepository
+from ...models.evidence import EvidenceSummary
 from ...models.portfolio_risk import PortfolioRiskReview
 from ...services.decision_policy.context import current_run_id
 
@@ -43,6 +44,7 @@ async def _persist_decisions(
     expected_symbols: list[str],
     holdings: list[str] | None = None,
     portfolio_risk: PortfolioRiskReview | None = None,
+    evidence: EvidenceSummary | None = None,
 ) -> int:
     quotes: dict[str, float | None] = {}
     for symbol in expected_symbols:
@@ -69,6 +71,7 @@ async def _persist_decisions(
         quotes=quotes,
         holdings=holdings,
         portfolio_risk=portfolio_risk,
+        evidence=evidence,
     )
     return len(batch.results)
 

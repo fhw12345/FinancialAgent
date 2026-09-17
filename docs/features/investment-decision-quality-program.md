@@ -1,7 +1,7 @@
 ---
 title: Investment Decision Quality Program
 status: in-progress
-version: backend@0.55.0, frontend@0.36.0
+version: backend@0.56.0, frontend@0.37.0
 last_updated: 2026-09-17
 owner: maintainer
 related_paths:
@@ -25,7 +25,8 @@ related_paths:
 
 当前出货切片：[IDQ-001-A](investment-decision-safety-containment.md)。没有 ready、批准或
 paper 执行资格。[IDQ-002](investment-portfolio-risk-allocation.md) 已出货风险数学与
-非行动性配仓预览；IDQ-001-B、003–009 仍未实施，PH-009 继续暂停。
+非行动性配仓预览；[IDQ-004](investment-evidence-snapshots.md) 已获授权、正在实施。
+维护者确认顺序调整为 **004 → 005 → 001-B**，003 后移；其余任务未启动，PH-009 继续暂停。
 
 ## 1. 目标、基线与证据等级
 

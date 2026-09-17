@@ -17,6 +17,7 @@ from ...models.decision_assessment import (
     Readiness,
     SymbolAssessment,
 )
+from ...models.evidence import EvidenceSummary
 from ...models.portfolio_risk import PortfolioRiskReview
 from ...shared.sanitizers import sanitize_text
 
@@ -39,6 +40,7 @@ MESSAGES = {
     "UNSUPPORTED_EXPOSURE": "A SELL requires a known current long holding; shorts are unsupported.",
     "DECISION_UNAVAILABLE": "Decision generation did not produce a usable result.",
     "PORTFOLIO_RISK_UNAVAILABLE": "Full account risk data is unavailable; no subset risk clearance.",
+    "EVIDENCE_UNVERIFIED": "Material structured claims or core evidence are unverified; prose is not certified by matching fields.",
     "ALLOCATION_BLOCKED": "The whole-batch risk/allocation preview was rejected; see its constraints.",
 }
 
@@ -78,6 +80,7 @@ def build_assessment(
     holdings: list[str] | None = None,
     run_id: str | None = None,
     portfolio_risk: PortfolioRiskReview | None = None,
+    evidence: EvidenceSummary | None = None,
 ) -> DecisionAssessment:
     expected = list(dict.fromkeys(symbol.upper() for symbol in symbols))
     if not expected or any(
@@ -186,6 +189,10 @@ def build_assessment(
             }:
                 reasons.append(reason("ALLOCATION_BLOCKED"))
                 readiness = "blocked"
+        if evidence and evidence.errors:
+            reasons.append(reason("EVIDENCE_UNVERIFIED"))
+            if readiness != "blocked":
+                readiness = "insufficient_evidence"
         results.append(
             SymbolAssessment(
                 symbol=symbol,
@@ -210,6 +217,7 @@ def build_assessment(
         ),
         "proposals": proposals,
         "quotes": quotes,
+        "evidence": evidence.model_dump(mode="json") if evidence else None,
         "holdings": sorted(held) if held is not None else None,
     }
     digest = hashlib.sha256(
@@ -228,6 +236,7 @@ def build_assessment(
         created_at=utcnow(),
         backend_version=BACKEND_VERSION,
         portfolio_risk=portfolio_risk,
+        evidence=evidence,
         readiness=max((r.readiness for r in results), key=lambda item: PRIORITY[item]),
         results=results,
     )

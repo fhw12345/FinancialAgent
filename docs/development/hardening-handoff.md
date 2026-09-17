@@ -1,7 +1,7 @@
 ---
 title: Project Hardening Active Handoff
 status: in-progress
-version: backend@0.55.0, frontend@0.36.0
+version: backend@0.56.0, frontend@0.37.0
 last_updated: 2026-09-17
 owner: maintainer
 related_paths:
@@ -16,6 +16,20 @@ related_paths:
 # Project Hardening Active Handoff
 
 ## 1. Current State
+
+### IDQ-004 authorized / in progress (2026-09-17)
+
+Maintainer changed priority to **004 → 005 → 001-B**, postponing 003, then explicitly
+authorized [evidence snapshots](../features/investment-evidence-snapshots.md).
+Branch `feat/idq-004-evidence-snapshots`, target 0.56.0/0.37.0. Sealed per-symbol
+aggregates, collector fencing, typed source/unit/period/PIT metadata, frozen tools,
+structured-field validators and Portfolio/Deep dossiers are implemented locally.
+Matched fields do not certify prose/source truth; no ready/approval/strategy is enabled.
+Local backend 2180 / frontend 271 tests pass; final image-only acceptance passes 33
+scenarios. Two post-review no-cache builds match full manifests/assets/source trees.
+Hosted publication remains pending. Live 3013 runs accepted images with private
+credentials/routing revision 1 and unconfigured personal risk policy preserved.
+No live inference is required. PH-009 remains paused; no authorization to start 005 yet.
 
 ### IDQ-002 shipped (2026-09-17)
 
@@ -32,7 +46,7 @@ browser lanes; downloaded reports are verified in the
 [receipt](../features/assets/idq-002/hosted-validation.json). Live 3013 uses accepted
 images with its private credential volume and routing revision 1 preserved; no live
 inference was requested and no personal risk policy was configured automatically.
-PH-009 and IDQ-003–009 remain unstarted.
+At IDQ-002 shipment, PH-009 and IDQ-003–009 were unstarted. See current authorization above.
 
 ### IDQ-001-A shipped (2026-09-16)
 
@@ -204,15 +218,16 @@ config run. The 131 lint warnings are accepted non-increasing follow-up debt.
 | PH-009 Source decomposition | planning |
 | PH-010 Version metadata | shipped |
 
-## 5. Current Direction — IDQ-002; PH-009 Paused
+## 5. Current Direction — IDQ-004; PH-009 Paused
 
 The maintainer explicitly requested **not to execute PH-009**. IDQ-001-A is now
 separately authorized and shipped; see the current state above and the
 [program](../features/investment-decision-quality-program.md). IDQ-001 remains
 in-progress even after A ships. B requires confirmed policy and IDQ-002/004/005;
 none of those limits or approvals may be invented to make A look complete.
-IDQ-002 software is shipped as non-actionable risk/allocation previews. Other child plans remain planning. No paper
-execution or investment-quality claim.
+IDQ-002 software is shipped as non-actionable risk/allocation previews. IDQ-004 is
+now authorized; subsequent order is 005 then 001-B, with 003 postponed. Other child
+plans remain planning. No paper execution or investment-quality claim.
 
 ### PH-009 Resume References (Not an Active Work Queue)
 

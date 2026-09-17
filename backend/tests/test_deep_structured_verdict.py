@@ -2,9 +2,18 @@
 
 import json
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, MagicMock
 
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def evidence_transport_setup(monkeypatch):
+    from tests.evidence_fixtures import setup_deep
+
+    setup_deep(monkeypatch)
+
+
 from pydantic import ValidationError
 
 from src.agent.debate_types import (
@@ -123,6 +132,7 @@ def test_verdict_rejects_markdown_action_mismatch():
 async def test_persistence_records_research_not_an_executable_signal():
     order_repo = SimpleNamespace(
         assess=AsyncMock(),
+        collection=MagicMock(),
     )
     data_manager = SimpleNamespace(
         get_quote=AsyncMock(return_value=SimpleNamespace(price=123.45))
@@ -172,6 +182,7 @@ async def test_persistence_is_idempotent_by_analysis_id():
     )
     order_repo = SimpleNamespace(
         assess=AsyncMock(return_value=existing),
+        collection=MagicMock(),
     )
     data_manager = SimpleNamespace(
         get_quote=AsyncMock(return_value=SimpleNamespace(price=123.45))

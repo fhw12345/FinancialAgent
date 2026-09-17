@@ -1,19 +1,65 @@
 ---
 title: Point-In-Time Evidence Snapshots and Claim Validation
-status: planning
-version: n/a
-last_updated: 2026-09-14
+status: in-progress
+version: backend@0.56.0, frontend@0.37.0
+last_updated: 2026-09-17
 owner: maintainer
 related_paths:
-  - backend/src/services/data_manager/
-  - backend/src/services/insights/snapshot_inputs.py
-  - backend/src/agent/tools/
-  - backend/src/agent/portfolio/phase1_research.py
-  - backend/src/evals/tool_evidence.py
-  - frontend/src/components/portfolio/ResearchPanel.tsx
+  - backend/src/models/evidence.py
+  - backend/src/services/evidence/
+  - backend/src/database/repositories/evidence_repository.py
+  - backend/src/agent/portfolio/flows.py
+  - backend/src/agent/deep_workflow.py
+  - frontend/src/components/portfolio/EvidencePanel.tsx
+  - frontend/e2e/evidence.spec.ts
 ---
 
 # IDQ-004：统一时点证据快照与主张验证
+
+## Implementation Contract (2026-09-17)
+
+The maintainer reordered work: **004 → 005 → 001-B**; 003 is postponed. This task
+implements evidence infrastructure only. No ready/approval, investment strategy or
+personal limits are enabled, and no live model probes are required.
+
+- One bounded, per-symbol `research_snapshots` aggregate embeds typed records and
+  seals them with one Mongo CAS (maximum 1000 records / 2 MiB). This replaces the
+  proposed separate-record write protocol below: a standalone Mongo never exposes a
+  partially committed manifest. Lease generations fence concurrent/crashed collectors;
+  cancelled/failed collections are not consumable. A sealed retry returns the original
+  bytes, not a refetch. Explicit children retain parent evidence and never rewrite it.
+- Collect core quote, OHLCV, overview, cash flow, balance sheet, news and filing/insider
+  inputs through existing DataManager/market-service fallback paths with bounded calls.
+  Reuse IDQ-002 closing inputs. Preserve actual `_source` attribution; if a legacy DTO
+  lost provenance, record unknown rather than inventing it. Fetched time is never quote
+  observation/publication time; current provider-adjusted history is not a PIT archive.
+- Evidence tools are installed once at graph construction/composition boundaries. In a
+  sealed research ContextVar they return only matching manifest records; unsupported
+  tools/new symbols cannot perform fresh I/O. Outside that scope existing chat behavior
+  is unchanged. No per-request singleton/provider mutation or new fetch fallback chain.
+- Phase 1 returns an explicit `<claims-json>` structured numeric assertion block using
+  server IDs. Deterministic validation checks manifest membership, symbol, metric, unit,
+  economic period, time/PIT policy, quality/conflicts and value. Missing/malformed claims
+  remain unverified, not automatically extracted as true. All numeric claims are treated
+  as material regardless of model flags. Whitelisted derived methods execute in code.
+- **Verification is of structured fields against captured source records, not semantic
+  verification of all free prose.** Narrative/hypotheses/judgments remain explicitly
+  unverified; their numbers cannot gain verified status through a prose label. IDQ-005
+  must define strategy-required claims/freshness before 001-B may allow ready.
+- Portfolio Phase 2 and Deep consume sealed tools/context. A canonical manifest reminder
+  is separate from truncated prose. Material validation failure or missing core coverage
+  blocks decision progression. Deep persists a dossier before terminal completion and
+  associates it with the canonical run; sealed partial artifacts remain non-actionable.
+- Conflicts compare only like metric/unit/period/observation/adjustment slots using
+  versioned tolerances, never average providers. A closed-session quote can be compared
+  to the same session's raw closing reference; pre/post/regular quotes are distinct.
+- Read-only paginated snapshot/dossier/detail endpoints expose normalized facts and safe
+  source links, never a URL proxy, credentials or arbitrary filesystem paths. No deletion
+  API is introduced; referenced sealed snapshots are retained.
+- EV-01…12 plus lease/CAS/replay/cancel/BSON/budget/hostile-text and real browser scenarios
+  must pass, alongside all current gates and final-image/build/protected publication.
+  Preserve the live 3013 private credentials and routing revision; no test policy/data
+  is copied into that account. Record limitations and coverage explicitly, not as alpha.
 
 ## 1. 问题与边界
 
@@ -151,6 +197,39 @@ structured numeric fields、evidence IDs、method ID/version、materiality、ver
 - [ ] 未具备PIT能力的数据诚实标注，不能用于无污染历史验证的声明。
 - [ ] 总计划质量门禁、截图、版本、changelog、双语案例和protected PR完成。
 - [ ] 回滚停止新dossier/ready写入，保留旧sealed记录和兼容reader。
+
+## Local Validation / Publication Pending
+
+- Backend 2180 passed / 27 live integrations deselected, coverage rounds to 73%;
+  mypy 317 files, Black/Ruff/Bandit/deterministic evaluation and all critical floors pass.
+- Frontend 271 tests / 29 files, production lint zero warnings, total lint ceiling 131;
+  type-check and production build pass. Final image-only acceptance: 3 evidence + 3 risk
+  + 6 safety + 4 Copilot + 6 hardening + 11 default scenarios (33 total), including real
+  Deep graph completion/reload and two-provider conflict inspection.
+- Existing cache fallback regressions (EV-12) remain in the full suite; there is no new
+  fallback implementation or broad Redis invalidation in production.
+- Review found and fixed false available-zero news/filing counts from empty legacy lists;
+  those families now remain missing because emptiness cannot prove provider success.
+  Earlier images/screenshots predating that correction are not final acceptance evidence.
+- Typed verification is bounded: unreported financial currencies/periods and unsupported
+  tools stay explicit; baseline quote/overview coverage is not a complete strategy dossier.
+  Prose, source truth, real-time freshness and current-provider historical PIT are not certified.
+- The normal `portfolio-phase2@4` and `deep-verdict@2` base templates remain unchanged;
+  the appended manifest/claim contract is separately versioned by snapshot schema and
+  adapter `idq-004@1`, with diagnostic freshness/reconciliation/selection versions in the manifest.
+- Two post-review no-cache builds C/D match complete installed manifests (125 backend
+  distributions, 746 frontend paths), frontend build assets and runtime source trees.
+  Earlier images predating empty-list correction are excluded. Both UID 1000; no local
+  env or credentials in images; acceptance backend mounts fixtures only, frontend none.
+- [Build receipts](assets/idq-004/clean-build-validation.json),
+  [local validation](assets/idq-004/local-validation.json),
+  [canonical number](assets/idq-004/01-claim-evidence.png),
+  [conflicting sources](assets/idq-004/02-conflicting-evidence.png).
+- The sealed API response is byte-for-byte unchanged after actual backend recreation.
+  The live 3013 instance uses accepted images; private credentials, routing revision 1
+  and unconfigured personal policy are preserved. No live model probes or investment benchmark.
+- Hosted protected publication remains pending; local evidence is not shipment.
+- [Bilingual case study](../case-studies/2026-09-17-citation-is-not-evidence-verification.md).
 
 风险：存储膨胀、provider许可、修订财报、时区和转载新闻混淆。先适配核心数据、分页
 查询、去敏保存；没有能力核验的字段明确unknown，而不是扩大“verified”的定义。

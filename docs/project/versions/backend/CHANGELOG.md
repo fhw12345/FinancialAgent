@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.56.0] - 2026-09-17
+
+### IDQ-004 sealed evidence and structured claims
+
+- Adds bounded per-symbol evidence aggregates with atomic seal, replay, collector fencing, child lineage and immutable claim dossiers.
+- Captures quote/history/fundamentals/news/filing inputs through existing provider chains; retains source/unit/period/PIT uncertainty instead of using retrieval time as publication time.
+- Adds deterministic membership/value/unit/period/conflict/historical-cutoff checks and whitelisted derived calculators; free prose and source truth remain unverified.
+- Freezes tool data for Portfolio and Deep research, persists dossiers before success, and blocks missing/invalid material claims without enabling ready/approval.
+- Fixes legacy tool provenance that mislabeled Yahoo payloads as Alpha Vantage; preserves fractional statement values and explicit financial currency.
+- All local gates, 33 final-image browser cases and two unchanged-input post-review builds pass; hosted publication pending.
+
 ## [0.55.0] - 2026-09-17
 
 ### IDQ-002 deterministic portfolio risk and allocation previews

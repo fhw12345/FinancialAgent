@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-09-17
+
+### Sealed evidence navigation
+
+- Adds canonical dossier/claim/source detail views for Portfolio and restored Deep runs.
+- Displays values, units, economic periods, observation/publication/retrieval times, PIT uncertainty and conflicting sources without translating their IDs or numeric fields.
+- Explicitly distinguishes field matches from prose/source-truth verification and approval eligibility.
+- Adds schema/component and real-API browser coverage; 271 tests, 33 final-image scenarios and two equal-manifest builds pass; hosted publication pending.
+
 ## [0.36.0] - 2026-09-17
 
 ### Portfolio risk and non-actionable previews

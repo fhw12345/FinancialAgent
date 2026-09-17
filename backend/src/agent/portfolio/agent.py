@@ -40,6 +40,9 @@ class PortfolioAnalysisAgent(
         market_service: Any | None = None,
     ) -> None:
         self.mongodb = mongodb
+        from ...services.evidence.context import install_tools
+
+        install_tools(react_agent.tools)
         self.react_agent = react_agent
         self.settings = settings
         self.redis_cache = redis_cache

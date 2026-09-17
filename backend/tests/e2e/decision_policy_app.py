@@ -128,6 +128,50 @@ async def model_transport(request):
         text = "Recorded research based on the quote tool."
         if mode in ("missing", "check_unavailable"):
             text = "⚠️ **Cash flow unavailable for AAPL.** Cash flow is healthy."
+        for item in body.get("input", []):
+            if item.get("type") != "function_call_output":
+                continue
+            try:
+                records = json.loads(item.get("output", "")).get("records", [])
+            except (ValueError, TypeError):
+                continue
+            record = next(
+                (
+                    r
+                    for r in records
+                    if r["metric"] == "price.close_reference"
+                    and r["quality"] == "available"
+                ),
+                None,
+            )
+            if record:
+                assertion = {
+                    k: record[k]
+                    for k in [
+                        "symbol",
+                        "metric",
+                        "value",
+                        "unit",
+                        "period",
+                        "period_end",
+                    ]
+                }
+                text += (
+                    "<claims-json>"
+                    + json.dumps(
+                        {
+                            "claims": [
+                                {
+                                    **assertion,
+                                    "kind": "fact",
+                                    "evidence_ids": [record["evidence_id"]],
+                                }
+                            ]
+                        }
+                    )
+                    + "</claims-json>"
+                )
+                break
         return sse(text_output(text))
     if "get_stock_quote" in names:
         return sse(
@@ -169,6 +213,11 @@ class RecordedTicker:
             "regularMarketPrice": 100,
             "currency": "USD",
             "quoteType": "EQUITY",
+            "longName": "Recorded Company",
+            "financialCurrency": "USD",
+            "trailingPE": 20.0,
+            "trailingEps": 5.0,
+            "totalRevenue": 1000000.0,
         }
 
     def history(self, **kwargs):
@@ -260,6 +309,8 @@ async def reset(scenario: str):
         "holdings",
         "portfolio_orders",
         "decision_assessments",
+        "research_snapshots",
+        "research_dossiers",
         "risk_policy",
         "portfolio_risk_captures",
         "agent_runs",

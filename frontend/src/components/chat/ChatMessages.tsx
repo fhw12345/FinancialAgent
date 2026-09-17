@@ -15,6 +15,7 @@ import { useTranslated } from "../../hooks/useTranslated";
 import { ToolExecutionProgress } from "./ToolExecutionProgress";
 import { formatTime, localizeTimestamps } from "../../utils/timeFormatter";
 import { SymbolClarificationCard } from "./SymbolClarificationCard";
+import { RunEvidence } from "./RunEvidence";
 
 interface ChatMessagesProps {
   messages: ChatMessage[];
@@ -384,6 +385,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 />
               )}
             </div>
+            {msg.role === "assistant" &&
+            msg.run_id &&
+            msg.deep_events?.length ? (
+              <RunEvidence runId={msg.run_id} />
+            ) : null}
             {/* Deep accordion appears right after the last user message */}
             {isLastUserMessage && deepAccordion}
           </React.Fragment>

@@ -16,6 +16,7 @@ from ....database.repositories.message_repository import MessageRepository
 from ....services.agent_run_service import AgentRunService
 from ....services.chat_service import ChatService
 from ....services.context_window_manager import ContextWindowManager
+from ....services.decision_policy.context import create_run_task
 from ...schemas.chat_models import ChatRequest
 from .cancellation import (
     ClientDisconnected,
@@ -216,7 +217,7 @@ async def stream_with_deep_agent(
                     finally:
                         event_queue.put_nowait(None)
 
-                agent_task = asyncio.create_task(run_agent())
+                agent_task = create_run_task(lifecycle.run_id, run_agent())
 
                 while True:
                     await raise_if_disconnected(client_request)
@@ -240,7 +241,8 @@ async def stream_with_deep_agent(
                 await agent_task
                 result = result_holder
             else:
-                agent_task = asyncio.create_task(
+                agent_task = create_run_task(
+                    lifecycle.run_id,
                     asyncio.wait_for(
                         agent.ainvoke(
                             user_message=request.message,
@@ -253,7 +255,7 @@ async def stream_with_deep_agent(
                             resolved_symbol=resolution.symbol,
                         ),
                         timeout=600.0,
-                    )
+                    ),
                 )
                 result = await await_task_or_disconnect(
                     agent_task,
@@ -446,6 +448,7 @@ async def stream_with_deep_agent(
                         "route_selected": route_metadata,
                         "research_context": result.get("research_context"),
                         "verdict": result.get("verdict"),
+                        "evidence": result.get("evidence_summary"),
                     },
                     latency_metrics={
                         "tool_executions": tool_executions,

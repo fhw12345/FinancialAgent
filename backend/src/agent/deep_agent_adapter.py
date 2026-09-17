@@ -247,6 +247,7 @@ class DeepAgentAdapter:
                 "research_context": research_context.metadata(symbol=symbol),
                 "prompt_versions": used_prompt_versions,
                 "verdict": result.get("verdict"),
+                "evidence_summary": result.get("evidence_summary"),
             }
 
         except Exception as e:

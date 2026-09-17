@@ -353,6 +353,9 @@ def build_deep_workflow(
             research_context=state.get("research_context_with_report", ""),
             report=original_research[:6000],
         )
+        from ..services.evidence.context import reminder
+
+        prompt += reminder(state.get("symbol"))
         structured_llm = agent.verdict_llm.with_structured_output(DeepVerdict)
         raw_verdict = await structured_llm.ainvoke(
             [HumanMessage(content=prompt)],
