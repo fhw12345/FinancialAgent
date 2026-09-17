@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, model_validator
 
+from .portfolio_risk import PortfolioRiskReview
+
 Readiness = Literal["research_only", "insufficient_evidence", "needs_review", "blocked"]
 
 
@@ -68,6 +70,8 @@ class AssessmentReason(StrictRecord):
         "RUN_FAILED",
         "RUN_IN_PROGRESS",
         "RUN_UNVERIFIED",
+        "PORTFOLIO_RISK_UNAVAILABLE",
+        "ALLOCATION_BLOCKED",
     ]
     message: str = Field(max_length=500)
 
@@ -99,3 +103,4 @@ class DecisionAssessment(StrictRecord):
     action: None = None
     results: list[SymbolAssessment] = Field(min_length=1, max_length=100)
     run_status: str | None = None
+    portfolio_risk: PortfolioRiskReview | None = None

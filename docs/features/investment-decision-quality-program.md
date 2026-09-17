@@ -1,8 +1,8 @@
 ---
 title: Investment Decision Quality Program
 status: in-progress
-version: backend@0.54.0, frontend@0.35.0
-last_updated: 2026-09-16
+version: backend@0.55.0, frontend@0.36.0
+last_updated: 2026-09-17
 owner: maintainer
 related_paths:
   - backend/src/agent/portfolio/
@@ -24,7 +24,8 @@ related_paths:
 > 的闭环。目前仅 IDQ-001-A 安全收口已出货；其余目标仍待实施，工程验收不代表策略有超额收益。
 
 当前出货切片：[IDQ-001-A](investment-decision-safety-containment.md)。没有 ready、批准或
-paper 执行资格。IDQ-001-B、002–009 仍未实施，PH-009 继续暂停。
+paper 执行资格。[IDQ-002](investment-portfolio-risk-allocation.md) 正在实现风险数学与
+非行动性配仓预览；IDQ-001-B、003–009 仍未实施，PH-009 继续暂停。
 
 ## 1. 目标、基线与证据等级
 
@@ -188,8 +189,8 @@ API 后宣称跨层验证。各子计划列出场景及待生成的 `assets/idq-
 - 每个实现按实施提交 → 含其 hash 的出货文档提交 → protected PR CI → push/sync。
   版本、changelog、索引、双语案例、截图和 run receipts 缺一不可。
 
-**本次仅计划文档**：不 bump 应用版本，不生成虚假截图，不勾选以下实现验收。
-文档完整、链接有效和 PR CI 通过，只能说明计划已记录。
+最初的规划提交不包含实现验收。后续各子任务必须独立提供代码、版本、浏览器和
+出货证据；本总计划的未勾选项不因某个组件通过 CI 而自动变成已完成。
 
 ## 7. 三种完成条件必须分开
 

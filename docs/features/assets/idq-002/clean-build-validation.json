@@ -1,0 +1,53 @@
+{
+  "date": "2026-09-17",
+  "backend_version": "0.55.0",
+  "frontend_version": "0.36.0",
+  "dependencies_equal": true,
+  "frontend_assets_equal": true,
+  "note": "Two unchanged-input clean builds per component: backend A/B, frontend B/C. Frontend A predates the zero-cash HTML input correction and is not acceptance evidence.",
+  "runs": [
+    {
+      "backend": {
+        "image_id": "sha256:273f73ea9f2842307e9bd32b86bb40b1050092c37348f44567a6768d6d915cfb",
+        "user": "app",
+        "uid": "1000",
+        "dependency_count": 125,
+        "dependency_sha256": "33623b930da14c70a69d0fc550e35d4aa9ef68b04aab01c86354a2f1b619f087",
+        "local_env_files": 0
+      },
+      "frontend": {
+        "image_id": "sha256:7bcfac8a50a0ce6d7969bcafdf42082058e8bee9669d1e185669253edb352404",
+        "user": "node",
+        "uid": "1000",
+        "dependency_count": 746,
+        "dependency_sha256": "18efc4df1ef5ba048bc9ca2aea121864f0e5513dd1a2038cfed3f73e83a3420b",
+        "local_env_files": 0,
+        "build_assets_sha256": "b574c4fb7010a231d121769f586f158d5b41f35c340d83ac34d0266cc72f75ae"
+      }
+    },
+    {
+      "backend": {
+        "image_id": "sha256:105181da77d4a7cde106e1677aa9d3936ccc714922cb72204b43b6c2cf950e94",
+        "user": "app",
+        "uid": "1000",
+        "dependency_count": 125,
+        "dependency_sha256": "33623b930da14c70a69d0fc550e35d4aa9ef68b04aab01c86354a2f1b619f087",
+        "local_env_files": 0
+      },
+      "frontend": {
+        "image_id": "sha256:d5703da1501cf6c7cdf1726a18ffcf9b0804828595fc7645bb2a54309427d401",
+        "user": "node",
+        "uid": "1000",
+        "dependency_count": 746,
+        "dependency_sha256": "18efc4df1ef5ba048bc9ca2aea121864f0e5513dd1a2038cfed3f73e83a3420b",
+        "local_env_files": 0,
+        "build_assets_sha256": "b574c4fb7010a231d121769f586f158d5b41f35c340d83ac34d0266cc72f75ae"
+      }
+    }
+  ],
+  "production_sources_equal": true,
+  "accepted_runtime": {
+    "backend": "financialagent-idq002-backend:build-b",
+    "frontend": "financialagent-idq002-frontend:build-b"
+  }
+}

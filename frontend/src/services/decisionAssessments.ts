@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { apiClient } from "./api";
+import { riskSchema } from "./portfolioRisk";
 
 const readiness = z.enum([
   "research_only",
@@ -28,6 +29,7 @@ export const assessmentSchema = z.object({
   actionable: z.literal(false),
   action: z.null(),
   run_status: z.string().nullable(),
+  portfolio_risk: riskSchema.nullable().optional(),
   results: z.array(
     z.object({
       symbol: z.string(),

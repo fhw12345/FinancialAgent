@@ -7,7 +7,7 @@ Separates API layer from domain models for clean architecture.
 from datetime import UTC, datetime
 from typing import overload
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, FiniteFloat
 
 from ...models.holding import Holding
 
@@ -30,7 +30,7 @@ class HoldingCreateRequest(BaseModel):
     """Request model for creating a holding."""
 
     symbol: str = Field(..., description="Stock symbol", min_length=1, max_length=10)
-    quantity: int = Field(..., description="Number of shares", gt=0)
+    quantity: FiniteFloat = Field(..., description="Number of shares", gt=0)
     avg_price: float | None = Field(
         None, description="Average purchase price (auto-fetched if not provided)", gt=0
     )
@@ -50,7 +50,7 @@ class HoldingCreateRequest(BaseModel):
 class HoldingUpdateRequest(BaseModel):
     """Request model for updating a holding."""
 
-    quantity: int | None = Field(None, description="New quantity", gt=0)
+    quantity: FiniteFloat | None = Field(None, description="New quantity", gt=0)
     avg_price: float | None = Field(None, description="New average price", gt=0)
 
     class Config:
@@ -69,7 +69,7 @@ class HoldingResponse(BaseModel):
 
     holding_id: str = Field(..., description="Unique holding identifier")
     symbol: str = Field(..., description="Stock symbol")
-    quantity: int = Field(..., description="Number of shares")
+    quantity: FiniteFloat = Field(..., description="Number of shares")
     avg_price: float = Field(..., description="Average purchase price per share")
     current_price: float | None = Field(None, description="Current market price")
 

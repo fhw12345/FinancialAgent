@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.0] - 2026-09-17
+
+### IDQ-002 deterministic portfolio risk and allocation previews
+
+- Adds pinned XNYS daily-close sessions, explicit adjusted-close return inputs, account/invested sigma, invested HHI and honest missing-data coverage.
+- Adds immutable risk captures and user-confirmed preview-policy revision CAS; whole-batch post-cost position/sector/cash/turnover and stop-risk sizing checks never grant approval.
+- Integrates full local-account snapshots into holdings, picks and single-symbol research; persists current/proposed receipts with the same non-actionable assessment batch.
+- Preserves fractional shares across holding API/repository/context/manual ledger and avoids floating residuals on fractional sales.
+- Uses BSON-safe date serialization, stale account/policy projections, explicit provider failures and additional critical coverage floors.
+- Full local quality, 30 final-image browser cases and repeated clean-build manifests pass; protected publication pending. Full policy/PIT/strategy/approval remain pending.
+
 ## [0.54.0] - 2026-09-16
 
 ### IDQ-001-A decision safety containment

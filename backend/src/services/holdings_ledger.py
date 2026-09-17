@@ -60,7 +60,7 @@ async def apply_transaction(
         # restoring shares the user previously sold).
         await repo.create(
             holding_create=HoldingCreate(
-                symbol=tx.symbol, quantity=int(delta), avg_price=tx.price
+                symbol=tx.symbol, quantity=delta, avg_price=tx.price
             )
         )
         logger.info(
@@ -68,7 +68,10 @@ async def apply_transaction(
         )
         return
 
-    new_qty = existing.quantity + delta
+    # Decimal addition avoids fractional residuals (0.3 - 0.1 - 0.2).
+    from decimal import Decimal
+
+    new_qty = float(Decimal(str(existing.quantity)) + Decimal(str(delta)))
     if new_qty < 0:
         raise OversellError(
             f"Cannot sell {tx.quantity} {tx.symbol}: only {existing.quantity} held"
@@ -85,7 +88,7 @@ async def apply_transaction(
         new_avg = new_cost / new_qty
         await repo.update(
             existing.holding_id,
-            HoldingUpdate(quantity=int(new_qty), avg_price=round(new_avg, 4)),
+            HoldingUpdate(quantity=new_qty, avg_price=round(new_avg, 4)),
         )
         logger.info(
             "holding_updated_from_buy",
@@ -96,7 +99,7 @@ async def apply_transaction(
     else:
         # Forward SELL (or reverse BUY): qty drops, avg_price stays the same
         # (cost basis convention: SELL realizes P&L, doesn't reprice the lot).
-        await repo.update(existing.holding_id, HoldingUpdate(quantity=int(new_qty)))
+        await repo.update(existing.holding_id, HoldingUpdate(quantity=new_qty))
         logger.info(
             "holding_updated_from_sell",
             symbol=tx.symbol,

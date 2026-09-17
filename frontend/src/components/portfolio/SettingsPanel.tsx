@@ -49,7 +49,7 @@ export function SettingsPanel({ onSaved }: Props) {
   }, [data]);
 
   const cashNum = Number(cash);
-  const cashValid = cash !== "" && Number.isFinite(cashNum) && cashNum > 0;
+  const cashValid = cash !== "" && Number.isFinite(cashNum) && cashNum >= 0;
   const riskValid = risk !== "";
   const maxPosValid = maxPos >= 5 && maxPos <= 30;
   const allValid = cashValid && riskValid && maxPosValid;
@@ -98,13 +98,13 @@ export function SettingsPanel({ onSaved }: Props) {
               htmlFor="portfolio-cash"
               className="block text-xs font-medium text-gray-700 mb-1"
             >
-              Cash to Deploy ($)
+              Declared Account Cash ($)
             </label>
             <input
               id="portfolio-cash"
               type="number"
-              step="100"
-              min="1"
+              step="0.01"
+              min="0"
               placeholder="10000"
               value={cash}
               onChange={(e) => setCash(e.target.value)}
@@ -112,7 +112,7 @@ export function SettingsPanel({ onSaved }: Props) {
             />
             {touched && !cashValid && (
               <p className="mt-1 text-xs text-red-600">
-                Enter a positive number
+                Enter a non-negative number
               </p>
             )}
           </div>
@@ -144,7 +144,7 @@ export function SettingsPanel({ onSaved }: Props) {
 
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
-              Max Single Position: {maxPos}%
+              Legacy Model Size Hint: {maxPos}%
             </label>
             <input
               type="range"

@@ -3,6 +3,7 @@
 from typing import Any
 
 from ...database.repositories.portfolio_order_repository import PortfolioOrderRepository
+from ...models.portfolio_risk import PortfolioRiskReview
 from ...services.decision_policy.context import current_run_id
 
 
@@ -41,9 +42,16 @@ async def _persist_decisions(
     *,
     expected_symbols: list[str],
     holdings: list[str] | None = None,
+    portfolio_risk: PortfolioRiskReview | None = None,
 ) -> int:
     quotes: dict[str, float | None] = {}
     for symbol in expected_symbols:
+        if portfolio_risk:
+            quotes[symbol] = next(
+                (a.mark for a in portfolio_risk.snapshot.assets if a.symbol == symbol),
+                None,
+            )
+            continue
         try:
             quote = await data_manager.get_quote(symbol)
             quotes[symbol] = float(getattr(quote, "price", 0) or 0)
@@ -60,6 +68,7 @@ async def _persist_decisions(
         quality=data_quality_by_symbol,
         quotes=quotes,
         holdings=holdings,
+        portfolio_risk=portfolio_risk,
     )
     return len(batch.results)
 

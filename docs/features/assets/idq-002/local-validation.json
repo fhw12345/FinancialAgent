@@ -1,0 +1,122 @@
+{
+  "date": "2026-09-17",
+  "backend_version": "0.55.0",
+  "frontend_version": "0.36.0",
+  "backend_tests": 2142,
+  "backend_deselected": 27,
+  "coverage_rounded_percent": 73,
+  "mypy_files": 307,
+  "frontend_tests": 269,
+  "frontend_test_files": 28,
+  "production_lint_warnings": 0,
+  "total_frontend_lint_warnings": 131,
+  "image_only_e2e": {
+    "risk": 3,
+    "safety": 6,
+    "copilot": 4,
+    "hardening": 6,
+    "default": 11
+  },
+  "boundary": "Recorded outer providers/models, real APIs/graphs/provider adapters/Redis/Mongo; fixed XNYS risk clock. No live model requests or strategy-effectiveness test.",
+  "live_auth_routing_preserved": {
+    "authenticated": true,
+    "selected_model": "gpt-6-astra",
+    "routing_revision": 1,
+    "role_models": {
+      "router": "gpt-5.4-mini",
+      "simple_chat": "gpt-5.4-mini",
+      "summary": "gpt-5.4-mini",
+      "translation": "gpt-5.4-mini",
+      "consistency_check": "gpt-5.4-mini",
+      "react_agent": "gpt-5.6-sol",
+      "portfolio_research": "gpt-5.6-sol",
+      "sub_financial": "gpt-5.6-sol",
+      "sub_technical": "gpt-5.6-sol",
+      "deep_planner": "gpt-5.6-sol",
+      "sub_news": "gemini-3.8-flash",
+      "sub_debater": "grok-4.6",
+      "portfolio_decisions": "gpt-6-astra",
+      "verdict": "gpt-6-astra",
+      "eval_judge": "gpt-5.4"
+    }
+  },
+  "live_risk_policy": {
+    "revision": 0,
+    "policy": null,
+    "confirmed_at": null
+  },
+  "stage_a": {
+    "phase": "A",
+    "actionable": false,
+    "approval_enabled": false,
+    "risk_preview_available": true,
+    "pending": [
+      "confirmed_policy",
+      "review_approval",
+      "point_in_time_evidence",
+      "strategy_contract"
+    ]
+  },
+  "acceptance_backend": {
+    "image": "sha256:105181da77d4a7cde106e1677aa9d3936ccc714922cb72204b43b6c2cf950e94",
+    "mounts": [
+      {
+        "type": "bind",
+        "destination": "/app/tests"
+      }
+    ],
+    "ports": {
+      "8000/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "18096"
+        }
+      ]
+    }
+  },
+  "acceptance_frontend": {
+    "image": "sha256:7bcfac8a50a0ce6d7969bcafdf42082058e8bee9669d1e185669253edb352404",
+    "mounts": [],
+    "ports": {
+      "3000/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "3014"
+        }
+      ]
+    }
+  },
+  "live_backend": {
+    "image": "sha256:105181da77d4a7cde106e1677aa9d3936ccc714922cb72204b43b6c2cf950e94",
+    "mounts": [
+      {
+        "type": "volume",
+        "destination": "/home/app"
+      }
+    ],
+    "ports": {
+      "8000/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "18095"
+        }
+      ]
+    }
+  },
+  "live_frontend": {
+    "image": "sha256:7bcfac8a50a0ce6d7969bcafdf42082058e8bee9669d1e185669253edb352404",
+    "mounts": [],
+    "ports": {
+      "3000/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "3013"
+        }
+      ]
+    }
+  },
+  "screenshots": {
+    "01-account-risk.png": "600ce007d174905b4bc5158dec9ac4b7b0ef38efc12771c42d0fad01cdf8f431",
+    "02-posttrade-blocked.png": "6dbdee17ae70f96e4df323a1fc5f05509bb14160a3e3f3674f2c4de53e471f22"
+  }
+}

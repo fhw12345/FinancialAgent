@@ -14,7 +14,9 @@ from src.core.utils.date_utils import utcnow
 
 from ...models.chat import ChatCreate
 from ...models.message import MessageCreate, MessageMetadata
+from ...models.portfolio_risk import PortfolioRiskSnapshot, SessionReturn
 from ...models.trading_decision import SymbolAnalysisResult
+from ...services.portfolio_risk.estimator import estimate
 
 if TYPE_CHECKING:
     from ...database.repositories.chat_repository import ChatRepository
@@ -34,49 +36,21 @@ class Phase2DecisionsMixin:
     message_repo: "MessageRepository"
 
     async def _fetch_symbol_meta_for_risk(self, symbol: str) -> SymbolMeta:
-        """Fetch best-effort sector and beta metadata without blocking."""
-        import asyncio
+        from datetime import UTC, datetime
 
-        def _sync() -> SymbolMeta:
-            try:
-                import yfinance as yf
+        from ...services.portfolio_risk.calendar import completed_session
+        from ...services.portfolio_risk.provider import fetch_asset
 
-                info = yf.Ticker(symbol).info or {}
-            except Exception as e:
-                logger.warning("risk_meta_yf_fetch_failed", symbol=symbol, error=str(e))
-                return {}
-            if not info or len(info) <= 3:
-                return {}
-            return {
-                "sector": info.get("sector"),
-                "beta": info.get("beta"),
-            }
+        asset = await fetch_asset(symbol, completed_session(datetime.now(UTC)))
+        return {"sector": asset.sector, "beta": asset.beta}
 
-        return await asyncio.to_thread(_sync)
+    async def _fetch_symbol_returns_for_risk(self, symbol: str) -> list[SessionReturn]:
+        from datetime import UTC, datetime
 
-    async def _fetch_symbol_returns_for_risk(self, symbol: str) -> list[float]:
-        """Fetch the latest 60 daily returns without blocking."""
-        import asyncio
+        from ...services.portfolio_risk.calendar import completed_session
+        from ...services.portfolio_risk.provider import fetch_asset
 
-        def _sync() -> list[float]:
-            try:
-                import yfinance as yf
-
-                hist = yf.Ticker(symbol).history(period="3mo", interval="1d")
-            except Exception as e:
-                logger.warning(
-                    "risk_returns_yf_fetch_failed", symbol=symbol, error=str(e)
-                )
-                return []
-            if hist is None or hist.empty or "Close" not in hist:
-                return []
-            closes = hist["Close"].dropna()
-            if len(closes) < 2:
-                return []
-            returns = closes.pct_change().dropna().tolist()
-            return [float(r) for r in returns][-60:]
-
-        return await asyncio.to_thread(_sync)
+        return (await fetch_asset(symbol, completed_session(datetime.now(UTC)))).returns
 
     async def _make_portfolio_decisions(
         self,
@@ -128,23 +102,30 @@ class Phase2DecisionsMixin:
             class _PosAdapter:
                 def __init__(self, p: dict[str, Any]):
                     self.symbol = p["symbol"]
-                    self.quantity = int(p.get("quantity") or 0)
+                    self.quantity = float(p.get("quantity") or 0)
                     self.market_value = float(p.get("market_value") or 0.0)
                     self.current_price = (
                         self.market_value / self.quantity if self.quantity > 0 else 0.0
                     )
 
             adapted = [_PosAdapter(p) for p in positions] if positions else []
-            risk = await compute_portfolio_risk(
-                holdings=adapted,
-                cash=float(cash or 0.0),
-                fetch_meta=self._fetch_symbol_meta_for_risk,
-                fetch_returns=self._fetch_symbol_returns_for_risk,
-            )
+            if portfolio_context.get("risk_snapshot"):
+                risk = estimate(
+                    PortfolioRiskSnapshot.model_validate(
+                        portfolio_context["risk_snapshot"]
+                    )
+                ).model_dump(mode="json")
+            else:
+                risk = await compute_portfolio_risk(
+                    holdings=adapted,
+                    cash=float(cash or 0.0),
+                    fetch_meta=self._fetch_symbol_meta_for_risk,
+                    fetch_returns=self._fetch_symbol_returns_for_risk,
+                )
             risk_block = render_risk_block_for_prompt(risk)
         except Exception as e:
             logger.warning("phase2_risk_block_failed", error=str(e))
-            risk_block = ""
+            risk_block = "## Portfolio risk unavailable; no risk clearance or allocation eligibility."
 
         phase2_prompt = get_prompt("portfolio-phase2")
         decision_prompt = render_prompt(

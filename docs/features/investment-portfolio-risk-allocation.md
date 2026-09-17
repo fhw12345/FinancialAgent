@@ -1,8 +1,8 @@
 ---
 title: Deterministic Portfolio Risk and Allocation
-status: planning
-version: n/a
-last_updated: 2026-09-14
+status: in-progress
+version: backend@0.55.0, frontend@0.36.0
+last_updated: 2026-09-17
 owner: maintainer
 related_paths:
   - backend/src/agent/portfolio/risk_calculator.py
@@ -14,6 +14,49 @@ related_paths:
 ---
 
 # IDQ-002：组合风险口径与确定性配仓
+
+## Implementation Contract (2026-09-17)
+
+Authorized next task after IDQ-001-A. Stage A remains enforced: even a feasible
+allocation preview is **not ready, approved or executable**. No live model probes,
+real trades, inferred risk limits, or PH-009 work are authorized here.
+
+- New immutable daily-close USD/local_holdings risk snapshots use XNYS completed
+  sessions (pinned exchange-calendars), unadjusted close marks at one common session,
+  and explicit adjusted-close total returns (no forward fill). Sixty-session window,
+  minimum thirty shared observations; duplicate/non-session/future/bad rows are
+  unavailable, never silently dropped to publish subset risk. Cash has zero estimated
+  short-window volatility. Historical provider data is not a PIT archive.
+- Snapshot content hashes bind quantity/cost/cash account revision, provider inputs,
+  session, method and optional confirmed **risk-preview policy** revision. This is not
+  the complete InvestmentPolicy/strategy contract promised by IDQ-001-B/005.
+- A separate explicit policy confirmation form has no preselected personal limits.
+  It records equity-based position/sector/cash-floor/turnover/per-trade risk limits,
+  lot size, fees and slippage, using whole-document revision CAS. Existing
+  risk_tolerance/max_position_pct settings are not silently promoted into this policy.
+- Deterministic preview converts target weights to rounded share deltas with Decimal
+  arithmetic; optional stop sizing caps quantity with a new sizing receipt. Reject
+  invalid/duplicate/oversell/unknown-sector/incomplete-history batches. Check the entire
+  post-trade portfolio, including fees/slippage. Unfilled SELL proceeds cannot fund BUYs.
+  No reduce-only exception is enabled in v1. Rejected drafts are never silently resized
+  to fit cash or concentration limits, nor written into the holdings ledger.
+- Dashboard holdings/single-symbol/picks use the full local account snapshot; attach
+  current/proposed risk and allocation receipts to the same immutable assessment write.
+  Legacy model BUY size (% cash)/SELL size (% holding) is converted explicitly at the
+  adapter, not reinterpreted as a different denominator. Confidence does not size trades.
+- `/api/portfolio/risk` reads last saved capture, explicit refresh persists a new one;
+  `/risk-policy` GET/PUT confirms versioned preview limits. Read-time stale projection
+  compares account/policy revisions; old captures remain reproducible/read-only.
+  No API executes a supplied formula or makes approval eligibility true.
+- Fractional shares survive holding DTO/API/repository/manual-ledger/context/UI paths.
+  Manual cash remains an explicitly maintained cash balance, not a new settlement ledger.
+- Tests first: PR-01…12 plus calendar holidays, cash-only/zero-equity/constant returns,
+  CAS/replay/write failures/cancellation/stale account, legacy assessment reads and
+  non-actionability. Browser scenarios use actual API/Mongo/provider adapters and
+  synthetic external receipts; no browser-mocked risk/approval responses.
+- Release requires full existing gates, new critical floors, final-image browser proof,
+  curated screenshots, equal-manifest clean builds, versions/case study/indexes, protected
+  implementation and shipment PRs. The live 3013 credential volume/routing must survive.
 
 ## 1. 问题和目标
 
@@ -143,13 +186,44 @@ invested_sigma    = sqrt(w_invested' × covariance_daily × w_invested) × sqrt(
 
 ## 8. 接口、迁移与验收
 
-- 通过现有 portfolio summary/decision detail 增加 versioned risk payload；不混写旧
-  `portfolio_sigma_annualised` 的语义。旧值明确标 legacy definition。
+- 通过独立 `/api/portfolio/risk` 与 assessment detail 增加 versioned risk payload；
+  保持旧 summary 的响应兼容，避免普通列表查询隐式抓取市场历史。不混写旧
+  `portfolio_sigma_annualised` 的语义；旧入口的该别名为 null 并标明 legacy definition。
 - [ ] PR-01…12、真实 API browser、全部总计划质量门禁通过。
 - [ ] UI/API/receipts 的单位和分母一致；计算可按保存输入独立复算。
 - [ ] 缺历史和压力情景缺失时没有“风险为零”的回退。
 - [ ] 用户确认新政策后才启用新配仓；回滚保持历史可读并暂停新批准，不恢复假口径。
 - [ ] 截图、实现hash、component版本、changelog、双语案例和protected PR完整。
+
+## Local Validation / Publication Pending
+
+- Backend: 2142 passed / 27 live integrations deselected; coverage rounds to 73%.
+  Black/Ruff/mypy (307 source files), Bandit, deterministic Agent eval and repository
+  script tests pass. Critical floors retained and extended to new risk modules.
+- Frontend: 269 tests / 28 files, production lint zero warnings, total lint budget
+  unchanged at 131; type-check passes. Three source-mounted real-API scenarios pass:
+  cash/fractional/date persistence, explicit post-trade rejection, and policy CAS/staleness.
+- First failing regressions reproduced sigma 0.3202 vs expected ~0.03202 and rejected
+  0.5 shares. Browser discovered BSON date serialization; central write-boundary fix
+  has a BSON-codec regression. Calendar 4.11.3/pandas 3 incompatibility was fixed by
+  pinning compatible 4.13.2, not bypassing calendar validation.
+- No live model calls or investment-effectiveness test. Policy fixtures are synthetic,
+  not recommended personal limits. Full strategy/PIT/approval remains pending.
+- Final image-only acceptance: 3 risk + 6 safety + 4 Copilot + 6 hardening + 11 default
+  scenarios pass (30 total). Backend mounts fixtures only; frontend has no source or
+  dependency mounts. Both run as UID 1000.
+- Two unchanged-input clean builds per component match complete dependency manifests
+  (125 backend distributions / 746 frontend paths) and frontend assets: backend A/B,
+  frontend B/C. Frontend A preceded the zero-cash HTML input correction and is excluded.
+  [Build receipts](assets/idq-002/clean-build-validation.json) explicitly record this boundary.
+- [Local receipts](assets/idq-002/local-validation.json),
+  [cash/fractional risk screenshot](assets/idq-002/01-account-risk.png),
+  [post-trade rejection screenshot](assets/idq-002/02-posttrade-blocked.png).
+- The real localhost:3013 instance runs accepted images at 0.55.0/0.36.0. Private
+  Copilot credentials and the full role map/revision 1 survived recreation. Live risk
+  policy remains unconfigured; synthetic test limits were never copied to the user account.
+- Hosted protected publication remains pending; local tests alone do not establish shipment.
+- [Bilingual case study](../case-studies/2026-09-17-cash-is-not-missing-risk.md).
 
 风险：60日协方差不稳定、相关性在危机中改变、止损可能跳空。v1 明示这些限制；
 压力情景使用独立假设并标为 scenario，不把近60日统计等同最大损失保证。

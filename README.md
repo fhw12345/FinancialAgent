@@ -25,10 +25,14 @@ See [remote-access opt-in guidance](docs/development/getting-started.md#local-ne
 ## Research Safety
 
 Stage A records **non-actionable research assessments**, not approved BUY/SELL
-recommendations. Policy, evidence, portfolio-risk and strategy gates remain pending;
-no result can be `ready` or approved. Legacy decisions remain readable but cannot be
+recommendations. Daily-close risk and user-confirmed allocation **previews** are
+available; full investment policy, point-in-time evidence, strategy and approval
+integration remain pending. No result can be `ready` or approved. Legacy decisions remain readable but cannot be
 marked executed. Use **Add Transaction** independently to record trades you actually
-made. See [the Stage-A boundary](docs/features/investment-decision-safety-containment.md).
+made. On Portfolio, use **Refresh risk** to capture daily-close risk and explicitly
+confirm your own **Risk preview policy** limits; old model-size hints are not policy.
+Cash is your declared account balance, not an automatic settlement ledger.
+See [risk definitions](docs/features/investment-portfolio-risk-allocation.md) and [the Stage-A boundary](docs/features/investment-decision-safety-containment.md).
 
 ## LLM Provider
 

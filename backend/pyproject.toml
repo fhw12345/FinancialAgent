@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "financial-agent-backend"
-version = "0.54.0"
+version = "0.55.0"
 description = "AI-Enhanced Financial Analysis Platform Backend"
 authors = []
 # readme = "README.md"
@@ -23,6 +23,7 @@ dependencies = [
     "langgraph>=0.2.0",
     "langsmith>=0.2.0",
     "pandas>=2.1.0",
+    "exchange-calendars==4.13.2",          # Versioned XNYS sessions for portfolio risk
     "matplotlib>=3.8.0",
     "numpy>=1.26.0",
     "scipy>=1.11.0",
@@ -125,6 +126,7 @@ module = [
     "fastapi.*",
     "pydantic_settings.*",
     "pandas.*",
+    "exchange_calendars.*",
     "dashscope.*",
     "uvicorn.*",
     "langchain.*",

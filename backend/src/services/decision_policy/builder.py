@@ -17,6 +17,7 @@ from ...models.decision_assessment import (
     Readiness,
     SymbolAssessment,
 )
+from ...models.portfolio_risk import PortfolioRiskReview
 from ...shared.sanitizers import sanitize_text
 
 PRIORITY: dict[Readiness, int] = {
@@ -26,7 +27,7 @@ PRIORITY: dict[Readiness, int] = {
     "blocked": 3,
 }
 MESSAGES = {
-    "STAGE_A_ONLY": "Research only: confirmed policy, risk, evidence and strategy gates are not integrated.",
+    "STAGE_A_ONLY": "Research only: full investment policy, point-in-time evidence, strategy and approval integration remain pending; risk checks alone grant no eligibility.",
     "RESEARCH_MISSING": "Required symbol research is missing.",
     "CHECK_UNAVAILABLE": "Research consistency check did not complete.",
     "CONSISTENCY_VIOLATION": "Research contains unresolved consistency violations.",
@@ -37,6 +38,8 @@ MESSAGES = {
     "DUPLICATE_PROPOSAL": "Multiple model drafts target the same symbol.",
     "UNSUPPORTED_EXPOSURE": "A SELL requires a known current long holding; shorts are unsupported.",
     "DECISION_UNAVAILABLE": "Decision generation did not produce a usable result.",
+    "PORTFOLIO_RISK_UNAVAILABLE": "Full account risk data is unavailable; no subset risk clearance.",
+    "ALLOCATION_BLOCKED": "The whole-batch risk/allocation preview was rejected; see its constraints.",
 }
 
 
@@ -74,6 +77,7 @@ def build_assessment(
     quotes: dict[str, float | None] | None = None,
     holdings: list[str] | None = None,
     run_id: str | None = None,
+    portfolio_risk: PortfolioRiskReview | None = None,
 ) -> DecisionAssessment:
     expected = list(dict.fromkeys(symbol.upper() for symbol in symbols))
     if not expected or any(
@@ -170,6 +174,18 @@ def build_assessment(
                 )
             )
         )
+        if portfolio_risk:
+            if portfolio_risk.current.status != "complete":
+                reasons.append(reason("PORTFOLIO_RISK_UNAVAILABLE"))
+                if readiness != "blocked":
+                    readiness = "insufficient_evidence"
+            allocation = portfolio_risk.allocation
+            if allocation and set(allocation.constraints) - {
+                "POLICY_UNCONFIRMED",
+                "CURRENT_RISK_UNAVAILABLE",
+            }:
+                reasons.append(reason("ALLOCATION_BLOCKED"))
+                readiness = "blocked"
         results.append(
             SymbolAssessment(
                 symbol=symbol,
@@ -189,6 +205,9 @@ def build_assessment(
         "symbols": expected,
         "results": [r.model_dump(mode="json") for r in results],
         "run_id": run_id,
+        "portfolio_risk": (
+            portfolio_risk.model_dump(mode="json") if portfolio_risk else None
+        ),
         "proposals": proposals,
         "quotes": quotes,
         "holdings": sorted(held) if held is not None else None,
@@ -208,6 +227,7 @@ def build_assessment(
         source=source,
         created_at=utcnow(),
         backend_version=BACKEND_VERSION,
+        portfolio_risk=portfolio_risk,
         readiness=max((r.readiness for r in results), key=lambda item: PRIORITY[item]),
         results=results,
     )

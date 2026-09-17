@@ -1,8 +1,8 @@
 ---
 title: Project Hardening Active Handoff
 status: in-progress
-version: backend@0.54.0, frontend@0.35.0
-last_updated: 2026-09-16
+version: backend@0.55.0, frontend@0.36.0
+last_updated: 2026-09-17
 owner: maintainer
 related_paths:
   - docs/features/project-hardening-program.md
@@ -17,6 +17,19 @@ related_paths:
 
 ## 1. Current State
 
+### IDQ-002 authorized / in progress (2026-09-17)
+
+The maintainer authorized the next [risk/allocation task](../features/investment-portfolio-risk-allocation.md).
+Branch `feat/idq-002-portfolio-risk`, target 0.55.0/0.36.0. Implements daily-close
+XNYS snapshots, full-account vs invested sigma, dated covariance, fractional holdings,
+explicit preview-policy CAS and post-trade batch checks. No ready/approval is enabled.
+Backend 2142 / frontend 269 tests and strict gates pass locally. Final image-only
+acceptance passes 30 scenarios; two unchanged-input clean builds per component match
+full manifests/assets. Hosted publication is still pending. Live 3013 uses accepted
+images with its private credential volume and routing revision 1 preserved; no live
+inference was requested and no personal risk policy was configured automatically.
+PH-009 and IDQ-003–009 remain unstarted.
+
 ### IDQ-001-A shipped (2026-09-16)
 
 The maintainer authorized the narrow [safety containment slice](../features/investment-decision-safety-containment.md).
@@ -29,7 +42,8 @@ safety, four Copilot, six hardening and eleven default scenarios. Two clean buil
 match complete dependency/asset manifests. Hosted run 35087643908 passed every gate
 and all three browser lanes; downloaded reports were verified. See
 [receipts](../features/assets/idq-001-a/hosted-validation.json).
-IDQ-001/000 remain in-progress; PH-009 and IDQ-002–009 remain paused/planning.
+At A shipment, IDQ-001/000 remained in-progress and other children were planning;
+current IDQ-002 authorization is recorded above. PH-009 stays paused.
 The live localhost:3013 instance uses the final images; private credentials and the
 full role map/routing revision 1 were preserved. No new live inference was performed.
 
@@ -186,14 +200,15 @@ config run. The 131 lint warnings are accepted non-increasing follow-up debt.
 | PH-009 Source decomposition | planning |
 | PH-010 Version metadata | shipped |
 
-## 5. Current Direction — IDQ-001-A Only; PH-009 Paused
+## 5. Current Direction — IDQ-002; PH-009 Paused
 
 The maintainer explicitly requested **not to execute PH-009**. IDQ-001-A is now
 separately authorized and shipped; see the current state above and the
 [program](../features/investment-decision-quality-program.md). IDQ-001 remains
 in-progress even after A ships. B requires confirmed policy and IDQ-002/004/005;
 none of those limits or approvals may be invented to make A look complete.
-Other child plans remain planning. No paper execution or investment-quality claim.
+Only IDQ-002 is newly authorized. Other child plans remain planning. No paper
+execution or investment-quality claim.
 
 ### PH-009 Resume References (Not an Active Work Queue)
 

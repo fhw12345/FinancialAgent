@@ -20,6 +20,11 @@ THRESHOLDS = {
     "src/models/decision_assessment.py": 90.0,
     "src/services/decision_policy/builder.py": 85.0,
     "src/database/repositories/decision_assessment_repository.py": 85.0,
+    "src/models/portfolio_risk.py": 95.0,
+    "src/services/portfolio_risk/estimator.py": 95.0,
+    "src/services/portfolio_risk/allocation.py": 90.0,
+    "src/services/portfolio_risk/provider.py": 85.0,
+    "src/services/portfolio_risk/service.py": 80.0,
 }
 
 

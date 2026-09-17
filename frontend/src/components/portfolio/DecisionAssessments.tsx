@@ -7,6 +7,7 @@ import {
   type DecisionAssessment,
 } from "../../services/decisionAssessments";
 import { AssistantMarkdown } from "../chat/AssistantMarkdown";
+import { RiskReceipt } from "./RiskReceipt";
 import { getRecordValue } from "../../utils/safeRecord";
 
 const labels = {
@@ -51,8 +52,8 @@ export default function DecisionAssessments({
         data-testid="assessment-stage-a-notice"
       >
         {zh
-          ? "当前仅提供非行动性研究记录。政策、证据、组合风控和策略门禁尚未接齐，因此没有 ready、批准或执行资格。"
-          : "Non-actionable research only. Policy, evidence, portfolio-risk and strategy gates are not integrated: no ready, approval or execution eligibility."}
+          ? "当前仅提供非行动性研究。完整投资政策、时点证据、策略与审批尚未接齐；风险检查本身不赋予 ready、批准或执行资格。"
+          : "Non-actionable research only. Full investment policy, point-in-time evidence, strategy and approval integration remain pending; risk checks alone grant no eligibility."}
       </p>
       {query.isLoading && (
         <p role="status">{zh ? "加载评估…" : "Loading assessments…"}</p>
@@ -113,6 +114,9 @@ export default function DecisionAssessments({
                 </ul>
               </div>
             ))}
+            {batch.portfolio_risk && (
+              <RiskReceipt review={batch.portfolio_risk} />
+            )}
             <div className="mt-3 flex gap-3">
               <button
                 type="button"

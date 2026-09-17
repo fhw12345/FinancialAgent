@@ -7,7 +7,7 @@ Represents a stock position in user's portfolio.
 import typing
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, FiniteFloat
 
 
 class Holding(BaseModel):
@@ -19,7 +19,9 @@ class Holding(BaseModel):
 
     holding_id: str = Field(..., description="Unique holding identifier")
     symbol: str = Field(..., description="Stock symbol (e.g., AAPL)")
-    quantity: int = Field(..., description="Number of shares")
+    quantity: FiniteFloat = Field(
+        ..., description="Number of shares (including fractional)"
+    )
     avg_price: float = Field(..., description="Average purchase price per share")
     current_price: float | None = Field(None, description="Current market price")
 
@@ -104,7 +106,9 @@ class HoldingCreate(BaseModel):
     """Request model for creating a holding."""
 
     symbol: str = Field(..., description="Stock symbol", min_length=1, max_length=10)
-    quantity: int = Field(..., description="Number of shares", gt=0)
+    quantity: FiniteFloat = Field(
+        ..., description="Number of shares (including fractional)", gt=0
+    )
     avg_price: float | None = Field(
         None, description="Average purchase price (auto-fetched if not provided)", gt=0
     )
@@ -124,7 +128,7 @@ class HoldingCreate(BaseModel):
 class HoldingUpdate(BaseModel):
     """Request model for updating a holding."""
 
-    quantity: int | None = Field(None, description="New quantity", gt=0)
+    quantity: FiniteFloat | None = Field(None, description="New quantity", gt=0)
     avg_price: float | None = Field(None, description="New average price", gt=0)
 
     class Config:

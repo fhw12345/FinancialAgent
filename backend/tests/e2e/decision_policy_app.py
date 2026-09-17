@@ -167,9 +167,26 @@ class RecordedTicker:
             "beta": 1.0,
             "symbol": self.symbol,
             "regularMarketPrice": 100,
+            "currency": "USD",
+            "quoteType": "EQUITY",
         }
 
     def history(self, **kwargs):
+        if kwargs.get("auto_adjust") is False:
+            if mode == "missing":
+                raise RuntimeError("Recorded closing quote unavailable")
+            from src.services.portfolio_risk.calendar import sessions
+            from datetime import date, timedelta
+
+            end = date.fromisoformat(kwargs["end"]) - timedelta(days=1)
+            dates = sessions(end, 61)
+            adjusted = [100.0]
+            for change in [-0.02, 0.02] * 30:
+                adjusted.append(adjusted[-1] * (1 + change))
+            return pd.DataFrame(
+                {"Close": [100.0] * 61, "Adj Close": adjusted},
+                index=pd.to_datetime(dates),
+            )
         return pd.DataFrame(
             {"Close": [99, 100] * 31, "Volume": [1000000] * 62},
             index=pd.date_range(end=datetime.now(UTC), periods=62, freq="D"),
@@ -243,6 +260,8 @@ async def reset(scenario: str):
         "holdings",
         "portfolio_orders",
         "decision_assessments",
+        "risk_policy",
+        "portfolio_risk_captures",
         "agent_runs",
         "user_transactions",
         "chats",

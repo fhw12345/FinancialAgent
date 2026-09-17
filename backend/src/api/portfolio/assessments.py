@@ -27,9 +27,10 @@ async def decision_policy() -> dict[str, object]:
         "phase": "A",
         "actionable": False,
         "approval_enabled": False,
+        "risk_preview_available": True,
         "pending": [
             "confirmed_policy",
-            "portfolio_risk",
+            "review_approval",
             "point_in_time_evidence",
             "strategy_contract",
         ],

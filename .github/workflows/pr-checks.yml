@@ -168,6 +168,7 @@ jobs:
           bash scripts/run-ci-browser.sh
           bash scripts/run-ci-browser.sh copilot
           bash scripts/run-ci-browser.sh decision
+          bash scripts/run-ci-browser.sh risk
 
       - name: Upload quality reports and server logs (including failures)
         if: always()
