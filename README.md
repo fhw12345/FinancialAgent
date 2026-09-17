@@ -32,7 +32,11 @@ marked executed. Use **Add Transaction** independently to record trades you actu
 made. On Portfolio, use **Refresh risk** to capture daily-close risk and explicitly
 confirm your own **Risk preview policy** limits; old model-size hints are not policy.
 Cash is your declared account balance, not an automatic settlement ledger.
-See [risk definitions](docs/features/investment-portfolio-risk-allocation.md) and [the Stage-A boundary](docs/features/investment-decision-safety-containment.md).
+Research assessments also expose **Research evidence** dossiers: inspect exact values,
+units, periods and sources. “Fields match” means agreement with sealed records, not
+proof of source truth or the investment conclusion. Unknown publication/PIT remains unknown.
+See [evidence boundaries](docs/features/investment-evidence-snapshots.md),
+[risk definitions](docs/features/investment-portfolio-risk-allocation.md) and [the Stage-A boundary](docs/features/investment-decision-safety-containment.md).
 
 ## LLM Provider
 

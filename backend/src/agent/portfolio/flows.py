@@ -115,6 +115,17 @@ async def _research_and_assess(
     snapshot = await risk_service.capture(mongo, symbols)
     context.update(risk_service.prompt_context(snapshot))
     run_id = current_run_id() or f"{source}_{uuid.uuid4().hex}"
+    from ...services.evidence import service as evidence_service
+    from ...services.evidence.context import evidence_scope
+
+    evidence_snapshots = await evidence_service.prepare(
+        mongo,
+        dm,
+        getattr(pa, "market_service", None) or getattr(dm, "_av_service", None),
+        symbols,
+        run_id,
+        snapshot,
+    )
     repository = PortfolioOrderRepository(mongo.get_collection("portfolio_orders"))
     summary: dict[str, Any] = {
         "holdings_analyzed": 0,
@@ -128,17 +139,19 @@ async def _research_and_assess(
             pa = None
     if pa is not None:
         stubs = [_SymbolStub(symbol=s) for s in symbols]
-        results = await pa._run_phase1_research(
-            positions=stubs if as_holdings else [],
-            watchlist_items=[] if as_holdings else stubs,
-            user_id="local",
-            dry_run=False,
-            result_summary=summary,
-            suppress_chat=True,
-        )
+        with evidence_scope(evidence_snapshots):
+            results = await pa._run_phase1_research(
+                positions=stubs if as_holdings else [],
+                watchlist_items=[] if as_holdings else stubs,
+                user_id="local",
+                dry_run=False,
+                result_summary=summary,
+                suppress_chat=True,
+            )
         await _apply_consistency_gate(results)
     # The absent-agent path never invokes _phase2_for_symbols or another model.
     research = {r.symbol: r.analysis_text for r in results}
+    evidence = await evidence_service.dossiers(mongo, evidence_snapshots, research)
     quality = _build_data_quality_map(results)
     for symbol in symbols:
         if symbol not in research:
@@ -149,7 +162,11 @@ async def _research_and_assess(
     checked = complete and all(
         r.consistency_passed is True and not r.degraded_fields for r in results
     )
-    checked = checked and risk_service.estimate(snapshot).status == "complete"
+    checked = (
+        checked
+        and risk_service.estimate(snapshot).status == "complete"
+        and not evidence.errors
+    )
     if current_run_id():
         canonical = await mongo.get_collection("agent_runs").find_one(
             {"run_id": run_id}
@@ -160,13 +177,14 @@ async def _research_and_assess(
         )
     proposals: list[dict[str, Any]] = []
     if checked and pa is not None:
-        decision_result, decisions = await pa._run_phase2_decisions(
-            all_analysis_results=results,
-            portfolio_context=context,
-            user_id="local",
-            dry_run=False,
-            flow=source,
-        )
+        with evidence_scope(evidence_snapshots):
+            decision_result, decisions = await pa._run_phase2_decisions(
+                all_analysis_results=results,
+                portfolio_context=context,
+                user_id="local",
+                dry_run=False,
+                flow=source,
+            )
         proposals = _trading_decisions_to_dicts(decisions)
         if decision_result is None:
             for symbol in symbols:
@@ -194,6 +212,7 @@ async def _research_and_assess(
         expected_symbols=symbols,
         holdings=held,
         portfolio_risk=risk_review,
+        evidence=evidence,
     )
     return {
         "message": f"Stage A: saved {written} non-actionable research assessment(s). No trade recommendation is approved.",

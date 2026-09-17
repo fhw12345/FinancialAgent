@@ -8,6 +8,7 @@ import {
 } from "../../services/decisionAssessments";
 import { AssistantMarkdown } from "../chat/AssistantMarkdown";
 import { RiskReceipt } from "./RiskReceipt";
+import { EvidencePanel } from "./EvidencePanel";
 import { getRecordValue } from "../../utils/safeRecord";
 
 const labels = {
@@ -114,6 +115,7 @@ export default function DecisionAssessments({
                 </ul>
               </div>
             ))}
+            {batch.evidence && <EvidencePanel summary={batch.evidence} />}
             {batch.portfolio_risk && (
               <RiskReceipt review={batch.portfolio_risk} />
             )}

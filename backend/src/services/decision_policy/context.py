@@ -1,10 +1,19 @@
 """Bind assessment writes to the canonical background run, not per-flow random IDs."""
 
-from collections.abc import Iterator
+import asyncio
+from collections.abc import Coroutine, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
+from typing import Any
 
 _run_id: ContextVar[str | None] = ContextVar("assessment_run_id", default=None)
+
+
+def create_run_task[
+    T
+](run_id: str, coroutine: Coroutine[Any, Any, T]) -> asyncio.Task[T]:
+    with assessment_run(run_id):
+        return asyncio.create_task(coroutine)
 
 
 def current_run_id() -> str | None:

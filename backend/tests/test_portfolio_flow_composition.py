@@ -53,7 +53,14 @@ class _Collection:
 
 
 class _Mongo:
+    def __init__(self):
+        from tests.evidence_fixtures import Database
+
+        self.evidence = Database()
+
     def get_collection(self, name):
+        if name in ("research_snapshots", "research_dossiers"):
+            return self.evidence.get_collection(name)
         return _Collection(name)
 
 
@@ -97,6 +104,12 @@ class _OrderRepo:
 
 class _DataManager:
     def __init__(self, prices):
+        from tests.evidence_fixtures import market
+
+        self._av_service = market()
+        self.get_ohlcv = AsyncMock(return_value=[])
+        self.get_company_news = AsyncMock(return_value=[])
+        self.get_insider_trades = AsyncMock(return_value=[])
         self.prices = prices
 
     async def get_quote(self, symbol):
@@ -117,10 +130,12 @@ def _app(pa, dm=None):
 
 
 def _research(symbol="AAPL"):
+    from tests.evidence_fixtures import claim_block
+
     return SymbolAnalysisResult(
         symbol=symbol,
         analysis_type="holding",
-        analysis_text="Grounded research",
+        analysis_text="Grounded research" + claim_block(symbol),
         analysis_id=f"analysis_{symbol}",
         chat_id="ephemeral",
     )
@@ -279,7 +294,7 @@ async def test_candidate_research_uses_full_account_not_an_empty_portfolio(sourc
 
     _HoldingRepo.holdings = [SimpleNamespace(symbol="AAPL")]
     pa = SimpleNamespace(
-        _run_phase1_research=AsyncMock(return_value=[_research("MSFT")]),
+        _run_phase1_research=AsyncMock(side_effect=lambda **kw: [_research("MSFT")]),
         _run_phase2_decisions=AsyncMock(return_value=({}, [_decision("MSFT")])),
     )
     with patch("src.agent.portfolio.flows.PortfolioOrderRepository", _OrderRepo):

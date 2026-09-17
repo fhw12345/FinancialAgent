@@ -25,6 +25,14 @@ THRESHOLDS = {
     "src/services/portfolio_risk/allocation.py": 90.0,
     "src/services/portfolio_risk/provider.py": 85.0,
     "src/services/portfolio_risk/service.py": 80.0,
+    "src/models/evidence.py": 95.0,
+    "src/database/repositories/evidence_repository.py": 85.0,
+    "src/services/evidence/claims.py": 95.0,
+    "src/services/evidence/identity.py": 90.0,
+    "src/services/evidence/adapters.py": 85.0,
+    "src/services/evidence/collection.py": 90.0,
+    "src/services/evidence/context.py": 75.0,
+    "src/services/evidence/service.py": 85.0,
 }
 
 

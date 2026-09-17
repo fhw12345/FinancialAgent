@@ -2,6 +2,9 @@
 
 
 def render_research_prompt(symbol: str, language_directive: str) -> str:
+    from ...services.evidence.context import reminder
+
+    evidence = reminder(symbol)
     return f"""# Symbol Research: {symbol}
 
 **FIRST ACTION REQUIRED**: Call `get_stock_quote` with symbol="{symbol}" and
@@ -111,4 +114,5 @@ prose. You MUST:
    relies on these tokens to build the thesis citations W3.6 requires.
 
 {language_directive}
+{evidence}
 """

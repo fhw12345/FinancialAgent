@@ -1,0 +1,53 @@
+{
+  "date": "2026-09-17",
+  "backend_version": "0.56.0",
+  "frontend_version": "0.37.0",
+  "dependencies_equal": true,
+  "frontend_assets_equal": true,
+  "runs": [
+    {
+      "backend": {
+        "image_id": "sha256:0e28ef10fd335ae69d6c155cd608957477cce619af9563c97279c51245f97624",
+        "user": "app",
+        "uid": "1000",
+        "dependency_count": 125,
+        "dependency_sha256": "dcc7b6c19cb57598f799fbff12c9b69af66a483c94782ddc5e2d579e68c4c1c0",
+        "local_env_files": 0
+      },
+      "frontend": {
+        "image_id": "sha256:9790d7269861023db3ae423db06fb7441f59e7800e6386b0716d54af62131b66",
+        "user": "node",
+        "uid": "1000",
+        "dependency_count": 746,
+        "dependency_sha256": "18efc4df1ef5ba048bc9ca2aea121864f0e5513dd1a2038cfed3f73e83a3420b",
+        "local_env_files": 0,
+        "build_assets_sha256": "c410906311766baade232e5e7c4c8666956c9dcb8c5b844917c8f8c445837c1b"
+      }
+    },
+    {
+      "backend": {
+        "image_id": "sha256:818d8bdcb3967ebc726f255761ee1079434da201bcffba89b8cb4350522e2e53",
+        "user": "app",
+        "uid": "1000",
+        "dependency_count": 125,
+        "dependency_sha256": "dcc7b6c19cb57598f799fbff12c9b69af66a483c94782ddc5e2d579e68c4c1c0",
+        "local_env_files": 0
+      },
+      "frontend": {
+        "image_id": "sha256:5b501b01a554c11e843c3a51c07dac3b377dc5ab400f9fe9bce123a4c637b00c",
+        "user": "node",
+        "uid": "1000",
+        "dependency_count": 746,
+        "dependency_sha256": "18efc4df1ef5ba048bc9ca2aea121864f0e5513dd1a2038cfed3f73e83a3420b",
+        "local_env_files": 0,
+        "build_assets_sha256": "c410906311766baade232e5e7c4c8666956c9dcb8c5b844917c8f8c445837c1b"
+      }
+    }
+  ],
+  "production_sources_equal": true,
+  "note": "Final post-review builds C/D only; earlier pre-empty-list-correction images are excluded. Fixture/test/docs changed during acceptance, application source/dependency inputs did not.",
+  "accepted_runtime": {
+    "backend": "financialagent-idq004-backend:build-c",
+    "frontend": "financialagent-idq004-frontend:build-c"
+  }
+}

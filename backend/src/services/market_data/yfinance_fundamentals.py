@@ -76,7 +76,8 @@ def _overview_sync(symbol: str) -> dict[str, Any]:
         "Sector": info.get("sector") or "",
         "Exchange": info.get("exchange") or "",
         "Country": info.get("country") or "",
-        "Currency": info.get("currency") or "USD",
+        "Currency": info.get("currency") or "",
+        "FinancialCurrency": info.get("financialCurrency") or "",
         "MarketCapitalization": _av_str(info.get("marketCap")),
         "PERatio": _av_str(info.get("trailingPE")),
         "ForwardPE": _av_str(info.get("forwardPE")),
@@ -145,7 +146,7 @@ def _df_to_reports(
         }
         for av_key, candidates in fields:
             v = _row_value(df, candidates, col)
-            report[av_key] = _av_str(int(v) if isinstance(v, (int, float)) else v)
+            report[av_key] = _av_str(v)
         reports.append(report)
     return reports
 

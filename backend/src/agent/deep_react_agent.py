@@ -47,6 +47,9 @@ class DeepReActAgent:
         self.max_debate_rounds = max_debate_rounds
         self._order_repo = order_repo
         self._data_manager = data_manager
+        from ..services.evidence.context import install_tools
+
+        install_tools(tools)
         self.tools_dict = get_all_tools_dict(tools)
         self.exa_api_key: str = getattr(settings, "exa_api_key", "")
 
@@ -142,6 +145,11 @@ class DeepReActAgent:
             raise ValueError(f"Unsupported structured verdict action: {action}")
         if self._order_repo is None:
             raise RuntimeError("Deep assessment storage is unavailable")
+        from ..services.evidence.service import deep_summary
+
+        evidence = await deep_summary(
+            self._order_repo.collection.database, run_id, symbol, research_text
+        )
         # A directional research stance is not a sized trading proposal.
         await self._order_repo.assess(
             request_key=run_id,
@@ -150,6 +158,7 @@ class DeepReActAgent:
             symbols=[symbol],
             proposals=[],
             research={symbol: research_text},
+            evidence=evidence,
         )
 
     async def _invoke_subagent(
@@ -308,7 +317,11 @@ class DeepReActAgent:
             enable_debate=context.enable_debate,
         )
         try:
-            raw_final_state = await workflow.ainvoke(initial_state, config=config)
+            from ..services.evidence.service import run_deep
+
+            raw_final_state = await run_deep(
+                self, workflow, initial_state, config, symbol
+            )
         except Exception as exc:
             logger.error(
                 "Analysis failed",

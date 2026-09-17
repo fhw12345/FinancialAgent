@@ -5,6 +5,14 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+
+@pytest.fixture(autouse=True)
+def evidence_transport_setup(monkeypatch):
+    from tests.evidence_fixtures import setup_deep
+
+    setup_deep(monkeypatch)
+
+
 from src.agent.debate_types import DeepVerdict
 from src.agent.deep_react_agent import DeepReActAgent
 from src.agent.deep_research_context import DeepResearchContext

@@ -170,7 +170,7 @@ def create_fundamental_tools(
                 asof = _parse_av_date(data.get("LatestQuarter")) or datetime.now(UTC)
                 return _append_source_footnote(
                     body,
-                    source="alphavantage",
+                    source=str(data.get("_source") or "alphavantage"),
                     symbol=symbol,
                     field_code="OV",
                     asof=asof,
@@ -269,7 +269,7 @@ def create_fundamental_tools(
                     asof = _statement_asof(data, period=period) or datetime.now(UTC)
                     return _append_source_footnote(
                         body,
-                        source="alphavantage",
+                        source=str(data.get("_source") or "alphavantage"),
                         symbol=symbol,
                         field_code="CF",
                         asof=asof,
@@ -288,7 +288,7 @@ def create_fundamental_tools(
                     asof = _statement_asof(data, period=period) or datetime.now(UTC)
                     return _append_source_footnote(
                         body,
-                        source="alphavantage",
+                        source=str(data.get("_source") or "alphavantage"),
                         symbol=symbol,
                         field_code="BS",
                         asof=asof,
@@ -358,7 +358,7 @@ def create_fundamental_tools(
                 ) or datetime.now(UTC)
                 return _append_source_footnote(
                     body,
-                    source="alphavantage",
+                    source=str(data.get("_source") or "alphavantage"),
                     symbol=symbol,
                     field_code="INS",
                     asof=asof,
@@ -423,7 +423,7 @@ def create_fundamental_tools(
                 )
                 return _append_source_footnote(
                     body,
-                    source="alphavantage",
+                    source=str(data.get("_source") or "alphavantage"),
                     symbol=symbol,
                     field_code="EAR",
                     asof=asof,

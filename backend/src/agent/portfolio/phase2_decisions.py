@@ -139,6 +139,9 @@ class Phase2DecisionsMixin:
             current_session=current_session,
         )
 
+        from ...services.evidence.context import reminder
+
+        decision_prompt += reminder()
         try:
             from ..portfolio_phase2_prompt import GovernedPortfolioDecisionList
 
