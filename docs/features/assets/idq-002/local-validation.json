@@ -3,6 +3,8 @@
   "backend_version": "0.55.0",
   "frontend_version": "0.36.0",
   "backend_tests": 2142,
+  "saved_wire_snapshot_recomputed": true,
+  "supplemental_terminal_oracle": "Positive cash 200 below required floor 300: CASH_FLOOR, blocked, actionable=false; not included in automated test count",
   "backend_deselected": 27,
   "coverage_rounded_percent": 73,
   "mypy_files": 307,

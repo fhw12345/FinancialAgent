@@ -1,6 +1,6 @@
 ---
 title: Cash Is Not Missing Risk
-status: in-progress
+status: shipped
 version: backend@0.55.0, frontend@0.36.0
 last_updated: 2026-09-17
 owner: maintainer
@@ -93,5 +93,7 @@ Final-image acceptance passed 30 scenarios. Two unchanged-input builds per compo
 match full dependency/asset manifests: backend A/B and frontend B/C; frontend A was
 excluded after the zero-cash HTML input correction. The live account's credentials
 and role configuration were preserved; no synthetic risk limits were applied there.
-Hosted shipment remains pending; see the
+Implementation `17b6a4b6884794302c747fa162b03f6856636417` merged through protected
+PR #10 as `ef1fd2cd6897858fcb7a32638b871e2148215ded`. Hosted CI 35193568404
+passed all gates and retained all four browser-lane reports; see the
 [feature record](../features/investment-portfolio-risk-allocation.md).

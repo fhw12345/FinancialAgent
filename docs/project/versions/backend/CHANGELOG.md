@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Integrates full local-account snapshots into holdings, picks and single-symbol research; persists current/proposed receipts with the same non-actionable assessment batch.
 - Preserves fractional shares across holding API/repository/context/manual ledger and avoids floating residuals on fractional sales.
 - Uses BSON-safe date serialization, stale account/policy projections, explicit provider failures and additional critical coverage floors.
-- Full local quality, 30 final-image browser cases and repeated clean-build manifests pass; protected publication pending. Full policy/PIT/strategy/approval remain pending.
+- Shipped through protected PR #10 (`ef1fd2c`), implementation `17b6a4b`, CI 35193568404, after full local quality, 30 final-image browser cases and repeated clean builds. Full policy/PIT/strategy/approval remain pending.
 
 ## [0.54.0] - 2026-09-16
 

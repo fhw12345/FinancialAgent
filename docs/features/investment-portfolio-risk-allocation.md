@@ -1,6 +1,6 @@
 ---
 title: Deterministic Portfolio Risk and Allocation
-status: in-progress
+status: shipped
 version: backend@0.55.0, frontend@0.36.0
 last_updated: 2026-09-17
 owner: maintainer
@@ -147,12 +147,12 @@ invested_sigma    = sqrt(w_invested' × covariance_daily × w_invested) × sqrt(
 
 ## 6. 实施切片
 
-- [ ] 将 B04 现金口径和日期错配固化为失败测试。
-- [ ] 建 dated returns adapter、snapshot quality 与 estimator DTO。
-- [ ] 修空组合、缺数、fractional quantities、HHI/beta 文案。
-- [ ] 建 deterministic allocation 与 whole-batch policy checks。
-- [ ] 接入 holdings、single-symbol 与 picks 的拟议组合，不仅检查旧持仓。
-- [ ] UI 并列展示 current/proposed 风险与缺失覆盖；解释拒绝的真实约束。
+- [x] 将 B04 现金口径和日期错配固化为失败测试。
+- [x] 建 dated returns adapter、snapshot quality 与 estimator DTO。
+- [x] 修空组合、缺数、fractional quantities、HHI/beta 文案。
+- [x] 建 deterministic allocation 与 whole-batch policy checks。
+- [x] 接入 holdings、single-symbol 与 picks 的拟议组合，不仅检查旧持仓。
+- [x] UI 并列展示 current/proposed 风险与缺失覆盖；解释拒绝的真实约束。
 
 ## 7. 验证矩阵
 
@@ -189,13 +189,13 @@ invested_sigma    = sqrt(w_invested' × covariance_daily × w_invested) × sqrt(
 - 通过独立 `/api/portfolio/risk` 与 assessment detail 增加 versioned risk payload；
   保持旧 summary 的响应兼容，避免普通列表查询隐式抓取市场历史。不混写旧
   `portfolio_sigma_annualised` 的语义；旧入口的该别名为 null 并标明 legacy definition。
-- [ ] PR-01…12、真实 API browser、全部总计划质量门禁通过。
-- [ ] UI/API/receipts 的单位和分母一致；计算可按保存输入独立复算。
-- [ ] 缺历史和压力情景缺失时没有“风险为零”的回退。
-- [ ] 用户确认新政策后才启用新配仓；回滚保持历史可读并暂停新批准，不恢复假口径。
-- [ ] 截图、实现hash、component版本、changelog、双语案例和protected PR完整。
+- [x] PR-01…12、真实 API browser、全部总计划质量门禁通过。
+- [x] UI/API/receipts 的单位和分母一致；计算可按保存输入独立复算。
+- [x] 缺历史和压力情景缺失时没有“风险为零”的回退。
+- [x] 用户确认风险预览政策后才启用新配仓预览（仍非批准）；回滚保持历史可读并暂停新批准，不恢复假口径。
+- [x] 截图、实现hash、component版本、changelog、双语案例和protected PR完整。
 
-## Local Validation / Publication Pending
+## Validation / Shipment
 
 - Backend: 2142 passed / 27 live integrations deselected; coverage rounds to 73%.
   Black/Ruff/mypy (307 source files), Bandit, deterministic Agent eval and repository
@@ -222,7 +222,16 @@ invested_sigma    = sqrt(w_invested' × covariance_daily × w_invested) × sqrt(
 - The real localhost:3013 instance runs accepted images at 0.55.0/0.36.0. Private
   Copilot credentials and the full role map/revision 1 survived recreation. Live risk
   policy remains unconfigured; synthetic test limits were never copied to the user account.
-- Hosted protected publication remains pending; local tests alone do not establish shipment.
+- Implementation `17b6a4b6884794302c747fa162b03f6856636417` merged through
+  [protected PR #10](https://github.com/fhw12345/FinancialAgent/pull/10) as
+  `ef1fd2cd6897858fcb7a32638b871e2148215ded`.
+  [Hosted CI 35193568404](https://github.com/fhw12345/FinancialAgent/actions/runs/35193568404)
+  passed every quality gate and all four browser lanes. The downloaded artifact
+  retains all four HTML reports with verified hashes and no credential files;
+  see [hosted receipts](assets/idq-002/hosted-validation.json). No admin bypass.
+- A stored API snapshot independently reproduces all current risk metrics. A separate
+  terminal oracle also verifies positive cash below the cash floor (200 < 300) is blocked;
+  this supplemental check is not included in the 2142 automated-test count.
 - [Bilingual case study](../case-studies/2026-09-17-cash-is-not-missing-risk.md).
 
 风险：60日协方差不稳定、相关性在危机中改变、止损可能跳空。v1 明示这些限制；
