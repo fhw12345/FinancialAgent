@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adds typed annual peer PE and disclosed FCFF-proxy DCF model estimates, fiscal/unit/scope/freshness checks and deterministic monitoring flags; unavailable/inapplicable inputs never get invented values.
 - Uses separately registered Portfolio/Deep research-stance prompts with null portfolio action/execution intent; no short-term geometry or confidence-as-probability promotion.
 - Preserves legacy reads and old sealed hashes; later configuration edits only affect future research and mark historical receipts stale.
-- Local 2217 tests, strict gates/coverage, 37 final-image browser cases and two unchanged-input clean builds pass; hosted publication pending. No ready/approval is enabled.
+- Shipped through protected PR #14 (`0a9699d`), implementation `6104c3a`, CI 35321163990, after 2217 tests, strict gates/coverage, 37 final-image cases and two clean builds. No ready/approval is enabled.
 
 ## [0.56.0] - 2026-09-17
 
