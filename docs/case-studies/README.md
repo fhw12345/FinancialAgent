@@ -13,6 +13,7 @@ can decide whether the case is relevant before reading the Chinese body.
 
 | Date       | Title                                                                                       | Stack                   | Topic                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-18 | [Approval Is Not a Fill](2026-09-18-approval-is-not-a-fill.md) | Policy / Mongo CAS / Playwright | Explicit targets, subset revalidation, mutation tickets and atomic expiry; approval is not execution |
 | 2026-09-18 | [A Research Mandate Is Not a Trade](2026-09-18-research-mandate-is-not-a-trade.md) | Strategy / valuation / CAS / Playwright | Confirmed horizons, immutable assumptions, evidence-bound models and separated stance/action |
 | 2026-09-17 | [A Citation Is Not Evidence Verification](2026-09-17-citation-is-not-evidence-verification.md) | Evidence / LangGraph / Mongo / Playwright | Immutable facts, claim edges, source attribution and honest verification boundaries |
 | 2026-09-17 | [Cash Is Not Missing Risk](2026-09-17-cash-is-not-missing-risk.md) | Portfolio / covariance / BSON / Playwright | Cash-aware risk, dated inputs, fractional shares and explicit whole-batch previews |

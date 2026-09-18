@@ -12,6 +12,7 @@ from ...models.research_strategy import (
     StrategyState,
     StrategyVersion,
 )
+from ...services.decision_policy.control import service_write
 from ...services.evidence.identity import digest
 from ...services.portfolio_risk.service import policy_state
 
@@ -105,6 +106,7 @@ async def deactivate(db: EvidenceStorage, expected: int) -> StrategyState:
     return next_state
 
 
+@service_write
 async def _save(db: EvidenceStorage, value: StrategyState, expected: int) -> None:
     try:
         saved = await db.get_collection("research_strategy_state").find_one_and_update(

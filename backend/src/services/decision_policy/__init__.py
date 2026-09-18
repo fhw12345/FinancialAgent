@@ -1,1 +1,1 @@
-"""Deterministic Stage-A safety containment; no ready or approval capability."""
+"""Non-actionable research containment and separate deterministic human paper-review gates."""

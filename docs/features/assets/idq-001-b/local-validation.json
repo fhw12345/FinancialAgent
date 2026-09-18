@@ -1,0 +1,60 @@
+{
+  "date": "2026-09-18",
+  "status": "post_review_local_acceptance_passed",
+  "backend_version": "0.58.0",
+  "frontend_version": "0.39.0",
+  "backend": {
+    "passed": 2286,
+    "live_integrations_deselected": 27,
+    "warnings": 135,
+    "aggregate_coverage_percent": 74.8867710888847,
+    "strict_mypy_source_files": 339,
+    "black": "passed",
+    "ruff": "passed",
+    "critical_coverage": "all original and nine new review floors passed; no reductions",
+    "new_review_floors": "models 95%; control/policy/evidence/gate/projection/service/storage/API 90%",
+    "bandit_medium_high": "passed",
+    "deterministic_agent_eval": "passed without live model calls",
+    "script_tests": 9,
+    "script_subtests": 6
+  },
+  "frontend": {
+    "passed": 275,
+    "test_files": 31,
+    "production_lint_warnings": 0,
+    "total_lint_warnings": 131,
+    "typescript": "passed",
+    "production_build": "passed"
+  },
+  "final_image_browser": {
+    "backend_image": "sha256:de651980a54892cd313249c2999a35055ba0cc6d410080f29676a29415d905e4",
+    "frontend_image": "sha256:8d5c2756d515daf1d435ae5781361c4e3a4cc8a7156f8f74b500f908fc8e6f2e",
+    "backend_application_mounts": 0,
+    "frontend_mounts": 0,
+    "review": 6,
+    "strategy": 4,
+    "evidence": 3,
+    "risk": 3,
+    "safety": 6,
+    "copilot": 4,
+    "hardening": 6,
+    "default": 11,
+    "total": 43,
+    "review_clock": "2026-09-17T12:00:00Z",
+    "substitutions": "outer providers/model transports; explicit storage faults; recorded application/Mongo clock operand only",
+    "mocked_readiness_approval_or_risk_results": false,
+    "raw_reports": "backend/artifacts/idq001b-browser (ignored)",
+    "curated_screenshots": ["01-approved-review.png", "02-stale-approval.png", "03-rejected-subset.png"]
+  },
+  "publication": "protected implementation and shipment PRs pending",
+  "notes": [
+    "Two post-review unchanged-input no-cache builds C/D pass complete dependency, asset and source equality; final-image 43-case acceptance and recreation proof were rerun on D. Pre-correction A/B images are excluded; see clean-build-validation.json.",
+    "Build A completed; a newline-escaping defect in the external inspection driver was corrected and the same images re-inspected before build B. No application change or failed build was counted as successful.",
+    "Initial development browser attempt preceded server readiness; the bounded retry and all final-image scenarios use unchanged acceptance assertions.",
+    "Holding POST was asserted against its actual existing HTTP 200 contract. Injected storage failure asserts UI error plus independent real API 500 and zero publication, including when CORS hides the browser response.",
+    "A custom module-scoped coverage command caused eager NumPy import/re-import during collection; it is excluded. Canonical full-repository pytest/coverage passes without dependency changes or test skips.",
+    "Final review reproduced finite-operand FCFF overflow granting false zero debt risk/ready in a peer-PE-only case. The shared helper now rejects nonfinite arithmetic; a red-to-green real-gate regression and all post-review gates pass.",
+    "Holding test fixtures were narrowly extracted to honor the 500-line changed-source gate, preserving every assertion; PH-009 remains paused.",
+    "Screenshots/receipts use declared synthetic inputs. No live investment parameters were filled, no live model probe was authorized, and approval creates neither actual nor paper fills."
+  ]
+}

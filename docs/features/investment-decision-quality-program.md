@@ -1,7 +1,7 @@
 ---
 title: Investment Decision Quality Program
 status: in-progress
-version: backend@0.57.0, frontend@0.38.0
+version: backend@0.58.0, frontend@0.39.0
 last_updated: 2026-09-18
 owner: maintainer
 related_paths:
@@ -22,6 +22,10 @@ related_paths:
 >
 > **TL;DR (中文)**：保留已通过工程门禁的底座，补齐“事实有依据、建议受约束、结果能验证”
 > 的闭环。目前 IDQ-001-A、002、004、005 的安全、风险、证据和研究契约组件已出货；ready/批准等其余目标仍待实施，工程验收不代表策略有超额收益。
+
+[IDQ-001-B 人工 paper 审阅](investment-decision-review-gates.md) 已获实施授权，当前 in-progress；
+用户手动目标权重、确定性 ready、子集批准与失效门禁仍须通过完整验收／出货流程。
+不自动配置任何真实个人参数，不包含模拟或真实成交。
 
 当前出货切片：[IDQ-001-A](investment-decision-safety-containment.md)。没有 ready、批准或
 paper 执行资格。[IDQ-002](investment-portfolio-risk-allocation.md) 已出货风险数学与

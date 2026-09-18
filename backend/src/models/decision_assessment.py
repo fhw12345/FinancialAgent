@@ -88,6 +88,9 @@ class SymbolAssessment(StrictRecord):
     proposal: DraftProposal | None = None
     research: str = Field(default="", max_length=100000)
     research_truncated: bool = False
+    consistency_status: Literal["passed", "failed", "unavailable", "not_recorded"] = (
+        "not_recorded"
+    )
     exposure_context: Literal["held", "flat", "unknown"] = "unknown"
     reasons: list[AssessmentReason] = Field(min_length=1)
 

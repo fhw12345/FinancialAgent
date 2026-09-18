@@ -29,6 +29,7 @@ from ..models.portfolio_analysis import (
     PortfolioSettingsUpdate,
 )
 from ..services.agent_run_service import PORTFOLIO_RUN_LEASE, AgentRunService
+from ..services.decision_policy.control import mutation
 from .dependencies.rate_limit import limiter
 from .dependencies.run_deps import (
     get_agent_run_repository,
@@ -89,9 +90,10 @@ async def put_settings(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors()
         ) from e
-    await mongodb.get_collection("user_settings").replace_one(
-        {}, validated.model_dump(), upsert=True
-    )
+    async with mutation(mongodb):
+        await mongodb.get_collection("user_settings").replace_one(
+            {}, validated.model_dump(), upsert=True
+        )
     return validated
 
 

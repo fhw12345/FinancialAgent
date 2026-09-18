@@ -21,6 +21,7 @@ from ...models.portfolio_risk import (
     RiskPosition,
     TargetProposal,
 )
+from ..decision_policy.control import service_write
 from . import provider
 from .allocation import allocate
 from .calendar import completed_session
@@ -75,6 +76,7 @@ async def policy_state(mongo: MongoDB) -> PolicyState:
     return PolicyState.model_validate(row)
 
 
+@service_write
 async def confirm_policy(
     mongo: MongoDB, policy: RiskPolicy, expected: int
 ) -> PolicyState:

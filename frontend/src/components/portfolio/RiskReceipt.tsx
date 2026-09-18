@@ -76,8 +76,8 @@ export function RiskReceipt({ review }: { review: RiskReview }) {
         <div className="border-t pt-2" data-testid="allocation-receipt">
           <strong>Proposed / 拟议组合: {review.allocation.status}</strong>
           <p className="text-amber-900">
-            Non-actionable preview only / 非行动性预览 — no ready, approval or
-            execution.
+            Non-actionable risk preview / 非行动性风险预览 — no ready, approval
+            or execution from this calculation alone.
           </p>
           {review.snapshot.policy.policy && (
             <p data-testid="risk-policy-limits">

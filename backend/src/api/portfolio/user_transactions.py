@@ -21,6 +21,7 @@ from ...models.user_transaction import (
     UserTransactionCreate,
     UserTransactionUpdate,
 )
+from ...services.decision_policy.control import ledger_write
 from ...services.holdings_ledger import (
     NoHoldingToSellError,
     OversellError,
@@ -59,6 +60,7 @@ async def list_user_transactions(
     status_code=status.HTTP_201_CREATED,
 )
 @limiter.limit("60/minute")
+@ledger_write
 async def create_user_transaction(
     request: Request,
     payload: UserTransactionCreate,
@@ -90,6 +92,7 @@ async def create_user_transaction(
 
 @router.patch("/user-transactions/{transaction_id}", response_model=UserTransaction)
 @limiter.limit("60/minute")
+@ledger_write
 async def update_user_transaction(
     request: Request,
     transaction_id: str,
@@ -155,6 +158,7 @@ async def update_user_transaction(
     "/user-transactions/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT
 )
 @limiter.limit("60/minute")
+@ledger_write
 async def delete_user_transaction(
     request: Request,
     transaction_id: str,

@@ -171,6 +171,7 @@ jobs:
           bash scripts/run-ci-browser.sh risk
           bash scripts/run-ci-browser.sh evidence
           bash scripts/run-ci-browser.sh strategy
+          bash scripts/run-ci-browser.sh review
 
       - name: Upload quality reports and server logs (including failures)
         if: always()

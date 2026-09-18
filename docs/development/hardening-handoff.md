@@ -1,7 +1,7 @@
 ---
 title: Project Hardening Active Handoff
 status: in-progress
-version: backend@0.57.0, frontend@0.38.0
+version: backend@0.58.0, frontend@0.39.0
 last_updated: 2026-09-18
 owner: maintainer
 related_paths:
@@ -16,6 +16,24 @@ related_paths:
 # Project Hardening Active Handoff
 
 ## 1. Current State
+
+### IDQ-001-B authorized / in progress (2026-09-18)
+
+Maintainer said “do it” after the B scope discussion. Active branch:
+`feat/idq-001-b-review-gates`. The first release accepts explicit user target weights,
+not model sizing; introduces separate confirmed policy/proposal/human-review receipts;
+and coordinates publication against account/configuration mutation tickets, generation
+CAS and an atomic server-time deadline. Research/legacy execution remains disabled.
+No live policy, strategy, credential or role change is authorized by this implementation.
+See the [working spec](../features/investment-decision-review-gates.md). Local validation:
+2286 backend / 275 frontend tests, strict mypy 339 files, all critical floors/security/
+eval/script checks, zero production lint warnings / 131 total, two equal-manifest/source
+clean builds C/D and **43 final-image browser cases** pass. Final review reproduced
+finite-operand FCFF overflow falsely clearing debt risk in a PE-only case; the shared
+helper now rejects nonfinite results. Pre-correction A/B images are excluded; all
+quality, build, browser and recreation acceptance was rerun after the fix. Curated screenshots and real
+recreation proofs are under `assets/idq-001-b/`. Protected implementation/shipment
+publication and preservation-checked live rollout are pending; B is not yet shipped.
 
 ### IDQ-005 shipped (2026-09-18)
 
@@ -36,7 +54,8 @@ gates and six browser lanes; downloaded reports are verified in the
 Live 3013 uses accepted 0.57.0/0.38.0 images; private login/routing is preserved and
 personal risk/strategy values remain unconfigured. Preserve live
 3013 credentials/routing revision 1 and unconfigured risk/strategy state. No live probes.
-PH-009/003 stay postponed; 001-B is a subsequent task, not implicitly authorized.
+At the IDQ-005 shipment, PH-009/003 stayed postponed and 001-B required a subsequent
+instruction. Current B authorization/acceptance is recorded above.
 
 ### IDQ-004 shipped (2026-09-17)
 
@@ -244,7 +263,7 @@ config run. The 131 lint warnings are accepted non-increasing follow-up debt.
 | PH-009 Source decomposition | planning |
 | PH-010 Version metadata | shipped |
 
-## 5. Current Direction — IDQ-005; PH-009 Paused
+## 5. Current Direction — IDQ-001-B Publication; PH-009 Paused
 
 The maintainer explicitly requested **not to execute PH-009**. IDQ-001-A is now
 separately authorized and shipped; see the current state above and the
@@ -253,9 +272,10 @@ in-progress even after A ships. B requires confirmed policy and IDQ-002/004/005;
 none of those limits or approvals may be invented to make A look complete.
 IDQ-002 software is shipped as non-actionable risk/allocation previews. IDQ-004 is
 shipped as a bounded evidence/structured-field layer; subsequent order is 005 then
-001-B, with 003 postponed. IDQ-005 is now shipped as research-contract software; 001-B still
-requires a separate instruction. Other child
-plans remain planning. No paper execution or investment-quality claim.
+001-B, with 003 postponed. IDQ-005 is shipped as research-contract software. The maintainer
+has now explicitly authorized B; its local implementation/acceptance is recorded above,
+with protected publication pending. Other child plans remain planning. No paper execution
+or investment-quality claim.
 
 ### PH-009 Resume References (Not an Active Work Queue)
 

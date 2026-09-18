@@ -2,6 +2,7 @@
 
 from ...models.evidence import EvidenceSnapshot
 from ...models.research_strategy import MonitoringCheck, ValuationResult
+from .calculators import debt_to_fcff
 from .evaluation import MissingInput, select
 
 
@@ -57,33 +58,32 @@ def checks(
                 reason="Comparable positive prior EPS is unavailable.",
             )
         )
-    model = next(
-        (
-            v
-            for v in valuations
-            if v.method == "fcff_proxy_dcf@1" and v.status == "available"
-        ),
-        None,
-    )
-    if model:
-        inputs = {i.metric: i for i in model.inputs}
-        fcff = (
-            inputs["operating_cash_flow"].value
-            + inputs["interest_expense"].value * (1 - p.tax_rate)
-            - inputs["capital_expenditure"].value
-        )
-        ratio = (inputs["total_debt"].value - inputs["cash"].value) / fcff
+    # Monitoring a declared debt limit must not force selection of the DCF
+    # valuation method. Use the same typed proxy arithmetic without a projection.
+    try:
+        cfo = select(snapshot, "operating_cash_flow", "USD")
+        capex, interest, debt, cash = [
+            select(snapshot, metric, "USD", end=cfo.period_end)
+            for metric in (
+                "capital_expenditure",
+                "interest_expense",
+                "total_debt",
+                "cash",
+            )
+        ]
+        inputs = [cfo, capex, interest, debt, cash]
+        ratio = debt_to_fcff(cfo, capex, interest, debt, cash, p.tax_rate)
         out.append(
             MonitoringCheck(
                 rule="debt_to_fcf",
                 status="triggered" if ratio > p.debt_to_fcf_limit else "not_triggered",
                 value=ratio,
                 threshold=p.debt_to_fcf_limit,
-                evidence_ids=[i.evidence_id for i in model.inputs],
+                evidence_ids=[i.evidence_id for i in inputs],
                 reason="Net debt / positive modeled FCFF proxy, not an audited ratio.",
             )
         )
-    else:
+    except ValueError:
         out.append(
             MonitoringCheck(
                 rule="debt_to_fcf",

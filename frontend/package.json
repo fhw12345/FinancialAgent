@@ -1,6 +1,6 @@
 {
   "name": "financial-agent-frontend",
-  "version": "0.38.0",
+  "version": "0.39.0",
   "type": "module",
   "description": "Financial Agent frontend (personal local fork)",
   "scripts": {
@@ -32,6 +32,7 @@
     "test:e2e:chart-volume-overlay": "playwright test e2e/chart-volume-overlay.spec.ts",
     "test:e2e:evaluation-governance": "playwright test e2e/evaluation-governance.spec.ts",
     "test:e2e:strategy": "playwright test e2e/strategy-contract.spec.ts",
+    "test:e2e:review": "playwright test e2e/decision-review.spec.ts",
     "test:e2e:evidence": "playwright test e2e/evidence.spec.ts",
     "test:e2e:portfolio-risk": "playwright test e2e/portfolio-risk.spec.ts",
     "test:e2e:decision-safety": "playwright test e2e/decision-safety.spec.ts",

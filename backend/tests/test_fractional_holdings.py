@@ -13,6 +13,9 @@ from src.services.holdings_ledger import apply_transaction
 @pytest.mark.asyncio
 async def test_fractional_repository_and_wire_response_are_not_integers():
     collection = MagicMock()
+    from tests.evidence_fixtures import Database
+
+    collection.database = Database()
     collection.insert_one = AsyncMock()
     saved = await HoldingRepository(collection).create(
         holding_create=HoldingCreate(symbol="AAPL", quantity=0.5, avg_price=100)

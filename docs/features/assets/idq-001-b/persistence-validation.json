@@ -1,0 +1,26 @@
+{
+  "date": "2026-09-18",
+  "stack": "isolated recorded image-only review",
+  "backend_version": "0.58.0",
+  "frontend_version": "0.39.0",
+  "real_recreation": true,
+  "approval_current_before": true,
+  "approval_current_after": true,
+  "comparisons": [
+    {
+      "path": "/api/portfolio/review-policy",
+      "before_sha256": "4de9b1135ae2cf59b442033e7f75d1d319bc70e16d5e1bc39080f2ddaf894961",
+      "after_sha256": "4de9b1135ae2cf59b442033e7f75d1d319bc70e16d5e1bc39080f2ddaf894961"
+    },
+    {
+      "path": "/api/portfolio/review-batches/review_a0266ced36aa8784a410dc6847043160ba4a5abcef9eb98be67405de012a10b9",
+      "before_sha256": "d84e83373cc4f8130a8289f8d4d3253c1010c454a47ffffe8460ed96ee8bf398",
+      "after_sha256": "d84e83373cc4f8130a8289f8d4d3253c1010c454a47ffffe8460ed96ee8bf398"
+    },
+    {
+      "path": "/api/portfolio/assessments/assessment_9b7f3f8a227065bcf87aa6c3d942687b",
+      "before_sha256": "378f8205e9061749a37322a75cbb7eade8a1aa4f836674bd97aba009d5adbe2e",
+      "after_sha256": "378f8205e9061749a37322a75cbb7eade8a1aa4f836674bd97aba009d5adbe2e"
+    }
+  ]
+}

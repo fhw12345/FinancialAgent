@@ -32,7 +32,7 @@ describe("assessment visibility", () => {
     mount();
     expect(
       await screen.findByTestId("assessment-stage-a-notice"),
-    ).toHaveTextContent("Non-actionable research only");
+    ).toHaveTextContent("These records remain non-actionable research");
     expect(
       screen.queryByRole("button", { name: /approve|execute/i }),
     ).toBeNull();

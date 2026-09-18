@@ -160,6 +160,8 @@ class AgentRunRepository:
         run_id: str,
         **fields: Any,
     ) -> AgentRun | None:
+        if "status" in fields:
+            raise ValueError("Run status changes require a legal transition")
         updates = {key: value for key, value in fields.items() if value is not None}
         if not updates:
             return await self.get(run_id)
@@ -197,6 +199,8 @@ class AgentRunRepository:
         to_status: AgentRunStatus,
         **fields: Any,
     ) -> AgentRun | None:
+        if "status" in fields:
+            raise ValueError("Transition fields cannot override run status")
         allowed_from = [
             status
             for status in from_statuses
