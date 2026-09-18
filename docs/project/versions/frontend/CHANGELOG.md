@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Displays deterministic readiness, gate reasons, sealed/policy IDs, subset approval receipts and stale/cancelled/superseded history separately from non-actionable research.
 - Requires human subset confirmation; approval never submits a trade or changes holdings/cash, and independent manual bookkeeping invalidates old eligibility.
 - Preserves research/legacy safety notices, runtime response validation and explicit failure states; no model inference on opening or saving review settings.
-- Adds component tests and real-API ready/approval/missing-data/subset/race/storage-failure scenarios. Shipment references follow protected acceptance.
+- Adds component tests and real-API ready/approval/missing-data/subset/race/storage-failure scenarios. Shipped through protected PR #16 (`2b8abdd`) after 275 frontend tests, 43 post-review final-image cases, clean builds C/D and CI 35345193633. Live read-only UI verification made no model calls or personal-policy activation.
 
 ## [0.38.0] - 2026-09-18
 

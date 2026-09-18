@@ -1,7 +1,7 @@
 ---
 title: Point-In-Time Evidence Snapshots and Claim Validation
 status: shipped
-version: backend@0.57.0, frontend@0.38.0
+version: backend@0.58.0, frontend@0.39.0
 last_updated: 2026-09-18
 owner: maintainer
 related_paths:
@@ -44,8 +44,11 @@ personal limits are enabled, and no live model probes are required.
   as material regardless of model flags. Whitelisted derived methods execute in code.
 - **Verification is of structured fields against captured source records, not semantic
   verification of all free prose.** Narrative/hypotheses/judgments remain explicitly
-  unverified; their numbers cannot gain verified status through a prose label. IDQ-005
-  must define strategy-required claims/freshness before 001-B may allow ready.
+  unverified; their numbers cannot gain verified status through a prose label.
+  [IDQ-005](investment-research-strategy-contracts.md) now defines research inputs and
+  freshness; [scoped 001-B](investment-decision-review-gates.md) separately ships
+  user-target forward paper-review eligibility. Evidence output itself remains
+  non-actionable; B does not upgrade it into source truth or historical PIT certification.
 - Portfolio Phase 2 and Deep consume sealed tools/context. A canonical manifest reminder
   is separate from truncated prose. Material validation failure or missing core coverage
   blocks decision progression. Deep persists a dossier before terminal completion and

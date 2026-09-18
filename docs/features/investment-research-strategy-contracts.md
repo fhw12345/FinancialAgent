@@ -1,7 +1,7 @@
 ---
 title: Investment Mandates and Research Strategy Contracts
 status: shipped
-version: backend@0.57.0, frontend@0.38.0
+version: backend@0.58.0, frontend@0.39.0
 last_updated: 2026-09-18
 owner: maintainer
 related_paths:
@@ -62,6 +62,16 @@ or activation of a live strategy.
 - Test-first ST-01…10 plus CAS/replay/stale/cancel/persistence/unit/scope/old-record controls;
   real API/Mongo browser evidence, all existing gates, final repeated builds, versions,
   bilingual case study and two-stage protected publication are required.
+
+### Integration after IDQ-001-B (2026-09-18)
+
+[Scoped B](investment-decision-review-gates.md) is now shipped at 0.58.0/0.39.0.
+Strategy conclusions remain non-actionable; only a separate user-target batch can
+qualify for human paper review. Monitoring now uses shared typed FCFF-proxy arithmetic
+without requiring DCF to be selected as a valuation method, and explicitly rejects
+finite-operand overflow before it can appear as zero debt risk. This does not change
+the user-confirmed mandate, claim source truth, or backfill historical receipts.
+Paper execution remains future IDQ-008. Live strategy/assumptions are still unconfigured.
 
 ## 1. Context / Objective
 

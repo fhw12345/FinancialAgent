@@ -1,8 +1,8 @@
 ---
 title: Deterministic Portfolio Risk and Allocation
 status: shipped
-version: backend@0.55.0, frontend@0.36.0
-last_updated: 2026-09-17
+version: backend@0.58.0, frontend@0.39.0
+last_updated: 2026-09-18
 owner: maintainer
 related_paths:
   - backend/src/agent/portfolio/risk_calculator.py
@@ -208,7 +208,11 @@ invested_sigma    = sqrt(w_invested' × covariance_daily × w_invested) × sqrt(
   has a BSON-codec regression. Calendar 4.11.3/pandas 3 incompatibility was fixed by
   pinning compatible 4.13.2, not bypassing calendar validation.
 - No live model calls or investment-effectiveness test. Policy fixtures are synthetic,
-  not recommended personal limits. Full strategy/PIT/approval remains pending.
+  not recommended personal limits. At this component's shipment, strategy/approval
+  were pending. [005](investment-research-strategy-contracts.md) and
+  [scoped 001-B](investment-decision-review-gates.md) now supply separate research
+  contracts and forward human-review gates; this risk preview alone still grants no
+  eligibility, and historical PIT/source truth/paper fills are not certified.
 - Final image-only acceptance: 3 risk + 6 safety + 4 Copilot + 6 hardening + 11 default
   scenarios pass (30 total). Backend mounts fixtures only; frontend has no source or
   dependency mounts. Both run as UID 1000.

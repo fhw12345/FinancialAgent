@@ -46,7 +46,7 @@
     "raw_reports": "backend/artifacts/idq001b-browser (ignored)",
     "curated_screenshots": ["01-approved-review.png", "02-stale-approval.png", "03-rejected-subset.png"]
   },
-  "publication": "protected implementation and shipment PRs pending",
+  "publication": "implementation 2ced1281b5de87efec0931a220232983fa92d054, protected PR 16, merge 2b8abddd54e3d4dc4f140956642fe5207ae3f99a; hosted run 35345193633 passed; shipment documentation records the verified hosted/live receipts",
   "notes": [
     "Two post-review unchanged-input no-cache builds C/D pass complete dependency, asset and source equality; final-image 43-case acceptance and recreation proof were rerun on D. Pre-correction A/B images are excluded; see clean-build-validation.json.",
     "Build A completed; a newline-escaping defect in the external inspection driver was corrected and the same images re-inspected before build B. No application change or failed build was counted as successful.",

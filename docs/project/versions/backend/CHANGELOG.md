@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preserves immutable preparations/history, idempotent accepted requests, cancellation, stale projections and independent manual bookkeeping; no critical-gate override or live defaults.
 - Records positive consistency-check attestation for new research; legacy/Deep records without it are not backfilled into readiness. Keeps legacy execution paths closed.
 - Computes debt/FCFF monitoring from shared typed inputs without forcing the DCF valuation method; rejects finite-operand arithmetic overflow before it can produce false zero debt risk. Target-only review explicitly has no stop-loss/max-loss guarantee.
-- Adds strict contracts, race/persistence/negative tests, critical floors and the required real-API review browser lane. Shipment references follow protected acceptance.
+- Adds strict contracts, race/persistence/negative tests, critical floors and the required real-API review browser lane. Shipped through protected PR #16 (`2b8abdd`), implementation `2ced128`, CI 35345193633, after 2286 tests, strict/critical gates, 43 post-review final-image cases and clean builds C/D. Live personal settings remain unconfigured.
 
 ## [0.57.0] - 2026-09-18
 

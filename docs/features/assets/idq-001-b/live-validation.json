@@ -1,0 +1,22 @@
+{
+  "date": "2026-09-18",
+  "backend_version": "0.58.0",
+  "frontend_version": "0.39.0",
+  "ui": "http://localhost:3013",
+  "api": "http://localhost:18095",
+  "authenticated": true,
+  "selected_model": "gpt-6-astra",
+  "routing_revision": 1,
+  "private_credential_volume_preserved": true,
+  "role_map_preserved": true,
+  "account_and_configuration_hashes_unchanged": true,
+  "no_active_runs_before_recreation": true,
+  "risk_policy_confirmed": false,
+  "strategy_active": false,
+  "strategy_versions": 0,
+  "review_policy_confirmed": false,
+  "review_policy_versions": 0,
+  "read_only_browser_verified": true,
+  "live_model_calls": 0,
+  "real_or_paper_trade_calls": 0
+}

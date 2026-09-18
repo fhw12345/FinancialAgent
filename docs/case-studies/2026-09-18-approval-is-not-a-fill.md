@@ -1,6 +1,6 @@
 ---
 title: Approval Is Not a Fill / 批准不是成交
-status: in-progress
+status: shipped
 version: backend@0.58.0, frontend@0.39.0
 last_updated: 2026-09-18
 owner: maintainer
@@ -98,9 +98,13 @@ then invalidates current approval without deleting its historical receipt.
 Post-review validation passed **2286 backend / 275 frontend tests**, all critical/strict gates,
 **43 final-image browser cases**, repeat equal-manifest/source builds C/D and real recreation
 persistence. Curated screenshots and receipts are linked from
-[the feature](../features/investment-decision-review-gates.md). Hosted quality and protected
-implementation/shipment references are still pending; these local results alone are not
-shipment or an investment-effectiveness claim.
+[the feature](../features/investment-decision-review-gates.md). Protected PR #16 merged
+implementation `2ced1281b5de87efec0931a220232983fa92d054` as
+`2b8abddd54e3d4dc4f140956642fe5207ae3f99a`; hosted run 35345193633 passed all gates and
+seven browser lanes. Downloaded ZIP/report hashes were verified. The accepted images
+are live with independent credentials/routing/account state preserved and all personal
+review settings still unconfigured. None of these engineering results proves investment
+effectiveness.
 
 通过工程与合成回放验证，只能说明指定规则及失败边界得到执行；不能说明来源绝对
 正确、自由文本已核实、历史 PIT 已成立、预测已校准或投资会盈利。未配置的真实账户

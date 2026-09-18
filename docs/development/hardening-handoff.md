@@ -17,23 +17,33 @@ related_paths:
 
 ## 1. Current State
 
-### IDQ-001-B authorized / in progress (2026-09-18)
+### IDQ-001-B shipped (2026-09-18)
 
-Maintainer said “do it” after the B scope discussion. Active branch:
-`feat/idq-001-b-review-gates`. The first release accepts explicit user target weights,
-not model sizing; introduces separate confirmed policy/proposal/human-review receipts;
-and coordinates publication against account/configuration mutation tickets, generation
-CAS and an atomic server-time deadline. Research/legacy execution remains disabled.
-No live policy, strategy, credential or role change is authorized by this implementation.
-See the [working spec](../features/investment-decision-review-gates.md). Local validation:
-2286 backend / 275 frontend tests, strict mypy 339 files, all critical floors/security/
-eval/script checks, zero production lint warnings / 131 total, two equal-manifest/source
-clean builds C/D and **43 final-image browser cases** pass. Final review reproduced
-finite-operand FCFF overflow falsely clearing debt risk in a PE-only case; the shared
-helper now rejects nonfinite results. Pre-correction A/B images are excluded; all
-quality, build, browser and recreation acceptance was rerun after the fix. Curated screenshots and real
-recreation proofs are under `assets/idq-001-b/`. Protected implementation/shipment
-publication and preservation-checked live rollout are pending; B is not yet shipped.
+Maintainer authorized explicit user target weights, not model sizing. The shipped first
+release has separate confirmed policy/proposal/human-review receipts, full-account and
+actual-subset checks, persistent input-mutation tickets, generation CAS and atomic Mongo
+expiry capped at next XNYS close. Research/legacy execution remains disabled; human
+approval creates neither a real nor paper fill. See the
+[shipped spec](../features/investment-decision-review-gates.md).
+
+Release **0.58.0/0.39.0**: implementation `2ced1281b5de87efec0931a220232983fa92d054`,
+protected PR **#16**, merge `2b8abddd54e3d4dc4f140956642fe5207ae3f99a`, hosted run
+**35345193633**. All required gates and seven hosted browser lanes passed; downloaded
+ZIP digest and seven passing HTML reports were verified, with no credential files.
+Local acceptance: **2286 backend / 275 frontend tests**, strict mypy **339** source files,
+all original/new critical floors/security/eval/script checks, production lint **0** /
+total **131**, equal-manifest/source clean builds **C/D** and **43 final-image cases**.
+Final review reproduced finite-operand FCFF overflow falsely clearing debt risk; the
+shared helper rejects nonfinite results. Pre-correction A/B images are excluded; full
+quality, image/browser and recreation proof was rerun. See
+[receipts](../features/assets/idq-001-b/local-validation.json).
+
+Live **localhost:3013** runs accepted D images, authenticated default Astra/routing
+revision **1**, with independent private credential volume, role map and account/config
+hashes preserved. Risk policy, strategy and review policy remain **unconfigured**;
+read-only real-browser validation made no model POST. No live model probe or trade.
+001-A + scoped B, 002, 004 and 005 are shipped components; IDQ-000 remains in-progress.
+003 and PH-009 remain postponed; 006/007/008/009 remain planning, not automatically authorized.
 
 ### IDQ-005 shipped (2026-09-18)
 
@@ -263,18 +273,18 @@ config run. The 131 lint warnings are accepted non-increasing follow-up debt.
 | PH-009 Source decomposition | planning |
 | PH-010 Version metadata | shipped |
 
-## 5. Current Direction — IDQ-001-B Publication; PH-009 Paused
+## 5. Current Direction — After Scoped IDQ-001-B; PH-009 Paused
 
 The maintainer explicitly requested **not to execute PH-009**. IDQ-001-A is now
 separately authorized and shipped; see the current state above and the
-[program](../features/investment-decision-quality-program.md). IDQ-001 remains
-in-progress even after A ships. B requires confirmed policy and IDQ-002/004/005;
-none of those limits or approvals may be invented to make A look complete.
+[program](../features/investment-decision-quality-program.md). IDQ-001 now ships A plus
+scoped manual-target B. B still requires explicit policy and bound IDQ-002/004/005
+inputs for each actual review; shipment never supplies personal limits or an approval.
 IDQ-002 software is shipped as non-actionable risk/allocation previews. IDQ-004 is
 shipped as a bounded evidence/structured-field layer; subsequent order is 005 then
 001-B, with 003 postponed. IDQ-005 is shipped as research-contract software. The maintainer
-has now explicitly authorized B; its local implementation/acceptance is recorded above,
-with protected publication pending. Other child plans remain planning. No paper execution
+authorized B and its protected shipment is recorded above. Await a new instruction
+before subsequent feature work. Other child plans remain planning. No paper execution
 or investment-quality claim.
 
 ### PH-009 Resume References (Not an Active Work Queue)
