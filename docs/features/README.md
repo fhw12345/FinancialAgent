@@ -270,9 +270,9 @@ requires the evidence and workflow in [Documentation Standards](../development/d
 
 ### Investment Decision Quality Plans
 
-- **[IDQ-000 Program and Shared Acceptance](investment-decision-quality-program.md)** — in-progress (A only); baseline findings, contracts, dependencies, milestones, and validation gates
-- **[IDQ-001 Decision Policy Gates](investment-decision-policy-gates.md)** — in-progress; A shipped, B manual-target paper review undergoing implementation/acceptance
-- **[IDQ-001-B Human Paper Review](investment-decision-review-gates.md)** — in-progress; confirmed review policy, deterministic readiness, subset approval and atomic stale/expiry rejection; never execution
+- **[IDQ-000 Program and Shared Acceptance](investment-decision-quality-program.md)** — in-progress; 001-A/B, 002, 004 and 005 shipped components, with candidate/orchestration/insights/paper-ledger/outcome work still pending
+- **[IDQ-001 Decision Policy Gates](investment-decision-policy-gates.md)** — shipped (A + scoped B, 0.58.0/0.39.0); research stays non-actionable, explicit target proposals can qualify for human review
+- **[IDQ-001-B Human Paper Review](investment-decision-review-gates.md)** — shipped (0.58.0/0.39.0, PR #16); confirmed policy, deterministic readiness, subset approval and atomic stale/expiry rejection; never execution
 - **[IDQ-001-A Safety Containment](investment-decision-safety-containment.md)** — shipped (0.54.0/0.35.0); non-actionable assessments, legacy read-only, no ready/approval
 - **[IDQ-002 Portfolio Risk and Allocation](investment-portfolio-risk-allocation.md)** — shipped (0.55.0/0.36.0); dated daily-close snapshots, cash-aware risk, explicit preview policy and whole-batch limits (never approval)
 - **[IDQ-003 Candidate Selection](investment-candidate-selection.md)** — planning; deterministic quotas, eligibility, and actual portfolio fit

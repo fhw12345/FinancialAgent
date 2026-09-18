@@ -17,18 +17,20 @@ related_paths:
 
 > **TL;DR (EN)**: Preserve the working Agent/runtime foundation, but separate
 > evidence, research, portfolio constraints, and investment outcomes. This is a
-> staged program: IDQ-001-A containment, IDQ-002 risk previews, IDQ-004 evidence checks and IDQ-005 research contracts have shipped.
+> staged program: IDQ-001-A containment, scoped IDQ-001-B human paper review,
+> IDQ-002 risk previews, IDQ-004 evidence checks and IDQ-005 research contracts have shipped.
 > It introduces no profitability claims, broker integration, or authorization to start PH-009.
 >
 > **TL;DR (中文)**：保留已通过工程门禁的底座，补齐“事实有依据、建议受约束、结果能验证”
-> 的闭环。目前 IDQ-001-A、002、004、005 的安全、风险、证据和研究契约组件已出货；ready/批准等其余目标仍待实施，工程验收不代表策略有超额收益。
+> 的闭环。目前 001-A、manual-target 001-B、002、004、005 已出货；ready 仅是既定规则下
+> 的人工审阅资格，批准不成交。其余研究／前瞻账本／效果验证仍待实施，工程验收不代表超额收益。
 
-[IDQ-001-B 人工 paper 审阅](investment-decision-review-gates.md) 已获实施授权，当前 in-progress；
-用户手动目标权重、确定性 ready、子集批准与失效门禁仍须通过完整验收／出货流程。
-不自动配置任何真实个人参数，不包含模拟或真实成交。
+[IDQ-001-B 人工 paper 审阅](investment-decision-review-gates.md) 已在 0.58.0/0.39.0
+通过受保护 PR #16 出货：手动目标权重、确定性 ready、实际子集批准、同文档 CAS 与
+陈旧／到期拒绝。不自动配置个人参数，不包含模拟或真实成交。
 
-当前出货切片：[IDQ-001-A](investment-decision-safety-containment.md)。没有 ready、批准或
-paper 执行资格。[IDQ-002](investment-portfolio-risk-allocation.md) 已出货风险数学与
+[IDQ-001-A](investment-decision-safety-containment.md) 的研究记录仍不可批准或执行；
+B 的独立 review-batches 契约才可以在全部门禁通过后登记人工批准。[IDQ-002](investment-portfolio-risk-allocation.md) 已出货风险数学与
 非行动性配仓预览；[IDQ-004](investment-evidence-snapshots.md) 已出货封存证据与结构化字段校验（不认证全文/来源真伪）。
 维护者确认顺序调整为 **004 → 005 → 001-B**，003 后移。2026-09-18 已确认 005 首发
 范围（252 交易日 / SPY 总回报 / USD 美股非金融普通股 / 条件性 PE 与 DCF），005 已出货；
@@ -81,7 +83,8 @@ B03–B05 仅为不联网的内存样例，不是市场实测。B04 假设现金
 
 除 [A 阶段](investment-decision-safety-containment.md) 和
 [IDQ-002](investment-portfolio-risk-allocation.md)、[IDQ-004](investment-evidence-snapshots.md)
-以及 [IDQ-005](investment-research-strategy-contracts.md) 明确列出的实现外，本文 DTO、
+以及 [IDQ-005](investment-research-strategy-contracts.md)、
+[scoped IDQ-001-B](investment-decision-review-gates.md) 明确列出的实现外，本文 DTO、
 集合、接口、文件名和阈值仍为**拟定契约**。各 planning 子计划保留 `version: n/a`；
 本总计划的版本标记已出货组件的实现基线，不表示其余契约已经出货。
 
@@ -126,7 +129,7 @@ HOLD通过`exposure_context/hold_reason`区分继续持有和空仓等待；WAIT
 
 | 任务 | 重点 | 优先级 | 直接前置 |
 | --- | --- | --- | --- |
-| [IDQ-001 决策契约与硬门禁](investment-decision-policy-gates.md) | 状态、严格写入、降级、审批失效 | P0 | A 无；B 依赖 002/004/005 |
+| [IDQ-001 决策契约与硬门禁](investment-decision-policy-gates.md) | **shipped: A + manual-target B**；状态、严格写入、降级、审批失效 | P0 | A 无；B 接入 002/004/005 |
 | [IDQ-002 组合风险与确定性配仓](investment-portfolio-risk-allocation.md) | 日期对齐、现金口径、交易后约束 | P0 | 001-A 公共契约 |
 | [IDQ-003 候选筛选与组合适配](investment-candidate-selection.md) | 配额、稳定排序、候选与建议分离 | P0/P1 | 最终闭环依赖 002/004/005 |
 | [IDQ-004 时点证据与主张验证](investment-evidence-snapshots.md) | 数据快照、PIT、引用、数值验证 | P0/P1 | 001-A 身份契约 |
@@ -149,6 +152,10 @@ HOLD通过`exposure_context/hold_reason`区分继续持有和空仓等待；WAIT
 M1 不需要等待全部功能；用窄 helper/adapter 避免新行为混入机械重构。涉及已经超长的
 调用文件时，只做实现本任务所必需的边界提取并满足 touched-source ≤500 行；全仓库
 PH-009 仍不启动。若安全改动无法在此边界内完成，先记录阻塞并请求维护者决策。
+
+当前交付状态：001-A/B、002、004、005 已出货；003 按维护者决定后移，006/007/008/009
+仍为 planning。尤其 008 的模拟成交／现金账和 009 的投资效果评估尚未实现；本次出货
+不自动启动后续任务，也不启用真实账户的个人政策或策略。PH-009 继续暂停。
 
 ### 文件所有权／集成规则
 

@@ -1,6 +1,6 @@
 ---
 title: Deterministic Paper Review Readiness and Human Approval
-status: in-progress
+status: shipped
 version: backend@0.58.0, frontend@0.39.0
 last_updated: 2026-09-18
 owner: maintainer
@@ -140,7 +140,7 @@ The old `/assessments/{id}/approve` and `/decisions/{id}/approve` still reject.
   image-only regressions, repeat clean builds, versions/indexes/bilingual case study,
   implementation then shipment protected PRs and clean synchronized main are required.
 
-## Local Acceptance (Publication Pending)
+## Acceptance / Protected Publication
 
 Final diff review found that finite statement operands could overflow the shared FCFF
 proxy and produce a false zero debt ratio. A red real-gate regression reproduced it;
@@ -164,16 +164,31 @@ final-image revalidation, not the earlier passing normal-data cases.
   clock, not the live account: [approved](assets/idq-001-b/01-approved-review.png),
   [stale after independent bookkeeping](assets/idq-001-b/02-stale-approval.png),
   [rejected subset](assets/idq-001-b/03-rejected-subset.png).
-- Protected implementation and shipment publication remain pending. No investment
-  effectiveness claim and no live model probes are part of this acceptance.
+- Implementation `2ced1281b5de87efec0931a220232983fa92d054` merged through protected
+  [PR #16](https://github.com/fhw12345/FinancialAgent/pull/16) as
+  `2b8abddd54e3d4dc4f140956642fe5207ae3f99a`. Hosted
+  [run 35345193633](https://github.com/fhw12345/FinancialAgent/actions/runs/35345193633)
+  passed every required gate and seven browser lanes (32 cases). The downloaded
+  artifact ZIP digest and all seven report hashes/stats were verified; no credential
+  files were present. See [hosted receipt](assets/idq-001-b/hosted-validation.json).
+- Live **localhost:3013** runs the accepted D images at 0.58.0/0.39.0. Independent
+  Copilot credentials, Astra default, routing revision 1, role map, account and policy
+  hashes survived recreation. Risk policy, strategy and review policy remain explicitly
+  **unconfigured**. A real browser read-only check showed the new panel without approval
+  or model POSTs. See [live receipt](assets/idq-001-b/live-validation.json).
+- Required `Unit Tests` from Actions app 15368 remained strict/up-to-date and enforced
+  for administrators; no bypass. No investment-effectiveness claim, live model probe,
+  actual trade or simulated fill is part of this acceptance.
 
 ## Completion / Rollback
 
 - [x] Policy, target proposal, ready gate and approval are one coherent application path.
 - [x] Positive and negative/race/persistence tests and browser receipts pass locally.
 - [x] Old research remains non-actionable; manual actual-trade recording remains separate.
-- [ ] No live policy/strategy/target values are auto-configured; credentials/roles survive.
-- [ ] Full quality/build/browser/hosted publication evidence committed; only then shipped.
+- [x] No live policy/strategy/target values are auto-configured; credentials/roles survive.
+- [x] Full quality/build/browser/hosted evidence, protected implementation merge and shipment documentation recorded.
 
-Rollback disables new review publication/approval and retains history, never restores
-legacy AI execution or a fail-open validator. Numeric/claim matching is not proof of alpha.
+Before a binary rollback, deactivate the review policy while B is available, retaining
+its control/history fence; do not delete the aggregate or allow older uncoordinated
+writers to revive a current approval on re-upgrade. Rollback disables new publication/
+approval, never restores legacy AI execution or a fail-open validator. Numeric/claim matching is not proof of alpha.
