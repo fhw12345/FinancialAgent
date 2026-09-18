@@ -1,0 +1,131 @@
+{
+  "date": "2026-09-18",
+  "backend_version": "0.57.0",
+  "frontend_version": "0.38.0",
+  "backend_tests": 2217,
+  "backend_deselected": 27,
+  "coverage_rounded_percent": 74,
+  "mypy_files": 330,
+  "frontend_tests": 272,
+  "frontend_test_files": 30,
+  "production_lint_warnings": 0,
+  "total_frontend_lint_warnings": 131,
+  "image_only_e2e": {
+    "strategy": 4,
+    "evidence": 3,
+    "risk": 3,
+    "safety": 6,
+    "copilot": 4,
+    "hardening": 6,
+    "default": 11
+  },
+  "immutable_strategy_and_receipts_survived_recreation": true,
+  "boundary": "Recorded outer providers/models and fixed clocks; real API/graph/evidence/calculators/Mongo. Conditional model estimates are not verified fair value or investment effectiveness. No live model probes.",
+  "live_state_preserved": {
+    "authenticated": true,
+    "selected_model": "gpt-6-astra",
+    "routing_revision": 1,
+    "role_models": {
+      "router": "gpt-5.4-mini",
+      "simple_chat": "gpt-5.4-mini",
+      "summary": "gpt-5.4-mini",
+      "translation": "gpt-5.4-mini",
+      "consistency_check": "gpt-5.4-mini",
+      "react_agent": "gpt-5.6-sol",
+      "portfolio_research": "gpt-5.6-sol",
+      "sub_financial": "gpt-5.6-sol",
+      "sub_technical": "gpt-5.6-sol",
+      "deep_planner": "gpt-5.6-sol",
+      "sub_news": "gemini-3.8-flash",
+      "sub_debater": "grok-4.6",
+      "portfolio_decisions": "gpt-6-astra",
+      "verdict": "gpt-6-astra",
+      "eval_judge": "gpt-5.4"
+    },
+    "policy": {
+      "revision": 0,
+      "policy": null,
+      "confirmed_at": null
+    }
+  },
+  "live_strategy": {
+    "revision": 0,
+    "active_version": null,
+    "versions": []
+  },
+  "stage_a": {
+    "phase": "A",
+    "actionable": false,
+    "approval_enabled": false,
+    "risk_preview_available": true,
+    "research_strategy_contracts_available": true,
+    "pending": [
+      "confirmed_policy",
+      "review_approval",
+      "point_in_time_evidence",
+      "strategy_contract"
+    ]
+  },
+  "acceptance_backend": {
+    "image": "sha256:0557b04c413f84948b195c7b97adacc47919c643f230ca474bf240a89f375ffc",
+    "mounts": [
+      {
+        "type": "bind",
+        "destination": "/app/tests"
+      }
+    ],
+    "ports": {
+      "8000/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "18096"
+        }
+      ]
+    }
+  },
+  "acceptance_frontend": {
+    "image": "sha256:feb8d40f69471902f9dc912b1abab9525c314fd24046d599002ede51fb350779",
+    "mounts": [],
+    "ports": {
+      "3000/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "3014"
+        }
+      ]
+    }
+  },
+  "live_backend": {
+    "image": "sha256:0557b04c413f84948b195c7b97adacc47919c643f230ca474bf240a89f375ffc",
+    "mounts": [
+      {
+        "type": "volume",
+        "destination": "/home/app"
+      }
+    ],
+    "ports": {
+      "8000/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "18095"
+        }
+      ]
+    }
+  },
+  "live_frontend": {
+    "image": "sha256:feb8d40f69471902f9dc912b1abab9525c314fd24046d599002ede51fb350779",
+    "mounts": [],
+    "ports": {
+      "3000/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "3013"
+        }
+      ]
+    }
+  },
+  "screenshots": {
+    "01-strategy-contract.png": "e4859c63cb1d9f8cb9f567884095432c9ef9800041da21aaf12ec84f3cfdd278",
+    "02-missing-valuation.png": "5686770293be92e830abb2e594889898d3925b3afcd31d961d17909ea9140416"
+  }
+}

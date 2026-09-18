@@ -27,6 +27,7 @@ import { DecisionRows } from "./decisionTracking/DecisionRows";
 import { ResearchBody } from "./decisionTracking/ResearchBody";
 import DecisionAssessments from "./DecisionAssessments";
 import { PortfolioRiskPanel } from "./PortfolioRiskPanel";
+import { ResearchStrategyPanel } from "./ResearchStrategyPanel";
 export function DecisionTracker() {
   const { i18n } = useTranslation();
   const [symbolFilter, setSymbolFilter] = useState("");
@@ -88,6 +89,7 @@ export function DecisionTracker() {
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 mt-6">
+      <ResearchStrategyPanel />
       <PortfolioRiskPanel />
       <DecisionAssessments
         symbol={symbolFilter || undefined}

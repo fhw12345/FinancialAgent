@@ -19,6 +19,7 @@ from ...models.decision_assessment import (
 )
 from ...models.evidence import EvidenceSummary
 from ...models.portfolio_risk import PortfolioRiskReview
+from ...models.research_strategy import StrategySummary
 from ...shared.sanitizers import sanitize_text
 
 PRIORITY: dict[Readiness, int] = {
@@ -28,7 +29,7 @@ PRIORITY: dict[Readiness, int] = {
     "blocked": 3,
 }
 MESSAGES = {
-    "STAGE_A_ONLY": "Research only: full investment policy, point-in-time evidence, strategy and approval integration remain pending; risk checks alone grant no eligibility.",
+    "STAGE_A_ONLY": "Research only: the full policy/evidence/strategy approval gate remains incomplete; risk and valuation checks alone grant no eligibility.",
     "RESEARCH_MISSING": "Required symbol research is missing.",
     "CHECK_UNAVAILABLE": "Research consistency check did not complete.",
     "CONSISTENCY_VIOLATION": "Research contains unresolved consistency violations.",
@@ -40,6 +41,7 @@ MESSAGES = {
     "UNSUPPORTED_EXPOSURE": "A SELL requires a known current long holding; shorts are unsupported.",
     "DECISION_UNAVAILABLE": "Decision generation did not produce a usable result.",
     "PORTFOLIO_RISK_UNAVAILABLE": "Full account risk data is unavailable; no subset risk clearance.",
+    "STRATEGY_UNAVAILABLE": "Bound strategy inputs or assumptions are incomplete/inapplicable/stale; no investment eligibility.",
     "EVIDENCE_UNVERIFIED": "Material structured claims or core evidence are unverified; prose is not certified by matching fields.",
     "ALLOCATION_BLOCKED": "The whole-batch risk/allocation preview was rejected; see its constraints.",
 }
@@ -81,6 +83,7 @@ def build_assessment(
     run_id: str | None = None,
     portfolio_risk: PortfolioRiskReview | None = None,
     evidence: EvidenceSummary | None = None,
+    strategy: StrategySummary | None = None,
 ) -> DecisionAssessment:
     expected = list(dict.fromkeys(symbol.upper() for symbol in symbols))
     if not expected or any(
@@ -193,6 +196,10 @@ def build_assessment(
             reasons.append(reason("EVIDENCE_UNVERIFIED"))
             if readiness != "blocked":
                 readiness = "insufficient_evidence"
+        if strategy and (strategy.errors or any(r.stale for r in strategy.reviews)):
+            reasons.append(reason("STRATEGY_UNAVAILABLE"))
+            if readiness != "blocked":
+                readiness = "insufficient_evidence"
         results.append(
             SymbolAssessment(
                 symbol=symbol,
@@ -218,6 +225,7 @@ def build_assessment(
         "proposals": proposals,
         "quotes": quotes,
         "evidence": evidence.model_dump(mode="json") if evidence else None,
+        "strategy": strategy.model_dump(mode="json") if strategy else None,
         "holdings": sorted(held) if held is not None else None,
     }
     digest = hashlib.sha256(
@@ -237,6 +245,8 @@ def build_assessment(
         backend_version=BACKEND_VERSION,
         portfolio_risk=portfolio_risk,
         evidence=evidence,
+        strategy=strategy,
+        legacy_strategy=strategy is None,
         readiness=max((r.readiness for r in results), key=lambda item: PRIORITY[item]),
         results=results,
     )

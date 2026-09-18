@@ -7,6 +7,7 @@ from typing import Any
 from ...database.repositories.evidence_repository import EvidenceRepository
 from ...models.evidence import EvidenceRecord, EvidenceSnapshot
 from ...models.portfolio_risk import PortfolioRiskSnapshot
+from ...models.research_strategy import StrategyVersion
 from ...services.data_manager.types import Granularity
 from . import adapters
 
@@ -21,6 +22,8 @@ async def collect(
     data_manager: Any,
     market_service: Any,
     risk: PortfolioRiskSnapshot | None = None,
+    strategy: StrategyVersion | None = None,
+    peers: dict[str, str] | None = None,
 ) -> EvidenceSnapshot:
     snapshot = await repository.begin(
         request_key=request_key,
@@ -29,6 +32,8 @@ async def collect(
         as_of=as_of,
         risk_snapshot_id=risk.snapshot_id if risk else None,
         policy_revision=risk.policy.revision if risk else None,
+        strategy=strategy,
+        strategy_peers=peers,
     )
     if snapshot.state == "sealed":
         return snapshot
@@ -80,6 +85,11 @@ async def collect(
             lambda: adapters.filings(snapshot, filing),
         ]:
             records.extend(build())
+        if strategy:
+            from ..research_strategy.adapters import inputs
+
+            income = await safe(market_service.get_research_income(symbol), {})
+            records.extend(inputs(snapshot, overview, cash, balance, income))
         return await repository.finish(snapshot, records)
     except asyncio.CancelledError:
         await repository.abort(snapshot, "COLLECTION_CANCELLED", True)

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from src.agent.portfolio_phase2_prompt import render_portfolio_phase2_prompt
+from src.services.research_strategy.prompts import CONCLUSION, FUNDAMENTAL, SHORT
 
 
 @dataclass(frozen=True)
@@ -216,6 +217,9 @@ style when facts or tool contracts are wrong."""
 _PROMPTS = {
     spec.prompt_id: spec
     for spec in (
+        PromptSpec("strategy-fundamental", 1, FUNDAMENTAL, ("strategy", "research")),
+        PromptSpec("strategy-conclusion", 1, CONCLUSION, ("strategy", "structured")),
+        PromptSpec("strategy-short-disabled", 1, SHORT, ("strategy", "experimental")),
         PromptSpec("router", 1, ROUTER_TEMPLATE, ("routing", "structured")),
         PromptSpec(
             "symbol-extraction",

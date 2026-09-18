@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, model_validator
 
 from .evidence import EvidenceSummary
 from .portfolio_risk import PortfolioRiskReview
+from .research_strategy import StrategySummary
 
 Readiness = Literal["research_only", "insufficient_evidence", "needs_review", "blocked"]
 
@@ -74,6 +75,7 @@ class AssessmentReason(StrictRecord):
         "PORTFOLIO_RISK_UNAVAILABLE",
         "ALLOCATION_BLOCKED",
         "EVIDENCE_UNVERIFIED",
+        "STRATEGY_UNAVAILABLE",
     ]
     message: str = Field(max_length=500)
 
@@ -107,3 +109,5 @@ class DecisionAssessment(StrictRecord):
     run_status: str | None = None
     portfolio_risk: PortfolioRiskReview | None = None
     evidence: EvidenceSummary | None = None
+    strategy: StrategySummary | None = None
+    legacy_strategy: bool = True

@@ -10,6 +10,7 @@ from ...database.repositories.evidence_repository import (
 )
 from ...models.evidence import EvidenceSnapshot, EvidenceSummary
 from ...models.portfolio_risk import PortfolioRiskSnapshot
+from ...models.research_strategy import StrategyVersion
 from ...services.decision_policy.context import current_run_id
 from ...services.portfolio_risk import service as risk_service
 from .claims import build_dossier
@@ -24,6 +25,7 @@ async def prepare(
     symbols: list[str],
     run_id: str,
     risk: PortfolioRiskSnapshot,
+    strategy: StrategyVersion | None = None,
 ) -> dict[str, EvidenceSnapshot]:
     repository = EvidenceRepository(db)
     run = await db.get_collection("agent_runs").find_one({"run_id": run_id})
@@ -31,6 +33,10 @@ async def prepare(
     if not isinstance(as_of, datetime):
         as_of = risk.captured_at
     as_of = as_of.replace(tzinfo=UTC) if as_of.tzinfo is None else as_of.astimezone(UTC)
+    from .identity import digest
+
+    peer_symbols = strategy.parameters.peer_symbols if strategy else []
+    peer_ids = {s: "snapshot_" + digest([run_id, "research", s]) for s in peer_symbols}
     semaphore = asyncio.Semaphore(2)
 
     async def one(symbol: str) -> EvidenceSnapshot:
@@ -44,10 +50,16 @@ async def prepare(
                 data_manager=dm,
                 market_service=market,
                 risk=risk,
+                strategy=strategy,
+                peers={
+                    s: identifier for s, identifier in peer_ids.items() if s != symbol
+                },
             )
 
-    snapshots = await asyncio.gather(*(one(s) for s in symbols))
-    return {s.symbol: s for s in snapshots}
+    snapshots = await asyncio.gather(
+        *(one(s) for s in sorted(set(symbols) | set(peer_symbols)))
+    )
+    return {s.symbol: s for s in snapshots if s.symbol in symbols}
 
 
 async def dossiers(
@@ -79,12 +91,28 @@ async def run_deep(
     run_id = current_run_id()
     if run_id is None:
         raise RuntimeError("Deep evidence requires a canonical run identity")
-    risk = await risk_service.capture(db, [symbol])
-    snapshots = await prepare(
-        db, agent._data_manager, agent._data_manager._av_service, [symbol], run_id, risk
+    from ..research_strategy import service as strategy_service
+    from ..research_strategy import store
+    from ..research_strategy.context import strategy_scope
+
+    strategy = await store.active(db)
+    risk = await risk_service.capture(
+        db, sorted({symbol} | set(strategy.parameters.peer_symbols if strategy else []))
     )
-    with evidence_scope(snapshots):
+    snapshots = await prepare(
+        db,
+        agent._data_manager,
+        agent._data_manager._av_service,
+        [symbol],
+        run_id,
+        risk,
+        strategy=strategy,
+    )
+    strategy_reviews = await strategy_service.reviews(db, snapshots)
+    with evidence_scope(snapshots), strategy_scope(strategy_reviews):
         result = dict(await workflow.ainvoke(state, config=config))
+    await strategy_service.record_prompts(db, run_id, strategy_reviews)
+    result["strategy_summary"] = strategy_service.summary(strategy_reviews)
     report = str(result.get("research_report") or "")
     summary = await dossiers(db, snapshots, {symbol: report})
     result["evidence_summary"] = summary.model_dump(mode="json")

@@ -95,6 +95,13 @@ class PortfolioAnalysisAgent(
         flow: str | None = None,
     ) -> tuple[Any, list[Any]]:
         with model_role_scope("react_agent", "portfolio_decisions"):
+            from ...services.evidence.context import current_snapshots
+            from ...services.research_strategy import context, service
+
+            if context.current() and not dry_run:
+                return await service.conclude(
+                    self.react_agent, all_analysis_results, current_snapshots()
+                )
             return await super()._run_phase2_decisions(
                 all_analysis_results, portfolio_context, user_id, dry_run, flow
             )

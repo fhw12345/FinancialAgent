@@ -9,6 +9,7 @@ import {
 import { AssistantMarkdown } from "../chat/AssistantMarkdown";
 import { RiskReceipt } from "./RiskReceipt";
 import { EvidencePanel } from "./EvidencePanel";
+import { StrategyReceipt } from "./StrategyReceipt";
 import { getRecordValue } from "../../utils/safeRecord";
 
 const labels = {
@@ -53,8 +54,8 @@ export default function DecisionAssessments({
         data-testid="assessment-stage-a-notice"
       >
         {zh
-          ? "当前仅提供非行动性研究。完整投资政策、时点证据、策略与审批尚未接齐；风险检查本身不赋予 ready、批准或执行资格。"
-          : "Non-actionable research only. Full investment policy, point-in-time evidence, strategy and approval integration remain pending; risk checks alone grant no eligibility."}
+          ? "当前仅提供非行动性研究。完整政策/证据/策略批准门禁尚未接齐；风险与估值检查不赋予 ready、批准或执行资格。"
+          : "Non-actionable research only. The full policy/evidence/strategy approval gate remains incomplete; risk and valuation checks alone grant no eligibility."}
       </p>
       {query.isLoading && (
         <p role="status">{zh ? "加载评估…" : "Loading assessments…"}</p>
@@ -115,6 +116,13 @@ export default function DecisionAssessments({
                 </ul>
               </div>
             ))}
+            {batch.strategy ? (
+              <StrategyReceipt summary={batch.strategy} />
+            ) : (
+              <p className="text-xs text-gray-500">
+                legacy_strategy / No bound strategy (unverified)
+              </p>
+            )}
             {batch.evidence && <EvidencePanel summary={batch.evidence} />}
             {batch.portfolio_risk && (
               <RiskReceipt review={batch.portfolio_risk} />

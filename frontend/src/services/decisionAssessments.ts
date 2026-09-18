@@ -2,6 +2,7 @@ import { z } from "zod";
 import { apiClient } from "./api";
 import { riskSchema } from "./portfolioRisk";
 import { evidenceSummarySchema } from "./evidence";
+import { strategySummarySchema } from "./researchStrategy";
 
 const readiness = z.enum([
   "research_only",
@@ -32,6 +33,8 @@ export const assessmentSchema = z.object({
   run_status: z.string().nullable(),
   portfolio_risk: riskSchema.nullable().optional(),
   evidence: evidenceSummarySchema.nullable().optional(),
+  strategy: strategySummarySchema.nullable().optional(),
+  legacy_strategy: z.boolean().optional(),
   results: z.array(
     z.object({
       symbol: z.string(),

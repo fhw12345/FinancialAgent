@@ -311,6 +311,7 @@ async def reset(scenario: str):
         "decision_assessments",
         "research_snapshots",
         "research_dossiers",
+        "research_strategy_state",
         "risk_policy",
         "portfolio_risk_captures",
         "agent_runs",
