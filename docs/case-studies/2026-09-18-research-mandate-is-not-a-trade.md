@@ -1,6 +1,6 @@
 ---
 title: A Research Mandate Is Not a Trade
-status: in-progress
+status: shipped
 version: backend@0.57.0, frontend@0.38.0
 last_updated: 2026-09-18
 owner: maintainer
@@ -94,4 +94,7 @@ strategy, deactivation and historical receipts survived actual backend recreatio
 A supplemental browser run hit one read-transport socket hang-up; the unchanged bounded
 rerun passed all four strategy assertions, without suppression or weakened expectations.
 The live account's login/roles remain intact and personal risk/strategy configuration
-remains empty. Hosted publication receipts are pending in the [feature record](../features/investment-research-strategy-contracts.md).
+remains empty. Implementation `6104c3a8bcff891c506c554931c126a285362cb4` merged
+through protected PR #14 as `0a9699d9af365bb734d5033668c65c7ffc12a1ff`. Hosted run
+35321163990 passed every gate and all six browser lanes; their reports were downloaded
+and hashed with no credential files. See the [feature record](../features/investment-research-strategy-contracts.md).

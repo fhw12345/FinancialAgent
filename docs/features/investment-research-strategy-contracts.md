@@ -1,6 +1,6 @@
 ---
 title: Investment Mandates and Research Strategy Contracts
-status: in-progress
+status: shipped
 version: backend@0.57.0, frontend@0.38.0
 last_updated: 2026-09-18
 owner: maintainer
@@ -147,12 +147,12 @@ ResearchRequest引用policy/strategy，并区分 `purpose=research|portfolio_pro
 拟增加 strategy list/detail/version endpoints及研究请求的strategy_id；扩展现有设置
 面板，不建立第二套现金/持仓表。默认列表显示“未启用／需确认”，不能选择后立即付费运行。
 
-- [ ] 确认pilot mandate、期限、基准与必需字段；记录decision log。
-- [ ] 建StrategySpec/ValuationResult/Thesis/Forecast DTO与明确单位。
-- [ ] 将原有方法转成小型deterministic calculators与input验证。
-- [ ] 按模板生成Phase1/Phase2 Prompt，注册版本并记录实际使用。
-- [ ] 接001/004，展示strategy/horizon/invalidation/assumptions。
-- [ ] 保留旧研究原文，新增legacy_strategy标签，不补写历史策略身份。
+- [x] 确认pilot mandate、期限、基准与必需字段；记录decision log。
+- [x] 建StrategySpec/ValuationResult/Thesis/Forecast DTO与明确单位。
+- [x] 将原有方法转成小型deterministic calculators与input验证。
+- [x] 按模板生成Phase1/Phase2 Prompt，注册版本并记录实际使用。
+- [x] 接001/004，展示strategy/horizon/invalidation/assumptions。
+- [x] 保留旧研究原文，新增legacy_strategy标签，不补写历史策略身份。
 
 ## 7. 验证条件
 
@@ -183,18 +183,18 @@ ResearchRequest引用policy/strategy，并区分 `purpose=research|portfolio_pro
 
 ## 8. Acceptance / Rollback / 未决问题
 
-- [ ] ST-01…10、真实API E2E与总计划质量门禁通过。
-- [ ] 首发策略所有参数、必需数据、期限、基准、成本和变更流程已明确确认。
-- [ ] 方法返回的事实／假设／主观概率在UI与export中同样清晰。
-- [ ] 版本、截图、changelog、双语案例和protected PR完成；不把软件出货称作策略有效。
-- [ ] 回滚禁用新策略版本但保留旧record读取；不把新结果重标旧版本。
+- [x] ST-01…10、真实API E2E与总计划质量门禁通过。
+- [x] 首发范围、期限、基准、必需数据和参数/成本/变更语义已确认；个人数值须经显式 UI/API 确认，真实账户未自动启用。
+- [x] 方法返回的事实／假设／主观概率在UI与export中同样清晰。
+- [x] 版本、截图、changelog、双语案例和protected PR完成；不把软件出货称作策略有效。
+- [x] 回滚禁用新策略版本但保留旧record读取；不把新结果重标旧版本。
 
 首发范围已于 2026-09-18 确认，见本文顶部。个人数值假设、同行和阈值仍须在 UI/API
 显式确认才创建/启用版本；本次范围确认不会填入真实账户。短期模板和 ETF look-through
 不启用，不支持类型明确 inapplicable。Provider 的 equity/country/sector 分类只是研究
 适用性筛查，不是独立 share-class 或未来 ready 资格证明。
 
-## Validation / Publication Pending
+## Validation / Shipment
 
 - Backend 2217 passed / 27 live integrations deselected, coverage rounds to 74%;
   Black/Ruff/mypy (330 files), Bandit, deterministic Agent evaluation and script checks pass.
@@ -219,5 +219,11 @@ ResearchRequest引用policy/strategy，并区分 `purpose=research|portfolio_pro
 - Live localhost:3013 runs 0.57.0/0.38.0 with private login/routing revision 1 preserved.
   Personal risk policy and research strategy remain unconfigured; synthetic parameters
   were never copied into the live account. No live inference was requested.
-- Hosted protected publication remains pending; local acceptance is not shipment.
+- Implementation `6104c3a8bcff891c506c554931c126a285362cb4` merged through
+  [protected PR #14](https://github.com/fhw12345/FinancialAgent/pull/14) as
+  `0a9699d9af365bb734d5033668c65c7ffc12a1ff`.
+  [Hosted CI 35321163990](https://github.com/fhw12345/FinancialAgent/actions/runs/35321163990)
+  passed all gates and all six browser lanes. Downloaded artifacts retain six HTML
+  reports with verified hashes and no credential files; see
+  [hosted receipts](assets/idq-005/hosted-validation.json). No admin bypass.
 - [Bilingual case study](../case-studies/2026-09-18-research-mandate-is-not-a-trade.md).

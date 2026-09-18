@@ -17,18 +17,22 @@ related_paths:
 
 ## 1. Current State
 
-### IDQ-005 authorized / in progress (2026-09-18)
+### IDQ-005 shipped (2026-09-18)
 
 Maintainer approved the fundamental pilot: 252 XNYS sessions, SPY total return,
 USD US non-financial common equities, conditional peer PE and DCF. Numeric valuation
 assumptions/peer rationale/invalidation thresholds remain explicit user inputs;
 there is no permission to configure the live account or open ready/approval.
-Branch `feat/idq-005-strategy-contracts`, target 0.57.0/0.38.0. Immutable version CAS,
+Shipped at 0.57.0/0.38.0 through protected PR #14: implementation
+`6104c3a8bcff891c506c554931c126a285362cb4`, merge
+`0a9699d9af365bb734d5033668c65c7ffc12a1ff`. Immutable version CAS,
 sealed peer inputs, separate Portfolio/Deep stance prompts, typed valuation/monitoring
 receipts and explicit UI confirmation are implemented locally. Backend 2217/frontend
 272 tests pass with strict gates and new critical floors. Final image-only acceptance
 passes 37 cases. Two unchanged-input builds match full manifests/assets/source trees;
-strategy/deactivation/history survive recreation. Hosted publication remains pending.
+strategy/deactivation/history survive recreation. Hosted run 35321163990 passed all
+gates and six browser lanes; downloaded reports are verified in the
+[receipt](../features/assets/idq-005/hosted-validation.json).
 Live 3013 uses accepted 0.57.0/0.38.0 images; private login/routing is preserved and
 personal risk/strategy values remain unconfigured. Preserve live
 3013 credentials/routing revision 1 and unconfigured risk/strategy state. No live probes.
@@ -249,7 +253,7 @@ in-progress even after A ships. B requires confirmed policy and IDQ-002/004/005;
 none of those limits or approvals may be invented to make A look complete.
 IDQ-002 software is shipped as non-actionable risk/allocation previews. IDQ-004 is
 shipped as a bounded evidence/structured-field layer; subsequent order is 005 then
-001-B, with 003 postponed. IDQ-005 now has explicit pilot authorization; 001-B still
+001-B, with 003 postponed. IDQ-005 is now shipped as research-contract software; 001-B still
 requires a separate instruction. Other child
 plans remain planning. No paper execution or investment-quality claim.
 
