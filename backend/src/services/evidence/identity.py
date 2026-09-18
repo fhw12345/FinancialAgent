@@ -116,5 +116,13 @@ def manifest_hash(snapshot: EvidenceSnapshot) -> str:
             ],
             "coverage": snapshot.coverage,
             "conflicts": snapshot.conflicts,
+            **(
+                {
+                    "strategy": snapshot.strategy_contract.model_dump(mode="json"),
+                    "strategy_peers": snapshot.strategy_peers,
+                }
+                if snapshot.strategy_contract
+                else {}
+            ),
         }
     )

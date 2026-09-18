@@ -190,6 +190,11 @@ class FundamentalsMixin(AlphaVantageBase):
             logger.error("Market movers fetch failed", error=str(e))
             raise
 
+    async def get_research_income(self, symbol: str) -> dict[str, Any]:
+        from .research_income import fetch_income
+
+        return await fetch_income(self, symbol)
+
     async def get_earnings(self, symbol: str) -> dict[str, Any]:
         """
         Get company earnings data using EARNINGS endpoint.

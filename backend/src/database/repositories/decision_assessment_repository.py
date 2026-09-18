@@ -41,6 +41,8 @@ class DecisionAssessmentRepository:
             document["portfolio_risk"] = assessment.portfolio_risk.model_dump(
                 mode="json"
             )
+        if assessment.strategy:
+            document["strategy"] = assessment.strategy.model_dump(mode="json")
         saved: dict[str, Any] | None
         try:
             saved = await self.collection.find_one_and_update(
@@ -68,6 +70,12 @@ class DecisionAssessmentRepository:
 
             assessment.portfolio_risk = await project_stale(
                 self.collection.database, assessment.portfolio_risk
+            )
+        if assessment.strategy:
+            from ...services.research_strategy.service import project
+
+            assessment.strategy = await project(
+                self.collection.database, assessment.strategy
             )
         if not assessment.run_id:
             return assessment

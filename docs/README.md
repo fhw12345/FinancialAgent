@@ -77,6 +77,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [A Research Mandate Is Not a Trade](case-studies/2026-09-18-research-mandate-is-not-a-trade.md)
 - [A Citation Is Not Evidence Verification](case-studies/2026-09-17-citation-is-not-evidence-verification.md)
 - [Cash Is Not Missing Risk](case-studies/2026-09-17-cash-is-not-missing-risk.md)
 - [A Completed Run Is Not an Approved Decision](case-studies/2026-09-16-completed-run-is-not-approved-decision.md)

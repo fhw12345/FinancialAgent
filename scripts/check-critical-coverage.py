@@ -33,6 +33,13 @@ THRESHOLDS = {
     "src/services/evidence/collection.py": 90.0,
     "src/services/evidence/context.py": 75.0,
     "src/services/evidence/service.py": 85.0,
+    "src/models/research_strategy.py": 95.0,
+    "src/services/research_strategy/calculators.py": 90.0,
+    "src/services/research_strategy/evaluation.py": 85.0,
+    "src/services/research_strategy/store.py": 85.0,
+    "src/services/research_strategy/adapters.py": 90.0,
+    "src/services/research_strategy/service.py": 85.0,
+    "src/services/research_strategy/monitoring.py": 85.0,
 }
 
 

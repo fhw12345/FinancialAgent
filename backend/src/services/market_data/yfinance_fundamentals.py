@@ -78,6 +78,7 @@ def _overview_sync(symbol: str) -> dict[str, Any]:
         "Country": info.get("country") or "",
         "Currency": info.get("currency") or "",
         "FinancialCurrency": info.get("financialCurrency") or "",
+        "QuoteType": info.get("quoteType") or "",
         "MarketCapitalization": _av_str(info.get("marketCap")),
         "PERatio": _av_str(info.get("trailingPE")),
         "ForwardPE": _av_str(info.get("forwardPE")),
@@ -186,6 +187,7 @@ _BALANCE_SHEET_FIELDS: list[tuple[str, list[str]]] = [
     ("inventory", ["Inventory"]),
     ("currentNetReceivables", ["Receivables", "Net Receivables"]),
     ("longTermDebt", ["Long Term Debt"]),
+    ("totalDebt", ["Total Debt"]),
 ]
 
 

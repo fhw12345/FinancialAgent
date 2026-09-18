@@ -5,6 +5,11 @@ def render_research_prompt(symbol: str, language_directive: str) -> str:
     from ...services.evidence.context import reminder
 
     evidence = reminder(symbol)
+    from ...services.research_strategy.context import phase1_prompt
+
+    strategy = phase1_prompt(symbol)
+    if strategy is not None:
+        return strategy + "\n" + language_directive + "\n" + evidence
     return f"""# Symbol Research: {symbol}
 
 **FIRST ACTION REQUIRED**: Call `get_stock_quote` with symbol="{symbol}" and

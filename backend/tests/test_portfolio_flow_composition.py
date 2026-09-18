@@ -76,6 +76,14 @@ def recorded_risk_provider(monkeypatch):
 
     monkeypatch.setattr(provider, "fetch_asset", fetch)
     monkeypatch.setattr(service, "completed_session", lambda now: ASOF)
+    from datetime import datetime, UTC
+
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 9, 16, 21, tzinfo=UTC)
+
+    monkeypatch.setattr(service, "datetime", Clock)
 
 
 class _HoldingRepo:

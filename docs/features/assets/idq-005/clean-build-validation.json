@@ -1,0 +1,53 @@
+{
+  "date": "2026-09-18",
+  "backend_version": "0.57.0",
+  "frontend_version": "0.38.0",
+  "dependencies_equal": true,
+  "frontend_assets_equal": true,
+  "runs": [
+    {
+      "backend": {
+        "image_id": "sha256:0557b04c413f84948b195c7b97adacc47919c643f230ca474bf240a89f375ffc",
+        "user": "app",
+        "uid": "1000",
+        "dependency_count": 125,
+        "dependency_sha256": "2aa7a32d8121c221960464dfee8ad5b60a25e085bd7cdc2a4cf95dae86e46fa7",
+        "local_env_files": 0
+      },
+      "frontend": {
+        "image_id": "sha256:feb8d40f69471902f9dc912b1abab9525c314fd24046d599002ede51fb350779",
+        "user": "node",
+        "uid": "1000",
+        "dependency_count": 746,
+        "dependency_sha256": "18efc4df1ef5ba048bc9ca2aea121864f0e5513dd1a2038cfed3f73e83a3420b",
+        "local_env_files": 0,
+        "build_assets_sha256": "7bef8bb70dc5e092ad57f3f2555ff3d765fb75d332ed5ad260f0a593307a8b99"
+      }
+    },
+    {
+      "backend": {
+        "image_id": "sha256:a24868db685cce992af87a034ae67c46cfcc5c0bce98b7901d6fbda7f2885a9c",
+        "user": "app",
+        "uid": "1000",
+        "dependency_count": 125,
+        "dependency_sha256": "2aa7a32d8121c221960464dfee8ad5b60a25e085bd7cdc2a4cf95dae86e46fa7",
+        "local_env_files": 0
+      },
+      "frontend": {
+        "image_id": "sha256:fd5e582cc47d6f04ec344ac6a152f6d52315af9554304c7cd3565918a5de4f1c",
+        "user": "node",
+        "uid": "1000",
+        "dependency_count": 746,
+        "dependency_sha256": "18efc4df1ef5ba048bc9ca2aea121864f0e5513dd1a2038cfed3f73e83a3420b",
+        "local_env_files": 0,
+        "build_assets_sha256": "7bef8bb70dc5e092ad57f3f2555ff3d765fb75d332ed5ad260f0a593307a8b99"
+      }
+    }
+  ],
+  "production_sources_equal": true,
+  "note": "Successful unchanged-input builds A/B. Initial B attempt failed on truncated registry JSON and is excluded; bounded retry passed all original lock/dependency/asset checks. Fixture/test/docs changed during acceptance, production inputs did not.",
+  "accepted_runtime": {
+    "backend": "financialagent-idq005-backend:build-a",
+    "frontend": "financialagent-idq005-frontend:build-a"
+  }
+}

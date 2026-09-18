@@ -5,9 +5,18 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from .research_strategy import StrategyVersion
+
 Number = Annotated[float, Field(strict=True, allow_inf_nan=False)]
 Family = Literal[
-    "quote", "ohlcv", "overview", "cash_flow", "balance_sheet", "news", "filing"
+    "quote",
+    "ohlcv",
+    "overview",
+    "cash_flow",
+    "balance_sheet",
+    "news",
+    "filing",
+    "income_statement",
 ]
 Quality = Literal["available", "stale", "missing", "conflicting", "unsupported"]
 Period = Literal["instant", "session", "quarter", "annual", "ttm", "event", "unknown"]
@@ -44,7 +53,7 @@ class EvidenceRecord(EvidenceModel):
     quality: Quality = "available"
     adjustment: str = "unknown"
     payload_hash: str = ""
-    adapter_version: Literal["idq-004@1"] = "idq-004@1"
+    adapter_version: Literal["idq-004@1", "idq-005@1"] = "idq-004@1"
     revision_of: str | None = None
     legacy_aliases: list[str] = Field(default_factory=list, max_length=5)
 
@@ -83,7 +92,9 @@ EXPECTED_FAMILIES: tuple[Family, ...] = (
 
 class EvidenceSnapshot(EvidenceModel):
     schema_version: Literal[1] = 1
-    freshness_policy: Literal["diagnostic-close@1"] = "diagnostic-close@1"
+    freshness_policy: Literal["diagnostic-close@1", "strategy-contract@1"] = (
+        "diagnostic-close@1"
+    )
     reconciliation_policy: Literal["like-slot-1e-6@1"] = "like-slot-1e-6@1"
     source_selection: Literal["retain-all-comparable-no-average@1"] = (
         "retain-all-comparable-no-average@1"
@@ -104,6 +115,8 @@ class EvidenceSnapshot(EvidenceModel):
     risk_snapshot_id: str | None = None
     policy_revision: int | None = None
     strategy_version: str | None = None
+    strategy_contract: StrategyVersion | None = None
+    strategy_peers: dict[str, str] = Field(default_factory=dict)
     records: list[EvidenceRecord] = Field(default_factory=list, max_length=1000)
     expected: list[Family] = Field(default_factory=lambda: list(EXPECTED_FAMILIES))
     coverage: dict[str, Quality] = Field(default_factory=dict)

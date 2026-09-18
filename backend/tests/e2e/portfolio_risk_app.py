@@ -2,6 +2,8 @@
 
 from datetime import UTC, datetime
 from src.services.portfolio_risk import service
+from src.services import agent_run_service
+from src.api import portfolio_admin
 from tests.e2e.decision_policy_app import app, reset
 
 
@@ -12,6 +14,8 @@ class Clock(datetime):
 
 
 service.datetime = Clock
+agent_run_service.utcnow = lambda: Clock.now(UTC)
+portfolio_admin.utcnow = lambda: Clock.now(UTC)
 
 
 @app.post("/api/test/risk/reset")

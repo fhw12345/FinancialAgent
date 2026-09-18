@@ -1,20 +1,67 @@
 ---
 title: Investment Mandates and Research Strategy Contracts
-status: planning
-version: n/a
-last_updated: 2026-09-14
+status: in-progress
+version: backend@0.57.0, frontend@0.38.0
+last_updated: 2026-09-18
 owner: maintainer
 related_paths:
-  - backend/src/models/portfolio_analysis.py
-  - backend/src/agent/portfolio_phase2_prompt.py
-  - backend/src/agent/portfolio/phase1_research.py
-  - backend/src/agent/skills/financial/
-  - backend/src/agent/skills/technical/
+  - backend/src/models/research_strategy.py
+  - backend/src/services/research_strategy/
+  - backend/src/services/market_data/research_income.py
+  - backend/src/services/evidence/
   - backend/src/agent/prompt_registry.py
-  - frontend/src/components/portfolio/SettingsPanel.tsx
+  - frontend/src/components/portfolio/ResearchStrategyPanel.tsx
+  - frontend/src/components/portfolio/StrategyReceipt.tsx
 ---
 
 # IDQ-005：投资授权、研究期限与策略方法契约
+
+## Confirmed Pilot / Implementation Contract (2026-09-18)
+
+Maintainer explicitly confirmed: medium-term fundamental research, **252 XNYS trading
+sessions**, **SPY total-return benchmark**, USD US non-financial common equities, with
+conditional peer PE and DCF. Banks/insurance/other financials and ETF look-through are
+inapplicable in this pilot. Short-term research remains a separate disabled experimental
+contract. This approval is the software pilot scope, not personal valuation assumptions
+or activation of a live strategy.
+
+- Numeric assumptions are blank until explicit confirmation: discount/growth/terminal
+  growth/tax rate/projection years, valuation discount, earnings-decline and debt/FCF
+  invalidation thresholds, and financial-age/closing-price freshness limits. Peer membership
+  and selection rationale are fixed before provider fetch. Costs bind a user-confirmed
+  IDQ-002 risk-policy revision, not a second cash/position ledger.
+- A single-document CAS aggregate stores immutable strategy versions and an active-for-
+  future-research pointer. Confirmation needs expected revision and request identity;
+  same-request replay is idempotent, divergent/stale writes conflict. Deactivation keeps
+  history. Opening/selecting/saving never invokes a model; running research is separate.
+- Selected versions, cost assumptions, peer snapshot IDs and method versions are frozen
+  into new evidence captures. Old sealed records/hash verification stay compatible and
+  old assessments are explicitly legacy_strategy, never backfilled. A later edit cannot
+  alter in-flight prompts or historical receipts; stale projections require new research.
+- Fundamental Phase 1/Phase 2 use separately registered prompts, not the old mixed
+  Fibonacci/forced stop/target instructions. Active strategy output separates investment
+  stance from portfolio_action=null / execution_intent=null. No fabricated HOLD for
+  missing inputs. Deep uses the same contract and evidence/calculation receipts.
+- PE uses positive annual diluted EPS and a predeclared peer set with comparable dated
+  EPS/closing-price receipts; derive the peer median PE, never invent a sector multiple.
+  DCF is a disclosed FCFF **proxy model**: CFO + interest×(1−declared tax) − capex,
+  projected under declared assumptions, then subtract net debt and divide by annual
+  diluted-average shares. Accrual/cash-interest and future-dilution limitations are explicit.
+  This is not audited FCFF or a verified fair value. No method averaging/triangulation
+  merely because two outputs share a currency; unavailable/inapplicable is valid.
+- Additional income-statement evidence preserves fiscal period, financial currency and
+  provider normalization. Missing financial currency, earnings/shares, peers, dates,
+  conflicts or unsupported company type produces no invented valuation. Current provider
+  restatements remain retrieval_only, not historical PIT. No new arbitrary formula evaluator.
+- Material theses reference captured evidence; monitoring conditions are rendered from
+  the confirmed contract. Forecast scenarios are conditional/unverified; v1 probability
+  is null, never confidence/10 or an empirical historical-frequency claim.
+- Always non-actionable. Full InvestmentPolicy, ready/review approval and paper execution
+  remain IDQ-001-B/008. No live inference, synthetic personal limits, PH-009 work or IDQ-003
+  implementation is authorized by this task.
+- Test-first ST-01…10 plus CAS/replay/stale/cancel/persistence/unit/scope/old-record controls;
+  real API/Mongo browser evidence, all existing gates, final repeated builds, versions,
+  bilingual case study and two-stage protected publication are required.
 
 ## 1. Context / Objective
 
@@ -142,5 +189,35 @@ ResearchRequest引用policy/strategy，并区分 `purpose=research|portfolio_pro
 - [ ] 版本、截图、changelog、双语案例和protected PR完成；不把软件出货称作策略有效。
 - [ ] 回滚禁用新策略版本但保留旧record读取；不把新结果重标旧版本。
 
-仍需维护者确认：首发模板、允许估值方法/行业范围、具体阈值、是否支持ETF look-through。
-不支持的类型明确inapplicable/blocked。不要为追求覆盖率把银行、ETF、亏损股都硬套同一估值。
+首发范围已于 2026-09-18 确认，见本文顶部。个人数值假设、同行和阈值仍须在 UI/API
+显式确认才创建/启用版本；本次范围确认不会填入真实账户。短期模板和 ETF look-through
+不启用，不支持类型明确 inapplicable。Provider 的 equity/country/sector 分类只是研究
+适用性筛查，不是独立 share-class 或未来 ready 资格证明。
+
+## Validation / Publication Pending
+
+- Backend 2217 passed / 27 live integrations deselected, coverage rounds to 74%;
+  Black/Ruff/mypy (330 files), Bandit, deterministic Agent evaluation and script checks pass.
+- All existing critical floors are preserved; new floors cover contracts, calculators,
+  applicability, CAS store, adapters, monitoring and composition.
+- Frontend 272 tests / 30 files, production lint zero, total test/E2E lint ceiling 131;
+  type-check passes. Final image-only acceptance passes 4 strategy + 3 evidence + 3 risk
+  + 6 safety + 4 Copilot + 6 hardening + 11 default scenarios (37 total).
+- [Contract screenshot](assets/idq-005/01-strategy-contract.png) follows assertions of
+  252 XNYS sessions, SPY total return, PE=100 USD/share and null portfolio/execution action.
+  [Missing valuation](assets/idq-005/02-missing-valuation.png) follows assertions of
+  missing EPS/shares, unavailable estimates and unchanged reload results.
+- All browser data/model receipts are synthetic outer transports with real API/graph/
+  adapter/Mongo paths. No live model probe or investment-performance comparison was run.
+- Two unchanged-input no-cache builds A/B match full installed manifests (125 backend
+  distributions / 746 frontend paths), frontend assets and production source trees.
+  The initial B transport returned truncated registry JSON and was excluded; bounded
+  retry passed the same lock checks. [Build receipts](assets/idq-005/clean-build-validation.json).
+- [Local receipts](assets/idq-005/local-validation.json) record accepted image IDs, UID
+  1000, fixtures-only backend/no frontend mounts, and unchanged historical strategy /
+  deactivation / assessment responses after actual backend recreation.
+- Live localhost:3013 runs 0.57.0/0.38.0 with private login/routing revision 1 preserved.
+  Personal risk policy and research strategy remain unconfigured; synthetic parameters
+  were never copied into the live account. No live inference was requested.
+- Hosted protected publication remains pending; local acceptance is not shipment.
+- [Bilingual case study](../case-studies/2026-09-18-research-mandate-is-not-a-trade.md).

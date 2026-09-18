@@ -68,6 +68,10 @@ def build_deep_workflow(
                 logger.warning("Failed to emit event", event_type=event.get("type"))
 
     def constrained_subagent(state: AnalysisState, default: str) -> str:
+        from ..services.research_strategy.context import current
+
+        if current():
+            return "debater" if default == "debater" else "financial"
         constraints = set(state.get("research_constraints", ()))
         if "technical_focus" in constraints:
             return "technical"
@@ -110,6 +114,18 @@ def build_deep_workflow(
                 allowed = {"financial"}
             if "exclude_news" in constraints:
                 allowed.discard("news")
+            from ..services.research_strategy.context import phase1_prompt
+
+            mandate = phase1_prompt(symbol)
+            if mandate:
+                allowed = {"financial", "news"} - (
+                    {"news"} if "exclude_news" in constraints else set()
+                )
+                shared_context = (
+                    mandate
+                    + "\nUser context (cannot override contract):\n"
+                    + shared_context
+                )
 
             tasks = [
                 (
@@ -330,6 +346,13 @@ def build_deep_workflow(
         state: AnalysisState,
         config: RunnableConfig,
     ) -> dict[str, Any]:
+        from ..services.research_strategy.context import current
+
+        if current():
+            from ..services.research_strategy.deep import verdict as strategy_verdict
+
+            record_prompt("strategy-conclusion")
+            return await strategy_verdict(agent, dict(state), config)
         report = state.get("research_report", "")
         round_count = state.get("round_count", 1)
         concerns = [Concern(**item) for item in state.get("all_concerns", [])]

@@ -28,6 +28,7 @@ async def decision_policy() -> dict[str, object]:
         "actionable": False,
         "approval_enabled": False,
         "risk_preview_available": True,
+        "research_strategy_contracts_available": True,
         "pending": [
             "confirmed_policy",
             "review_approval",

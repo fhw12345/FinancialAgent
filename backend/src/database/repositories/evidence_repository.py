@@ -9,7 +9,13 @@ from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
 from ...core.exceptions import AppError
-from ...models.evidence import EvidenceRecord, EvidenceSnapshot, ResearchDossier
+from ...models.evidence import (
+    EXPECTED_FAMILIES,
+    EvidenceRecord,
+    EvidenceSnapshot,
+    ResearchDossier,
+)
+from ...models.research_strategy import StrategyVersion
 from ...services.evidence.identity import digest, identify, manifest_hash, reconcile
 
 
@@ -38,8 +44,10 @@ class EvidenceRepository:
         parent_id: str | None = None,
         risk_snapshot_id: str | None = None,
         policy_revision: int | None = None,
+        strategy: StrategyVersion | None = None,
+        strategy_peers: dict[str, str] | None = None,
     ) -> EvidenceSnapshot:
-        identity = {
+        identity: dict[str, Any] = {
             "run_id": run_id,
             "symbol": symbol,
             "as_of": as_of.isoformat(),
@@ -48,6 +56,9 @@ class EvidenceRepository:
             "risk_snapshot_id": risk_snapshot_id,
             "policy_revision": policy_revision,
         }
+        if strategy:
+            identity["strategy"] = strategy.model_dump(mode="json")
+            identity["strategy_peers"] = strategy_peers or {}
         snapshot_id = "snapshot_" + digest([run_id, request_key, symbol])
         now = datetime.now(UTC)
         fresh = EvidenceSnapshot(
@@ -63,6 +74,17 @@ class EvidenceRepository:
             parent_id=parent_id,
             risk_snapshot_id=risk_snapshot_id,
             policy_revision=policy_revision,
+            strategy_version=strategy.version_id if strategy else None,
+            freshness_policy=(
+                "strategy-contract@1" if strategy else "diagnostic-close@1"
+            ),
+            strategy_contract=strategy,
+            strategy_peers=strategy_peers or {},
+            expected=(
+                [*EXPECTED_FAMILIES, "income_statement"]
+                if strategy
+                else list(EXPECTED_FAMILIES)
+            ),
         )
         try:
             row = await self.collection.find_one_and_update(

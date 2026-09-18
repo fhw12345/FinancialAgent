@@ -32,6 +32,12 @@ marked executed. Use **Add Transaction** independently to record trades you actu
 made. On Portfolio, use **Refresh risk** to capture daily-close risk and explicitly
 confirm your own **Risk preview policy** limits; old model-size hints are not policy.
 Cash is your declared account balance, not an automatic settlement ledger.
+The **Research mandate** panel offers the approved fundamental pilot (252 XNYS sessions,
+SPY total return, USD US non-financial equities). Confirm costs and supply your own
+assumptions/peers before using an immutable version for future research; configuration
+never calls a model. PE/DCF outputs are conditional model estimates, not verified fair
+values or execution prices. Short-term experiments remain disabled.
+
 Research assessments also expose **Research evidence** dossiers: inspect exact values,
 units, periods and sources. “Fields match” means agreement with sealed records, not
 proof of source truth or the investment conclusion. Unknown publication/PIT remains unknown.

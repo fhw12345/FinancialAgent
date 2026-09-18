@@ -56,6 +56,27 @@ class DeepAgentAdapter:
         message_id: str,
     ) -> None:
         """Persist a validated verdict signal after chat completion is durable."""
+        if verdict.get("kind") == "strategy_research":
+            from ..models.research_strategy import StrategyConclusion
+            from ..services.research_strategy.service import saved_deep_summary
+
+            conclusion = StrategyConclusion.model_validate(verdict)
+            summary = await saved_deep_summary(
+                self.deep_agent._order_repo.collection.database,
+                run_id,
+                symbol,
+                conclusion,
+            )
+            await self.deep_agent._persist_verdict_decision(
+                symbol,
+                None,
+                chat_id=chat_id,
+                run_id=run_id,
+                message_id=message_id,
+                research_text=conclusion.report_markdown,
+                strategy=summary,
+            )
+            return
         structured_verdict = DeepVerdict.model_validate(verdict, strict=True)
         await self.deep_agent._persist_verdict_decision(
             symbol=symbol,

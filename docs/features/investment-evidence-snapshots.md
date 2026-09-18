@@ -1,8 +1,8 @@
 ---
 title: Point-In-Time Evidence Snapshots and Claim Validation
 status: shipped
-version: backend@0.56.0, frontend@0.37.0
-last_updated: 2026-09-17
+version: backend@0.57.0, frontend@0.38.0
+last_updated: 2026-09-18
 owner: maintainer
 related_paths:
   - backend/src/models/evidence.py
@@ -60,6 +60,16 @@ personal limits are enabled, and no live model probes are required.
   must pass, alongside all current gates and final-image/build/protected publication.
   Preserve the live 3013 private credentials and routing revision; no test policy/data
   is copied into that account. Record limitations and coverage explicitly, not as alpha.
+
+## IDQ-005 Compatibility Extension (2026-09-18)
+
+Confirmed research now binds the immutable strategy/cost contract and predeclared peer
+snapshot IDs into the evidence request/manifest. Income-statement inputs and a versioned
+financial normalization adapter are added only on that branch. Missing financial units
+remain missing; provider-current financial currency is disclosed as normalization, not
+historical PIT proof. Historical snapshots without a strategy retain their original
+manifest-hash algorithm and never receive a fabricated strategy version. The IDQ-004
+release evidence below remains the historical 0.56.0/0.37.0 receipt.
 
 ## 1. 问题与边界
 

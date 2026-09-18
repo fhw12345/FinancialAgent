@@ -133,15 +133,16 @@ class DeepReActAgent:
     async def _persist_verdict_decision(
         self,
         symbol: str,
-        action: VerdictAction,
+        action: VerdictAction | None,
         *,
         chat_id: str,
         run_id: str,
         message_id: str,
         research_text: str = "",
+        strategy: Any = None,
     ) -> None:
         """Persist Deep research as a non-actionable assessment, never a signal order."""
-        if action not in {"BUY", "HOLD", "SELL"}:
+        if action not in {"BUY", "HOLD", "SELL", None}:
             raise ValueError(f"Unsupported structured verdict action: {action}")
         if self._order_repo is None:
             raise RuntimeError("Deep assessment storage is unavailable")
@@ -159,6 +160,7 @@ class DeepReActAgent:
             proposals=[],
             research={symbol: research_text},
             evidence=evidence,
+            strategy=strategy,
         )
 
     async def _invoke_subagent(

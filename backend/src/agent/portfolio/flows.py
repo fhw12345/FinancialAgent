@@ -111,8 +111,19 @@ async def _research_and_assess(
         raise RuntimeError("MongoDB/DataManager unavailable")
     symbols = list(dict.fromkeys(s.upper() for s in symbols))
     from ...services.portfolio_risk import service as risk_service
+    from ...services.research_strategy import (
+        service as strategy_service,
+    )
+    from ...services.research_strategy import (
+        store as strategy_store,
+    )
+    from ...services.research_strategy.context import strategy_scope
 
-    snapshot = await risk_service.capture(mongo, symbols)
+    strategy = await strategy_store.active(mongo)
+    capture_symbols = sorted(
+        set(symbols) | set(strategy.parameters.peer_symbols if strategy else [])
+    )
+    snapshot = await risk_service.capture(mongo, capture_symbols)
     context.update(risk_service.prompt_context(snapshot))
     run_id = current_run_id() or f"{source}_{uuid.uuid4().hex}"
     from ...services.evidence import service as evidence_service
@@ -125,7 +136,9 @@ async def _research_and_assess(
         symbols,
         run_id,
         snapshot,
+        strategy=strategy,
     )
+    strategy_reviews = await strategy_service.reviews(mongo, evidence_snapshots)
     repository = PortfolioOrderRepository(mongo.get_collection("portfolio_orders"))
     summary: dict[str, Any] = {
         "holdings_analyzed": 0,
@@ -139,7 +152,7 @@ async def _research_and_assess(
             pa = None
     if pa is not None:
         stubs = [_SymbolStub(symbol=s) for s in symbols]
-        with evidence_scope(evidence_snapshots):
+        with evidence_scope(evidence_snapshots), strategy_scope(strategy_reviews):
             results = await pa._run_phase1_research(
                 positions=stubs if as_holdings else [],
                 watchlist_items=[] if as_holdings else stubs,
@@ -177,7 +190,7 @@ async def _research_and_assess(
         )
     proposals: list[dict[str, Any]] = []
     if checked and pa is not None:
-        with evidence_scope(evidence_snapshots):
+        with evidence_scope(evidence_snapshots), strategy_scope(strategy_reviews):
             decision_result, decisions = await pa._run_phase2_decisions(
                 all_analysis_results=results,
                 portfolio_context=context,
@@ -200,6 +213,10 @@ async def _research_and_assess(
     if risk_review.stale and risk_review.allocation:
         risk_review.allocation.status = "blocked"
         risk_review.allocation.constraints.append("STALE_SNAPSHOT")
+    await strategy_service.record_prompts(mongo, run_id, strategy_reviews)
+    strategy_result = strategy_service.summary(strategy_reviews)
+    if strategy_result:
+        strategy_result = await strategy_service.project(mongo, strategy_result)
     written = await _persist_decisions(
         proposals,
         dm,
@@ -213,6 +230,7 @@ async def _research_and_assess(
         holdings=held,
         portfolio_risk=risk_review,
         evidence=evidence,
+        strategy=strategy_result,
     )
     return {
         "message": f"Stage A: saved {written} non-actionable research assessment(s). No trade recommendation is approved.",

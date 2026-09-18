@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.0] - 2026-09-18
+
+### IDQ-005 confirmed research contracts
+
+- Adds explicitly confirmed, immutable fundamental strategy versions and CAS activation/deactivation without inference or trade side effects.
+- Freezes the approved 252-session / SPY-total-return mandate, cost-policy revision, declared peer set and user-supplied numeric assumptions into evidence captures.
+- Adds typed annual peer PE and disclosed FCFF-proxy DCF model estimates, fiscal/unit/scope/freshness checks and deterministic monitoring flags; unavailable/inapplicable inputs never get invented values.
+- Uses separately registered Portfolio/Deep research-stance prompts with null portfolio action/execution intent; no short-term geometry or confidence-as-probability promotion.
+- Preserves legacy reads and old sealed hashes; later configuration edits only affect future research and mark historical receipts stale.
+- Local 2217 tests, strict gates/coverage, 37 final-image browser cases and two unchanged-input clean builds pass; hosted publication pending. No ready/approval is enabled.
+
 ## [0.56.0] - 2026-09-17
 
 ### IDQ-004 sealed evidence and structured claims

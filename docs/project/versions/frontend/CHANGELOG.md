@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-09-18
+
+### Research mandate configuration and receipts
+
+- Adds explicit strategy/cost/assumption confirmation with blank numeric inputs, immutable version history and deactivation for future research.
+- Displays horizons, benchmark, dated valuation inputs, conditional estimates, monitoring thresholds, stance and stale-version warnings separately from execution prices.
+- Reuses the existing HTTP-compatible request ID generator so local non-secure browser contexts cannot crash the form.
+- All 272 frontend tests, strict lint/types and 37 final-image browser scenarios pass; repeated build manifests match. Hosted publication pending; live personal strategy remains unconfigured.
+
 ## [0.37.0] - 2026-09-17
 
 ### Sealed evidence navigation

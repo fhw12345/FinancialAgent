@@ -1,8 +1,8 @@
 ---
 title: Investment Decision Quality Program
 status: in-progress
-version: backend@0.56.0, frontend@0.37.0
-last_updated: 2026-09-17
+version: backend@0.57.0, frontend@0.38.0
+last_updated: 2026-09-18
 owner: maintainer
 related_paths:
   - backend/src/agent/portfolio/
@@ -26,7 +26,9 @@ related_paths:
 当前出货切片：[IDQ-001-A](investment-decision-safety-containment.md)。没有 ready、批准或
 paper 执行资格。[IDQ-002](investment-portfolio-risk-allocation.md) 已出货风险数学与
 非行动性配仓预览；[IDQ-004](investment-evidence-snapshots.md) 已出货封存证据与结构化字段校验（不认证全文/来源真伪）。
-维护者确认顺序调整为 **004 → 005 → 001-B**，003 后移；其余任务未启动，PH-009 继续暂停。
+维护者确认顺序调整为 **004 → 005 → 001-B**，003 后移。2026-09-18 已确认 005 首发
+范围（252 交易日 / SPY 总回报 / USD 美股非金融普通股 / 条件性 PE 与 DCF），005 正在实施；
+个人数值假设仍必须显式填写，不能因本次软件范围确认自动启用。PH-009 继续暂停。
 
 ## 1. 目标、基线与证据等级
 

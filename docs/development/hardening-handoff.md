@@ -1,8 +1,8 @@
 ---
 title: Project Hardening Active Handoff
 status: in-progress
-version: backend@0.56.0, frontend@0.37.0
-last_updated: 2026-09-17
+version: backend@0.57.0, frontend@0.38.0
+last_updated: 2026-09-18
 owner: maintainer
 related_paths:
   - docs/features/project-hardening-program.md
@@ -16,6 +16,23 @@ related_paths:
 # Project Hardening Active Handoff
 
 ## 1. Current State
+
+### IDQ-005 authorized / in progress (2026-09-18)
+
+Maintainer approved the fundamental pilot: 252 XNYS sessions, SPY total return,
+USD US non-financial common equities, conditional peer PE and DCF. Numeric valuation
+assumptions/peer rationale/invalidation thresholds remain explicit user inputs;
+there is no permission to configure the live account or open ready/approval.
+Branch `feat/idq-005-strategy-contracts`, target 0.57.0/0.38.0. Immutable version CAS,
+sealed peer inputs, separate Portfolio/Deep stance prompts, typed valuation/monitoring
+receipts and explicit UI confirmation are implemented locally. Backend 2217/frontend
+272 tests pass with strict gates and new critical floors. Final image-only acceptance
+passes 37 cases. Two unchanged-input builds match full manifests/assets/source trees;
+strategy/deactivation/history survive recreation. Hosted publication remains pending.
+Live 3013 uses accepted 0.57.0/0.38.0 images; private login/routing is preserved and
+personal risk/strategy values remain unconfigured. Preserve live
+3013 credentials/routing revision 1 and unconfigured risk/strategy state. No live probes.
+PH-009/003 stay postponed; 001-B is a subsequent task, not implicitly authorized.
 
 ### IDQ-004 shipped (2026-09-17)
 
@@ -33,7 +50,8 @@ Hosted run 35209071011 passed all gates and five browser lanes; downloaded repor
 were verified in the [receipt](../features/assets/idq-004/hosted-validation.json).
 Live 3013 runs accepted images with private
 credentials/routing revision 1 and unconfigured personal risk policy preserved.
-No live inference is required. PH-009 remains paused; no authorization to start 005 yet.
+At IDQ-004 shipment, 005 was not yet authorized. Current authorization is recorded above.
+No live inference is required; PH-009 remains paused.
 
 ### IDQ-002 shipped (2026-09-17)
 
@@ -222,7 +240,7 @@ config run. The 131 lint warnings are accepted non-increasing follow-up debt.
 | PH-009 Source decomposition | planning |
 | PH-010 Version metadata | shipped |
 
-## 5. Current Direction — IDQ-004; PH-009 Paused
+## 5. Current Direction — IDQ-005; PH-009 Paused
 
 The maintainer explicitly requested **not to execute PH-009**. IDQ-001-A is now
 separately authorized and shipped; see the current state above and the
@@ -231,7 +249,8 @@ in-progress even after A ships. B requires confirmed policy and IDQ-002/004/005;
 none of those limits or approvals may be invented to make A look complete.
 IDQ-002 software is shipped as non-actionable risk/allocation previews. IDQ-004 is
 shipped as a bounded evidence/structured-field layer; subsequent order is 005 then
-001-B, with 003 postponed. Next implementation still needs maintainer authorization. Other child
+001-B, with 003 postponed. IDQ-005 now has explicit pilot authorization; 001-B still
+requires a separate instruction. Other child
 plans remain planning. No paper execution or investment-quality claim.
 
 ### PH-009 Resume References (Not an Active Work Queue)

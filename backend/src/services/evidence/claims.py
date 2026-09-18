@@ -11,7 +11,7 @@ from ...models.evidence import (
     ResearchClaim,
     ResearchDossier,
 )
-from ..portfolio_risk.calendar import completed_session
+from ..portfolio_risk.calendar import completed_session, sessions
 from .identity import digest, same_value
 
 CLAIM_INSTRUCTION = """
@@ -74,9 +74,23 @@ def validate_claim(
             reasons.append("PERIOD_UNVERIFIED")
         if record.period_end and record.period_end > snapshot.requested_as_of.date():
             reasons.append("ECONOMIC_PERIOD_AFTER_CUTOFF")
+        if (
+            snapshot.strategy_contract
+            and record.period in ("annual", "quarter", "ttm")
+            and record.period_end
+        ):
+            if (
+                snapshot.requested_as_of.date() - record.period_end
+            ).days > snapshot.strategy_contract.parameters.max_financial_age_days:
+                reasons.append("STALE_FINANCIAL_PERIOD")
         if record.metric.startswith("price."):
-            if record.period == "session" and record.period_end != completed_session(
-                snapshot.requested_as_of
+            lag = (
+                snapshot.strategy_contract.parameters.max_price_lag_sessions
+                if snapshot.strategy_contract
+                else 0
+            )
+            if record.period == "session" and record.period_end not in sessions(
+                completed_session(snapshot.requested_as_of), lag + 1
             ):
                 reasons.append("STALE_SESSION")
             if record.period == "instant":

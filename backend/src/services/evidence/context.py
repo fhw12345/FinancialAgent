@@ -124,6 +124,10 @@ def install_tools(tools: list[Any]) -> None:
         tool.metadata = {**(tool.metadata or {}), "sealed_evidence_wrapper": True}
 
 
+def current_snapshots() -> dict[str, EvidenceSnapshot]:
+    return dict(_scope.get() or {})
+
+
 def reminder(symbol: str | None = None) -> str:
     scope = _scope.get()
     if scope is None:
@@ -151,7 +155,8 @@ def reminder(symbol: str | None = None) -> str:
                 },
             )
             for r in snapshot.records
-            if r.family in ("quote", "overview", "cash_flow", "balance_sheet")
+            if r.family
+            in ("quote", "overview", "cash_flow", "balance_sheet", "income_statement")
         ]
         lines.append(
             json.dumps(
