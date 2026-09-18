@@ -54,8 +54,8 @@ export default function DecisionAssessments({
         data-testid="assessment-stage-a-notice"
       >
         {zh
-          ? "当前仅提供非行动性研究。完整政策/证据/策略批准门禁尚未接齐；风险与估值检查不赋予 ready、批准或执行资格。"
-          : "Non-actionable research only. The full policy/evidence/strategy approval gate remains incomplete; risk and valuation checks alone grant no eligibility."}
+          ? "这些记录仍是非行动性研究，不能直接批准或执行。需在独立的人工目标提案中校验政策、证据与完整账户；风险或估值结果本身不赋予资格。"
+          : "These records remain non-actionable research, not directly approvable or executable. A separate user-target review validates policy, evidence and the whole account; risk or valuation results alone grant no eligibility."}
       </p>
       {query.isLoading && (
         <p role="status">{zh ? "加载评估…" : "Loading assessments…"}</p>

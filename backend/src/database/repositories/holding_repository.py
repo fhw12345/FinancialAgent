@@ -12,6 +12,7 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 from src.core.utils.date_utils import utcnow
 
 from ...models.holding import Holding, HoldingCreate, HoldingUpdate
+from ...services.decision_policy.control import repository_write
 
 logger = structlog.get_logger()
 
@@ -38,6 +39,7 @@ class HoldingRepository:
         )
         logger.info("Holding indexes ensured")
 
+    @repository_write
     async def create(
         self,
         user_id: str | None = None,
@@ -128,6 +130,7 @@ class HoldingRepository:
             "unrealized_pl_pct": unrealized_pl_pct,
         }
 
+    @repository_write
     async def update(
         self, holding_id: str, holding_update: HoldingUpdate
     ) -> Holding | None:
@@ -248,6 +251,7 @@ class HoldingRepository:
 
         return Holding(**result)
 
+    @repository_write
     async def delete(self, holding_id: str) -> bool:
         """
         Delete a holding.

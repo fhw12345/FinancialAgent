@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.0] - 2026-09-18
+
+### IDQ-001-B deterministic human paper review
+
+- Adds explicitly confirmed versioned review policy, user-target proposals and separate human-review approvals; no real-account mutation, broker call or simulated fill.
+- Revalidates positive research checks, sealed dossiers/strategy inputs, full current/proposed account constraints, exact approved subsets and confirmed sigma/expiry limits.
+- Coordinates all supported account/settings/risk/strategy writes with persistent mutation tickets and one publication/approval CAS; server-time expiry is capped at the next XNYS close.
+- Preserves immutable preparations/history, idempotent accepted requests, cancellation, stale projections and independent manual bookkeeping; no critical-gate override or live defaults.
+- Records positive consistency-check attestation for new research; legacy/Deep records without it are not backfilled into readiness. Keeps legacy execution paths closed.
+- Computes debt/FCFF monitoring from shared typed inputs without forcing the DCF valuation method; rejects finite-operand arithmetic overflow before it can produce false zero debt risk. Target-only review explicitly has no stop-loss/max-loss guarantee.
+- Adds strict contracts, race/persistence/negative tests, critical floors and the required real-API review browser lane. Shipment references follow protected acceptance.
+
 ## [0.57.0] - 2026-09-18
 
 ### IDQ-005 confirmed research contracts

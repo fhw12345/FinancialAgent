@@ -1,7 +1,7 @@
 ---
 title: Investment Decision Contracts and Policy Gates
 status: in-progress
-version: backend@0.57.0, frontend@0.38.0
+version: backend@0.58.0, frontend@0.39.0
 last_updated: 2026-09-18
 owner: maintainer
 related_paths:
@@ -25,6 +25,13 @@ A 使用独立 assessments API，不将新研究混入 legacy 决策收益统计
 IDQ-004 已接入封存证据与结构化字段校验（0.56.0/0.37.0，PR #12）；字段匹配不等于全文语义认证，更不赋予 ready。
 005 首发研究契约已按确认范围出货（0.57.0/0.38.0，PR #14）；完整投资政策、策略/证据满足条件的确定性
 ready 门禁与批准仍属 001-B，不因研究契约保存而开放。
+
+Maintainer has now authorized [IDQ-001-B](investment-decision-review-gates.md).
+The scoped implementation is in progress: user-entered target weights, a separate
+review-policy/batch API, full-account/subset checks, same-document publication CAS
+and human paper-review approval only. The child spec is authoritative for this pilot;
+the broader original target below is not an execution mandate. No live personal values
+are auto-filled and no existing assessment is promoted. Publication remains pending.
 
 ## 1. 目标与根因
 

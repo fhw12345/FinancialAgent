@@ -69,6 +69,45 @@ def enterprise_to_equity(
     return equity, equity / shares
 
 
+def fcff_proxy(
+    cfo: ValuationInput,
+    capex: ValuationInput,
+    interest: ValuationInput,
+    tax_rate: float,
+) -> float:
+    _check([cfo, capex, interest], ["USD", "USD", "USD"])
+    if any(v.period != "annual" for v in [cfo, capex, interest]):
+        raise ValueError("ANNUAL_INPUT_REQUIRED")
+    if capex.value < 0 or interest.value < 0 or not 0 <= tax_rate <= 1:
+        raise ValueError("INVALID_FINANCIAL_INPUT_SIGN")
+    proxy = cfo.value + interest.value * (1 - tax_rate) - capex.value
+    if not math.isfinite(proxy):
+        raise ValueError("NONFINITE_FCFF_PROXY")
+    return proxy
+
+
+def debt_to_fcff(
+    cfo: ValuationInput,
+    capex: ValuationInput,
+    interest: ValuationInput,
+    debt: ValuationInput,
+    cash: ValuationInput,
+    tax_rate: float,
+) -> float:
+    _check([cfo, capex, interest, debt, cash], ["USD"] * 5)
+    if (
+        debt.value < 0
+        or cash.value < 0
+        or debt.period != "annual"
+        or cash.period != "annual"
+    ):
+        raise ValueError("INVALID_DEBT_INPUT")
+    proxy = fcff_proxy(cfo, capex, interest, tax_rate)
+    if proxy <= 0:
+        raise ValueError("NONPOSITIVE_FCFF_PROXY")
+    return (debt.value - cash.value) / proxy
+
+
 def dcf(
     cfo: ValuationInput,
     capex: ValuationInput,
@@ -92,7 +131,7 @@ def dcf(
         raise ValueError("INVALID_FINANCIAL_INPUT_SIGN")
     if params.terminal_growth >= params.discount_rate:
         raise ValueError("INVALID_TERMINAL_GROWTH")
-    fcff = cfo.value + interest.value * (1 - params.tax_rate) - capex.value
+    fcff = fcff_proxy(cfo, capex, interest, params.tax_rate)
     assumptions = {
         "discount_rate": params.discount_rate,
         "growth_rate": params.growth_rate,

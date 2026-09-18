@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-09-18
+
+### Manual target proposals and paper-review approval
+
+- Adds blank-until-confirmed review-policy inputs, instrument/evidence limitations, explicit target weights and code-calculated reference quantities.
+- Displays deterministic readiness, gate reasons, sealed/policy IDs, subset approval receipts and stale/cancelled/superseded history separately from non-actionable research.
+- Requires human subset confirmation; approval never submits a trade or changes holdings/cash, and independent manual bookkeeping invalidates old eligibility.
+- Preserves research/legacy safety notices, runtime response validation and explicit failure states; no model inference on opening or saving review settings.
+- Adds component tests and real-API ready/approval/missing-data/subset/race/storage-failure scenarios. Shipment references follow protected acceptance.
+
 ## [0.38.0] - 2026-09-18
 
 ### Research mandate configuration and receipts

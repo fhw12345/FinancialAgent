@@ -24,7 +24,7 @@ class DecisionWriteRejected(AppError):
 
     def __init__(self) -> None:
         super().__init__(
-            "Stage A: AI decisions are research-only; use independent manual trade recording for actual transactions."
+            "Research/legacy decisions cannot authorize execution; paper review approval is separate. Record actual trades independently."
         )
 
 

@@ -25,6 +25,15 @@ def completed_session(now: datetime) -> date:
     return result
 
 
+def next_close(as_of: date) -> datetime:
+    """Deadline when this closing reference ceases to be the last completed session."""
+    cal = calendar(as_of.year)
+    result: datetime = cal.session_close(
+        cal.next_session(pd.Timestamp(as_of))
+    ).to_pydatetime()
+    return result
+
+
 def sessions(as_of: date, count: int = 60) -> list[date]:
     cal = calendar(as_of.year)
     if not cal.is_session(pd.Timestamp(as_of)):

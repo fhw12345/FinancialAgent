@@ -29,7 +29,7 @@ PRIORITY: dict[Readiness, int] = {
     "blocked": 3,
 }
 MESSAGES = {
-    "STAGE_A_ONLY": "Research only: the full policy/evidence/strategy approval gate remains incomplete; risk and valuation checks alone grant no eligibility.",
+    "STAGE_A_ONLY": "This assessment remains research-only and cannot authorize execution. A separately validated user-target review batch is required for human paper review.",
     "RESEARCH_MISSING": "Required symbol research is missing.",
     "CHECK_UNAVAILABLE": "Research consistency check did not complete.",
     "CONSISTENCY_VIOLATION": "Research contains unresolved consistency violations.",
@@ -206,6 +206,19 @@ def build_assessment(
                 readiness=readiness,
                 proposal=draft,
                 research=text,
+                consistency_status=(
+                    "unavailable"
+                    if unavailable
+                    else (
+                        "failed"
+                        if violations or fields.get("consistency_passed") is False
+                        else (
+                            "passed"
+                            if fields.get("consistency_passed") is True
+                            else "not_recorded"
+                        )
+                    )
+                ),
                 exposure_context=(
                     "unknown" if held is None else "held" if symbol in held else "flat"
                 ),

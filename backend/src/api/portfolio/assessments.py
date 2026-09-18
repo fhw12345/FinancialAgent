@@ -1,4 +1,4 @@
-"""Stage-A read API and explicit rejection of approval attempts."""
+"""Immutable research read API. Approval belongs only to separately validated review batches."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
@@ -24,17 +24,15 @@ def get_assessments(
 @router.get("/decision-policy")
 async def decision_policy() -> dict[str, object]:
     return {
-        "phase": "A",
+        "phase": "B",
         "actionable": False,
         "approval_enabled": False,
         "risk_preview_available": True,
         "research_strategy_contracts_available": True,
-        "pending": [
-            "confirmed_policy",
-            "review_approval",
-            "point_in_time_evidence",
-            "strategy_contract",
-        ],
+        "paper_review_approval_available": True,
+        "paper_review_endpoint": "/api/portfolio/review-batches",
+        "execution_available": False,
+        "pending": ["user_confirmed_policy_and_targets", "validated_review_batch"],
     }
 
 
@@ -68,5 +66,5 @@ async def get_assessment(
 @router.post("/assessments/{assessment_id}/approve")
 @router.post("/decisions/{assessment_id}/approve")
 async def reject_approval(assessment_id: str) -> None:
-    # Stage A has no approval implementation or override, including for legacy IDs.
+    # Research/legacy IDs are never approval authority. Only review-batches can be approved.
     raise DecisionWriteRejected()

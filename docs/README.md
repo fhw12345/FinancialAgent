@@ -24,6 +24,7 @@ All current documentation describes the local single-user application.
 - [Investment Decision Quality Program — safety, risk, evidence and research contracts shipped; program in progress](features/investment-decision-quality-program.md)
   - [IDQ-001 Decision Contracts and Policy Gates](features/investment-decision-policy-gates.md)
   - [IDQ-001-A Decision Safety Containment](features/investment-decision-safety-containment.md)
+  - [IDQ-001-B Deterministic Human Paper Review](features/investment-decision-review-gates.md)
   - [IDQ-002 Portfolio Risk and Allocation](features/investment-portfolio-risk-allocation.md)
   - [IDQ-003 Candidate Selection and Portfolio Fit](features/investment-candidate-selection.md)
   - [IDQ-004 Point-in-Time Evidence and Claim Validation](features/investment-evidence-snapshots.md)
@@ -77,6 +78,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [Approval Is Not a Fill](case-studies/2026-09-18-approval-is-not-a-fill.md)
 - [A Research Mandate Is Not a Trade](case-studies/2026-09-18-research-mandate-is-not-a-trade.md)
 - [A Citation Is Not Evidence Verification](case-studies/2026-09-17-citation-is-not-evidence-verification.md)
 - [Cash Is Not Missing Risk](case-studies/2026-09-17-cash-is-not-missing-risk.md)

@@ -13,61 +13,19 @@ Tests portfolio holding data access operations including:
 """
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 
 import pytest
 from pymongo.errors import DuplicateKeyError
 
-from src.database.repositories.holding_repository import HoldingRepository
 from src.models.holding import Holding, HoldingCreate, HoldingUpdate
 
-# ===== Fixtures =====
-
-
-@pytest.fixture
-def mock_collection():
-    """Mock MongoDB collection"""
-    collection = Mock()
-    collection.create_index = AsyncMock()
-    collection.insert_one = AsyncMock()
-    collection.find_one = AsyncMock()
-    collection.find = Mock()
-    collection.find_one_and_update = AsyncMock()
-    collection.update_one = AsyncMock()
-    collection.delete_one = AsyncMock()
-    return collection
-
-
-@pytest.fixture
-def repository(mock_collection):
-    """Create HoldingRepository instance"""
-    return HoldingRepository(mock_collection)
-
-
-@pytest.fixture
-def sample_holding():
-    """Sample holding object"""
-    return Holding(
-        holding_id="holding_abc123",
-        user_id="user_123",
-        symbol="AAPL",
-        quantity=100,
-        avg_price=150.50,
-        current_price=155.25,
-        cost_basis=15050.00,
-        market_value=15525.00,
-        unrealized_pl=475.00,
-        unrealized_pl_pct=3.16,
-        created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC),
-        last_price_update=datetime.now(UTC),
-    )
-
-
-@pytest.fixture
-def sample_holding_create():
-    """Sample holding creation data"""
-    return HoldingCreate(symbol="AAPL", quantity=100, avg_price=150.50)
+from tests.holding_repository_fixtures import (
+    mock_collection as mock_collection,
+    repository as repository,
+    sample_holding as sample_holding,
+    sample_holding_create as sample_holding_create,
+)
 
 
 # ===== Index Tests =====

@@ -60,8 +60,13 @@ class PolicyCollection:
 @pytest.mark.asyncio
 async def test_whole_policy_cas_and_no_implicit_personal_defaults():
     collection = PolicyCollection()
+    from tests.evidence_fixtures import Database
+
+    control_db = Database()
     mongo = MagicMock()
-    mongo.get_collection.return_value = collection
+    mongo.get_collection.side_effect = lambda name: (
+        collection if name == "risk_policy" else control_db.get_collection(name)
+    )
     assert (await service.policy_state(mongo)).policy is None
     p = policy().policy
     outcomes = await asyncio.gather(

@@ -28,16 +28,46 @@ class Cursor:
 
 
 class Collection:
-    def __init__(self, db):
+    def __init__(self, db, name="fixture"):
         self.database = db
+        self.full_name = f"fixture_{id(db)}.{name}"
         self.rows = {}
         self.lock = asyncio.Lock()
 
     async def create_index(self, *args, **kwargs):
         return "run_id_1"
 
+    @staticmethod
+    def path(row, key):
+        keys = key.split(".")
+        for part in keys[:-1]:
+            row = row.get(part, {})
+        return row, keys[-1]
+
     def matches(self, row, query):
-        return all(row.get(key) == value for key, value in query.items())
+        for key, value in query.items():
+            if key == "$expr":
+                assert value["$lt"][0] == "$$NOW"
+                if (
+                    not getattr(self.database, "now", datetime.now(UTC))
+                    < value["$lt"][1]
+                ):
+                    return False
+                continue
+            parent, leaf = self.path(row, key)
+            if isinstance(value, dict) and "$exists" in value:
+                if (leaf in parent) != value["$exists"]:
+                    return False
+            elif parent.get(leaf) != value:
+                return False
+        return True
+
+    @staticmethod
+    def assign(row, key, value):
+        keys = key.split(".")
+        for part in keys[:-1]:
+            row = row.setdefault(part, {})
+        row[keys[-1]] = copy.deepcopy(value)
 
     async def find_one(self, query, **kwargs):
         return next(
@@ -57,12 +87,32 @@ class Collection:
                 if query["_id"] in self.rows:
                     raise DuplicateKeyError("duplicate")
                 row = {**query, **copy.deepcopy(update.get("$setOnInsert", {}))}
-            row.update(copy.deepcopy(update.get("$set", {})))
+            for key, value in update.get("$set", {}).items():
+                self.assign(row, key, value)
+            for key, value in update.get("$inc", {}).items():
+                parent, leaf = self.path(row, key)
+                self.assign(row, key, parent.get(leaf, 0) + value)
+            for key in update.get("$unset", {}):
+                parent, leaf = self.path(row, key)
+                parent.pop(leaf, None)
             self.rows[row["_id"]] = row
             return copy.deepcopy(row)
 
     async def update_one(self, query, update, **kwargs):
-        return await self.find_one_and_update(query, update, **kwargs)
+        row = await self.find_one_and_update(query, update, **kwargs)
+        return SimpleNamespace(modified_count=int(row is not None))
+
+    async def insert_one(self, document):
+        row = copy.deepcopy(document)
+        row.setdefault("_id", "row_" + str(len(self.rows)))
+        self.rows[row["_id"]] = row
+        return SimpleNamespace(inserted_id=row["_id"])
+
+    async def delete_one(self, query):
+        row = await self.find_one(query)
+        if row:
+            del self.rows[row["_id"]]
+        return SimpleNamespace(deleted_count=int(row is not None))
 
 
 class Database:
@@ -70,7 +120,7 @@ class Database:
         self.collections = {}
 
     def get_collection(self, name):
-        return self.collections.setdefault(name, Collection(self))
+        return self.collections.setdefault(name, Collection(self, name))
 
 
 def market():
