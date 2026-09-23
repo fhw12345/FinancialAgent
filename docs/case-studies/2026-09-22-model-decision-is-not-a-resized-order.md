@@ -1,6 +1,6 @@
 ---
 title: A Model Decision Is Not a Resized Order / 模型决策不能被悄悄改写
-status: in-progress
+status: shipped
 version: backend@0.59.0, frontend@0.40.0
 last_updated: 2026-09-22
 owner: maintainer
