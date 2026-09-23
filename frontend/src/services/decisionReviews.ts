@@ -3,6 +3,7 @@ import { z } from "zod";
 import { isAxiosError } from "axios";
 import { apiClient } from "./api";
 import { riskSchema } from "./portfolioRisk";
+import { modelDecisionRecordSchema } from "./modelDecisionSchema";
 const n = z.number().finite();
 const revision = z.number().int().nonnegative();
 const symbol = z.string().regex(/^[A-Z0-9][A-Z0-9.-]{0,14}$/);
@@ -22,6 +23,15 @@ export const reviewPolicyInputSchema = z
     evidence_acknowledgment: z.literal(
       "forward-close-not-truth-or-historical-PIT",
     ),
+    model_decisions: z
+      .enum(["disabled", "propose_for_human_review"])
+      .optional(),
+    model_may_open: z.boolean().nullable().optional(),
+    model_may_exit: z.boolean().nullable().optional(),
+    model_acknowledgment: z
+      .literal("model-proposes-code-validates-human-decides-no-trade")
+      .nullable()
+      .optional(),
   })
   .strict();
 export type ReviewPolicyInput = z.infer<typeof reviewPolicyInputSchema>;
@@ -115,6 +125,7 @@ export const preparedReviewSchema = z.object({
       unverified_context: z.array(z.string()),
     }),
   ),
+  model_decision: modelDecisionRecordSchema.nullable().optional(),
   executable: z.literal(false),
 });
 export const reviewViewSchema = z.object({

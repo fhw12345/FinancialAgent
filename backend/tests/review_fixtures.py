@@ -62,6 +62,7 @@ async def setup(
     quantity=10.0,
     prior_eps=4.0,
     financial_changes=None,
+    model_policy=None,
 ):
     for module in (
         risk,
@@ -240,6 +241,7 @@ async def setup(
                 acknowledged_contract="manual-target-paper-review@1",
                 instrument_attestation="USD-US-nonfinancial-common-equities",
                 evidence_acknowledgment="forward-close-not-truth-or-historical-PIT",
+                **(model_policy or {}),
             ),
         ),
     )

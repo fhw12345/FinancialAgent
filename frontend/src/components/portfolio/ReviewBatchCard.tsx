@@ -165,6 +165,14 @@ export function ReviewBatchCard({
         <summary>Account/constraint receipt / 账户与限制回执</summary>
         {view.batch.risk && <RiskReceipt review={view.batch.risk} />}
       </details>
+      {view.batch.model_decision && (
+        <p className="text-sm" data-testid="batch-model-decision">
+          Source: model recommendation / 来源：模型决策{" "}
+          <span className="break-all text-xs">
+            {view.batch.model_decision.decision_id}
+          </span>
+        </p>
+      )}
       <details>
         <summary>Sealed source and policy IDs / 证据与政策版本</summary>
         <p className="break-all text-xs">{view.batch.policy?.version_id}</p>

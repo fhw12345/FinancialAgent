@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-09-22
+
+### Model investment decisions
+
+- Adds an explicit review-policy choice for model decisions, with required open/exit answers and acknowledgment; nothing is preselected.
+- Adds a paid, consent-gated "Get model decision" action, the model's explicit actions/targets/rationale/risks/triggers/provenance, blocked reasons, and re-validation without a new model call.
+- Labels review batches that originate from a model recommendation; human approval, subset checks and no-trade semantics are unchanged.
+
 ## [0.39.0] - 2026-09-18
 
 ### Manual target proposals and paper-review approval

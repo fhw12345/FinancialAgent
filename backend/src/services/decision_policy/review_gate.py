@@ -1,4 +1,4 @@
-"""Deterministic review gate from server-owned research plus explicit user target weights."""
+"""Deterministic review gate from server-owned research plus user or model target weights."""
 
 from datetime import UTC, datetime, timedelta
 
@@ -11,6 +11,7 @@ from ...models.decision_review import (
     ReviewPolicyVersion,
     ReviewTrade,
 )
+from ...models.model_decision import ModelDecisionRecord
 from ...models.portfolio_risk import PortfolioRiskReview, TargetProposal
 from ..evidence.identity import digest
 from ..portfolio_risk import service as risk
@@ -18,7 +19,7 @@ from ..portfolio_risk.allocation import allocate
 from ..portfolio_risk.calendar import next_close
 from ..portfolio_risk.estimator import estimate
 from ..research_strategy import store as strategy
-from . import evidence_gate
+from . import evidence_gate, model_decision_gate
 from .review_storage import receipt_hash
 
 SOURCE_FAILURES = {
@@ -54,6 +55,7 @@ async def evaluate(
     db: EvidenceStorage,
     request: ProposeReview,
     policy: ReviewPolicyVersion | None,
+    model: ModelDecisionRecord | None = None,
 ) -> PreparedReview:
     now = datetime.now(UTC)
     source = await source_record(db, request.assessment_id)
@@ -71,6 +73,7 @@ async def evaluate(
         reasons=[],
         trades=[],
         proofs=[],
+        model_decision=model,
     )
     if source is None:
         result.reasons.append(evidence_gate.failure("SOURCE_ASSESSMENT_REQUIRED"))
@@ -80,8 +83,45 @@ async def evaluate(
         )
     if source is not None and policy is not None:
         await _assess(db, source, result, now)
+        if model is not None:
+            result.reasons.extend(
+                await model_decision_gate.check(db, model, source, result, policy)
+            )
     result.receipt_hash = receipt_hash(result)
     return result
+
+
+async def source_reasons(
+    db: EvidenceStorage, source: DecisionAssessment
+) -> list[GateReason]:
+    """Source eligibility shared by manual targets and the pre-call model check."""
+    out: list[GateReason] = []
+    run = (
+        await db.get_collection("agent_runs").find_one({"run_id": source.run_id})
+        if source.run_id
+        else None
+    )
+    if run is None or run.get("status") != "completed":
+        out.append(GateReason(code="SOURCE_RUN_NOT_COMPLETED", severity="needs_review"))
+    if source.legacy_strategy or source.strategy is None:
+        out.append(evidence_gate.failure("CONFIRMED_STRATEGY_SOURCE_REQUIRED"))
+    if source.evidence is None or source.evidence.errors:
+        out.append(evidence_gate.failure("SOURCE_EVIDENCE_UNVERIFIED"))
+    if source.strategy and source.strategy.errors:
+        out.append(evidence_gate.failure("SOURCE_STRATEGY_UNAVAILABLE"))
+    if source.portfolio_risk is None or source.portfolio_risk.snapshot.errors:
+        out.append(evidence_gate.failure("SOURCE_ACCOUNT_RISK_REQUIRED"))
+    for row in source.results:
+        if (
+            row.consistency_status != "passed"
+            or row.research_truncated
+            or not row.research.strip()
+            or any(r.code in SOURCE_FAILURES for r in row.reasons)
+        ):
+            out.append(
+                evidence_gate.failure("SOURCE_RESEARCH_CHECK_NOT_PASSED", row.symbol)
+            )
+    return out
 
 
 async def _assess(
@@ -95,33 +135,7 @@ async def _assess(
         raise ValueError("Policy required")
     lifetime = timedelta(minutes=policy.policy.lifetime_minutes)
     result.expires_at = min(clock(source.created_at) + lifetime, now + lifetime)
-    run = (
-        await db.get_collection("agent_runs").find_one({"run_id": source.run_id})
-        if source.run_id
-        else None
-    )
-    if run is None or run.get("status") != "completed":
-        result.reasons.append(
-            GateReason(code="SOURCE_RUN_NOT_COMPLETED", severity="needs_review")
-        )
-    if source.legacy_strategy or source.strategy is None:
-        result.reasons.append(
-            evidence_gate.failure("CONFIRMED_STRATEGY_SOURCE_REQUIRED")
-        )
-    if source.evidence is None or source.evidence.errors:
-        result.reasons.append(evidence_gate.failure("SOURCE_EVIDENCE_UNVERIFIED"))
-    if source.strategy and source.strategy.errors:
-        result.reasons.append(evidence_gate.failure("SOURCE_STRATEGY_UNAVAILABLE"))
-    for row in source.results:
-        if (
-            row.consistency_status != "passed"
-            or row.research_truncated
-            or not row.research.strip()
-            or any(r.code in SOURCE_FAILURES for r in row.reasons)
-        ):
-            result.reasons.append(
-                evidence_gate.failure("SOURCE_RESEARCH_CHECK_NOT_PASSED", row.symbol)
-            )
+    result.reasons.extend(await source_reasons(db, source))
     allowed = set(policy.policy.allowed_symbols)
     requested = {t.symbol for t in result.request.targets}
     researched = {r.symbol for r in source.results}
@@ -149,7 +163,7 @@ async def _assess(
         )
     original = source.portfolio_risk
     if original is None or original.snapshot.errors:
-        result.reasons.append(evidence_gate.failure("SOURCE_ACCOUNT_RISK_REQUIRED"))
+        # Reason already recorded by source_reasons; no market I/O without a capture.
         return
     result.expires_at = min(
         result.expires_at, next_close(original.snapshot.session_date)

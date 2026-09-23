@@ -80,6 +80,10 @@ it("requires the user's exact numeric inputs and every acknowledgment, binding v
   fireEvent.click(screen.getByTestId("review-instrument-ack"));
   fireEvent.click(screen.getByTestId("review-evidence-ack"));
   fireEvent.submit(screen.getByTestId("review-policy-form"));
+  // No default for model decisions: the explicit choice is still missing.
+  expect(confirmReviewPolicy).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByTestId("review-model-disabled"));
+  fireEvent.submit(screen.getByTestId("review-policy-form"));
   await waitFor(() => expect(confirmReviewPolicy).toHaveBeenCalledTimes(1));
   const sent = vi.mocked(confirmReviewPolicy).mock.calls.at(0);
   expect(sent?.[0]).toEqual({
@@ -91,12 +95,50 @@ it("requires the user's exact numeric inputs and every acknowledgment, binding v
     acknowledged_contract: "manual-target-paper-review@1",
     instrument_attestation: "USD-US-nonfinancial-common-equities",
     evidence_acknowledgment: "forward-close-not-truth-or-historical-PIT",
+    model_decisions: "disabled",
   });
   expect(sent?.[1]).toMatchObject({
     expected_revision: 7,
     expected_generation: 1,
   });
   expect(sent?.[1].request_id).toMatch(/^[A-Za-z0-9_-]{8,80}$/);
+});
+it("model decisions need explicit open/exit answers and acknowledgment", async () => {
+  vi.mocked(confirmReviewPolicy).mockResolvedValue(state);
+  mount();
+  fireEvent.click(screen.getByTestId("configure-review-policy"));
+  fireEvent.change(screen.getByTestId("review-policy-symbols"), {
+    target: { value: "AAPL" },
+  });
+  fireEvent.change(screen.getByTestId("review-policy-sigma"), {
+    target: { value: ".3" },
+  });
+  fireEvent.change(screen.getByTestId("review-policy-lifetime"), {
+    target: { value: "30" },
+  });
+  for (const id of [
+    "review-policy-ack",
+    "review-instrument-ack",
+    "review-evidence-ack",
+    "review-model-enabled",
+  ])
+    fireEvent.click(screen.getByTestId(id));
+  expect(screen.getByTestId("review-model-open-yes")).not.toBeChecked();
+  expect(screen.getByTestId("review-model-open-no")).not.toBeChecked();
+  fireEvent.submit(screen.getByTestId("review-policy-form"));
+  expect(confirmReviewPolicy).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByTestId("review-model-open-no"));
+  fireEvent.click(screen.getByTestId("review-model-exit-yes"));
+  fireEvent.click(screen.getByTestId("review-model-ack"));
+  fireEvent.submit(screen.getByTestId("review-policy-form"));
+  await waitFor(() => expect(confirmReviewPolicy).toHaveBeenCalledTimes(1));
+  expect(vi.mocked(confirmReviewPolicy).mock.calls.at(0)?.[0]).toMatchObject({
+    model_decisions: "propose_for_human_review",
+    model_may_open: false,
+    model_may_exit: true,
+    model_acknowledgment:
+      "model-proposes-code-validates-human-decides-no-trade",
+  });
 });
 it("cannot silently create a strategy or costs and cannot force-unlock an in-flight writer", () => {
   mount({
