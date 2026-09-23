@@ -17,7 +17,7 @@ related_paths:
 
 ## 1. Current State
 
-### IDQ-001-C model decisions in progress (2026-09-22)
+### IDQ-001-C model decisions shipped (2026-09-22)
 
 User asked for the model to make explicit investment decisions (as recommendations) and
 said "开始". Branch `feat/idq-001-c-model-decisions`, release 0.59.0/0.40.0. The model
@@ -25,7 +25,10 @@ returns one action/target per researched symbol; code validates without rewritin
 human approval unchanged; no trades. Local: 2316 backend / 278 frontend tests, 46
 final-image cases, equal clean builds. See the
 [spec](../features/investment-model-decisions.md). The single SPCX holding was migrated
-into 3013; cash is still unset. Publication and live rollout pending.
+into 3013; cash is still unset. Shipped via protected PR #18 (implementation `8f5d15d`,
+merge `afac9c2`, CI 35854518856); live 3013 runs the accepted images with login/routing/
+holding preserved and all personal policies still unconfigured. 003/006–009 and PH-009
+remain unstarted/paused.
 
 ### IDQ-001-B shipped (2026-09-18)
 

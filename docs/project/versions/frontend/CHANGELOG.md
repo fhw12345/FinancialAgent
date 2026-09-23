@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adds an explicit review-policy choice for model decisions, with required open/exit answers and acknowledgment; nothing is preselected.
 - Adds a paid, consent-gated "Get model decision" action, the model's explicit actions/targets/rationale/risks/triggers/provenance, blocked reasons, and re-validation without a new model call.
 - Labels review batches that originate from a model recommendation; human approval, subset checks and no-trade semantics are unchanged.
+- Shipped through protected PR #18 (`afac9c2`) after 278 tests, 46 final-image cases and CI 35854518856.
 
 ## [0.39.0] - 2026-09-18
 

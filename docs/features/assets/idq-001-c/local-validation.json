@@ -40,7 +40,7 @@
       "02-model-decision-blocked.png"
     ]
   },
-  "publication": "pending protected implementation and shipment PRs",
+  "publication": "implementation 8f5d15d2ae2894eafad70c64f05c79218a18ae7d, protected PR 18, merge afac9c2f746020829e515bad85e08c136746656d, hosted run 35854518856 passed",
   "notes": [
     "Replay initially re-checked current revisions before finding the stored decision, so a legitimate replay after publication returned 409; replay now returns the stored output without re-checking or re-calling the model.",
     "Cancellation now records the claim as failed instead of leaving it running until lease expiry.",

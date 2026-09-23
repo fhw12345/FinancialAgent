@@ -1,6 +1,6 @@
 ---
 title: Model-Proposed Portfolio Decisions for Human Review
-status: in-progress
+status: shipped
 version: backend@0.59.0, frontend@0.40.0
 last_updated: 2026-09-22
 owner: maintainer
@@ -72,7 +72,7 @@ revalidation without borrowing omitted-sale headroom.
 4. Provenance records prompt `portfolio-model-decision@1`, role
    `portfolio_decisions`, provider, actual routed model, protocol and routing revision.
 
-## Local Acceptance (publication pending)
+## Acceptance / Protected Publication
 
 - Backend **2316 passed / 27 live deselected**, strict mypy 345 files, Black/Ruff/Bandit/eval,
   all existing plus five new critical floors. Frontend **278 tests / 32 files**, production
@@ -85,6 +85,17 @@ revalidation without borrowing omitted-sale headroom.
   [builds](assets/idq-001-c/clean-build-validation.json).
 - Review found and fixed: replay rechecking current revisions (false 409), cancellation
   leaving a running claim, and blocked reasons not shown beside the recommendation.
+
+- Implementation `8f5d15d2ae2894eafad70c64f05c79218a18ae7d` merged via protected
+  [PR #18](https://github.com/fhw12345/FinancialAgent/pull/18) as
+  `afac9c2f746020829e515bad85e08c136746656d`. Hosted
+  [run 35854518856](https://github.com/fhw12345/FinancialAgent/actions/runs/35854518856)
+  passed all gates and seven browser lanes (35 cases); artifact ZIP digest and report
+  stats verified, no credential files ([receipt](assets/idq-001-c/hosted-validation.json)).
+- Live localhost:3013 runs the accepted images at 0.59.0/0.40.0 with Copilot login,
+  Astra default, routing revision 1, role map and the migrated SPCX holding preserved.
+  Risk policy, strategy and review policy (including model decisions) remain
+  **unconfigured**; no live model call ([receipt](assets/idq-001-c/live-validation.json)).
 
 ## Acceptance Criteria
 

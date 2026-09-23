@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Requires a new explicit review-policy choice (no default) and open/exit answers; older policies stay disabled. Rejects before any paid call when the source or policy is ineligible.
 - Persists a per-request claim and immutable output before validation; replays never re-call the model; failures/cancellation are recorded and not resumable; stale results can be re-validated without a model call.
 - Records prompt `portfolio-model-decision@1`, role, provider, actual routed model and routing revision. Approval still creates no real or simulated trade.
+- Shipped through protected PR #18 (`afac9c2`), implementation `8f5d15d`, CI 35854518856, after 2316 tests, all critical floors, 46 final-image cases and equal clean builds.
 
 ## [0.58.0] - 2026-09-18
 
