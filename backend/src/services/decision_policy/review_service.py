@@ -14,6 +14,7 @@ from ...models.decision_review import (
     ReviewView,
     RevisionRequest,
 )
+from ...models.model_decision import ModelDecisionRecord
 from ..evidence.identity import digest
 from . import control, policies, review_gate, review_storage
 from .review_projection import project, readiness
@@ -31,12 +32,18 @@ async def recent(db: EvidenceStorage) -> list[ReviewView]:
     return [await get(db, p.batch_id) for p in reversed(state.published[-20:])]
 
 
-async def propose(db: EvidenceStorage, request: ProposeReview) -> ReviewView:
+async def propose(
+    db: EvidenceStorage,
+    request: ProposeReview,
+    model: ModelDecisionRecord | None = None,
+) -> ReviewView:
     identifier = "review_" + digest(request.request_id)
     existing = await review_storage.load(db, identifier)
     current = await control.read(db)
     if existing:
-        if existing.request_hash != digest(request.model_dump(mode="json")):
+        if existing.request_hash != digest(
+            request.model_dump(mode="json")
+        ) or existing.model_decision != (model if model else None):
             raise control.ReviewConflict("Proposal request ID has different inputs")
         if not any(p.batch_id == identifier for p in current.published):
             raise control.ReviewConflict(
@@ -48,7 +55,7 @@ async def propose(db: EvidenceStorage, request: ProposeReview) -> ReviewView:
         raise control.ReviewConflict(
             "Review history budget exhausted; history is retained"
         )
-    batch = await review_gate.evaluate(db, request, policies.active(current))
+    batch = await review_gate.evaluate(db, request, policies.active(current), model)
     await review_storage.save(db, review_storage.BATCHES, batch.batch_id, batch)
     pointer = ReviewPointer(
         batch_id=batch.batch_id,
@@ -110,6 +117,7 @@ async def approve(
             targets=[t for t in view.batch.request.targets if t.symbol in selected],
         ),
         policies.active(current),
+        view.batch.model_decision,
     )
     if (
         readiness(evaluation.reasons) != "ready"

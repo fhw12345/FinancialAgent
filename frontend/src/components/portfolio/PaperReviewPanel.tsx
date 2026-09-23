@@ -17,6 +17,7 @@ import {
 } from "../../services/decisionReviews";
 import { ReviewPolicyPanel } from "./ReviewPolicyPanel";
 import { ReviewBatchCard } from "./ReviewBatchCard";
+import { ModelDecisionPanel } from "./ModelDecisionPanel";
 
 function TargetForm({
   source,
@@ -137,7 +138,8 @@ export function PaperReviewPanel() {
       data-testid="paper-review-panel"
     >
       <h3 className="font-semibold">
-        Manual target proposals & paper review / 人工目标提案与审阅 · IDQ-001-B
+        Model decisions, manual targets & paper review /
+        模型决策、人工目标与审阅
       </h3>
       <p className="text-sm text-amber-900">
         Research stance ≠ proposal ≠ human approval ≠ fill. Nothing here changes
@@ -178,6 +180,7 @@ export function PaperReviewPanel() {
           ))}
         </select>
       </label>
+      {state.data && <ModelDecisionPanel source={source} state={state.data} />}
       {source && state.data && (
         <TargetForm
           key={`${source.assessment_id}:${state.data.revision}:${state.data.generation}`}

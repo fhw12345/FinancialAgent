@@ -5,6 +5,7 @@ from typing import Annotated, Literal
 
 from pydantic import AfterValidator, Field, StrictBool, model_validator
 
+from .model_decision import ModelDecisionRecord
 from .portfolio_risk import Number, PortfolioRiskReview, Record, Symbol, Weight
 
 Revision = Annotated[int, Field(strict=True, ge=0)]
@@ -32,11 +33,24 @@ class ReviewPolicyInput(Record):
     acknowledged_contract: Literal["manual-target-paper-review@1"]
     instrument_attestation: Literal["USD-US-nonfinancial-common-equities"]
     evidence_acknowledgment: Literal["forward-close-not-truth-or-historical-PIT"]
+    # Absent in older versions = model decisions disabled; never inferred as enabled.
+    model_decisions: Literal["disabled", "propose_for_human_review"] = "disabled"
+    model_may_open: StrictBool | None = None
+    model_may_exit: StrictBool | None = None
+    model_acknowledgment: (
+        Literal["model-proposes-code-validates-human-decides-no-trade"] | None
+    ) = None
 
     @model_validator(mode="after")
     def unique_symbols(self) -> "ReviewPolicyInput":
         if len(set(self.allowed_symbols)) != len(self.allowed_symbols):
             raise ValueError("Duplicate allowed symbol")
+        enabled = self.model_decisions == "propose_for_human_review"
+        answered = [self.model_may_open, self.model_may_exit, self.model_acknowledgment]
+        if enabled and any(v is None for v in answered):
+            raise ValueError("Model decisions need explicit open/exit answers")
+        if not enabled and any(v is not None for v in answered):
+            raise ValueError("Model permissions require enabled model decisions")
         return self
 
 
@@ -59,7 +73,7 @@ class ReviewPolicyVersion(Record):
     confirmed_at: datetime
     revision: int
     account_scope: Literal["local_holdings"] = "local_holdings"
-    sizing: Literal["user_targets@1"] = "user_targets@1"
+    sizing: Literal["user_targets@1", "user_or_model_targets@1"] = "user_targets@1"
     reference_basis: Literal["completed-XNYS-daily-close"] = (
         "completed-XNYS-daily-close"
     )
@@ -150,6 +164,7 @@ class PreparedReview(Record):
     reasons: list[GateReason]
     trades: list[ReviewTrade]
     proofs: list[SymbolProof]
+    model_decision: ModelDecisionRecord | None = None
     executable: Literal[False] = False
 
 

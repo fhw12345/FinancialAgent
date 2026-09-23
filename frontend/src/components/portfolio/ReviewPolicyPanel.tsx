@@ -12,6 +12,93 @@ import {
   type ReviewPolicyInput,
 } from "../../services/decisionReviews";
 
+/** No default: the user must explicitly choose whether the model may decide. */
+function modelChoice(data: FormData): Partial<ReviewPolicyInput> {
+  const mode = data.get("model_mode");
+  if (mode === "disabled") return { model_decisions: "disabled" };
+  if (mode !== "model") return {};
+  const answer = (name: string) =>
+    data.get(name) === "yes" ? true : data.get(name) === "no" ? false : null;
+  return {
+    model_decisions: "propose_for_human_review",
+    model_may_open: answer("model_open"),
+    model_may_exit: answer("model_exit"),
+    model_acknowledgment:
+      data.get("model_ack") === "on"
+        ? "model-proposes-code-validates-human-decides-no-trade"
+        : null,
+  };
+}
+
+function ModelChoice() {
+  const [mode, setMode] = useState("");
+  const radio = (
+    name: string,
+    value: string,
+    label: string,
+    testId: string,
+  ) => (
+    <label className="mr-3">
+      <input
+        type="radio"
+        name={name}
+        value={value}
+        required
+        data-testid={testId}
+        onChange={name === "model_mode" ? () => setMode(value) : undefined}
+      />{" "}
+      {label}
+    </label>
+  );
+  return (
+    <fieldset
+      className="space-y-1 rounded border p-2"
+      data-testid="review-model-choice"
+    >
+      <legend>Model investment decisions / 模型投资决策</legend>
+      <div>
+        {radio(
+          "model_mode",
+          "disabled",
+          "Disabled / 不启用",
+          "review-model-disabled",
+        )}
+        {radio(
+          "model_mode",
+          "model",
+          "Model proposes, I approve / 模型建议，我审批",
+          "review-model-enabled",
+        )}
+      </div>
+      {mode === "model" && (
+        <>
+          <div>
+            May open new positions / 允许建议新开仓:{" "}
+            {radio("model_open", "yes", "Yes / 是", "review-model-open-yes")}
+            {radio("model_open", "no", "No / 否", "review-model-open-no")}
+          </div>
+          <div>
+            May propose full exits / 允许建议清仓:{" "}
+            {radio("model_exit", "yes", "Yes / 是", "review-model-exit-yes")}
+            {radio("model_exit", "no", "No / 否", "review-model-exit-no")}
+          </div>
+          <label className="block">
+            <input
+              type="checkbox"
+              name="model_ack"
+              required
+              data-testid="review-model-ack"
+            />{" "}
+            The model gives explicit decisions; code checks limits and never
+            resizes them; I decide; nothing is traded. /
+            模型给出明确决策，代码校验且不改写，由我决定，不交易。
+          </label>
+        </>
+      )}
+    </fieldset>
+  );
+}
+
 function PolicyForm({
   state,
   changed,
@@ -46,9 +133,15 @@ function PolicyForm({
           acknowledged_contract: "manual-target-paper-review@1",
           instrument_attestation: "USD-US-nonfinancial-common-equities",
           evidence_acknowledgment: "forward-close-not-truth-or-historical-PIT",
+          ...modelChoice(data),
         });
         if (
           !parsed.success ||
+          !data.get("model_mode") ||
+          (parsed.data.model_decisions === "propose_for_human_review" &&
+            (parsed.data.model_may_open == null ||
+              parsed.data.model_may_exit == null ||
+              parsed.data.model_acknowledgment == null)) ||
           !confirmed ||
           data.get("instruments") !== "on" ||
           data.get("evidence") !== "on"
@@ -116,6 +209,7 @@ function PolicyForm({
         gate uses account sigma and exposure/cash/turnover limits. /
         本版本不设置止损，不把预览止损预算当作最大亏损保证。
       </p>
+      <ModelChoice />
       <label className="block">
         <input
           type="checkbox"

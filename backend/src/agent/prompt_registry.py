@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from src.agent.portfolio_phase2_prompt import render_portfolio_phase2_prompt
+from src.services.decision_policy.model_prompt import MODEL_DECISION
 from src.services.research_strategy.prompts import CONCLUSION, FUNDAMENTAL, SHORT
 
 
@@ -220,6 +221,12 @@ _PROMPTS = {
         PromptSpec("strategy-fundamental", 1, FUNDAMENTAL, ("strategy", "research")),
         PromptSpec("strategy-conclusion", 1, CONCLUSION, ("strategy", "structured")),
         PromptSpec("strategy-short-disabled", 1, SHORT, ("strategy", "experimental")),
+        PromptSpec(
+            "portfolio-model-decision",
+            1,
+            MODEL_DECISION,
+            ("portfolio", "decisions", "structured"),
+        ),
         PromptSpec("router", 1, ROUTER_TEMPLATE, ("routing", "structured")),
         PromptSpec(
             "symbol-extraction",

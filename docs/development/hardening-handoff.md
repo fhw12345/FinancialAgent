@@ -1,8 +1,8 @@
 ---
 title: Project Hardening Active Handoff
 status: in-progress
-version: backend@0.58.0, frontend@0.39.0
-last_updated: 2026-09-18
+version: backend@0.59.0, frontend@0.40.0
+last_updated: 2026-09-22
 owner: maintainer
 related_paths:
   - docs/features/project-hardening-program.md
@@ -16,6 +16,16 @@ related_paths:
 # Project Hardening Active Handoff
 
 ## 1. Current State
+
+### IDQ-001-C model decisions in progress (2026-09-22)
+
+User asked for the model to make explicit investment decisions (as recommendations) and
+said "开始". Branch `feat/idq-001-c-model-decisions`, release 0.59.0/0.40.0. The model
+returns one action/target per researched symbol; code validates without rewriting;
+human approval unchanged; no trades. Local: 2316 backend / 278 frontend tests, 46
+final-image cases, equal clean builds. See the
+[spec](../features/investment-model-decisions.md). The single SPCX holding was migrated
+into 3013; cash is still unset. Publication and live rollout pending.
 
 ### IDQ-001-B shipped (2026-09-18)
 

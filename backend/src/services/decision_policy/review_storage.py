@@ -15,7 +15,12 @@ APPROVALS = "review_approval_receipts"
 
 
 def receipt_hash(value: PreparedReview | ApprovalReceipt) -> str:
-    return digest(value.model_dump(mode="json", exclude={"receipt_hash"}))
+    # Optional additions are hashed only when present, so earlier receipts still verify.
+    data = value.model_dump(mode="json", exclude={"receipt_hash"})
+    batch = data.get("evaluation", data)
+    if batch.get("model_decision") is None:
+        batch.pop("model_decision", None)
+    return digest(data)
 
 
 async def save[

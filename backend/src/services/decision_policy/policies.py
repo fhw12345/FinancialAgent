@@ -100,6 +100,11 @@ async def confirm(db: EvidenceStorage, request: ConfirmReviewPolicy) -> ReviewSe
         request_hash=fingerprint,
         confirmed_at=datetime.now(UTC),
         revision=current.revision + 1,
+        sizing=(
+            "user_or_model_targets@1"
+            if request.policy.model_decisions == "propose_for_human_review"
+            else "user_targets@1"
+        ),
     )
     await control.commit(
         db,

@@ -317,6 +317,7 @@ async def reset(scenario: str):
         "review_control",
         "review_batches",
         "review_approval_receipts",
+        "review_model_decisions",
         "agent_runs",
         "user_transactions",
         "chats",

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.0] - 2026-09-22
+
+### IDQ-001-C model-proposed portfolio decisions
+
+- Adds explicit, user-triggered model decisions: one BUY/ADD/REDUCE/SELL/HOLD action and account-equity target weight per researched, attested symbol, with rationale, captured evidence IDs, risks and review triggers.
+- Routes the stored decision through the unchanged IDQ-001-B gate plus deterministic model checks (scope, exposure/action/delta agreement, open/exit permissions, same-symbol evidence, stance conflicts, policy version). Blocked decisions are shown verbatim; code never resizes or rewrites them.
+- Requires a new explicit review-policy choice (no default) and open/exit answers; older policies stay disabled. Rejects before any paid call when the source or policy is ineligible.
+- Persists a per-request claim and immutable output before validation; replays never re-call the model; failures/cancellation are recorded and not resumable; stale results can be re-validated without a model call.
+- Records prompt `portfolio-model-decision@1`, role, provider, actual routed model and routing revision. Approval still creates no real or simulated trade.
+
 ## [0.58.0] - 2026-09-18
 
 ### IDQ-001-B deterministic human paper review

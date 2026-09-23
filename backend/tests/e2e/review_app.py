@@ -10,6 +10,7 @@ import yfinance as yf
 from motor.motor_asyncio import AsyncIOMotorCollection
 
 from src.services.decision_policy import (
+    model_decision,
     builder,
     policies,
     review_gate,
@@ -45,15 +46,66 @@ class ReviewTicker(strategy.StrategyTicker):
 
 
 yf.Ticker = ReviewTicker
-for module in (policies, review_gate, review_projection, review_service):
+for module in (
+    policies,
+    review_gate,
+    review_projection,
+    review_service,
+    model_decision,
+):
     module.datetime = evidence.Clock
 builder.utcnow = lambda: evidence.Clock.now()
+
+
+model_mode = "valid"
+
+
+def model_decisions(body):
+    """Recorded outer model output built from the real rendered decision prompt."""
+    receipts = []
+    for text in evidence.strings(body.get("input", [])):
+        for line in text.splitlines():
+            try:
+                value = json.loads(line)
+            except (ValueError, TypeError):
+                continue
+            if isinstance(value, list) and value and "evidence_ids" in value[0]:
+                receipts = value
+    assert receipts, "Real model-decision prompt must contain code receipts"
+    rows = []
+    for receipt in receipts:
+        held = receipt["held"]
+        action = ("BUY" if model_mode == "exposure" else "ADD") if held else "HOLD"
+        rows.append(
+            {
+                "symbol": receipt["symbol"],
+                "action": action,
+                "target_weight": 0.2 if held else None,
+                "rationale": "Recorded model rationale from sealed receipts",
+                "evidence_ids": receipt["evidence_ids"][:1],
+                "key_risks": ["Recorded risk"],
+                "review_triggers": ["Recorded trigger"],
+            }
+        )
+    return {"decisions": rows, "portfolio_summary": "Recorded model summary"}
 
 
 async def transport(request):
     body = json.loads(request.content)
     transport_calls.append(body.get("model"))
     names = [tool.get("name") for tool in body.get("tools", [])]
+    if "ModelDecisionSet" in names:
+        decision.model_calls.append(body["model"])
+        return sse(
+            [
+                {
+                    "type": "function_call",
+                    "name": "ModelDecisionSet",
+                    "call_id": "model-decision",
+                    "arguments": json.dumps(model_decisions(body)),
+                }
+            ]
+        )
     if "GateVerdict" in names:
         decision.model_calls.append(body["model"])
         return sse(
@@ -129,10 +181,15 @@ AsyncIOMotorCollection.find_one_and_update = guarded_write
 
 @app.post("/api/test/review/reset/{scenario}")
 async def reset(scenario: str):
-    global fault, reached, release, storage_clock_offset
+    global fault, reached, release, storage_clock_offset, model_mode
     assert scenario in ("normal", "missing")
     fault = "none"
     storage_clock_offset = timedelta()
+    model_mode = "valid"
+    # Independent recorded scenarios run back-to-back; production limits are unchanged.
+    from src.api.dependencies.rate_limit import limiter
+
+    limiter.reset()
     reached = asyncio.Event()
     release = asyncio.Event()
     await strategy.reset_strategy(scenario)
@@ -182,6 +239,14 @@ async def expire_storage_clock():
     global storage_clock_offset
     storage_clock_offset = timedelta(hours=2)
     return {"clock_advanced": True}
+
+
+@app.post("/api/test/review/model-mode/{name}")
+async def set_model_mode(name: str):
+    global model_mode
+    assert name in ("valid", "exposure")
+    model_mode = name
+    return {"mode": model_mode}
 
 
 @app.post("/api/test/review/release")
