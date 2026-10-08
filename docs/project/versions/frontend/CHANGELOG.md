@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-10-08
+
+### Offline-friendly manual PAPER scenarios
+
+- Adds a separate opt-in PAPER panel with blank capital/cost/universe inputs, explicit manual journal consent and no real-holdings copy or model call.
+- Displays exact cash/FIFO basis/fees, manual scenario P&L, per-trade receipts, immutable events and read-only manifest export.
+- Requires corporate-action reconciliation before explicitly refreshing closing marks; missing marks remain unavailable and old session/ledger values remain visibly stale.
+- No scheduler, automatic next-open/backdated fill, stop-loss monitoring or real/AI-approved trade. Shipment references follow protected publication.
+
 ## [0.40.0] - 2026-09-22
 
 ### Model investment decisions

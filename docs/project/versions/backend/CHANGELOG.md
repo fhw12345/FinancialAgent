@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.0] - 2026-10-08
+
+### IDQ-008-A manual offline PAPER ledger
+
+- Adds cash-only user-confirmed PAPER experiments, exact Decimal/FIFO trade accounting, fees/slippage, manual split/dividend reconciliation and permanent read-only closure; no real-account writes or approval consumption.
+- Uses bounded single-document append-only events, verified hash chains, sequence CAS, request replay and rebuildable pure projections; rejects overdrafts, oversells and invalid precision without fabricated fills.
+- Adds explicit on-demand closing valuation, unavailable/coverage/stale receipts and an atomic next-session deadline; startup/read/export never fetches prices or calls models.
+- Labels user scenario prices and current-quantity closing NAV as manual/unverified, not broker fills, historical trades, alpha or AI-validated outcomes. Parent IDQ-008 execution/evaluation work remains deferred.
+- Adds accounting/lifecycle/API/browser regressions and critical floors; shipment references follow protected publication.
+
 ## [0.59.0] - 2026-09-22
 
 ### IDQ-001-C model-proposed portfolio decisions

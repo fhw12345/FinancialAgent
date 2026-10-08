@@ -29,6 +29,7 @@ import DecisionAssessments from "./DecisionAssessments";
 import { PortfolioRiskPanel } from "./PortfolioRiskPanel";
 import { ResearchStrategyPanel } from "./ResearchStrategyPanel";
 import { PaperReviewPanel } from "./PaperReviewPanel";
+import { PaperPanel } from "./paper/PaperPanel";
 export function DecisionTracker() {
   const { i18n } = useTranslation();
   const [symbolFilter, setSymbolFilter] = useState("");
@@ -93,6 +94,7 @@ export function DecisionTracker() {
       <ResearchStrategyPanel />
       <PortfolioRiskPanel />
       <PaperReviewPanel />
+      <PaperPanel />
       <DecisionAssessments
         symbol={symbolFilter || undefined}
         source={tab === "all" ? undefined : tab}

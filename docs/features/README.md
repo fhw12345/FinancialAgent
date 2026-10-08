@@ -281,7 +281,8 @@ requires the evidence and workflow in [Documentation Standards](../development/d
 - **[IDQ-005 Strategy Contracts](investment-research-strategy-contracts.md)** — shipped (0.57.0/0.38.0); approved fundamental pilot, explicit immutable assumptions and conditional calculators; mandate, horizon, valuation methods, and invalidation conditions
 - **[IDQ-006 Agent Research Orchestration](investment-agent-research-orchestration.md)** — planning; structured coverage, counterevidence, budgets, and ablation
 - **[IDQ-007 Insights Risk Dimensions](investment-insights-risk-dimensions.md)** — planning; honest missing data and separate financial risk dimensions
-- **[IDQ-008 Forward Paper Ledger](investment-forward-paper-ledger.md)** — planning; future simulated fills, accounting, costs, and isolated experiments
+- **[IDQ-008 Forward Paper Ledger](investment-forward-paper-ledger.md)** — in-progress; offline manual journal slice, future experiment-bound execution deferred
+- **[IDQ-008-A Manual Paper Ledger](investment-manual-paper-ledger.md)** — in-progress; explicit user scenario bookings and on-demand valuation, no scheduler or approval consumption
 - **[IDQ-009 Quality Evaluation](investment-quality-evaluation.md)** — planning; factual oracles, forward outcomes, calibration, and strategy review
 
 ### Active Hardening Program

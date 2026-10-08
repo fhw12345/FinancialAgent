@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-08",
+  "backend_version": "0.60.0",
+  "frontend_version": "0.41.0",
+  "real_backend_frontend_recreation": true,
+  "nav_before": "9999.00",
+  "nav_after": "9999.00",
+  "sequence_before": 3,
+  "sequence_after": 3,
+  "no_restart_or_read_market_requests": true,
+  "no_restart_or_read_model_requests": true,
+  "comparisons": [
+    {
+      "path": "/api/portfolio/paper/experiments/paper_4c3024f387867e7275e5ae290dbef0af7a6685496ebf267072f30932e7182937",
+      "before_sha256": "f48ad9f4c4bf4658038ddd138088870fed5e86f1050163a037906fe649356d54",
+      "after_sha256": "f48ad9f4c4bf4658038ddd138088870fed5e86f1050163a037906fe649356d54"
+    },
+    {
+      "path": "/api/portfolio/paper/experiments/paper_4c3024f387867e7275e5ae290dbef0af7a6685496ebf267072f30932e7182937/manifest",
+      "before_sha256": "96d4c1e9a9fd48823160edd47a36d5bdeee8b2774a156e23c6c92cfac7e19eb8",
+      "after_sha256": "96d4c1e9a9fd48823160edd47a36d5bdeee8b2774a156e23c6c92cfac7e19eb8"
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-08",
+  "backend_version": "0.60.0",
+  "frontend_version": "0.41.0",
+  "same_application_inputs": true,
+  "metadata_sha256": "03f7559abce2eb7b3d1ba179c1fa1c9fb79481561e8745958462dfa66e6f6cc1",
+  "dependencies_equal": true,
+  "frontend_assets_equal": true,
+  "source_image_equality": true,
+  "source_sha256": {
+    "backend": "c3d656fa6ede0e26aa12b26484556aaef172fd634a87b54b860922abd7a01281",
+    "frontend": "7428b023519f69ccee1bc6d9cd4117c6f3c34e9d0151371ad5f54368fb700a81"
+  },
+  "runs": [
+    {
+      "backend": {
+        "image_id": "sha256:7545ad77831760a4578886ef0b657a026e74ab8033679d7434b67df6cd5eacde",
+        "user": "app",
+        "uid": "1000",
+        "dependency_count": 125,
+        "dependency_sha256": "0c413a08e38b084f70812f9dcb51e5b29720673590109ce091173ff1cd0872e8",
+        "source_sha256": "c3d656fa6ede0e26aa12b26484556aaef172fd634a87b54b860922abd7a01281",
+        "local_env_files": 0
+      },
+      "frontend": {
+        "image_id": "sha256:e902f3159d0383ac9354293d667b9f82711630b5337ad80b3b4e8776c1aa4bbb",
+        "user": "node",
+        "uid": "1000",
+        "dependency_count": 746,
+        "dependency_sha256": "18efc4df1ef5ba048bc9ca2aea121864f0e5513dd1a2038cfed3f73e83a3420b",
+        "source_sha256": "7428b023519f69ccee1bc6d9cd4117c6f3c34e9d0151371ad5f54368fb700a81",
+        "local_env_files": 0,
+        "build_assets_sha256": "057dbf7fecf06ce5de1d64be7b8cfc39bce170f9269c8ad073dfb79ddc664ac8"
+      }
+    },
+    {
+      "backend": {
+        "image_id": "sha256:67dabb2a6e1f02ba4c9cecde97bec436f32a9a8df0da24e3751b68734cca31d9",
+        "user": "app",
+        "uid": "1000",
+        "dependency_count": 125,
+        "dependency_sha256": "0c413a08e38b084f70812f9dcb51e5b29720673590109ce091173ff1cd0872e8",
+        "source_sha256": "c3d656fa6ede0e26aa12b26484556aaef172fd634a87b54b860922abd7a01281",
+        "local_env_files": 0
+      },
+      "frontend": {
+        "image_id": "sha256:cc98d37fc1a855be7c1780e143b4bc354b3e60a26975fed465e9123fdc26e016",
+        "user": "node",
+        "uid": "1000",
+        "dependency_count": 746,
+        "dependency_sha256": "18efc4df1ef5ba048bc9ca2aea121864f0e5513dd1a2038cfed3f73e83a3420b",
+        "source_sha256": "7428b023519f69ccee1bc6d9cd4117c6f3c34e9d0151371ad5f54368fb700a81",
+        "local_env_files": 0,
+        "build_assets_sha256": "057dbf7fecf06ce5de1d64be7b8cfc39bce170f9269c8ad073dfb79ddc664ac8"
+      }
+    }
+  ]
+}
