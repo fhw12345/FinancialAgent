@@ -136,7 +136,7 @@ HOLD通过`exposure_context/hold_reason`区分继续持有和空仓等待；WAIT
 | [IDQ-005 投资方法与研究模板](investment-research-strategy-contracts.md) | 期限、估值口径、失效条件、基准 | P1 | 001-A/004 |
 | [IDQ-006 结构化多 Agent 研究](investment-agent-research-orchestration.md) | 覆盖率、争议状态、预算、消融 | P1/P2 | 004/005 |
 | [IDQ-007 多维 Insights 风险](investment-insights-risk-dimensions.md) | 缺数状态、风险维度、方法版本 | P0/P1 | 可独立修缺数；完整引用依赖 004 |
-| [IDQ-008 前瞻 Paper 账本](investment-forward-paper-ledger.md) | 审批、未来成交、现金账、企业行动 | P2 | 001-B/002/004/005 |
+| [IDQ-008 前瞻 Paper 账本](investment-forward-paper-ledger.md) | **in-progress: A 手动账本已出货**；实验审批／未来成交仍待 B | P2 | A 独立手动记账；B 需实验绑定 001-B/002/004/005 |
 | [IDQ-009 研究与投资评估](investment-quality-evaluation.md) | 事实 oracle、收益基线、校准、发布门槛 | 全程 | oracle 先行；完整评估依赖 003/006/007/008 |
 
 ### 非循环的交付里程碑
@@ -153,14 +153,11 @@ M1 不需要等待全部功能；用窄 helper/adapter 避免新行为混入机�
 调用文件时，只做实现本任务所必需的边界提取并满足 touched-source ≤500 行；全仓库
 PH-009 仍不启动。若安全改动无法在此边界内完成，先记录阻塞并请求维护者决策。
 
-当前交付状态：001-A/B/C（C=模型给出决策、代码校验、人工批准）、002、004、005 已出货；003 按维护者决定后移，006/007/008/009
-仍为 planning。尤其 008 的模拟成交／现金账和 009 的投资效果评估尚未实现；本次出货
-不自动启动后续任务，也不启用真实账户的个人政策或策略。PH-009 继续暂停。
-
-2026-10-08：维护者确认本地服务非全天运行，并授权
-[IDQ-008-A 人工模拟账本](investment-manual-paper-ledger.md)，当前 in-progress。
-仅手动情景记账与按需估值，不消费真实账户批准、不自动模拟成交。父 008 的实验绑定
-执行／前瞻测量仍为未来工作；003/PH-009 继续后移或暂停。
+当前交付状态：001-A/B/C（模型明确决策／代码校验／人工批准）、002、004、005 与
+[IDQ-008-A 人工模拟账本](investment-manual-paper-ledger.md) 已出货。父 008 仍为
+in-progress，003 按维护者决定后移，006/007/009 仍为 planning。008-A 只有手动情景记账
+与按需估值，不消费真实账户批准、不自动模拟成交；实验绑定执行／前瞻效果测量仍是
+未来 008-B/009，不因 A 出货而自动启动。未启用真实账户个人政策或策略，PH-009 继续暂停。
 
 ### 文件所有权／集成规则
 
@@ -232,7 +229,7 @@ API 后宣称跨层验证。各子计划列出场景及待生成的 `assets/idq-
 | 首发策略 | 005 的中期基本面模板；短期模板独立 | 不把多周期信号混成 BUY | 005 |
 | Freshness／事件窗口 | 随策略版本固定，延迟行情显式标注 | 不满足关键输入则 blocked/review | 004/005 |
 | Provider PIT 能力／授权 | 无可靠 publication time 就标 unknown | 不用于严格历史验证 | 004/009 |
-| Paper 成交／费用／基准 | 008 的 next-session market pilot | 不生成回测收益结论 | 008 |
+| Paper 分录／费用／估值 | 已出货 008-A 人工情景账本；next-session/基准测量仍待后续 | 情景账不冒充客观投资效果或真实成交 | 008 |
 | Live 调用总预算／并发 | 显式选择，不因打开页面触发 | 默认不付费执行 | 006/009 |
 
 ## 9. Program Acceptance Checklist（未来实施）

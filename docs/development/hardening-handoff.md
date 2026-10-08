@@ -17,21 +17,31 @@ related_paths:
 
 ## 1. Current State
 
-### IDQ-008-A offline manual PAPER authorized / in progress (2026-10-08)
+### IDQ-008-A offline manual PAPER shipped (2026-10-08)
 
 User clarified this service is intermittent and authorized manual scenario bookkeeping
-plus on-demand valuation, not a next-open scheduler. Active branch
-`feat/idq-008-a-manual-paper-ledger`, target 0.60.0/0.41.0. Separate hash-chained single-doc
+plus on-demand valuation, not a next-open scheduler. Shipped at **0.60.0/0.41.0**. Separate hash-chained single-doc
 journal, exact Decimal/FIFO, manual corporate actions, no approval consumption or actual
 holdings/cash writes. Parent 008 remains in-progress; approval-linked experiment execution
-is deferred. See the [working spec](../features/investment-manual-paper-ledger.md).
+is deferred. See the [shipped spec](../features/investment-manual-paper-ledger.md).
 Docker Desktop was stuck starting; its failed graceful restart was followed by restarting
 only the stuck Desktop processes (no volumes/credentials removed); validation is restored.
 Local acceptance passes 2354 backend / 280 frontend tests, strict mypy 352 files,
 all critical/security/eval/script gates, production lint 0 / total 131; two equal-manifest/
 source clean builds and 51 final-image cases pass. Exact paper receipts survive real
-recreation without startup/read market/model calls. Hosted two-stage protected publication
-and live-preservation rollout are pending before shipment.
+recreation without startup/read market/model calls. Implementation
+`c7333782a22d0e938f7ebe0bfd1b12d38b497677` merged via protected **PR #20** as
+`70c90ffdeae5e6f702df86b1dc90678414ace544`. Hosted **37759803259** passed all gates and
+eight browser lanes; downloaded artifact ZIP/report stats and hashes are verified, no
+credential files. Required Unit Tests / Actions app15368 / strict / admin enforcement
+were preserved, no bypass.
+
+Live **localhost:3013** runs accepted B images. Private Copilot login/default Astra/routing
+revision1, role map, one existing real holding and all account/configuration hashes survived
+recreation. Risk/strategy/review policies remain unconfigured; **zero PAPER accounts** were
+auto-created. Read-only real-browser verification showed blank capital/cost inputs, explicit
+consent and no model/trade POST. See [local/hosted/live evidence](../features/investment-manual-paper-ledger.md).
+Wait for further authorization before IDQ-008-B/009 or other feature work. PH-009/003 stay paused.
 
 ### IDQ-001-C model decisions shipped (2026-09-22)
 
@@ -302,7 +312,7 @@ config run. The 131 lint warnings are accepted non-increasing follow-up debt.
 | PH-009 Source decomposition | planning |
 | PH-010 Version metadata | shipped |
 
-## 5. Current Direction — After Scoped IDQ-001-B; PH-009 Paused
+## 5. Current Direction — After Manual IDQ-008-A; PH-009 Paused
 
 The maintainer explicitly requested **not to execute PH-009**. IDQ-001-A is now
 separately authorized and shipped; see the current state above and the
@@ -312,9 +322,10 @@ inputs for each actual review; shipment never supplies personal limits or an app
 IDQ-002 software is shipped as non-actionable risk/allocation previews. IDQ-004 is
 shipped as a bounded evidence/structured-field layer; subsequent order is 005 then
 001-B, with 003 postponed. IDQ-005 is shipped as research-contract software. The maintainer
-authorized B and its protected shipment is recorded above. Await a new instruction
-before subsequent feature work. Other child plans remain planning. No paper execution
-or investment-quality claim.
+authorized B/C and the later offline manual 008-A slice; their protected shipments are
+recorded above. Await a new instruction before subsequent work. Parent 008 stays in-progress;
+experiment-bound approval consumption/automatic simulated execution and investment-quality
+measurement remain deferred. Manual PAPER scenarios are not those capabilities.
 
 ### PH-009 Resume References (Not an Active Work Queue)
 

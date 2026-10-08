@@ -39,7 +39,7 @@
     "curated_screenshots": ["01-manual-paper-nav.png", "02-unavailable-paper-nav.png"],
     "raw_reports": "backend/artifacts/idq008a-browser (ignored)"
   },
-  "publication": "protected implementation and shipment PRs pending",
+  "publication": "implementation c7333782a22d0e938f7ebe0bfd1b12d38b497677, protected PR 20, merge 70c90ffdeae5e6f702df86b1dc90678414ace544; hosted run 37759803259 passed; shipment documentation records verified hosted/live receipts",
   "notes": [
     "Two successful unchanged-input no-cache builds match complete dependency, asset and source manifests, both runtime UIDs 1000; see clean-build-validation.json.",
     "Exact aggregate/projection/manifest responses survive real backend/frontend recreation. Read/startup performs zero fresh market/model calls; see persistence-validation.json.",

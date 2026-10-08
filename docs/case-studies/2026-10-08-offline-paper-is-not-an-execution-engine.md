@@ -1,6 +1,6 @@
 ---
 title: Offline PAPER Is Not an Execution Engine / 离线模拟账本不是交易引擎
-status: in-progress
+status: shipped
 version: backend@0.60.0, frontend@0.41.0
 last_updated: 2026-10-08
 owner: maintainer
@@ -82,10 +82,13 @@ competing cash requests, delayed storage clocks, corruption, provider/storage/ca
 failures and no I/O on reads. Real browser scenarios traverse UI/API/Mongo with only outer
 market receipts and explicit storage/clock faults recorded. The real account/review and
 model-call audit stays unchanged. Local acceptance passes **2354 backend / 280 frontend
- tests**, all critical/strict gates, **51 final-image cases**, repeat equal-source/dependency/
-asset builds and real recreation without fresh provider/model calls. Hosted publication
-is pending; current evidence is linked in
-[the feature](../features/investment-manual-paper-ledger.md).
+tests**, all critical/strict gates, **51 final-image cases**, repeat equal-source/dependency/
+asset builds and real recreation without fresh provider/model calls. Implementation
+`c7333782a22d0e938f7ebe0bfd1b12d38b497677` merged via protected PR #20 as
+`70c90ffdeae5e6f702df86b1dc90678414ace544`. Hosted run 37759803259 passed every gate
+and eight browser lanes; downloaded artifact/report digests were verified. Live 3013
+preserves real-account/auth/configuration hashes and has no auto-created PAPER scenario.
+Committed evidence is linked in [the feature](../features/investment-manual-paper-ledger.md).
 
 Tests prove specified accounting and failure behavior, not that chosen prices are unbiased,
 company actions verified, a strategy profitable or a model calibrated. Service downtime is
