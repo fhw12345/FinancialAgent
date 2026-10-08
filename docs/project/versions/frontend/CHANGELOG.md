@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adds a separate opt-in PAPER panel with blank capital/cost/universe inputs, explicit manual journal consent and no real-holdings copy or model call.
 - Displays exact cash/FIFO basis/fees, manual scenario P&L, per-trade receipts, immutable events and read-only manifest export.
 - Requires corporate-action reconciliation before explicitly refreshing closing marks; missing marks remain unavailable and old session/ledger values remain visibly stale.
-- No scheduler, automatic next-open/backdated fill, stop-loss monitoring or real/AI-approved trade. Shipment references follow protected publication.
+- No scheduler, automatic next-open/backdated fill, stop-loss monitoring or real/AI-approved trade. Shipped through protected PR #20 (`70c90ff`) after 280 frontend tests, 51 final-image cases, two clean builds and CI 37759803259; live read-only UI requires explicit blank inputs/consent and makes no model/trade calls.
 
 ## [0.40.0] - 2026-09-22
 

@@ -15,12 +15,15 @@ related_paths:
 
 # IDQ-008：前瞻 Paper Portfolio 与可复算账本
 
-## Current Authorized Slice (2026-10-08)
+## Current Shipped Slice (2026-10-08)
 
 The user runs this local service intermittently, not 24h. The authorized first slice is
-[IDQ-008-A manual paper bookkeeping and on-demand valuation](investment-manual-paper-ledger.md):
-explicit manual scenario trades, isolated cash/FIFO journal, no backdated/automatic fills,
-no timers/model calls. Local-account approvals remain review-only and are not consumed.
+[IDQ-008-A manual paper bookkeeping and on-demand valuation](investment-manual-paper-ledger.md)
+is shipped at **0.60.0/0.41.0**, protected PR #20, implementation `c733378`, merge `70c90ff`,
+CI 37759803259. It delivers explicit manual scenario trades, isolated cash/FIFO journal,
+no backdated/automatic fills and no timers/model calls. Local-account approvals remain
+review-only and are not consumed. Final-image 51-case acceptance and exact journal/NAV
+recreation proof are linked from the child spec.
 The next-open/policy-linked forward engine below remains a **future proposal**, not the
 current implementation contract. Parent IDQ-008 is not completed by A alone.
 
@@ -59,7 +62,7 @@ cost model、corporate-action policy、外部cashflow规则、evaluation manifes
 - changes产生新实验或版本，不能回填历史参数；旧run结果可读。
 - 未确认费用、成交方式、基准和起始状态，实验不能进入active。
 
-## 4. v1 成交模型：先小而明确
+## 4. Future IDQ-008-B 成交模型（未实现／需另行授权）
 
 首发建议仅支持 **next regular-session open 的market模拟**：
 
@@ -117,7 +120,7 @@ FIFO为建议的v1 realized-PnL cost basis方法；方法在创建实验时固�
   初始资金与明确费用假设。005预先选择适当基准，不能结束后换到最好比较的那个。
 - 预测评估期限按005的units；旧calendar-day marks保持legacy，不偷偷改成trading sessions。
 
-## 7. API/UI 与实现顺序
+## 7. Broader API/UI 与后续实现顺序（A 的实际 API 见子文档）
 
 拟新增 `/api/portfolio/paper/experiments`（创建/列表/detail）、对应ledger/NAV只读接口。
 批准复用001而非第二个绕过policy的buy按钮；默认本地、无新增认证/云服务。
@@ -129,7 +132,7 @@ FIFO为建议的v1 realized-PnL cost basis方法；方法在创建实验时固�
 - [ ] UI区别建议/批准/pending/filled/expired，展示NAV与费用，导出ledger manifest。
 - [ ] 旧directional view改清楚标签；不迁移为真实或paper收益。
 
-## 8. 验证矩阵
+## 8. Broader Forward-Execution 验证矩阵（仍是后续目标）
 
 拟新增 `test_paper_ledger_accounting.py`、`test_paper_execution_calendar.py`、
 `test_paper_ledger_concurrency.py`、`test_paper_portfolio_api.py`。
@@ -161,7 +164,10 @@ FIFO为建议的v1 realized-PnL cost basis方法；方法在创建实验时固�
    金额不变；真实holdings/transactions未改。截图 `assets/idq-008/02-paper-nav.png`。
 3. `idq-008-wait-is-not-hold`：空仓等待不显示股票上涨带来的虚构盈利。
 
-## 9. Acceptance / Rollout / Rollback
+## 9. Broader Program Acceptance / Rollout / Rollback
+
+A's committed evidence and protected shipment do not check off all forward-execution
+requirements below. Manual scenarios are not unbiased investment-effectiveness measurements.
 
 - [ ] PL-01…13、真实API/数据库browser场景及总计划质量门禁通过。
 - [ ] 每份NAV能从初始状态＋events独立复算到最小货币单位。

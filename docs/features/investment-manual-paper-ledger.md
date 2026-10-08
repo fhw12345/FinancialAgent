@@ -1,6 +1,6 @@
 ---
 title: Offline-Friendly Manual Paper Ledger
-status: in-progress
+status: shipped
 version: backend@0.60.0, frontend@0.41.0
 last_updated: 2026-10-08
 owner: maintainer
@@ -116,7 +116,7 @@ fetches fresh marks, imports holdings or submits a trade.
   regressions, case study/indexes/version/changelogs, protected implementation then shipment
   PRs required before shipped. No live investment settings or paper account auto-created.
 
-## Local Acceptance (Protected Publication Pending)
+## Acceptance / Protected Publication
 
 - Backend **2354 passed / 27 live integrations deselected**, aggregate **75.7785%**;
   strict mypy **352 files**, Black/Ruff/Bandit/eval and all original plus six new critical
@@ -137,8 +137,22 @@ fetches fresh marks, imports holdings or submits a trade.
   [persistence receipt](assets/idq-008-a/persistence-validation.json).
 - Final review tested valuation arithmetic overflow, exact inclusive numeric range, FIFO
   residual depletion, concurrent identical replay, cancelled fetches and failed storage.
-  Protected implementation/shipment publication and preservation-checked live rollout are
-  still required before this slice is shipped. Parent IDQ-008 remains incomplete.
+  Parent IDQ-008 remains incomplete; only this authorized manual slice is shipped.
+- Implementation `c7333782a22d0e938f7ebe0bfd1b12d38b497677` merged through protected
+  [PR #20](https://github.com/fhw12345/FinancialAgent/pull/20) as
+  `70c90ffdeae5e6f702df86b1dc90678414ace544`. Hosted
+  [run 37759803259](https://github.com/fhw12345/FinancialAgent/actions/runs/37759803259)
+  passed every gate and eight browser lanes (40 cases). Downloaded archive digest and
+  all eight embedded report stats/hashes match, no credentials:
+  [hosted receipt](assets/idq-008-a/hosted-validation.json).
+- Live **localhost:3013**, 0.60.0/0.41.0, uses accepted B images. Copilot login/default
+  Astra/routing revision 1/private credential volume, the existing one real holding and
+  all account/configuration hashes survive rollout. No paper experiment or personal
+  investment policy is auto-created. Read-only browser verified blank creation inputs,
+  consent required and no model/trade POSTs:
+  [live receipt](assets/idq-008-a/live-validation.json).
+- Main required `Unit Tests` (Actions app 15368), strict up-to-date and administrator
+  enforcement remained unchanged; no bypass. No live inference or performance claim.
 
 ## Risks / Deferred
 
