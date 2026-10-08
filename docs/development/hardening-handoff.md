@@ -1,8 +1,8 @@
 ---
 title: Project Hardening Active Handoff
 status: in-progress
-version: backend@0.59.0, frontend@0.40.0
-last_updated: 2026-09-22
+version: backend@0.60.0, frontend@0.41.0
+last_updated: 2026-10-08
 owner: maintainer
 related_paths:
   - docs/features/project-hardening-program.md
@@ -16,6 +16,22 @@ related_paths:
 # Project Hardening Active Handoff
 
 ## 1. Current State
+
+### IDQ-008-A offline manual PAPER authorized / in progress (2026-10-08)
+
+User clarified this service is intermittent and authorized manual scenario bookkeeping
+plus on-demand valuation, not a next-open scheduler. Active branch
+`feat/idq-008-a-manual-paper-ledger`, target 0.60.0/0.41.0. Separate hash-chained single-doc
+journal, exact Decimal/FIFO, manual corporate actions, no approval consumption or actual
+holdings/cash writes. Parent 008 remains in-progress; approval-linked experiment execution
+is deferred. See the [working spec](../features/investment-manual-paper-ledger.md).
+Docker Desktop was stuck starting; its failed graceful restart was followed by restarting
+only the stuck Desktop processes (no volumes/credentials removed); validation is restored.
+Local acceptance passes 2354 backend / 280 frontend tests, strict mypy 352 files,
+all critical/security/eval/script gates, production lint 0 / total 131; two equal-manifest/
+source clean builds and 51 final-image cases pass. Exact paper receipts survive real
+recreation without startup/read market/model calls. Hosted two-stage protected publication
+and live-preservation rollout are pending before shipment.
 
 ### IDQ-001-C model decisions shipped (2026-09-22)
 

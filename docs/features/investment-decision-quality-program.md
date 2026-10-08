@@ -1,8 +1,8 @@
 ---
 title: Investment Decision Quality Program
 status: in-progress
-version: backend@0.58.0, frontend@0.39.0
-last_updated: 2026-09-18
+version: backend@0.60.0, frontend@0.41.0
+last_updated: 2026-10-08
 owner: maintainer
 related_paths:
   - backend/src/agent/portfolio/
@@ -156,6 +156,11 @@ PH-009 仍不启动。若安全改动无法在此边界内完成，先记录阻�
 当前交付状态：001-A/B/C（C=模型给出决策、代码校验、人工批准）、002、004、005 已出货；003 按维护者决定后移，006/007/008/009
 仍为 planning。尤其 008 的模拟成交／现金账和 009 的投资效果评估尚未实现；本次出货
 不自动启动后续任务，也不启用真实账户的个人政策或策略。PH-009 继续暂停。
+
+2026-10-08：维护者确认本地服务非全天运行，并授权
+[IDQ-008-A 人工模拟账本](investment-manual-paper-ledger.md)，当前 in-progress。
+仅手动情景记账与按需估值，不消费真实账户批准、不自动模拟成交。父 008 的实验绑定
+执行／前瞻测量仍为未来工作；003/PH-009 继续后移或暂停。
 
 ### 文件所有权／集成规则
 

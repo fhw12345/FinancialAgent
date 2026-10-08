@@ -9,6 +9,7 @@ from .evidence import router as evidence_router
 from .holdings import router as holdings_router
 from .model_decisions import router as model_decisions_router
 from .orders import router as orders_router
+from .paper import router as paper_router
 from .reviews import router as reviews_router
 from .risk import router as risk_router
 from .strategies import router as strategies_router
@@ -31,5 +32,6 @@ router.include_router(strategies_router)
 router.include_router(reviews_router)
 router.include_router(model_decisions_router)
 router.include_router(user_transactions_router)
+router.include_router(paper_router)
 
 __all__ = ["router"]

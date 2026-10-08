@@ -172,6 +172,7 @@ jobs:
           bash scripts/run-ci-browser.sh evidence
           bash scripts/run-ci-browser.sh strategy
           bash scripts/run-ci-browser.sh review
+          bash scripts/run-ci-browser.sh paper
 
       - name: Upload quality reports and server logs (including failures)
         if: always()

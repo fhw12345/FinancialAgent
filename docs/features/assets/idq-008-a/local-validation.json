@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-08",
+  "backend_version": "0.60.0",
+  "frontend_version": "0.41.0",
+  "backend": {
+    "passed": 2354,
+    "live_integrations_deselected": 27,
+    "warnings": 135,
+    "aggregate_coverage_percent": 75.77845261297195,
+    "strict_mypy_source_files": 352,
+    "black": "passed",
+    "ruff": "passed",
+    "critical_floors": "all prior floors plus six manual-paper floors passed, no reductions",
+    "paper_coverage": { "model": 100, "accounting": 97.98, "store": 100, "service": 100, "valuation": 100, "api": 100 },
+    "bandit_medium_high": "passed",
+    "deterministic_agent_eval": "passed without live calls",
+    "script_tests": 9,
+    "script_subtests": 6
+  },
+  "frontend": {
+    "passed": 280,
+    "test_files": 33,
+    "production_lint_warnings": 0,
+    "total_lint_warnings": 131,
+    "typescript": "passed",
+    "production_build": "passed"
+  },
+  "final_image_browser": {
+    "backend_image": "sha256:67dabb2a6e1f02ba4c9cecde97bec436f32a9a8df0da24e3751b68734cca31d9",
+    "frontend_image": "sha256:cc98d37fc1a855be7c1780e143b4bc354b3e60a26975fed465e9123fdc26e016",
+    "backend_application_mounts": 0,
+    "frontend_mounts": 0,
+    "paper": 5, "review_and_model": 9, "strategy": 4, "evidence": 3, "risk": 3,
+    "safety": 6, "copilot": 4, "hardening": 6, "default": 11, "total": 51,
+    "recorded_paper_clock": "2026-09-17T12:00:00Z",
+    "recorded_paper_completed_session": "2026-09-16",
+    "substitutions": "outer market/model transports, explicit storage faults and Mongo/application clock operands only",
+    "mocked_ledger_nav_readiness_or_approval_results": false,
+    "curated_screenshots": ["01-manual-paper-nav.png", "02-unavailable-paper-nav.png"],
+    "raw_reports": "backend/artifacts/idq008a-browser (ignored)"
+  },
+  "publication": "protected implementation and shipment PRs pending",
+  "notes": [
+    "Two successful unchanged-input no-cache builds match complete dependency, asset and source manifests, both runtime UIDs 1000; see clean-build-validation.json.",
+    "Exact aggregate/projection/manifest responses survive real backend/frontend recreation. Read/startup performs zero fresh market/model calls; see persistence-validation.json.",
+    "Review found that valuation overflow could throw after committing a receipt and make later reads fail. Valuation now persists unavailable reasons instead, tested at quantity/price maxima.",
+    "The strict numeric lexical bound was corrected to include the declared inclusive 10^15 USD boundary; larger values/unsupported precision still reject.",
+    "Parallel identical requests reuse their single committed event; independent competing cash requests still conflict.",
+    "Screenshots were centered below the sticky header after assertions; no account/result mocks were used.",
+    "Docker Desktop was stuck starting; a graceful restart timed out. Only stuck Desktop processes were restarted; no data/credential volume removal or dependency reinstall.",
+    "No live paper account, personal policy, model call, simulated automatic fill or real trade is created by development. This delivers manual IDQ-008-A, not the deferred approval-linked execution engine."
+  ]
+}

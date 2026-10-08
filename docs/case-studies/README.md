@@ -13,6 +13,7 @@ can decide whether the case is relevant before reading the Chinese body.
 
 | Date       | Title                                                                                       | Stack                   | Topic                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-08 | [Offline PAPER Is Not an Execution Engine](2026-10-08-offline-paper-is-not-an-execution-engine.md) | Decimal / FIFO / Mongo CAS / Playwright | Manual scenario authority, immutable replay and on-demand honest valuation |
 | 2026-09-22 | [A Model Decision Is Not a Resized Order](2026-09-22-model-decision-is-not-a-resized-order.md) | Model / policy gate / Mongo / Playwright | Explicit model actions, reject-not-rewrite checks, paid-call claims and replay |
 | 2026-09-18 | [Approval Is Not a Fill](2026-09-18-approval-is-not-a-fill.md) | Policy / Mongo CAS / Playwright | Explicit targets, subset revalidation, mutation tickets and atomic expiry; approval is not execution |
 | 2026-09-18 | [A Research Mandate Is Not a Trade](2026-09-18-research-mandate-is-not-a-trade.md) | Strategy / valuation / CAS / Playwright | Confirmed horizons, immutable assumptions, evidence-bound models and separated stance/action |

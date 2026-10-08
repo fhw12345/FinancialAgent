@@ -1,8 +1,8 @@
 ---
 title: Forward Paper Portfolio and Reproducible Ledger
-status: planning
-version: n/a
-last_updated: 2026-09-14
+status: in-progress
+version: backend@0.60.0, frontend@0.41.0
+last_updated: 2026-10-08
 owner: maintainer
 related_paths:
   - backend/src/services/pnl_service.py
@@ -14,6 +14,15 @@ related_paths:
 ---
 
 # IDQ-008：前瞻 Paper Portfolio 与可复算账本
+
+## Current Authorized Slice (2026-10-08)
+
+The user runs this local service intermittently, not 24h. The authorized first slice is
+[IDQ-008-A manual paper bookkeeping and on-demand valuation](investment-manual-paper-ledger.md):
+explicit manual scenario trades, isolated cash/FIFO journal, no backdated/automatic fills,
+no timers/model calls. Local-account approvals remain review-only and are not consumed.
+The next-open/policy-linked forward engine below remains a **future proposal**, not the
+current implementation contract. Parent IDQ-008 is not completed by A alone.
 
 ## 1. 目标与边界
 

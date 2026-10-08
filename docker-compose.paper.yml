@@ -1,0 +1,8 @@
+# Offline-friendly manual PAPER acceptance; private live data and credentials are not reused.
+services:
+  backend:
+    environment:
+      FINNHUB_API_KEY: dummy
+    command: python -m uvicorn tests.e2e.paper_app:app --host 0.0.0.0 --port 8000
+  browser:
+    command: npm run test:e2e:paper
