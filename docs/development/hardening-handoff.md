@@ -17,7 +17,7 @@ related_paths:
 
 ## 1. Current State
 
-### IDQ-009-A synthetic portfolio/live-model acceptance in progress (2026-10-09)
+### IDQ-009-A synthetic portfolio/live-model acceptance shipped (2026-10-09)
 
 User explicitly authorized at most six Astra upstream attempts, 4096 output tokens each,
 one 10-minute run; no probes/judge/retry. Branch `feat/idq-009-a-live-model-portfolios`.
@@ -33,8 +33,20 @@ Model contract result is 5 conforming / 1 finding, not all-quality-pass. No live
 approval-positive occurred; explicit replay covers it. Real account/config hashes are
 unchanged. Budget is spent/expired; **no additional inference is authorized**. Full local
 2360 backend / 280 frontend tests, 60 deterministic final-image executions and equal clean
-builds pass. Protected publication remains pending. See the
-[working spec](../features/investment-live-model-portfolio-tests.md).
+builds pass. Shipped at **0.60.1/0.41.1**, implementation
+`b43d59127ef44eafa7f78ed8ea08621abc416882`, protected **PR #22**, merge
+`7e6f490722b735bff838f4fc079d92a0fe8ebf7d`, hosted **37916743724**. All quality gates
+and nine browser lanes (49 hosted executions) pass; downloaded ZIP/report digests and
+replay-only mode verified, no private credentials in artifacts. See the
+[shipped spec](../features/investment-live-model-portfolio-tests.md).
+
+Live 3013 uses the accepted patch images, unchanged production decision logic, independent
+Copilot credentials/default Astra/routing revision1, and real account/configuration hashes
+preserved. Deployment made zero inference/trade calls and did not configure personal limits.
+Private volume remains `financialagent-copilot-live_credentials`. Do not rerun the live
+acceptance override: its namespace/run contains six spent attempts and an expired deadline.
+Future live calls need new explicit bounded consent. Prompt/sizing feasibility findings and
+broader IDQ-009 research/profit/forecast work remain pending; PH-009/003 stay paused.
 
 ### IDQ-008-A offline manual PAPER shipped (2026-10-08)
 
@@ -331,7 +343,7 @@ config run. The 131 lint warnings are accepted non-increasing follow-up debt.
 | PH-009 Source decomposition | planning |
 | PH-010 Version metadata | shipped |
 
-## 5. Current Direction — After Manual IDQ-008-A; PH-009 Paused
+## 5. Current Direction — After Bounded IDQ-009-A; PH-009 Paused
 
 The maintainer explicitly requested **not to execute PH-009**. IDQ-001-A is now
 separately authorized and shipped; see the current state above and the

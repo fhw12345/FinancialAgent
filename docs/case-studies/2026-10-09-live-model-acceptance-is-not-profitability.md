@@ -1,6 +1,6 @@
 ---
 title: Live Model Acceptance Is Not Profitability / 真模型验收不是收益验证
-status: in-progress
+status: shipped
 version: backend@0.60.1, frontend@0.41.1
 last_updated: 2026-10-09
 owner: maintainer
@@ -58,7 +58,12 @@ production decision and approval endpoints, immutable records and Mongo; no read
 model-gate result is mocked. Final-image/repeated-build and the one registered real batch
 passed locally; [the spec](../features/investment-live-model-portfolio-tests.md) records
 2360 backend/280 frontend tests, 60 deterministic image-browser executions and a separate
-9-case native batch with exactly six requests. Protected publication remains pending.
+9-case native batch with exactly six requests. Implementation
+`b43d59127ef44eafa7f78ed8ea08621abc416882` merged via protected PR #22 as
+`7e6f490722b735bff838f4fc079d92a0fe8ebf7d`; hosted37916743724 passed all required
+quality gates and nine replay/browser lanes. Downloaded ZIP/report hashes and no-private-
+credentials were verified. Production metadata-patch rollout preserved account/auth/config
+hashes and made no additional inference or trade. No model-quality finding was erased.
 
 The actual model returned five HOLD/WAIT outputs and one REDUCE-to-30% boundary proposal.
 After costs and lot sizing, the latter was 30.0132%, so the real gate blocked it. Contract

@@ -53,7 +53,7 @@
     "live_positive_ready_approvals_exercised": 0,
     "report": "live-validation.json"
   },
-  "publication": "protected implementation/shipment PRs pending",
+  "publication": "implementation b43d59127ef44eafa7f78ed8ea08621abc416882 / protected PR 22 / merge 7e6f490722b735bff838f4fc079d92a0fe8ebf7d; hosted run 37916743724 passed; shipment docs record verified hosted and deployment evidence",
   "notes": [
     "One authorized native six-attempt run only; no new inference after it. Real ledger/config hashes stayed unchanged.",
     "Full native output/source/attempt report is retained, including the blocked exact-cap recommendation. Safe containment is not model-quality success.",

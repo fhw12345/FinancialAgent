@@ -15,14 +15,18 @@ related_paths:
 
 # IDQ-009：分层质量评估、前瞻收益与策略准入
 
-## Current Authorized Slice (2026-10-09)
+## Current Shipped Slice (2026-10-09)
 
 [IDQ-009-A bounded live-model tests](investment-live-model-portfolio-tests.md) implement
 synthetic portfolio/research inputs → real Astra decisions → actual deterministic gates,
 with a separate replay CI lane. User authorized at most six inference attempts, 4096
 output tokens each, one 10-minute run; no judge/vendor probes/retry or winner selection.
-Three invalid sources must stop before any paid call. This is narrower than the broader
-E1 corpus/E2 outcomes below and never claims full IDQ-009 completion or investment edge.
+Three invalid sources stop before any paid call. A shipped at 0.60.1/0.41.1 via protected
+PR #22 (`7e6f490`), CI37916743724. The one real batch produced six parsed outputs / nine
+containment passes, but model contract quality was five conforming / one feasibility finding
+(exact 30% cap became 30.0132% after costs and was blocked). All raw decisions are retained,
+no retry/winner-picking. This is narrower than the broader E1 corpus/E2 outcomes below;
+IDQ-009 remains in-progress, not proof of investment edge or all model quality passing.
 
 ## 1. Goal / Evidence Boundary
 

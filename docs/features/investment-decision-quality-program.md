@@ -137,7 +137,7 @@ HOLD通过`exposure_context/hold_reason`区分继续持有和空仓等待；WAIT
 | [IDQ-006 结构化多 Agent 研究](investment-agent-research-orchestration.md) | 覆盖率、争议状态、预算、消融 | P1/P2 | 004/005 |
 | [IDQ-007 多维 Insights 风险](investment-insights-risk-dimensions.md) | 缺数状态、风险维度、方法版本 | P0/P1 | 可独立修缺数；完整引用依赖 004 |
 | [IDQ-008 前瞻 Paper 账本](investment-forward-paper-ledger.md) | **in-progress: A 手动账本已出货**；实验审批／未来成交仍待 B | P2 | A 独立手动记账；B 需实验绑定 001-B/002/004/005 |
-| [IDQ-009 研究与投资评估](investment-quality-evaluation.md) | 事实 oracle、收益基线、校准、发布门槛 | 全程 | oracle 先行；完整评估依赖 003/006/007/008 |
+| [IDQ-009 研究与投资评估](investment-quality-evaluation.md) | **in-progress: A 有界真模型测试已出货**；事实语料／收益／校准仍待后续 | 全程 | A 合成持仓验收；完整评估依赖 003/006/007/008 |
 
 ### 非循环的交付里程碑
 
@@ -155,13 +155,16 @@ PH-009 仍不启动。若安全改动无法在此边界内完成，先记录阻�
 
 当前交付状态：001-A/B/C（模型明确决策／代码校验／人工批准）、002、004、005 与
 [IDQ-008-A 人工模拟账本](investment-manual-paper-ledger.md) 已出货。父 008 仍为
-in-progress，003 按维护者决定后移，006/007/009 仍为 planning。008-A 只有手动情景记账
+in-progress，003 按维护者决定后移，006/007 仍为 planning，009 在 A 出货后仍 in-progress。
+008-A 只有手动情景记账
 与按需估值，不消费真实账户批准、不自动模拟成交；实验绑定执行／前瞻效果测量仍是
 未来 008-B/009，不因 A 出货而自动启动。未启用真实账户个人政策或策略，PH-009 继续暂停。
 
-2026-10-09：已授权 [IDQ-009-A 真模型／模拟持仓验收](investment-live-model-portfolio-tests.md)，
-最多六次 Astra 推理、每次 4096 输出 tokens、单批十分钟，不重试挑结果。仅验证固定合成
-输入上的模型决策契约和代码阻断；实时研究质量、收益／基准与概率校准仍未完成。
+2026-10-09：[IDQ-009-A 真模型／模拟持仓验收](investment-live-model-portfolio-tests.md)
+已于 0.60.1/0.41.1、受保护 PR #22 出货。单批实际六次 Astra 推理、每次输出≤4096 tokens、
+4.1 分钟，不重试挑结果；九个安全场景通过，模型契约五符合／一项费用后仓位边界发现，
+按规则阻断并保留。只验证合成输入上的决策契约，不认证实时研究质量、收益／基准或校准。
+父 009 仍 in-progress；六次额度已用完，未来真实调用须重新明确授权。
 
 ### 文件所有权／集成规则
 
