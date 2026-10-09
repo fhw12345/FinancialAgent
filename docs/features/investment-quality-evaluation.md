@@ -1,8 +1,8 @@
 ---
 title: Research Quality and Investment Outcome Evaluation
-status: planning
-version: n/a
-last_updated: 2026-09-14
+status: in-progress
+version: backend@0.60.1, frontend@0.41.1
+last_updated: 2026-10-09
 owner: maintainer
 related_paths:
   - backend/src/evals/
@@ -14,6 +14,15 @@ related_paths:
 ---
 
 # IDQ-009：分层质量评估、前瞻收益与策略准入
+
+## Current Authorized Slice (2026-10-09)
+
+[IDQ-009-A bounded live-model tests](investment-live-model-portfolio-tests.md) implement
+synthetic portfolio/research inputs → real Astra decisions → actual deterministic gates,
+with a separate replay CI lane. User authorized at most six inference attempts, 4096
+output tokens each, one 10-minute run; no judge/vendor probes/retry or winner selection.
+Three invalid sources must stop before any paid call. This is narrower than the broader
+E1 corpus/E2 outcomes below and never claims full IDQ-009 completion or investment edge.
 
 ## 1. Goal / Evidence Boundary
 

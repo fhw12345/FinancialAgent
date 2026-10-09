@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.41.1] - 2026-10-09
+
+### Synthetic-portfolio model-decision browser acceptance
+
+- Adds real UI/API decision/replay/conditional approval scenarios for six portfolio shapes and three zero-call prerequisites, retaining all case results before aggregate checks.
+- Curated test screenshots label synthetic inputs and live versus recorded models. Production UI and personal defaults are unchanged.
+
 ## [0.41.0] - 2026-10-08
 
 ### Offline-friendly manual PAPER scenarios

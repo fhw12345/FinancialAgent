@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 profile="${1:-hardening}"
-case "$profile" in hardening|copilot|decision|risk|evidence|strategy|review|paper)  ;; *) echo 'Unknown browser profile' >&2; exit 2;; esac
+case "$profile" in hardening|copilot|decision|risk|evidence|strategy|review|paper|model-portfolios)  ;; *) echo 'Unknown browser profile' >&2; exit 2;; esac
 logs="backend/artifacts/browser/$profile"
 mkdir -p "$logs"
 # Preserve the previous lane's reports before Playwright replaces its output dirs.
@@ -37,7 +37,13 @@ else
   export LLM_PROVIDER=github_copilot
   auth_dir="$(mktemp -d)" # Never put even recorded credentials in CI artifacts.
   export COPILOT_STATE_DIR="$auth_dir"
-  if [[ "$profile" == paper ]]; then
+  if [[ "$profile" == model-portfolios ]]; then
+    fixture=model_portfolios_app
+    suite=test:e2e:model-portfolios
+    export FINNHUB_API_KEY=dummy
+    export MONGODB_URL="${MONGODB_URL%/*}/model_portfolios_ci"
+    export MODEL_PORTFOLIO_MODE=replay
+  elif [[ "$profile" == paper ]]; then
     fixture=paper_app
     suite=test:e2e:paper
     export FINNHUB_API_KEY=dummy
