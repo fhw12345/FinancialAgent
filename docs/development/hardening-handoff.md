@@ -1,8 +1,8 @@
 ---
 title: Project Hardening Active Handoff
 status: in-progress
-version: backend@0.60.0, frontend@0.41.0
-last_updated: 2026-10-08
+version: backend@0.60.1, frontend@0.41.1
+last_updated: 2026-10-09
 owner: maintainer
 related_paths:
   - docs/features/project-hardening-program.md
@@ -16,6 +16,25 @@ related_paths:
 # Project Hardening Active Handoff
 
 ## 1. Current State
+
+### IDQ-009-A synthetic portfolio/live-model acceptance in progress (2026-10-09)
+
+User explicitly authorized at most six Astra upstream attempts, 4096 output tokens each,
+one 10-minute run; no probes/judge/retry. Branch `feat/idq-009-a-live-model-portfolios`.
+Synthetic source receipts are built via real repositories/calculators, not live research;
+actual model decisions and deterministic gates/approval are tested in an isolated namespace.
+A persistent transport budget prevents attempts from being replenished on restart or reset.
+Model-contract findings and engineering containment are separate; known-bad output has a
+negative quality result even when safely blocked. Native credentials never enter artifacts
+or a fake-login fixture. New ordinary CI lane is replay-only/no paid calls. Registered
+`idq009a-20261009-live-001` completed exactly six HTTP-200 Astra outputs / nine browser
+cases in 4.1 minutes: five HOLD/WAIT, one REDUCE-to-30% blocked at 30.0132% post-cost weight.
+Model contract result is 5 conforming / 1 finding, not all-quality-pass. No live ready/
+approval-positive occurred; explicit replay covers it. Real account/config hashes are
+unchanged. Budget is spent/expired; **no additional inference is authorized**. Full local
+2360 backend / 280 frontend tests, 60 deterministic final-image executions and equal clean
+builds pass. Protected publication remains pending. See the
+[working spec](../features/investment-live-model-portfolio-tests.md).
 
 ### IDQ-008-A offline manual PAPER shipped (2026-10-08)
 

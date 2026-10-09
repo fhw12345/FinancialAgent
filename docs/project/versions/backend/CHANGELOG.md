@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.1] - 2026-10-09
+
+### IDQ-009-A synthetic-portfolio/live-model test coverage
+
+- Adds a registered six-case synthetic portfolio suite plus three invalid-source zero-inference cases, with native real-model and labeled replay modes in an isolated test application/database.
+- Fences actual upstream attempts with persistent total/per-case/token/time budgets; retries, reseeding or restart do not replenish the authorized live run.
+- Separates code containment from independent model-contract findings; preserves inputs, raw model output, gate results, usage and failed/blocked cases without a profitability claim or paid judge.
+- Adds a required replay browser CI lane; ordinary PR CI has no private credentials or paid model calls. Production decisions, real accounts and paper journals are unchanged.
+
 ## [0.60.0] - 2026-10-08
 
 ### IDQ-008-A manual offline PAPER ledger

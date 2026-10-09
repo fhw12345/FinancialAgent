@@ -26,6 +26,9 @@ class Cursor:
         for row in self.rows:
             yield copy.deepcopy(row)
 
+    async def to_list(self, length=None):
+        return copy.deepcopy(self.rows[:length])
+
 
 class Collection:
     def __init__(self, db, name="fixture"):
@@ -107,6 +110,12 @@ class Collection:
         row.setdefault("_id", "row_" + str(len(self.rows)))
         self.rows[row["_id"]] = row
         return SimpleNamespace(inserted_id=row["_id"])
+
+    async def delete_many(self, query):
+        matches = [key for key, row in self.rows.items() if self.matches(row, query)]
+        for key in matches:
+            del self.rows[key]
+        return SimpleNamespace(deleted_count=len(matches))
 
     async def delete_one(self, query):
         row = await self.find_one(query)

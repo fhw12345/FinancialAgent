@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-09",
+  "backend_version": "0.60.1",
+  "frontend_version": "0.41.1",
+  "backend": {
+    "passed": 2360,
+    "live_integrations_deselected": 27,
+    "warnings": 135,
+    "aggregate_coverage_percent": 75.80111498889543,
+    "strict_mypy_source_files": 352,
+    "black": "passed",
+    "ruff": "passed",
+    "critical_floors": "all prior production floors unchanged and passed",
+    "bandit": "passed",
+    "deterministic_eval": "passed",
+    "script_tests": 9,
+    "script_subtests": 6
+  },
+  "frontend": {
+    "passed": 280,
+    "test_files": 33,
+    "production_lint_warnings": 0,
+    "total_lint_warnings": 131,
+    "types": "passed",
+    "production_build": "passed"
+  },
+  "final_images": {
+    "backend": "sha256:ea0d572c373383e9d33f2d76a150a1ab27a4c4f6d522303fae9776d9b761b042",
+    "frontend": "sha256:c7683ae5639a142f3126a0f87f3f062702d90df2dcd361f3068d1b30c2d5ad99",
+    "application_source_mounts": 0,
+    "frontend_mounts": 0
+  },
+  "deterministic_browser": {
+    "model_portfolios_replay": 9,
+    "paper": 5,
+    "review_and_model": 9,
+    "strategy": 4,
+    "evidence": 3,
+    "risk": 3,
+    "safety": 6,
+    "copilot": 4,
+    "hardening": 6,
+    "default": 11,
+    "total_executions": 60,
+    "scope": "mixed full-chain core and UI-mocked regressions; three shared UI cases repeated across hardening/default"
+  },
+  "live_browser": {
+    "passed": 9,
+    "actual_upstream_inference_attempts": 6,
+    "zero_call_negative_cases": 3,
+    "contract_positive_passed": 5,
+    "contract_positive_findings": 1,
+    "live_positive_ready_approvals_exercised": 0,
+    "report": "live-validation.json"
+  },
+  "publication": "protected implementation/shipment PRs pending",
+  "notes": [
+    "One authorized native six-attempt run only; no new inference after it. Real ledger/config hashes stayed unchanged.",
+    "Full native output/source/attempt report is retained, including the blocked exact-cap recommendation. Safe containment is not model-quality success.",
+    "Source/gate/prompt production logic is unchanged from baseline b25c579; this is a test-only patch with version metadata bumps.",
+    "After live execution, test-only refinements added the report artifact bind, improved screenshot layout, and a replay-only compliant ADD/approval case. No production prompt/gate, live case manifest or live budget semantics changed; no live batch was repeated.",
+    "The browser completion wait now waits for the original POST response: a stored completed model output may precede its separate review publication, so an early history read could skip conditional approval. The replay positive now explicitly requires ready and records approval.",
+    "A rerun against an already-spent replay run was refused by the budget as designed. A fresh replay process/run was used; live identity/count/deadline remained unchanged.",
+    "Curated live screenshots are marked read-only renderings of the original persisted report, not a second model call or production UI capture; original UI images remain in ignored artifacts."
+  ]
+}

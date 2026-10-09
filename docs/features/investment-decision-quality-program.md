@@ -1,8 +1,8 @@
 ---
 title: Investment Decision Quality Program
 status: in-progress
-version: backend@0.60.0, frontend@0.41.0
-last_updated: 2026-10-08
+version: backend@0.60.1, frontend@0.41.1
+last_updated: 2026-10-09
 owner: maintainer
 related_paths:
   - backend/src/agent/portfolio/
@@ -158,6 +158,10 @@ PH-009 仍不启动。若安全改动无法在此边界内完成，先记录阻�
 in-progress，003 按维护者决定后移，006/007/009 仍为 planning。008-A 只有手动情景记账
 与按需估值，不消费真实账户批准、不自动模拟成交；实验绑定执行／前瞻效果测量仍是
 未来 008-B/009，不因 A 出货而自动启动。未启用真实账户个人政策或策略，PH-009 继续暂停。
+
+2026-10-09：已授权 [IDQ-009-A 真模型／模拟持仓验收](investment-live-model-portfolio-tests.md)，
+最多六次 Astra 推理、每次 4096 输出 tokens、单批十分钟，不重试挑结果。仅验证固定合成
+输入上的模型决策契约和代码阻断；实时研究质量、收益／基准与概率校准仍未完成。
 
 ### 文件所有权／集成规则
 

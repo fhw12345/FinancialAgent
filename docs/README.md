@@ -27,6 +27,7 @@ All current documentation describes the local single-user application.
   - [IDQ-001-B Deterministic Human Paper Review](features/investment-decision-review-gates.md)
   - [IDQ-001-C Model-Proposed Decisions](features/investment-model-decisions.md)
   - [IDQ-008-A Offline-Friendly Manual Paper Ledger](features/investment-manual-paper-ledger.md)
+  - [IDQ-009-A Bounded Live-Model Portfolio Tests](features/investment-live-model-portfolio-tests.md)
   - [IDQ-002 Portfolio Risk and Allocation](features/investment-portfolio-risk-allocation.md)
   - [IDQ-003 Candidate Selection and Portfolio Fit](features/investment-candidate-selection.md)
   - [IDQ-004 Point-in-Time Evidence and Claim Validation](features/investment-evidence-snapshots.md)
@@ -80,6 +81,7 @@ All current documentation describes the local single-user application.
 ## Project History
 
 - [Case Studies](case-studies/README.md)
+- [Live Model Acceptance Is Not Profitability](case-studies/2026-10-09-live-model-acceptance-is-not-profitability.md)
 - [Offline PAPER Is Not an Execution Engine](case-studies/2026-10-08-offline-paper-is-not-an-execution-engine.md)
 - [A Model Decision Is Not a Resized Order](case-studies/2026-09-22-model-decision-is-not-a-resized-order.md)
 - [Approval Is Not a Fill](case-studies/2026-09-18-approval-is-not-a-fill.md)
