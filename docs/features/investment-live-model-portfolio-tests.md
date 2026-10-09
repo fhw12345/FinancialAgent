@@ -1,6 +1,6 @@
 ---
 title: Bounded Live-Model Acceptance on Synthetic Portfolios
-status: in-progress
+status: shipped
 version: backend@0.60.1, frontend@0.41.1
 last_updated: 2026-10-09
 owner: maintainer
@@ -103,7 +103,7 @@ indexes/case study and protected implementation/shipment PRs are required. Do no
 live acceptance complete if authorization/model availability/provider failure blocks it;
 retain the result and ask for new consent before additional inference.
 
-## Recorded Local Results (Protected Publication Pending)
+## Recorded Results / Protected Publication
 
 - Native run **`idq009a-20261009-live-001`** on 2026-10-09: exactly **6** Astra requests,
   all HTTP 200/parsed outputs, **9/9 browser containment scenarios** passed in **4.1 minutes**.
@@ -141,7 +141,21 @@ retain the result and ask for new consent before additional inference.
   recorded honestly. Post-run test-only changes repaired artifact mounting/screenshots
   and made the replay approval-positive check explicit. Production prompt/gate/live case
   manifest/budget did not change, and the paid batch was never rerun. Real account and
-  configuration hashes remain unchanged. Protected two-stage publication is pending.
+  configuration hashes remain unchanged.
+- Implementation `b43d59127ef44eafa7f78ed8ea08621abc416882` merged normally through protected
+  [PR #22](https://github.com/fhw12345/FinancialAgent/pull/22) as
+  `7e6f490722b735bff838f4fc079d92a0fe8ebf7d`. Hosted
+  [run 37916743724](https://github.com/fhw12345/FinancialAgent/actions/runs/37916743724)
+  passed every gate and nine browser lanes (49 cases). Artifact digest and all reports'
+  embedded stats/hashes verified; the new lane was replay mode, zero paid CI calls and
+  no private credential files: [hosted receipt](assets/idq-009-a/hosted-validation.json).
+- Production 3013 uses accepted 0.60.1/0.41.1 metadata-patch images, unchanged decision
+  logic and preserved independent credentials/default Astra/routing revision1/account/
+  configuration hashes. Deployment made zero model/trade calls and no personal-policy
+  activation: [deployment receipt](assets/idq-009-a/deployment-validation.json).
+- Required Unit Tests from Actions app15368 stayed strict/up-to-date/admin-enforced, no
+  bypass. This shipped acceptance tooling retains a model-contract finding; it does not
+  mark the whole IDQ-009 research/outcome program shipped or assert investment quality.
 
 ## Scope Still Deferred
 

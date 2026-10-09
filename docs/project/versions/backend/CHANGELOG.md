@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fences actual upstream attempts with persistent total/per-case/token/time budgets; retries, reseeding or restart do not replenish the authorized live run.
 - Separates code containment from independent model-contract findings; preserves inputs, raw model output, gate results, usage and failed/blocked cases without a profitability claim or paid judge.
 - Adds a required replay browser CI lane; ordinary PR CI has no private credentials or paid model calls. Production decisions, real accounts and paper journals are unchanged.
+- Shipped through protected PR #22 (`7e6f490`), implementation `b43d591`, CI37916743724 after 2360 backend tests, 60 deterministic final-image executions and one 9-case live batch with six native calls. Actual model contract result is 5 conforming/1 safely blocked finding; broader profitability evaluation remains pending.
 
 ## [0.60.0] - 2026-10-08
 

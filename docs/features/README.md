@@ -284,7 +284,7 @@ requires the evidence and workflow in [Documentation Standards](../development/d
 - **[IDQ-008 Forward Paper Ledger](investment-forward-paper-ledger.md)** — in-progress; offline manual journal slice, future experiment-bound execution deferred
 - **[IDQ-008-A Manual Paper Ledger](investment-manual-paper-ledger.md)** — shipped (0.60.0/0.41.0, PR #20); explicit manual scenarios/FIFO journal and on-demand valuation, no scheduler or approval consumption
 - **[IDQ-009 Quality Evaluation](investment-quality-evaluation.md)** — in-progress; bounded synthetic-portfolio model acceptance first, broader research/outcome validation pending
-- **[IDQ-009-A Live-Model Portfolio Tests](investment-live-model-portfolio-tests.md)** — in-progress; six bounded Astra requests, three zero-call negatives, separate model-contract and containment results; not profitability
+- **[IDQ-009-A Live-Model Portfolio Tests](investment-live-model-portfolio-tests.md)** — shipped (0.60.1/0.41.1, PR #22); six real Astra requests/three zero-call negatives; 5 contract-conforming/1 blocked finding, all containment checks pass; not profitability
 
 ### Active Hardening Program
 
