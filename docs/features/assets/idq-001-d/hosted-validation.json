@@ -1,0 +1,380 @@
+{
+  "date": "2026-10-12",
+  "implementation": "21e2e795020808ba08cb24402ac28cdd1de54bd2",
+  "merge": "e6d680f7183fc752dd0a14665adb931882738c9a",
+  "pr": "https://github.com/fhw12345/FinancialAgent/pull/24",
+  "ci": {
+    "conclusion": "success",
+    "createdAt": "2026-10-12T09:58:38Z",
+    "headSha": "21e2e795020808ba08cb24402ac28cdd1de54bd2",
+    "jobs": [
+      {
+        "completedAt": "2026-10-12T10:09:25Z",
+        "conclusion": "success",
+        "databaseId": 114757927305,
+        "name": "Unit Tests",
+        "startedAt": "2026-10-12T09:58:42Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-10-12T09:58:44Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-10-12T09:58:43Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T09:59:01Z",
+            "conclusion": "success",
+            "name": "Initialize containers",
+            "number": 2,
+            "startedAt": "2026-10-12T09:58:44Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T09:59:03Z",
+            "conclusion": "success",
+            "name": "Checkout",
+            "number": 3,
+            "startedAt": "2026-10-12T09:59:01Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T09:59:05Z",
+            "conclusion": "success",
+            "name": "Setup Python",
+            "number": 4,
+            "startedAt": "2026-10-12T09:59:03Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T09:59:09Z",
+            "conclusion": "success",
+            "name": "Setup Node.js",
+            "number": 5,
+            "startedAt": "2026-10-12T09:59:05Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T09:59:15Z",
+            "conclusion": "success",
+            "name": "Validate repository policy and negative fixtures",
+            "number": 6,
+            "startedAt": "2026-10-12T09:59:09Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T09:59:19Z",
+            "conclusion": "success",
+            "name": "Gitleaks (PR commits and current tracked tree)",
+            "number": 7,
+            "startedAt": "2026-10-12T09:59:15Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T09:59:55Z",
+            "conclusion": "success",
+            "name": "Install locked backend runtime and CI tools",
+            "number": 8,
+            "startedAt": "2026-10-12T09:59:19Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T10:00:49Z",
+            "conclusion": "success",
+            "name": "Install locked frontend dependencies (host runner only)",
+            "number": 9,
+            "startedAt": "2026-10-12T09:59:55Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T10:00:52Z",
+            "conclusion": "success",
+            "name": "Bandit production source",
+            "number": 10,
+            "startedAt": "2026-10-12T10:00:49Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T10:00:52Z",
+            "conclusion": "success",
+            "name": "Activate optional mypy failure control",
+            "number": 11,
+            "startedAt": "2026-10-12T10:00:52Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T10:01:11Z",
+            "conclusion": "success",
+            "name": "Backend lint and strict types",
+            "number": 12,
+            "startedAt": "2026-10-12T10:00:52Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T10:02:19Z",
+            "conclusion": "success",
+            "name": "Backend tests and critical coverage",
+            "number": 13,
+            "startedAt": "2026-10-12T10:01:11Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T10:02:19Z",
+            "conclusion": "success",
+            "name": "Activate optional eval failure control",
+            "number": 14,
+            "startedAt": "2026-10-12T10:02:19Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T10:02:21Z",
+            "conclusion": "success",
+            "name": "Deterministic Agent evaluation",
+            "number": 15,
+            "startedAt": "2026-10-12T10:02:19Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T10:03:14Z",
+            "conclusion": "success",
+            "name": "Frontend tests, lint, types and build",
+            "number": 16,
+            "startedAt": "2026-10-12T10:02:21Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T10:03:14Z",
+            "conclusion": "success",
+            "name": "Activate optional browser failure control",
+            "number": 17,
+            "startedAt": "2026-10-12T10:03:14Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T10:09:14Z",
+            "conclusion": "success",
+            "name": "Deterministic real-API browser smoke",
+            "number": 18,
+            "startedAt": "2026-10-12T10:03:14Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T10:09:15Z",
+            "conclusion": "success",
+            "name": "Upload quality reports and server logs (including failures)",
+            "number": 19,
+            "startedAt": "2026-10-12T10:09:14Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T10:09:18Z",
+            "conclusion": "success",
+            "name": "Post Setup Node.js",
+            "number": 35,
+            "startedAt": "2026-10-12T10:09:15Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T10:09:22Z",
+            "conclusion": "success",
+            "name": "Post Setup Python",
+            "number": 36,
+            "startedAt": "2026-10-12T10:09:18Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T10:09:22Z",
+            "conclusion": "success",
+            "name": "Post Checkout",
+            "number": 37,
+            "startedAt": "2026-10-12T10:09:22Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T10:09:23Z",
+            "conclusion": "success",
+            "name": "Stop containers",
+            "number": 38,
+            "startedAt": "2026-10-12T10:09:22Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-12T10:09:23Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 39,
+            "startedAt": "2026-10-12T10:09:23Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/fhw12345/FinancialAgent/actions/runs/38233353603/job/114757927305"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/fhw12345/FinancialAgent/actions/runs/38233353603"
+  },
+  "artifact": {
+    "id": 11740396544,
+    "name": "pr-quality-reports",
+    "size_in_bytes": 2279785,
+    "digest": "sha256:09dd307b3268ed0a53de7e4af4e1f0a0583091f5928f4c50ffad7f58c86fb1ab",
+    "expires_at": "2026-10-26T10:09:14Z"
+  },
+  "download_verified": true,
+  "download_zip_sha256": "09dd307b3268ed0a53de7e4af4e1f0a0583091f5928f4c50ffad7f58c86fb1ab",
+  "browser_lane_reports": [
+    {
+      "path": "backend/artifacts/browser/previous-0FILOT/playwright-report/index.html",
+      "sha256": "6a959404edd8699d973414ba22bc7a45ecc2f70e110fce1977235f3ae455b3e8",
+      "files": [
+        "decision-safety.spec.ts"
+      ],
+      "stats": {
+        "total": 6,
+        "expected": 6,
+        "unexpected": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "ok": true
+      }
+    },
+    {
+      "path": "backend/artifacts/browser/previous-4ImXec/playwright-report/index.html",
+      "sha256": "67766544947bbcf81980613f6dd323aab40550fb00b79670fc19b9863f16a923",
+      "files": [
+        "strategy-contract.spec.ts"
+      ],
+      "stats": {
+        "total": 4,
+        "expected": 4,
+        "unexpected": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "ok": true
+      }
+    },
+    {
+      "path": "backend/artifacts/browser/previous-6hWaAD/playwright-report/index.html",
+      "sha256": "e36e901e0260a5d0ee41dc1e64cb6e96ed762198fed330f47e32c1ee63f769e2",
+      "files": [
+        "copilot-role-routing.spec.ts",
+        "native-copilot.spec.ts"
+      ],
+      "stats": {
+        "total": 4,
+        "expected": 4,
+        "unexpected": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "ok": true
+      }
+    },
+    {
+      "path": "backend/artifacts/browser/previous-DJurtR/playwright-report/index.html",
+      "sha256": "206600771053fc6d66ecb2b0ce5cbe52dbfffb6f64dc51bd7591fea37c80a002",
+      "files": [
+        "ci-hardening.spec.ts",
+        "insights-prefetch.spec.ts",
+        "project-hardening.spec.ts"
+      ],
+      "stats": {
+        "total": 6,
+        "expected": 6,
+        "unexpected": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "ok": true
+      }
+    },
+    {
+      "path": "backend/artifacts/browser/previous-e2qSDa/playwright-report/index.html",
+      "sha256": "3189b08b09738a33dde27995e57058d70d7d8df9026df00a88c1754f3a46673a",
+      "files": [
+        "portfolio-risk.spec.ts"
+      ],
+      "stats": {
+        "total": 3,
+        "expected": 3,
+        "unexpected": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "ok": true
+      }
+    },
+    {
+      "path": "backend/artifacts/browser/previous-tbi2yn/playwright-report/index.html",
+      "sha256": "acf08fb5f6ae8c8945e840903051b71ad96dec07d833799d13a04c0923dfbeff",
+      "files": [
+        "evidence.spec.ts"
+      ],
+      "stats": {
+        "total": 3,
+        "expected": 3,
+        "unexpected": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "ok": true
+      }
+    },
+    {
+      "path": "backend/artifacts/browser/previous-uUesoQ/playwright-report/index.html",
+      "sha256": "73ad56c4c6ebdc1239c4c9ce0bb450f3a866330132a8b7de23828cfe13906d3b",
+      "files": [
+        "decision-review.spec.ts",
+        "model-decisions.spec.ts",
+        "post-cost-targets.spec.ts"
+      ],
+      "stats": {
+        "total": 11,
+        "expected": 11,
+        "unexpected": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "ok": true
+      }
+    },
+    {
+      "path": "backend/artifacts/browser/previous-VVe28S/playwright-report/index.html",
+      "sha256": "85baa11958b00f40f33b54577960f16784e0e4513f8d5c12188aa301370c51f9",
+      "files": [
+        "paper-ledger.spec.ts"
+      ],
+      "stats": {
+        "total": 5,
+        "expected": 5,
+        "unexpected": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "ok": true
+      }
+    },
+    {
+      "path": "frontend/playwright-report/index.html",
+      "sha256": "b6d49458b25c51ad2905574ad7d9b0abc32ddda4a5a038ce9d57a65c2262d26e",
+      "files": [
+        "live-model-portfolios.spec.ts"
+      ],
+      "stats": {
+        "total": 9,
+        "expected": 9,
+        "unexpected": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "ok": true
+      }
+    }
+  ],
+  "hosted_browser_total": 51,
+  "live_inference_calls": 0,
+  "credential_files": 0,
+  "merge_protection": {
+    "required_check": "Unit Tests",
+    "app_id": 15368,
+    "strict": true,
+    "enforce_admins": true,
+    "observed_premerge_state": "CLEAN/MERGEABLE",
+    "admin_bypass": false
+  }
+}

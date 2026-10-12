@@ -1,6 +1,6 @@
 ---
 title: Post-Cost Target Sizing and Complete Decision Risk Context
-status: in-progress
+status: shipped
 version: backend@0.61.0, frontend@0.42.0
 last_updated: 2026-10-12
 owner: maintainer
@@ -85,7 +85,7 @@ no fabricated stop distance is needed. The template describes the bound policy's
 legacy/pre-cost versus new/post-cost basis and directs the model to propose when data
 supports it rather than treating a pending code check as missing current data.
 
-## Local Validation (Protected Publication Pending)
+## Validation / Protected Publication
 
 - **2383 backend tests / 27 live integrations deselected**, aggregate75.9638%, strict
   mypy355 source files; all original plus shared-check95/post-cost90/risk-context90 floors,
@@ -104,7 +104,21 @@ supports it rather than treating a pending code check as missing current data.
 - A rapid PAPER test helper selected the old form before sequence-driven remount; it now
   waits for the returned sequence/new form without changing financial assertions, retries
   or timeout budgets. Failed artifacts retained; full final-image regression rerun passed.
-  Hosted implementation/shipment and preservation-checked live rollout remain pending.
+- Implementation `21e2e795020808ba08cb24402ac28cdd1de54bd2` merged via protected
+  [PR#24](https://github.com/fhw12345/FinancialAgent/pull/24) as
+  `e6d680f7183fc752dd0a14665adb931882738c9a`. Hosted
+  [38233353603](https://github.com/fhw12345/FinancialAgent/actions/runs/38233353603)
+  passed every required gate and nine browser lanes/51 cases; downloaded archive digest,
+  embedded report hashes/stats and zero credential files were verified:
+  [hosted receipt](assets/idq-001-d/hosted-validation.json).
+- Live3013 runs accepted0.61.0/0.42.0 B images, preserving independent private credentials,
+  defaultAstra/routing revision1/role map and all real-account/config hashes. Risk/strategy/
+  review policies remain unconfigured; no policy is automatically migrated. Read-only
+  browser validation and deployment made zero inference/trade calls:
+  [live receipt](assets/idq-001-d/live-validation.json).
+- Required Unit Tests/Actions app15368/strict up-to-date/admin enforcement are unchanged;
+  no bypass. No fresh real-model acceptance is claimed; the prior paid report remains
+  unchanged at old prompt/allocation versions and its original finding remains recorded.
 
 ## Tests / Browser Acceptance
 
