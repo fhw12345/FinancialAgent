@@ -1,6 +1,6 @@
 ---
 title: Target Equity Basis Is a Contract / 目标权益口径是一份契约
-status: in-progress
+status: shipped
 version: backend@0.61.0, frontend@0.42.0
 last_updated: 2026-10-12
 owner: maintainer
@@ -72,8 +72,12 @@ ready/human approval without ledger mutation, and the above-limit40% target rema
 Local2383 backend/281 frontend tests and all strict/critical gates pass, with62 final-image
 recorded-provider/UI regression executions, equal source/dependency/asset builds and real
 recreation preserving exact new receipts. A PAPER browser wait was corrected to the returned
-sequence/form remount (no financial assertion/retry/timeout changes). Hosted protected
-publication remains pending; see [the feature](../features/investment-post-cost-targets-risk-context.md).
+sequence/form remount (no financial assertion/retry/timeout changes). Implementation
+`21e2e795020808ba08cb24402ac28cdd1de54bd2` merged via protected PR#24 as
+`e6d680f7183fc752dd0a14665adb931882738c9a`; hosted38233353603 passed all gates and nine
+browser lanes/51 cases. Archive/report hashes were verified with no credential files.
+Accepted images deployed with private auth/account/config hashes preserved and zero live
+model/trade calls; see [the feature](../features/investment-post-cost-targets-risk-context.md).
 
 ## 5. Lessons
 

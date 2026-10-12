@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adds versioned sizing receipts with original/continuous/actual equity, costs, rounding and achieved weights; invalid sums, unavailable inputs, unsupported stops and numeric ranges remain blocked.
 - Registers portfolio-model-decision@2 with frozen cash/quantities/marks/current risk/coverage, disclosed correlation slice, pending proposal checks and no inapplicable stop-budget requirement. Model provenance retains old prompt versions.
 - Rejects unavailable current account risk before spending a model call. No additional live inference is authorized or performed by this task.
+- Shipped via protected PR#24 (`e6d680f`), implementation `21e2e79`, hosted38233353603 after2383 tests, strict/critical gates,62 deterministic final-image executions, equal clean builds and exact recreation proof. Private live auth/account/config hashes preserved; no personal policy migration.
 
 ## [0.60.1] - 2026-10-09
 

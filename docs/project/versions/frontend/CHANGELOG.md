@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adds explicit confirmation of the after-cost target basis without filling personal numeric defaults or migrating older policy versions.
 - Displays allocator/basis, cost-aware equity and original versus achieved target weights separately; quantity precision does not rewrite targets or override policy limits.
 - Reads legacy/new allocator and model-prompt versions safely; deterministic recorded-provider browser regression covers the captured 30% geometry, approval without ledger changes, and an above-cap target still blocked.
+- Shipped via protected PR#24 (`e6d680f`) after281 frontend tests,62 deterministic final-image executions and hosted38233353603. PAPER browser waits now track committed UI sequence/form remount without weakening financial assertions, retries or timeouts.
 
 ## [0.41.1] - 2026-10-09
 

@@ -1,8 +1,8 @@
 ---
 title: Model-Proposed Portfolio Decisions for Human Review
 status: shipped
-version: backend@0.59.0, frontend@0.40.0
-last_updated: 2026-09-22
+version: backend@0.61.0, frontend@0.42.0
+last_updated: 2026-10-12
 owner: maintainer
 related_paths:
   - backend/src/models/model_decision.py
@@ -35,6 +35,14 @@ recommendation, then said “开始”. The assistant-proposed v1 boundary appli
   review-policy version that enables them and explicitly answers whether new positions
   and full exits may be proposed. No live model probe is part of development; the user
   explicitly triggers each paid decision call.
+
+## Later Versioned Contract (2026-10-12)
+
+[IDQ-001-D](investment-post-cost-targets-risk-context.md) now supplies explicitly confirmed
+post-cost target sizing and prompt@2's frozen current risk inputs. Earlier policy/prompt/
+allocator receipts remain unchanged; no historical output is upgraded. New semantics
+require the new acknowledgment, not silent defaults. The original live six-case report
+keeps its old blocked finding; no new paid model acceptance is claimed.
 
 ## Contract
 

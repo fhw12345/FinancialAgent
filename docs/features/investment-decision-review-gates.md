@@ -1,8 +1,8 @@
 ---
 title: Deterministic Paper Review Readiness and Human Approval
 status: shipped
-version: backend@0.58.0, frontend@0.39.0
-last_updated: 2026-09-18
+version: backend@0.61.0, frontend@0.42.0
+last_updated: 2026-10-12
 owner: maintainer
 related_paths:
   - backend/src/services/decision_policy/
@@ -26,6 +26,13 @@ Existing `DecisionAssessment`/strategy/evidence outputs remain immutable non-act
 research. New `ReviewBatch` is a separate typed contract: `ready` means **approvable
 for human paper review**, never executable. Legacy orders remain read-only and all
 old mark-executed paths stay closed. Approval records are not IDQ-008 paper fills.
+
+## Later Version Binding (2026-10-12)
+
+[IDQ-001-D](investment-post-cost-targets-risk-context.md) binds new post-cost target
+semantics only through explicit `post-cost-target-paper-review@2` confirmation. Previous
+versions retain pre-cost sizing and all receipt hashes; old model records cannot be
+approved under a different policy. Human approval still has no ledger/broker mutation.
 
 ## Policy / Decision Table
 

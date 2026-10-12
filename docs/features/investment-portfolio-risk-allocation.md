@@ -1,8 +1,8 @@
 ---
 title: Deterministic Portfolio Risk and Allocation
 status: shipped
-version: backend@0.58.0, frontend@0.39.0
-last_updated: 2026-09-18
+version: backend@0.61.0, frontend@0.42.0
+last_updated: 2026-10-12
 owner: maintainer
 related_paths:
   - backend/src/agent/portfolio/risk_calculator.py
@@ -57,6 +57,14 @@ real trades, inferred risk limits, or PH-009 work are authorized here.
 - Release requires full existing gates, new critical floors, final-image browser proof,
   curated screenshots, equal-manifest clean builds, versions/case study/indexes, protected
   implementation and shipment PRs. The live 3013 credential volume/routing must survive.
+
+## Later Allocation Binding (2026-10-12)
+
+[IDQ-001-D](investment-post-cost-targets-risk-context.md) adds a separately acknowledged
+`post-cost-targets@1` allocator for new review policies. It solves aggregate costs/equity
+and discloses target/achieved lot weights. Existing `idq-002@1` preview/stop arithmetic,
+risk estimator and immutable legacy hashes remain compatible; old policy bindings are
+not migrated. Shared full-account/availability constraints are unchanged, not overridden.
 
 ## 1. 问题和目标
 

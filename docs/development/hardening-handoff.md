@@ -17,10 +17,10 @@ related_paths:
 
 ## 1. Current State
 
-### IDQ-001-D post-cost targets/risk context authorized / in progress (2026-10-12)
+### IDQ-001-D post-cost targets/risk context shipped (2026-10-12)
 
 User said “继续” after the actual live-model findings. Current branch:
-`feat/idq-001-d-post-cost-risk-context`. Target0.61.0/0.42.0. Versioned exact-rational
+`feat/idq-001-d-post-cost-risk-context`. Shipped at **0.61.0/0.42.0**. Versioned exact-rational
 post-cost sizing is bound only by explicit new policy acknowledgment; legacy allocator,
 policy defaults/serialized hashes and the original paid report remain intact. Prompt@2
 supplies frozen current risk/cash/positions/coverage and truthful pending/inapplicable
@@ -28,8 +28,13 @@ checks. Both recorded real-UI scenarios pass (30%→29.9shares→ready/approval 
 40% against30% cap remains blocked). Local2383 backend /281 frontend tests, strict mypy355,
 all critical/security/eval/scripts, zero production lint/total131, equal clean builds and
 62 final-image regression executions pass; new receipts survive actual recreation.
-Protected implementation/shipment publication and live-preservation rollout pending.
-See the [working spec](../features/investment-post-cost-targets-risk-context.md).
+Implementation `21e2e795020808ba08cb24402ac28cdd1de54bd2`, protected **PR#24**, merge
+`e6d680f7183fc752dd0a14665adb931882738c9a`, hosted **38233353603**: all gates and nine
+browser lanes/51 cases passed; downloaded archive/report hashes verified, no credential
+files. Live3013 runs accepted B images with independent login/defaultAstra/routing revision1,
+role map and real account/config hashes preserved. Personal risk/strategy/review policies
+remain unconfigured and no policy is migrated automatically; no live inference/trade.
+See the [shipped spec](../features/investment-post-cost-targets-risk-context.md).
 **No new live calls are authorized:** prior six-attempt run is spent/expired. Do not rerun it
 or configure any personal limits/strategy while validating. PH-009 and IDQ-003 stay paused.
 
@@ -359,7 +364,7 @@ config run. The 131 lint warnings are accepted non-increasing follow-up debt.
 | PH-009 Source decomposition | planning |
 | PH-010 Version metadata | shipped |
 
-## 5. Current Direction — After Bounded IDQ-009-A; PH-009 Paused
+## 5. Current Direction — After Post-Cost/Risk-Context IDQ-001-D; PH-009 Paused
 
 The maintainer explicitly requested **not to execute PH-009**. IDQ-001-A is now
 separately authorized and shipped; see the current state above and the
