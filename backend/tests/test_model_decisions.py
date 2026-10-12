@@ -96,7 +96,7 @@ async def test_model_decision_becomes_ready_for_human_approval_without_trading(
     body = await request(db, source)
     view = await model_decision.decide(db, agent, body)
     assert agent.calls == 1 and view.record.status == "completed"
-    assert view.record.provenance.prompt == "portfolio-model-decision@1"
+    assert view.record.provenance.prompt == "portfolio-model-decision@2"
     assert "AAPL, MSFT" in agent.prompts[0] and "ev_" in agent.prompts[0]
     review = view.review
     assert review.readiness == "ready", review.reasons

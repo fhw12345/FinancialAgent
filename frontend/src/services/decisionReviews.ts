@@ -18,7 +18,10 @@ export const reviewPolicyInputSchema = z
     allowed_symbols: z.array(symbol).min(1).max(100),
     max_account_sigma: n.positive().max(3),
     lifetime_minutes: z.number().int().min(1).max(1440),
-    acknowledged_contract: z.literal("manual-target-paper-review@1"),
+    acknowledged_contract: z.enum([
+      "manual-target-paper-review@1",
+      "post-cost-target-paper-review@2",
+    ]),
     instrument_attestation: z.literal("USD-US-nonfinancial-common-equities"),
     evidence_acknowledgment: z.literal(
       "forward-close-not-truth-or-historical-PIT",
@@ -37,6 +40,7 @@ export const reviewPolicyInputSchema = z
 export type ReviewPolicyInput = z.infer<typeof reviewPolicyInputSchema>;
 const policySchema = z.object({
   version_id: z.string(),
+  allocation_calculator: z.literal("post-cost-targets@1").optional(),
   policy: reviewPolicyInputSchema,
   confirmed_at: z.string(),
   revision,

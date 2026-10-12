@@ -23,7 +23,10 @@ export const modelDecisionRecordSchema = z.object({
   completed_at: z.string().nullable(),
   provenance: z
     .object({
-      prompt: z.literal("portfolio-model-decision@1"),
+      prompt: z.enum([
+        "portfolio-model-decision@1",
+        "portfolio-model-decision@2",
+      ]),
       role: z.literal("portfolio_decisions"),
       provider: z.string(),
       model: z.string(),

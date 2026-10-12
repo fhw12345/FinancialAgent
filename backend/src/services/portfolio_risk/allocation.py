@@ -9,7 +9,7 @@ from ...models.portfolio_risk import (
     SizedChange,
     TargetProposal,
 )
-from .estimator import estimate
+from .allocation_checks import finish_allocation, prepare_inputs
 
 
 def decimal(value: float) -> Decimal:
@@ -23,27 +23,8 @@ def lot_floor(quantity: Decimal, lot: Decimal) -> Decimal:
 def allocate(
     snapshot: PortfolioRiskSnapshot, proposals: list[TargetProposal]
 ) -> AllocationReceipt:
-    current = estimate(snapshot)
-    failures = list(snapshot.errors)
-    policy = snapshot.policy.policy
-    if policy is None or snapshot.policy.confirmed_at is None:
-        failures.append("POLICY_UNCONFIRMED")
-    if current.status != "complete" or current.equity is None or current.equity <= 0:
-        failures.append("CURRENT_RISK_UNAVAILABLE")
-    if len({p.symbol for p in proposals}) != len(proposals):
-        failures.append("DUPLICATE_PROPOSAL")
+    current, policy, failures = prepare_inputs(snapshot, proposals)
     assets = {a.symbol: a for a in snapshot.assets}
-    for p in proposals:
-        asset = assets.get(p.symbol)
-        if (
-            asset is None
-            or asset.mark is None
-            or asset.mark_session != snapshot.session_date
-            or asset.currency != "USD"
-        ):
-            failures.append("PROPOSAL_MARK_UNAVAILABLE:" + p.symbol)
-        elif p.stop is not None and p.stop >= asset.mark:
-            failures.append("INVALID_STOP_DISTANCE:" + p.symbol)
     if failures or policy is None or current.equity is None:
         return AllocationReceipt(status="blocked", constraints=sorted(set(failures)))
     equity = decimal(current.equity)
@@ -105,54 +86,14 @@ def allocate(
             )
         else:
             positions.pop(p.symbol, None)
-    if cash < 0:
-        failures.append("CASH_INSUFFICIENT_AFTER_COSTS")
-    # Estimated sales are not settled buying power, regardless of request ordering.
-    if available < 0:
-        failures.append("UNFILLED_SELL_PROCEEDS_REQUIRED")
-    turnover = gross_turnover / equity
-    if turnover > decimal(policy.max_turnover):
-        failures.append("TURNOVER_LIMIT")
-    proposed = None
-    if cash >= 0:
-        post_snapshot = snapshot.model_copy(
-            update={"cash": float(cash), "positions": list(positions.values())}
-        )
-        proposed = estimate(post_snapshot)
-        if proposed.status != "complete":
-            failures.append("PROPOSED_RISK_UNAVAILABLE")
-        # Use post-cost equity for exposures. Original draft/target is never mutated.
-        post_equity = cash + sum(
-            decimal(p.quantity) * decimal(assets[p.symbol].mark or 0)
-            for p in positions.values()
-        )
-        if post_equity <= 0:
-            failures.append("ZERO_POSTTRADE_EQUITY")
-        else:
-            if cash < post_equity * decimal(policy.min_cash_weight):
-                failures.append("CASH_FLOOR")
-            sectors: dict[str, Decimal] = {}
-            for position in positions.values():
-                weight = (
-                    decimal(position.quantity)
-                    * decimal(assets[position.symbol].mark or 0)
-                    / post_equity
-                )
-                if weight > decimal(policy.max_position_weight):
-                    failures.append("POSITION_LIMIT:" + position.symbol)
-                sector = assets[position.symbol].sector
-                sectors[sector] = sectors.get(sector, Decimal(0)) + weight
-            for sector, weight in sectors.items():
-                if sector == "Unknown":
-                    failures.append("SECTOR_UNAVAILABLE")
-                if weight > decimal(policy.max_sector_weight):
-                    failures.append("SECTOR_LIMIT:" + sector)
-    return AllocationReceipt(
-        status="blocked" if failures else "feasible_preview",
-        constraints=sorted(set(failures)),
-        changes=changes,
-        proposed=proposed,
-        turnover=float(turnover),
-        posttrade_cash=float(cash),
-        cash_without_unfilled_sales=float(available),
+    return finish_allocation(
+        snapshot,
+        policy,
+        equity,
+        changes,
+        cash,
+        available,
+        gross_turnover,
+        positions,
+        failures,
     )

@@ -63,6 +63,7 @@ async def setup(
     prior_eps=4.0,
     financial_changes=None,
     model_policy=None,
+    allocation_contract="manual-target-paper-review@1",
 ):
     for module in (
         risk,
@@ -238,7 +239,7 @@ async def setup(
                 allowed_symbols=["AAPL", "MSFT"],
                 max_account_sigma=0.5,
                 lifetime_minutes=60,
-                acknowledged_contract="manual-target-paper-review@1",
+                acknowledged_contract=allocation_contract,
                 instrument_attestation="USD-US-nonfinancial-common-equities",
                 evidence_acknowledgment="forward-close-not-truth-or-historical-PIT",
                 **(model_policy or {}),

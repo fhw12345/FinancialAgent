@@ -223,7 +223,7 @@ _PROMPTS = {
         PromptSpec("strategy-short-disabled", 1, SHORT, ("strategy", "experimental")),
         PromptSpec(
             "portfolio-model-decision",
-            1,
+            2,
             MODEL_DECISION,
             ("portfolio", "decisions", "structured"),
         ),

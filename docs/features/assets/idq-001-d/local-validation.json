@@ -1,0 +1,57 @@
+{
+  "date": "2026-10-12",
+  "backend_version": "0.61.0",
+  "frontend_version": "0.42.0",
+  "backend": {
+    "passed": 2383,
+    "live_integrations_deselected": 27,
+    "warnings": 135,
+    "aggregate_coverage_percent": 75.96383103153538,
+    "strict_mypy_source_files": 355,
+    "black": "passed",
+    "ruff": "passed",
+    "critical_floors": "all old floors plus allocation_checks95/post_cost90/model_risk_context90 passed",
+    "bandit": "passed",
+    "deterministic_eval": "passed",
+    "script_tests": 9,
+    "script_subtests": 6
+  },
+  "frontend": {
+    "passed": 281,
+    "test_files": 33,
+    "production_lint_warnings": 0,
+    "total_lint_warnings": 131,
+    "types": "passed",
+    "production_build": "passed"
+  },
+  "final_image_browser": {
+    "backend_image": "sha256:c3dce5bc4c31ce7425b8b75c488afea063841f663f9e9f92287ea8ccd721fb1f",
+    "frontend_image": "sha256:6b92c6b4dcc368cff4596c628ce802275104ed2171a0d3904d906277e503e8d0",
+    "application_source_mounts": 0,
+    "frontend_mounts": 0,
+    "review_and_model_and_post_cost": 11,
+    "model_portfolios_replay": 9,
+    "paper": 5,
+    "strategy": 4,
+    "evidence": 3,
+    "risk": 3,
+    "safety": 6,
+    "copilot": 4,
+    "hardening": 6,
+    "default": 11,
+    "total_executions": 62,
+    "scope": "core real-API recorded-provider plus UI-mocked regression; shared UI cases repeat across hardening/default",
+    "new_scenarios": "recorded concentrated REDUCE30% \u2192 29.9shares \u2192 ready/human approval without trading; target40% against cap30% remains blocked"
+  },
+  "live_inference_calls_for_this_task": 0,
+  "original_live_report_unchanged": true,
+  "policy_activation_in_real_account": false,
+  "publication": "protected implementation and shipment PRs pending",
+  "notes": [
+    "Red-to-green tests reproduce30.0132% old-basis rejection; independent rational/brute-force goldens and exact shared constraints validate new target conversion.",
+    "Legacy policy/allocator/prompt receipts keep original hashes; the original paid batch stays @1/blocked and is never relabeled a new live pass.",
+    "Two unchanged-input clean builds match complete dependency/source/asset manifests; real recreation preserves versioned policy/source/approval/sizing receipts.",
+    "A paper browser helper selected the next entry before query-driven sequence/form remount. Its wait was strengthened to the returned ledger sequence and new form, preserving all original financial assertions. Pre-fix failure artifacts are retained; no retries/timeouts were loosened.",
+    "No further native inference or personal-value configuration; the prior six-request live budget remains spent/expired."
+  ]
+}

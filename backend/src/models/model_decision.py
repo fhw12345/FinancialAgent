@@ -39,7 +39,9 @@ class ModelDecisionSet(Record):
 
 
 class ModelProvenance(Record):
-    prompt: Literal["portfolio-model-decision@1"] = "portfolio-model-decision@1"
+    prompt: Literal["portfolio-model-decision@1", "portfolio-model-decision@2"] = (
+        "portfolio-model-decision@1"
+    )
     role: Literal["portfolio_decisions"] = "portfolio_decisions"
     provider: str
     model: str
