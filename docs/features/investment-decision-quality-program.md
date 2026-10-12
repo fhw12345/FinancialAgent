@@ -1,8 +1,8 @@
 ---
 title: Investment Decision Quality Program
 status: in-progress
-version: backend@0.60.1, frontend@0.41.1
-last_updated: 2026-10-09
+version: backend@0.61.0, frontend@0.42.0
+last_updated: 2026-10-12
 owner: maintainer
 related_paths:
   - backend/src/agent/portfolio/
@@ -165,6 +165,10 @@ in-progress，003 按维护者决定后移，006/007 仍为 planning，009 在 A
 4.1 分钟，不重试挑结果；九个安全场景通过，模型契约五符合／一项费用后仓位边界发现，
 按规则阻断并保留。只验证合成输入上的决策契约，不认证实时研究质量、收益／基准或校准。
 父 009 仍 in-progress；六次额度已用完，未来真实调用须重新明确授权。
+
+2026-10-12：已授权 [IDQ-001-D 费用后目标与风险上下文](investment-post-cost-targets-risk-context.md)，
+当前 in-progress。修正提示词／股数计算口径，并保留旧算法、政策及已付费样本的历史语义。
+仅做确定性／录制回放验收，不授权新真实模型调用或个人参数配置。
 
 ### 文件所有权／集成规则
 

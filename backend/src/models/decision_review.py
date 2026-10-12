@@ -1,9 +1,16 @@
 """User-target paper-review contracts. Readiness/approval never grant execution authority."""
 
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import AfterValidator, Field, StrictBool, model_validator
+from pydantic import (
+    AfterValidator,
+    Field,
+    SerializerFunctionWrapHandler,
+    StrictBool,
+    model_serializer,
+    model_validator,
+)
 
 from .model_decision import ModelDecisionRecord
 from .portfolio_risk import Number, PortfolioRiskReview, Record, Symbol, Weight
@@ -30,7 +37,9 @@ class ReviewPolicyInput(Record):
     allowed_symbols: list[Symbol] = Field(min_length=1, max_length=100)
     max_account_sigma: Annotated[Number, Field(gt=0, le=3)]
     lifetime_minutes: Annotated[int, Field(strict=True, ge=1, le=1440)]
-    acknowledged_contract: Literal["manual-target-paper-review@1"]
+    acknowledged_contract: Literal[
+        "manual-target-paper-review@1", "post-cost-target-paper-review@2"
+    ]
     instrument_attestation: Literal["USD-US-nonfinancial-common-equities"]
     evidence_acknowledgment: Literal["forward-close-not-truth-or-historical-PIT"]
     # Absent in older versions = model decisions disabled; never inferred as enabled.
@@ -83,6 +92,24 @@ class ReviewPolicyVersion(Record):
         "not_applicable_target_only_no_max_loss_bound"
     )
     unfilled_sales_are_buying_power: Literal[False] = False
+    allocation_calculator: Literal["post-cost-targets@1"] | None = None
+
+    @model_validator(mode="after")
+    def bind_allocator(self) -> "ReviewPolicyVersion":
+        if (self.policy.acknowledged_contract == "post-cost-target-paper-review@2") != (
+            self.allocation_calculator is not None
+        ):
+            raise ValueError("Policy acknowledgment and allocation binding must agree")
+        return self
+
+    @model_serializer(mode="wrap")
+    def preserve_legacy_binding(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> dict[str, Any]:
+        data: dict[str, Any] = handler(self)
+        if self.allocation_calculator is None:
+            data.pop("allocation_calculator", None)
+        return data
 
 
 class ReviewTarget(Record):

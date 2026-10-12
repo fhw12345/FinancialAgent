@@ -75,6 +75,39 @@ export function RiskReceipt({ review }: { review: RiskReview }) {
       {review.allocation && (
         <div className="border-t pt-2" data-testid="allocation-receipt">
           <strong>Proposed / 拟议组合: {review.allocation.status}</strong>
+          <p data-testid="allocation-target-basis" className="text-xs">
+            {review.allocation.calculator_version ?? "idq-002@1"} ·{" "}
+            {review.allocation.target_equity_basis === "post_cost"
+              ? "Targets use post-cost equity / 费用后权益目标"
+              : "Legacy pre-cost target sizing / 旧版费用前口径"}
+          </p>
+          {review.allocation.post_cost_sizing && (
+            <div data-testid="post-cost-sizing-receipt" className="text-xs">
+              <p>
+                Equity before / after costs:{" "}
+                {review.allocation.post_cost_sizing.original_equity} /{" "}
+                {review.allocation.post_cost_sizing.actual_post_cost_equity};
+                estimated costs{" "}
+                {review.allocation.post_cost_sizing.total_estimated_cost}
+              </p>
+              <p>
+                {review.allocation.post_cost_sizing.solver} ·{" "}
+                {review.allocation.post_cost_sizing.rounding}
+              </p>
+              {review.allocation.post_cost_sizing.targets.map((target) => (
+                <p key={target.symbol}>
+                  {target.symbol}: requested / 原目标{" "}
+                  {pct(target.requested_target_weight)} · achieved after costs /
+                  费用后实际 {pct(target.effective_post_cost_weight)}
+                </p>
+              ))}
+              <p>
+                Quantities are computed from the unchanged target/basis/lot
+                rule; policy violations still block. /
+                仅计算股数，不改目标、不豁免政策。
+              </p>
+            </div>
+          )}
           <p className="text-amber-900">
             Non-actionable risk preview / 非行动性风险预览 — no ready, approval
             or execution from this calculation alone.

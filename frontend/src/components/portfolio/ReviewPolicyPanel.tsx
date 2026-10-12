@@ -130,7 +130,7 @@ function PolicyForm({
             .filter(Boolean),
           max_account_sigma: Number(data.get("sigma")),
           lifetime_minutes: Number(data.get("lifetime")),
-          acknowledged_contract: "manual-target-paper-review@1",
+          acknowledged_contract: "post-cost-target-paper-review@2",
           instrument_attestation: "USD-US-nonfinancial-common-equities",
           evidence_acknowledgment: "forward-close-not-truth-or-historical-PIT",
           ...modelChoice(data),
@@ -203,6 +203,14 @@ function PolicyForm({
         automatic sizing or stance→BUY. Unfilled SELL proceeds cannot finance
         BUYs. / 不自动配仓，不以未成交卖出融资。
       </p>
+      <p className="text-xs" data-testid="review-target-basis-notice">
+        This confirmation binds post-cost-targets@1: requested weights use total
+        equity after declared fees/slippage. Code solves the batch and rounds
+        trade deltas on the lot grid, showing the achieved weight separately;
+        the target itself is not changed or clipped to a limit. Older policies
+        keep their legacy sizing until you explicitly reconfirm. /
+        确认费用后的账户权益口径；股数按批次费用与交易精度计算，目标权重不被改写。
+      </p>
       <p className="text-xs">
         Target-only sizing has no stop-loss plan or maximum-loss guarantee. The
         preview policy’s stop-risk budget is not applied without a stop; this
@@ -239,7 +247,7 @@ function PolicyForm({
           data-testid="review-policy-ack"
           onChange={(e) => setConfirmed(e.target.checked)}
         />{" "}
-        Confirm manual-target paper review only; no broker call or fill. /
+        Confirm post-cost target paper review only; no broker call or fill. /
         仅确认人工审阅政策，不执行交易。
       </label>
       <button

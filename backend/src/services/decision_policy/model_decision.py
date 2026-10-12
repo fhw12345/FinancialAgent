@@ -104,11 +104,11 @@ async def prompt(
     symbols: list[str],
 ) -> str:
     from ...agent.prompt_registry import get_prompt
-    from ..portfolio_risk.service import policy_state
+    from .model_risk_context import context as risk_context
 
     risk = source.portfolio_risk
-    costs = await policy_state(db)
     current = risk.current if risk else None
+    account_context, bound_limits = risk_context(source, policy, symbols)
     receipts = []
     for symbol in symbols:
         review = next(
@@ -155,23 +155,8 @@ async def prompt(
         scope=", ".join(symbols),
         may_open=policy.policy.model_may_open,
         may_exit=policy.policy.model_may_exit,
-        limits=json.dumps(
-            {
-                "risk_policy": (
-                    costs.policy.model_dump(mode="json") if costs.policy else None
-                ),
-                "max_account_sigma": policy.policy.max_account_sigma,
-            }
-        ),
-        account=json.dumps(
-            {
-                "equity": current.equity if current else None,
-                "cash_weight": current.cash_weight if current else None,
-                "position_weights": current.position_weights if current else {},
-                "sector_weights": current.sector_weights if current else {},
-                "session": str(risk.snapshot.session_date) if risk else None,
-            }
-        ),
+        limits=json.dumps(bound_limits, allow_nan=False),
+        account=json.dumps(account_context, allow_nan=False),
         receipts=json.dumps(receipts, ensure_ascii=False),
         research=research,
     )
@@ -184,13 +169,16 @@ def provenance() -> ModelProvenance:
 
         profile = current_profile("portfolio_decisions")
         return ModelProvenance(
+            prompt="portfolio-model-decision@2",
             provider="github_copilot",
             model=profile.model,
             api=profile.api,
             routing_revision=profile.routing_revision,
         )
     return ModelProvenance(
-        provider=settings.llm_provider, model=settings.model_portfolio_decisions
+        prompt="portfolio-model-decision@2",
+        provider=settings.llm_provider,
+        model=settings.model_portfolio_decisions,
     )
 
 

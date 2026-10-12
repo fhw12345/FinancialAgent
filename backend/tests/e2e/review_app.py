@@ -75,12 +75,32 @@ def model_decisions(body):
     rows = []
     for receipt in receipts:
         held = receipt["held"]
-        action = ("BUY" if model_mode == "exposure" else "ADD") if held else "HOLD"
+        action = (
+            (
+                "BUY"
+                if model_mode == "exposure"
+                else (
+                    "REDUCE"
+                    if model_mode in ("post-cost-reduction", "above-limit")
+                    else "ADD"
+                )
+            )
+            if held
+            else "HOLD"
+        )
         rows.append(
             {
                 "symbol": receipt["symbol"],
                 "action": action,
-                "target_weight": 0.2 if held else None,
+                "target_weight": (
+                    (
+                        0.3
+                        if model_mode == "post-cost-reduction"
+                        else 0.4 if model_mode == "above-limit" else 0.2
+                    )
+                    if held
+                    else None
+                ),
                 "rationale": "Recorded model rationale from sealed receipts",
                 "evidence_ids": receipt["evidence_ids"][:1],
                 "key_risks": ["Recorded risk"],
@@ -244,7 +264,7 @@ async def expire_storage_clock():
 @app.post("/api/test/review/model-mode/{name}")
 async def set_model_mode(name: str):
     global model_mode
-    assert name in ("valid", "exposure")
+    assert name in ("valid", "exposure", "post-cost-reduction", "above-limit")
     model_mode = name
     return {"mode": model_mode}
 

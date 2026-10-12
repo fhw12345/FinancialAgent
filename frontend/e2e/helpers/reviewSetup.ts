@@ -8,13 +8,43 @@ export async function setup(
   mode = "normal",
   subset = false,
   model = false,
+  postCost = false,
 ) {
   await setupStrategy(page, request, mode, {
     resetPath: "/api/test/review/reset",
     peers: "AAPL, MSFT",
     discount: "0",
-    minCash: subset ? ".15" : "0",
+    minCash: postCost ? ".2" : subset ? ".15" : "0",
+    positionLimit: postCost ? ".3" : "1",
+    sectorLimit: postCost ? ".6" : "1",
+    feeBps: postCost ? "1" : "0",
+    slippageBps: postCost ? "10" : "0",
   });
+  if (postCost) {
+    expect(
+      (
+        await request.put(`${backend}/api/admin/portfolio/settings`, {
+          data: {
+            cash_balance: 3000,
+            risk_tolerance: "moderate",
+            max_position_pct: 10,
+          },
+        })
+      ).status(),
+    ).toBe(200);
+    expect(
+      (
+        await request.patch(
+          `${backend}/api/portfolio/holdings/holding_fixture`,
+          {
+            data: { quantity: 70 },
+          },
+        )
+      ).status(),
+    ).toBe(200);
+    await page.reload();
+    await page.getByTestId("nav-portfolio").click();
+  }
   if (subset) {
     expect(
       (

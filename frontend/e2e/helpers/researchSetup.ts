@@ -9,6 +9,10 @@ export async function setupStrategy(
     peers?: string;
     discount?: string;
     minCash?: string;
+    positionLimit?: string;
+    sectorLimit?: string;
+    feeBps?: string;
+    slippageBps?: string;
   } = {},
 ) {
   expect(
@@ -37,14 +41,14 @@ export async function setupStrategy(
     })
     .click();
   for (const [key, value] of Object.entries({
-    max_position_weight: "1",
-    max_sector_weight: "1",
+    max_position_weight: options.positionLimit ?? "1",
+    max_sector_weight: options.sectorLimit ?? "1",
     min_cash_weight: options.minCash ?? "0",
     max_turnover: "2",
     risk_per_trade_weight: ".01",
     lot_size: ".1",
-    fee_bps: "0",
-    slippage_bps: "0",
+    fee_bps: options.feeBps ?? "0",
+    slippage_bps: options.slippageBps ?? "0",
   }))
     await risk.getByTestId(`risk-policy-${key}`).fill(value);
   await risk.getByRole("checkbox").check();

@@ -18,6 +18,7 @@ from ..portfolio_risk import service as risk
 from ..portfolio_risk.allocation import allocate
 from ..portfolio_risk.calendar import next_close
 from ..portfolio_risk.estimator import estimate
+from ..portfolio_risk.post_cost import allocate_post_cost
 from ..research_strategy import store as strategy
 from . import evidence_gate, model_decision_gate
 from .review_storage import receipt_hash
@@ -111,6 +112,8 @@ async def source_reasons(
         out.append(evidence_gate.failure("SOURCE_STRATEGY_UNAVAILABLE"))
     if source.portfolio_risk is None or source.portfolio_risk.snapshot.errors:
         out.append(evidence_gate.failure("SOURCE_ACCOUNT_RISK_REQUIRED"))
+    elif source.portfolio_risk.current.status != "complete":
+        out.append(evidence_gate.failure("SOURCE_ACCOUNT_RISK_UNAVAILABLE"))
     for row in source.results:
         if (
             row.consistency_status != "passed"
@@ -200,7 +203,12 @@ async def _assess(
         result.reasons.append(
             GateReason(code="SOURCE_MARKET_INPUTS_CHANGED", severity="needs_review")
         )
-    allocation = allocate(
+    allocator = (
+        allocate_post_cost
+        if policy.allocation_calculator == "post-cost-targets@1"
+        else allocate
+    )
+    allocation = allocator(
         snapshot, [TargetProposal(**t.model_dump()) for t in result.request.targets]
     )
     allocation.allocation_id = "review_allocation_" + digest(

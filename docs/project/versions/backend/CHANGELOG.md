@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.0] - 2026-10-12
+
+### IDQ-001-D post-cost targets and truthful model risk inputs
+
+- Adds explicitly policy-bound `post-cost-targets@1`: exact rational whole-batch fee/equity solving and disclosed directed lot conversion, while requested target weights are unchanged and all exposure/cash/history/sigma gates remain authoritative.
+- Preserves legacy idq-002@1 previews/stop sizing and serialized hashes; older policies are not silently migrated. New after-cost semantics require the post-cost-target-paper-review@2 acknowledgment.
+- Adds versioned sizing receipts with original/continuous/actual equity, costs, rounding and achieved weights; invalid sums, unavailable inputs, unsupported stops and numeric ranges remain blocked.
+- Registers portfolio-model-decision@2 with frozen cash/quantities/marks/current risk/coverage, disclosed correlation slice, pending proposal checks and no inapplicable stop-budget requirement. Model provenance retains old prompt versions.
+- Rejects unavailable current account risk before spending a model call. No additional live inference is authorized or performed by this task.
+
 ## [0.60.1] - 2026-10-09
 
 ### IDQ-009-A synthetic-portfolio/live-model test coverage

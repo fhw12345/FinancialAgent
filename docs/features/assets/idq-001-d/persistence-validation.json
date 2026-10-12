@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-12",
+  "backend_version": "0.61.0",
+  "frontend_version": "0.42.0",
+  "real_backend_frontend_recreation": true,
+  "allocator": "post-cost-targets@1",
+  "original_target_weight": 0.3,
+  "proposed_quantity": 29.9,
+  "approval_current_before": true,
+  "approval_current_after": true,
+  "comparisons": [
+    {
+      "path": "/api/portfolio/review-policy",
+      "before_sha256": "8f1cd0d6f7ed4c48ab8ed73d9052e090969e91214806208de847d343214e99d6",
+      "after_sha256": "8f1cd0d6f7ed4c48ab8ed73d9052e090969e91214806208de847d343214e99d6"
+    },
+    {
+      "path": "/api/portfolio/review-batches/review_45cacb50842bbc8c3abce4cda4c7c031a9e18a551cba548f28cca9711ef41b8a",
+      "before_sha256": "f280354ee83278bcd7f5dac687796d0284988e8446162032485a1b8324dba480",
+      "after_sha256": "f280354ee83278bcd7f5dac687796d0284988e8446162032485a1b8324dba480"
+    },
+    {
+      "path": "/api/portfolio/assessments/assessment_28d3329735d41840fe72715b00ab9fe8",
+      "before_sha256": "62055528b9279b284450799646241dbaeb4133373f175fb3fe5fbab2d52080cc",
+      "after_sha256": "62055528b9279b284450799646241dbaeb4133373f175fb3fe5fbab2d52080cc"
+    }
+  ],
+  "model_mode": "recorded outer provider, no live calls"
+}

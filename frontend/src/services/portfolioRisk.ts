@@ -51,6 +51,30 @@ export const riskSchema = z.object({
   allocation: z
     .object({
       actionable: z.literal(false),
+      calculator_version: z
+        .enum(["idq-002@1", "post-cost-targets@1"])
+        .optional(),
+      target_equity_basis: z.literal("post_cost").nullable().optional(),
+      post_cost_sizing: z
+        .object({
+          solver: z.literal("piecewise-linear-rational@1"),
+          rounding: z.literal("signed-delta-floor-with-odd-lot-exit@1"),
+          cost_basis: z.literal("proportional-fee-plus-slippage@1"),
+          original_equity: number,
+          continuous_equity: number,
+          actual_post_cost_equity: number,
+          total_estimated_cost: number,
+          rounding_iterations: z.number().int(),
+          targets: z.array(
+            z.object({
+              symbol: z.string(),
+              requested_target_weight: number,
+              effective_post_cost_weight: number,
+            }),
+          ),
+        })
+        .nullable()
+        .optional(),
       status: z.enum(["feasible_preview", "blocked"]),
       constraints: z.array(z.string()),
       proposed: metrics.nullable(),

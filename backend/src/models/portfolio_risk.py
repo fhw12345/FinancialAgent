@@ -1,9 +1,16 @@
 """Versioned, reproducible daily-close risk and non-actionable allocation receipts."""
 
 from datetime import date, datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    model_serializer,
+    model_validator,
+)
 
 Number = Annotated[float, Field(strict=True, allow_inf_nan=False)]
 Weight = Annotated[Number, Field(ge=0, le=1)]
@@ -129,9 +136,31 @@ class SizedChange(Record):
     stop_risk_quantity_cap: Number | None = None
 
 
+class EffectiveTarget(Record):
+    symbol: Symbol
+    requested_target_weight: Weight
+    effective_post_cost_weight: Annotated[Number, Field(ge=0)]
+
+
+class PostCostSizing(Record):
+    solver: Literal["piecewise-linear-rational@1"] = "piecewise-linear-rational@1"
+    rounding: Literal["signed-delta-floor-with-odd-lot-exit@1"] = (
+        "signed-delta-floor-with-odd-lot-exit@1"
+    )
+    cost_basis: Literal["proportional-fee-plus-slippage@1"] = (
+        "proportional-fee-plus-slippage@1"
+    )
+    original_equity: Positive
+    continuous_equity: Positive
+    actual_post_cost_equity: Positive
+    total_estimated_cost: Annotated[Number, Field(ge=0)]
+    rounding_iterations: int = Field(ge=0, le=100, strict=True)
+    targets: list[EffectiveTarget]
+
+
 class AllocationReceipt(Record):
     allocation_id: str = ""
-    calculator_version: Literal["idq-002@1"] = "idq-002@1"
+    calculator_version: Literal["idq-002@1", "post-cost-targets@1"] = "idq-002@1"
     actionable: Literal[False] = False
     status: Literal["feasible_preview", "blocked"]
     constraints: list[str]
@@ -140,6 +169,32 @@ class AllocationReceipt(Record):
     turnover: Number | None = None
     posttrade_cash: Number | None = None
     cash_without_unfilled_sales: Number | None = None
+    target_equity_basis: Literal["post_cost"] | None = None
+    post_cost_sizing: PostCostSizing | None = None
+
+    @model_validator(mode="after")
+    def versioned_basis(self) -> "AllocationReceipt":
+        if self.calculator_version == "idq-002@1":
+            if (
+                self.target_equity_basis is not None
+                or self.post_cost_sizing is not None
+            ):
+                raise ValueError("Legacy allocator cannot carry new sizing authority")
+        elif self.target_equity_basis != "post_cost":
+            raise ValueError("New allocator must bind post-cost target basis")
+        elif self.status == "feasible_preview" and self.post_cost_sizing is None:
+            raise ValueError("Feasible post-cost allocation requires its sizing proof")
+        return self
+
+    @model_serializer(mode="wrap")
+    def preserve_legacy_wire(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> dict[str, Any]:
+        data: dict[str, Any] = handler(self)
+        if self.calculator_version == "idq-002@1":
+            data.pop("target_equity_basis", None)
+            data.pop("post_cost_sizing", None)
+        return data
 
 
 class PortfolioRiskReview(Record):

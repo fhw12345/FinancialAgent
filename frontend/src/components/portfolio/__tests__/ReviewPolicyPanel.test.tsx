@@ -92,7 +92,7 @@ it("requires the user's exact numeric inputs and every acknowledgment, binding v
     allowed_symbols: ["AAPL", "MSFT"],
     max_account_sigma: 0.25,
     lifetime_minutes: 45,
-    acknowledged_contract: "manual-target-paper-review@1",
+    acknowledged_contract: "post-cost-target-paper-review@2",
     instrument_attestation: "USD-US-nonfinancial-common-equities",
     evidence_acknowledgment: "forward-close-not-truth-or-historical-PIT",
     model_decisions: "disabled",

@@ -56,6 +56,50 @@ it("missing risk remains unavailable rather than zero and stale is explicit", ()
   expect(screen.getByTestId("account-sigma")).toHaveTextContent("Unavailable");
   expect(screen.getByRole("alert")).toHaveTextContent("ACCOUNT_CHANGED");
 });
+it("shows original and achieved post-cost weights without relabeling legacy risk math", () => {
+  const review = riskSchema.parse({
+    ...base,
+    allocation: {
+      actionable: false,
+      calculator_version: "post-cost-targets@1",
+      target_equity_basis: "post_cost",
+      status: "feasible_preview",
+      constraints: [],
+      proposed: base.current,
+      turnover: 0.401,
+      posttrade_cash: 7005.589,
+      cash_without_unfilled_sales: 2995.589,
+      changes: [],
+      post_cost_sizing: {
+        solver: "piecewise-linear-rational@1",
+        rounding: "signed-delta-floor-with-odd-lot-exit@1",
+        cost_basis: "proportional-fee-plus-slippage@1",
+        original_equity: 10000,
+        continuous_equity: 9995.598,
+        actual_post_cost_equity: 9995.589,
+        total_estimated_cost: 4.411,
+        rounding_iterations: 0,
+        targets: [
+          {
+            symbol: "AAPL",
+            requested_target_weight: 0.3,
+            effective_post_cost_weight: 0.299131947,
+          },
+        ],
+      },
+    },
+  });
+  render(<RiskReceipt review={review} />);
+  expect(screen.getByTestId("allocation-target-basis")).toHaveTextContent(
+    "post-cost-targets@1",
+  );
+  expect(screen.getByTestId("post-cost-sizing-receipt")).toHaveTextContent(
+    "30.0000%",
+  );
+  expect(screen.getByTestId("post-cost-sizing-receipt")).toHaveTextContent(
+    "29.9132%",
+  );
+});
 it("a purported executable allocation cannot cross the API schema", () => {
   expect(
     riskSchema.safeParse({

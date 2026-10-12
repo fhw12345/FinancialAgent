@@ -100,6 +100,11 @@ async def confirm(db: EvidenceStorage, request: ConfirmReviewPolicy) -> ReviewSe
         request_hash=fingerprint,
         confirmed_at=datetime.now(UTC),
         revision=current.revision + 1,
+        allocation_calculator=(
+            "post-cost-targets@1"
+            if request.policy.acknowledged_contract == "post-cost-target-paper-review@2"
+            else None
+        ),
         sizing=(
             "user_or_model_targets@1"
             if request.policy.model_decisions == "propose_for_human_review"

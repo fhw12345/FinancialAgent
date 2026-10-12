@@ -1,8 +1,8 @@
 ---
 title: Project Hardening Active Handoff
 status: in-progress
-version: backend@0.60.1, frontend@0.41.1
-last_updated: 2026-10-09
+version: backend@0.61.0, frontend@0.42.0
+last_updated: 2026-10-12
 owner: maintainer
 related_paths:
   - docs/features/project-hardening-program.md
@@ -16,6 +16,22 @@ related_paths:
 # Project Hardening Active Handoff
 
 ## 1. Current State
+
+### IDQ-001-D post-cost targets/risk context authorized / in progress (2026-10-12)
+
+User said “继续” after the actual live-model findings. Current branch:
+`feat/idq-001-d-post-cost-risk-context`. Target0.61.0/0.42.0. Versioned exact-rational
+post-cost sizing is bound only by explicit new policy acknowledgment; legacy allocator,
+policy defaults/serialized hashes and the original paid report remain intact. Prompt@2
+supplies frozen current risk/cash/positions/coverage and truthful pending/inapplicable
+checks. Both recorded real-UI scenarios pass (30%→29.9shares→ready/approval without trades;
+40% against30% cap remains blocked). Local2383 backend /281 frontend tests, strict mypy355,
+all critical/security/eval/scripts, zero production lint/total131, equal clean builds and
+62 final-image regression executions pass; new receipts survive actual recreation.
+Protected implementation/shipment publication and live-preservation rollout pending.
+See the [working spec](../features/investment-post-cost-targets-risk-context.md).
+**No new live calls are authorized:** prior six-attempt run is spent/expired. Do not rerun it
+or configure any personal limits/strategy while validating. PH-009 and IDQ-003 stay paused.
 
 ### IDQ-009-A synthetic portfolio/live-model acceptance shipped (2026-10-09)
 

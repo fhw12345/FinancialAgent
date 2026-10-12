@@ -49,7 +49,17 @@ async function trade(
     (r) => r.url().endsWith("/journal") && r.request().method() === "POST",
   );
   await page.getByTestId("paper-journal-submit").click();
-  return saved;
+  const response = await saved;
+  if (response.ok()) {
+    const result = (await response.json()) as PaperView;
+    // API completion precedes query invalidation/form remount; do not select
+    // the next entry in the old sequence's form and lose it on replacement.
+    await expect(page.getByTestId("paper-details")).toContainText(
+      `Sequence / 修订 ${result.experiment.sequence} · USD`,
+    );
+    await expect(page.getByTestId("paper-entry-kind")).toHaveValue("");
+  }
+  return response;
 }
 async function refresh(page: Page) {
   await page.getByTestId("paper-reconciliation-ack").check();
